@@ -14,12 +14,15 @@ type TaskDetail = {
   status: string;
   progress_percent: number;
   due_date: string | null;
+  created_at: string;
   attachment_url: string | null;
   assignee_id: string | null;
   owner_id: string | null;
+  created_by: string | null;
   assignment_mode: "individual" | "multi_user" | "department" | "mixed";
   departments?: { name: string } | null;
   owner?: { full_name: string } | null;
+  requester?: { full_name: string } | null;
   task_assignees?: { user_id: string; assignment_role: string; status: string; staff_users?: { full_name: string } | null }[];
 };
 
@@ -48,7 +51,7 @@ export default function TaskDetailPage() {
       supabase
         .from("tasks")
         .select(
-          "id,title,description,priority,status,progress_percent,due_date,attachment_url,assignee_id,owner_id,assignment_mode,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),task_assignees(user_id,assignment_role,status,staff_users(full_name))",
+          "id,title,description,priority,status,progress_percent,due_date,created_at,attachment_url,assignee_id,owner_id,created_by,assignment_mode,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),requester:staff_users!tasks_created_by_fkey(full_name),task_assignees(user_id,assignment_role,status,staff_users(full_name))",
         )
         .eq("id", taskId)
         .single(),
@@ -72,7 +75,7 @@ export default function TaskDetailPage() {
     const loadedTask = taskRes.data as unknown as TaskDetail;
 
     const isAssigned = !!loadedTask.task_assignees?.some((a) => a.user_id === user?.id);
-    const canViewTask = !!user && (hasPermission("can_edit_all_tasks") || loadedTask.owner_id === user.id || loadedTask.assignee_id === user.id || isAssigned);
+    const canViewTask = !!user && (hasPermission("can_edit_all_tasks") || loadedTask.created_by === user.id || loadedTask.owner_id === user.id || loadedTask.assignee_id === user.id || isAssigned);
     if (!canViewTask) {
       setTask(null);
       setComments([]);
@@ -159,13 +162,9 @@ export default function TaskDetailPage() {
     <main className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:p-6">
       <div className="mx-auto max-w-5xl">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-bold sm:text-2xl">Chi tiết công việc</h1>
+          <h1 className="text-xl font-bold sm:text-2xl">Chi tiết yêu cầu IT</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Công việc</Link>
-            <Link href="/users" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">User</Link>
-            <Link href="/departments" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Phòng ban</Link>
-            <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Phân quyền</Link>
-            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Theo user</Link>
+            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Về danh sách yêu cầu</Link>
             <span className="text-xs text-slate-600">{user?.full_name} ({user?.role_name})</span>
             <button onClick={logout} className="rounded bg-sky-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
           </div>
@@ -178,15 +177,14 @@ export default function TaskDetailPage() {
             <section className="rounded-xl border bg-white p-4">
               <h2 className="text-xl font-semibold">{task.title}</h2>
               <p className="mt-2 text-sm text-slate-600">{task.description || "(Không có mô tả)"}</p>
-              <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+              <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
                 <p><b>Phòng:</b> {task.departments?.name ?? "-"}</p>
-                <p><b>Owner chính:</b> {task.owner?.full_name ?? "-"}</p>
-                <p><b>Hạn:</b> {task.due_date ?? "-"}</p>
-                <p><b>Ưu tiên:</b> {task.priority}</p>
                 <p><b>Trạng thái:</b> {task.status}</p>
-                <p><b>Tiến độ:</b> {task.progress_percent}%</p>
+                <p><b>Người yêu cầu:</b> {task.requester?.full_name ?? "-"}</p>
+                <p><b>Thời gian yêu cầu:</b> {new Date(task.created_at).toLocaleString("vi-VN")}</p>
+                <p><b>Người phụ trách:</b> {task.owner?.full_name ?? "-"}</p>
+                <p><b>Tiến độ xử lý:</b> {task.progress_percent}%</p>
               </div>
-              <p className="mt-2 text-sm"><b>Người thực hiện:</b> {task.task_assignees?.map((a) => a.staff_users?.full_name).filter(Boolean).join(", ") || "-"}</p>
               {task.attachment_url ? (
                 <a href={task.attachment_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm text-blue-600 underline">
                   Mở file đính kèm
