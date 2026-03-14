@@ -33,6 +33,21 @@ const statusLabel: Record<ItTask["status"], string> = {
   rejected: "Từ chối",
 };
 
+const priorityClass: Record<ItTask["priority"], string> = {
+  low: "bg-slate-100 text-slate-700",
+  normal: "bg-sky-100 text-sky-700",
+  high: "bg-amber-100 text-amber-700",
+  urgent: "bg-rose-100 text-rose-700",
+};
+
+const statusClass: Record<ItTask["status"], string> = {
+  new: "bg-indigo-100 text-indigo-700",
+  in_progress: "bg-sky-100 text-sky-700",
+  pending_review: "bg-violet-100 text-violet-700",
+  done: "bg-emerald-100 text-emerald-700",
+  rejected: "bg-slate-200 text-slate-700",
+};
+
 export default function Home() {
   const router = useRouter();
   const { loading: authLoading, user, logout } = useAuth();
@@ -51,12 +66,7 @@ export default function Home() {
     if (!user) return;
     setLoading(true);
 
-    const depRes = await supabase
-      .from("departments")
-      .select("id,code,name")
-      .eq("code", "it")
-      .limit(1)
-      .maybeSingle();
+    const depRes = await supabase.from("departments").select("id,code,name").eq("code", "it").limit(1).maybeSingle();
 
     if (depRes.error || !depRes.data) {
       setMessage("❌ Không tìm thấy phòng IT.");
@@ -120,7 +130,8 @@ export default function Home() {
     const total = tasks.length;
     const open = tasks.filter((t) => ["new", "in_progress", "pending_review"].includes(t.status)).length;
     const done = tasks.filter((t) => t.status === "done").length;
-    return { total, open, done };
+    const urgent = tasks.filter((t) => t.priority === "urgent" && t.status !== "done").length;
+    return { total, open, done, urgent };
   }, [tasks]);
 
   useEffect(() => {
@@ -133,101 +144,104 @@ export default function Home() {
   }, [authLoading, user]);
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-5xl p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <img src="/diditravel-logo.png" alt="DiDiTravel" className="h-10 w-10 rounded-full border border-sky-100 object-cover" />
-            <div>
-              <h1 className="text-2xl font-bold text-sky-700">Cổng Yêu Cầu IT · DiDiTravel</h1>
-              <p className="text-xs text-slate-500">Tiếp nhận và xử lý các vấn đề kỹ thuật nội bộ</p>
+    <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white text-slate-900">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        <div className="rounded-2xl border border-sky-100 bg-white/90 p-4 shadow-sm backdrop-blur sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <img src="/diditravel-logo.png" alt="DiDiTravel" className="h-11 w-11 rounded-full border border-sky-100 object-cover" />
+              <div>
+                <h1 className="text-xl font-bold text-sky-700 sm:text-2xl">IT Service Desk · DiDiTravel</h1>
+                <p className="text-xs text-slate-500 sm:text-sm">Tiếp nhận và xử lý yêu cầu hỗ trợ kỹ thuật nội bộ</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-600">{user?.full_name}</span>
-            <button onClick={logout} className="rounded bg-sky-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
-          </div>
-        </div>
-
-        <section className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border bg-white p-4"><p className="text-xs text-slate-500">Tổng yêu cầu</p><p className="text-2xl font-bold">{stats.total}</p></div>
-          <div className="rounded-xl border bg-white p-4"><p className="text-xs text-slate-500">Đang mở</p><p className="text-2xl font-bold text-amber-600">{stats.open}</p></div>
-          <div className="rounded-xl border bg-white p-4"><p className="text-xs text-slate-500">Đã hoàn tất</p><p className="text-2xl font-bold text-emerald-600">{stats.done}</p></div>
-        </section>
-
-        <section className="mt-4 rounded-xl border bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">Tạo yêu cầu IT mới</h2>
-          <div className="grid gap-3">
-            <input
-              className="rounded border px-3 py-2"
-              placeholder="Tiêu đề sự cố / yêu cầu"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            <textarea
-              className="min-h-24 rounded border px-3 py-2"
-              placeholder="Mô tả chi tiết vấn đề (thiết bị, thời điểm, ảnh hưởng, mong muốn xử lý...)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="text-sm">Mức ưu tiên:</label>
-              <select className="rounded border px-3 py-2" value={priority} onChange={(e) => setPriority(e.target.value as ItTask["priority"])}>
-                <option value="low">Thấp</option>
-                <option value="normal">Bình thường</option>
-                <option value="high">Cao</option>
-                <option value="urgent">Khẩn</option>
-              </select>
-              <button
-                onClick={createRequest}
-                disabled={submitting}
-                className="rounded bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 disabled:opacity-60"
-              >
-                {submitting ? "Đang gửi..." : "Gửi yêu cầu"}
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{user?.full_name}</span>
+              <button onClick={logout} className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-700">
+                Đăng xuất
               </button>
             </div>
           </div>
-          <p className="mt-2 text-sm text-slate-600">{message}</p>
+        </div>
+
+        <section className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs text-slate-500">Tổng yêu cầu</p><p className="mt-1 text-2xl font-bold">{stats.total}</p></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs text-slate-500">Đang mở</p><p className="mt-1 text-2xl font-bold text-amber-600">{stats.open}</p></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs text-slate-500">Khẩn chưa xử lý</p><p className="mt-1 text-2xl font-bold text-rose-600">{stats.urgent}</p></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs text-slate-500">Đã hoàn tất</p><p className="mt-1 text-2xl font-bold text-emerald-600">{stats.done}</p></div>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">Danh sách yêu cầu IT</h2>
-          {loading ? (
-            <p className="text-sm text-slate-500">Đang tải...</p>
-          ) : (
-            <div className="overflow-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-2 py-2">Yêu cầu</th>
-                    <th className="px-2 py-2">Ưu tiên</th>
-                    <th className="px-2 py-2">Trạng thái</th>
-                    <th className="px-2 py-2">Người tạo</th>
-                    <th className="px-2 py-2">Thời gian</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tasks.map((t) => (
-                    <tr key={t.id} className="border-t align-top">
-                      <td className="px-2 py-2">
-                        <p className="font-medium">{t.title}</p>
-                        {t.description ? <p className="mt-1 text-xs text-slate-600">{t.description}</p> : null}
-                      </td>
-                      <td className="px-2 py-2">{priorityLabel[t.priority]}</td>
-                      <td className="px-2 py-2">{statusLabel[t.status]}</td>
-                      <td className="px-2 py-2">{t.staff_users?.full_name ?? "-"}</td>
-                      <td className="px-2 py-2">{new Date(t.created_at).toLocaleString("vi-VN")}</td>
-                    </tr>
-                  ))}
-                  {tasks.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-2 py-6 text-center text-slate-500">Chưa có yêu cầu IT nào.</td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
+        <section className="mt-4 grid gap-4 lg:grid-cols-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
+            <h2 className="mb-1 text-lg font-semibold">Tạo yêu cầu IT</h2>
+            <p className="mb-3 text-xs text-slate-500">Mô tả càng rõ, IT xử lý càng nhanh.</p>
+            <div className="space-y-3">
+              <input
+                className="w-full rounded-lg border px-3 py-2"
+                placeholder="Ví dụ: Không in được máy in tầng 2"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <textarea
+                className="min-h-28 w-full rounded-lg border px-3 py-2"
+                placeholder="Mô tả chi tiết: thiết bị, lỗi hiển thị, thời điểm xảy ra, ảnh hưởng công việc..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <select className="rounded-lg border px-3 py-2" value={priority} onChange={(e) => setPriority(e.target.value as ItTask["priority"])}>
+                  <option value="low">Ưu tiên thấp</option>
+                  <option value="normal">Ưu tiên bình thường</option>
+                  <option value="high">Ưu tiên cao</option>
+                  <option value="urgent">Ưu tiên khẩn</option>
+                </select>
+                <button
+                  onClick={createRequest}
+                  disabled={submitting}
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 disabled:opacity-60"
+                >
+                  {submitting ? "Đang gửi..." : "Gửi yêu cầu"}
+                </button>
+              </div>
             </div>
-          )}
+            <p className="mt-3 text-sm text-slate-600">{message}</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Danh sách yêu cầu IT</h2>
+              <span className="rounded-full bg-sky-50 px-3 py-1 text-xs text-sky-700">Phòng: {itDepartment?.name || "IT"}</span>
+            </div>
+
+            {loading ? (
+              <p className="text-sm text-slate-500">Đang tải dữ liệu...</p>
+            ) : tasks.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                Chưa có yêu cầu nào. Hãy tạo yêu cầu IT đầu tiên.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {tasks.map((t) => (
+                  <div key={t.id} className="rounded-xl border border-slate-200 p-3 transition hover:border-sky-200 hover:bg-sky-50/30">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-slate-900">{t.title}</p>
+                        {t.description ? <p className="mt-1 text-sm text-slate-600">{t.description}</p> : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${priorityClass[t.priority]}`}>{priorityLabel[t.priority]}</span>
+                        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass[t.status]}`}>{statusLabel[t.status]}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                      <span>Người tạo: {t.staff_users?.full_name ?? "-"}</span>
+                      <span>Thời gian: {new Date(t.created_at).toLocaleString("vi-VN")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </main>
