@@ -171,7 +171,7 @@ export default function Home() {
         <div className="rounded-2xl border border-sky-100 bg-white/90 p-4 shadow-sm sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <img src="/diditravel-logo.png" alt="DiDiTravel" className="h-11 w-11 rounded-full border border-sky-100 object-cover" />
+              <img src="/diditravel-logo.png" alt="DiDiTravel" className="h-20 w-20 rounded-2xl border border-sky-100 object-cover shadow-sm" />
               <div>
                 <h1 className="text-xl font-bold text-sky-700 sm:text-2xl">IT Service Desk · DiDiTravel</h1>
                 <p className="text-xs text-slate-500 sm:text-sm">Tiếp nhận yêu cầu xử lý các vấn đề IT nội bộ</p>

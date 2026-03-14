@@ -22,7 +22,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:p-6">
       <div className="mx-auto mt-6 w-full max-w-md rounded-xl border bg-white p-4 shadow-sm sm:mt-12 sm:p-6">
         <div className="mb-4 flex items-center gap-3">
-          <img src="/diditravel-logo.png" alt="DiDiTravel" className="h-12 w-12 rounded-full border border-sky-100 object-cover" />
+          <img src="/diditravel-logo.png" alt="DiDiTravel" className="h-24 w-24 rounded-2xl border border-sky-100 object-cover shadow-sm" />
           <div>
             <h1 className="text-xl font-bold text-sky-700 sm:text-2xl">DiDiTravel Task Manager</h1>
             <p className="text-xs text-slate-500">Giải pháp giao việc nội bộ</p>
