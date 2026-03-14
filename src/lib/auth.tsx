@@ -91,6 +91,29 @@ async function loadProfileByEmail(email: string) {
   return toAuthUser(data as unknown as StaffProfileRow);
 }
 
+async function provisionStaffUserIfMissing(email: string) {
+  const existing = await supabase.from("staff_users").select("id").ilike("email", email).limit(1).maybeSingle();
+  if (existing.data?.id) return true;
+
+  const roleRes = await supabase.from("roles").select("id").eq("code", "tong_bien_tap").limit(1).maybeSingle();
+  const deptRes = await supabase.from("departments").select("id").eq("code", "leadership").limit(1).maybeSingle();
+
+  const roleId = roleRes.data?.id;
+  const departmentId = deptRes.data?.id;
+  if (!roleId || !departmentId) return false;
+
+  const fullName = email.startsWith("admin@") ? "Admin Diditravel" : email.split("@")[0];
+  const { error } = await supabase.from("staff_users").insert({
+    full_name: fullName,
+    email,
+    role_id: roleId,
+    department_id: departmentId,
+    active: true,
+  });
+
+  return !error;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -173,7 +196,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, error: `Đăng nhập thất bại: ${signIn.error.message}` };
     }
 
-    const profile = await loadProfileByEmail(email);
+    let profile = await loadProfileByEmail(email);
+
+    if (!profile) {
+      const provisioned = await provisionStaffUserIfMissing(email);
+      if (provisioned) profile = await loadProfileByEmail(email);
+    }
+
     setUser(profile);
 
     if (!profile) {
