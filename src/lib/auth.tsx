@@ -28,7 +28,6 @@ type StaffProfileRow = {
   id: string;
   full_name: string;
   email: string | null;
-  username: string | null;
   active: boolean;
   roles: RoleRow | null;
 };
@@ -36,7 +35,6 @@ type StaffProfileRow = {
 type LoginLookupRow = {
   id: string;
   email: string | null;
-  username: string | null;
   active: boolean;
 };
 
@@ -44,7 +42,6 @@ type AuthUser = {
   id: string;
   full_name: string;
   email: string | null;
-  username: string | null;
   role_code: string;
   role_name: string;
   active: boolean;
@@ -67,7 +64,7 @@ function toAuthUser(row: StaffProfileRow): AuthUser {
     id: row.id,
     full_name: row.full_name,
     email: row.email,
-    username: row.username,
+
     role_code: row.roles?.code ?? "",
     role_name: row.roles?.name ?? "",
     active: row.active,
@@ -85,7 +82,7 @@ async function loadProfileByEmail(email: string) {
   const { data, error } = await supabase
     .from("staff_users")
     .select(
-      "id,full_name,email,username,active,roles(code,name,role_permissions(can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment))",
+      "id,full_name,email,active,roles(code,name,role_permissions(can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment))",
     )
     .ilike("email", email)
     .single();
@@ -135,10 +132,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const normalizedIdentifier = identifier.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
+    const emailGuess = normalizedIdentifier.includes("@")
+      ? normalizedIdentifier
+      : `${normalizedIdentifier}@diditravel.vn`;
+
     const { data: lookupData, error: lookupError } = await supabase
       .from("staff_users")
-      .select("id,email,username,active")
-      .or(`username.eq.${normalizedIdentifier},email.ilike.${normalizedIdentifier}`)
+      .select("id,email,active")
+      .ilike("email", emailGuess)
       .limit(1)
       .maybeSingle();
 
