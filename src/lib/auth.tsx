@@ -1,0 +1,180 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+type PermissionKey =
+  | "can_manage_users"
+  | "can_manage_permissions"
+  | "can_create_task"
+  | "can_edit_all_tasks"
+  | "can_comment";
+
+type PermissionRow = {
+  can_manage_users: boolean;
+  can_manage_permissions: boolean;
+  can_create_task: boolean;
+  can_edit_all_tasks: boolean;
+  can_comment: boolean;
+};
+
+type RoleRow = {
+  code: string;
+  name: string;
+  role_permissions: PermissionRow | null;
+};
+
+type StaffProfileRow = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  username: string | null;
+  active: boolean;
+  roles: RoleRow | null;
+};
+
+type LoginRow = {
+  id: string;
+  email: string | null;
+  username: string | null;
+  password: string | null;
+  active: boolean;
+};
+
+type AuthUser = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  username: string | null;
+  role_code: string;
+  role_name: string;
+  active: boolean;
+  permissions: Record<PermissionKey, boolean>;
+};
+
+type AuthContextType = {
+  loading: boolean;
+  user: AuthUser | null;
+  login: (identifier: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  logout: () => void;
+  hasPermission: (key: PermissionKey) => boolean;
+};
+
+const AuthContext = createContext<AuthContextType | null>(null);
+const SESSION_KEY = "thoidai_work_user_id";
+
+function toAuthUser(row: StaffProfileRow): AuthUser {
+  const perms = row.roles?.role_permissions;
+  return {
+    id: row.id,
+    full_name: row.full_name,
+    email: row.email,
+    username: row.username,
+    role_code: row.roles?.code ?? "",
+    role_name: row.roles?.name ?? "",
+    active: row.active,
+    permissions: {
+      can_manage_users: !!perms?.can_manage_users,
+      can_manage_permissions: !!perms?.can_manage_permissions,
+      can_create_task: !!perms?.can_create_task,
+      can_edit_all_tasks: !!perms?.can_edit_all_tasks,
+      can_comment: !!perms?.can_comment,
+    },
+  };
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  const loadById = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("staff_users")
+      .select(
+        "id,full_name,email,username,active,roles(code,name,role_permissions(can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment))",
+      )
+      .eq("id", userId)
+      .single();
+
+    if (error || !data) {
+      setUser(null);
+      return;
+    }
+
+    setUser(toAuthUser(data as unknown as StaffProfileRow));
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const userId = localStorage.getItem(SESSION_KEY);
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+
+      void (async () => {
+        await loadById(userId);
+        setLoading(false);
+      })();
+    }, 0);
+
+    return () => clearTimeout(t);
+  }, []);
+
+  const login = async (identifier: string, password: string) => {
+    const normalizedIdentifier = identifier.trim().toLowerCase();
+    const normalizedPassword = password.trim();
+
+    const { data, error } = await supabase
+      .from("staff_users")
+      .select("id,email,username,password,active")
+      .or(`username.eq.${normalizedIdentifier},email.ilike.${normalizedIdentifier}`)
+      .limit(1)
+      .maybeSingle();
+
+    const row = data as LoginRow | null;
+
+    if (error || !row) return { ok: false, error: "Sai tài khoản hoặc mật khẩu." };
+    if (!row.active) return { ok: false, error: "Tài khoản đã bị khóa." };
+
+    const storedPassword = (row.password ?? "123456").trim();
+    if (storedPassword !== normalizedPassword) return { ok: false, error: "Sai tài khoản hoặc mật khẩu." };
+
+    localStorage.setItem(SESSION_KEY, row.id);
+    await loadById(row.id);
+    return { ok: true };
+  };
+
+  const logout = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setUser(null);
+  };
+
+  const hasPermission = (key: PermissionKey) => {
+    if (!user) return false;
+
+    const assignmentRoles = new Set([
+      "tong_bien_tap",
+      "pho_tong_bien_tap",
+      "phu_trach_phong_tri_su",
+      "phu_trach_phong_phong_vien",
+      "phu_trach_phong_bien_tap",
+    ]);
+
+    // Quy ước nghiệp vụ: chỉ lãnh đạo + trưởng/phụ trách phòng mới được giao việc và xem/sửa toàn bộ việc.
+    if (key === "can_create_task" || key === "can_edit_all_tasks") {
+      return assignmentRoles.has(user.role_code);
+    }
+
+    if (user.role_code === "tong_bien_tap") return true;
+    return !!user.permissions[key];
+  };
+
+  return <AuthContext.Provider value={{ loading, user, login, logout, hasPermission }}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+}
