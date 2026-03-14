@@ -283,7 +283,13 @@ export default function Home() {
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto max-w-7xl p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-3xl font-bold">Quản lý công việc</h1>
+          <div className="flex items-center gap-3">
+            <img src="/diditravel-logo.png" alt="DiDiTravel" className="h-10 w-10 rounded-full border border-red-100 object-cover" />
+            <div>
+              <h1 className="text-2xl font-bold text-red-700 sm:text-3xl">DiDiTravel · Quản lý công việc</h1>
+              <p className="text-xs text-slate-500">Giải pháp du lịch toàn diện · vận hành nội bộ</p>
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/" className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Công việc</Link>
             <Link href="/users" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-red-100 hover:text-red-700">User</Link>
