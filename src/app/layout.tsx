@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "thoidai-work",
-  description: "Task management for Bao Thoi Dai",
+  title: "diditravel",
+  description: "Phần mềm giao việc nội bộ diditravel.vn",
 };
 
 export default function RootLayout({
