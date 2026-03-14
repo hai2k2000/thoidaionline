@@ -33,11 +33,10 @@ type StaffProfileRow = {
   roles: RoleRow | null;
 };
 
-type LoginRow = {
+type LoginLookupRow = {
   id: string;
   email: string | null;
   username: string | null;
-  password: string | null;
   active: boolean;
 };
 
@@ -56,12 +55,11 @@ type AuthContextType = {
   loading: boolean;
   user: AuthUser | null;
   login: (identifier: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   hasPermission: (key: PermissionKey) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
-const SESSION_KEY = "thoidai_work_user_id";
 
 function toAuthUser(row: StaffProfileRow): AuthUser {
   const perms = row.roles?.role_permissions;
@@ -83,70 +81,110 @@ function toAuthUser(row: StaffProfileRow): AuthUser {
   };
 }
 
+async function loadProfileByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("staff_users")
+    .select(
+      "id,full_name,email,username,active,roles(code,name,role_permissions(can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment))",
+    )
+    .ilike("email", email)
+    .single();
+
+  if (error || !data) return null;
+  return toAuthUser(data as unknown as StaffProfileRow);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  const loadById = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("staff_users")
-      .select(
-        "id,full_name,email,username,active,roles(code,name,role_permissions(can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment))",
-      )
-      .eq("id", userId)
-      .single();
-
-    if (error || !data) {
-      setUser(null);
-      return;
-    }
-
-    setUser(toAuthUser(data as unknown as StaffProfileRow));
-  };
-
   useEffect(() => {
-    const t = setTimeout(() => {
-      const userId = localStorage.getItem(SESSION_KEY);
-      if (!userId) {
-        setLoading(false);
+    let mounted = true;
+
+    void (async () => {
+      const { data } = await supabase.auth.getUser();
+      const email = data.user?.email;
+      if (email) {
+        const profile = await loadProfileByEmail(email);
+        if (mounted) setUser(profile);
+      }
+      if (mounted) setLoading(false);
+    })();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user?.email;
+      if (!email) {
+        setUser(null);
         return;
       }
-
       void (async () => {
-        await loadById(userId);
-        setLoading(false);
+        const profile = await loadProfileByEmail(email);
+        setUser(profile);
       })();
-    }, 0);
+    });
 
-    return () => clearTimeout(t);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (identifier: string, password: string) => {
     const normalizedIdentifier = identifier.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
-    const { data, error } = await supabase
+    const { data: lookupData, error: lookupError } = await supabase
       .from("staff_users")
-      .select("id,email,username,password,active")
+      .select("id,email,username,active")
       .or(`username.eq.${normalizedIdentifier},email.ilike.${normalizedIdentifier}`)
       .limit(1)
       .maybeSingle();
 
-    const row = data as LoginRow | null;
+    const row = lookupData as LoginLookupRow | null;
 
-    if (error || !row) return { ok: false, error: "Sai tài khoản hoặc mật khẩu." };
+    if (lookupError || !row) return { ok: false, error: "Không tìm thấy tài khoản nội bộ." };
     if (!row.active) return { ok: false, error: "Tài khoản đã bị khóa." };
+    if (!row.email) return { ok: false, error: "Tài khoản này chưa có email để đăng nhập." };
 
-    const storedPassword = (row.password ?? "123456").trim();
-    if (storedPassword !== normalizedPassword) return { ok: false, error: "Sai tài khoản hoặc mật khẩu." };
+    const email = row.email.trim().toLowerCase();
 
-    localStorage.setItem(SESSION_KEY, row.id);
-    await loadById(row.id);
+    // 1) Thử đăng nhập trực tiếp
+    let signIn = await supabase.auth.signInWithPassword({ email, password: normalizedPassword });
+
+    // 2) Nếu chưa có user trong auth.users thì đăng ký tự động rồi đăng nhập lại
+    if (signIn.error && /invalid login credentials/i.test(signIn.error.message || "")) {
+      const signUp = await supabase.auth.signUp({ email, password: normalizedPassword });
+      if (signUp.error && !/already registered/i.test(signUp.error.message || "")) {
+        return { ok: false, error: `Không thể tạo tài khoản Auth: ${signUp.error.message}` };
+      }
+      signIn = await supabase.auth.signInWithPassword({ email, password: normalizedPassword });
+    }
+
+    if (signIn.error) {
+      if (/email not confirmed/i.test(signIn.error.message || "")) {
+        return {
+          ok: false,
+          error: "Email chưa xác nhận. Vào Supabase Auth để tắt Confirm email (MVP) hoặc xác nhận email trước.",
+        };
+      }
+      return { ok: false, error: `Đăng nhập thất bại: ${signIn.error.message}` };
+    }
+
+    const profile = await loadProfileByEmail(email);
+    setUser(profile);
+
+    if (!profile) {
+      await supabase.auth.signOut();
+      return { ok: false, error: "Email đăng nhập chưa được gán user trong staff_users." };
+    }
+
     return { ok: true };
   };
 
-  const logout = () => {
-    localStorage.removeItem(SESSION_KEY);
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
@@ -161,7 +199,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       "phu_trach_phong_bien_tap",
     ]);
 
-    // Quy ước nghiệp vụ: chỉ lãnh đạo + trưởng/phụ trách phòng mới được giao việc và xem/sửa toàn bộ việc.
     if (key === "can_create_task" || key === "can_edit_all_tasks") {
       return assignmentRoles.has(user.role_code);
     }
