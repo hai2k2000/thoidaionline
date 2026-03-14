@@ -88,6 +88,11 @@ export default function Home() {
     if (!itDepartment) return setMessage("❌ Chưa lấy được thông tin phòng IT."), undefined;
     if (!title.trim()) return setMessage("❌ Vui lòng nhập tiêu đề yêu cầu."), undefined;
 
+    const now = new Date();
+    const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+    const timePart = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+    const ticketCode = `IT-${datePart}-${timePart}`;
+
     setSubmitting(true);
     let attachmentUrl: string | null = null;
 
@@ -113,7 +118,7 @@ export default function Home() {
       .join("\n");
 
     const { error } = await supabase.from("tasks").insert({
-      title: title.trim(),
+      title: `[${ticketCode}] ${title.trim()}`, 
       description: combinedDescription || null,
       priority: "normal",
       status: "new",
@@ -139,7 +144,7 @@ export default function Home() {
     setUltraId("");
     setUltraPass("");
     setAttachmentFile(null);
-    setMessage("✅ Đã gửi yêu cầu IT.");
+    setMessage(`✅ Đã gửi yêu cầu IT. Mã ticket: ${ticketCode}`);
     setSubmitting(false);
     await loadData();
   };
