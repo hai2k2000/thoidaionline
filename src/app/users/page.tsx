@@ -165,13 +165,13 @@ export default function UsersPage() {
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Quản trị user</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-red-100 hover:text-red-700">Công việc</Link>
-            <Link href="/users" className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700">User</Link>
-            <Link href="/departments" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-red-100 hover:text-red-700">Phòng ban</Link>
-            <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-red-100 hover:text-red-700">Phân quyền</Link>
-            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-red-100 hover:text-red-700">Theo user</Link>
+            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Công việc</Link>
+            <Link href="/users" className="rounded bg-sky-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-600">User</Link>
+            <Link href="/departments" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Phòng ban</Link>
+            <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Phân quyền</Link>
+            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Theo user</Link>
             <span className="text-xs text-slate-600">{user?.full_name} ({user?.role_name})</span>
-            <button onClick={logout} className="rounded bg-rose-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
+            <button onClick={logout} className="rounded bg-sky-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
           </div>
         </div>
 
@@ -190,8 +190,8 @@ export default function UsersPage() {
             </select>
           </div>
           <div className="mt-3 flex gap-2">
-            <button onClick={createUser} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tạo user</button>
-            <button onClick={loadAll} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tải danh sách</button>
+            <button onClick={createUser} className="rounded bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600">Tạo user</button>
+            <button onClick={loadAll} className="rounded bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600">Tải danh sách</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>
@@ -207,7 +207,7 @@ export default function UsersPage() {
               <option value="active">Trạng thái: Active</option>
               <option value="disabled">Trạng thái: Disable</option>
             </select>
-            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-red-100 hover:text-red-700">
+            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">
               Xóa bộ lọc
             </button>
           </div>

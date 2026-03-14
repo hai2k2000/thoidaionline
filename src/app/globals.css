@@ -3,8 +3,8 @@
 :root {
   --background: #f5f5f5;
   --foreground: #2f2f33;
-  --brand-red: #e31e24;
-  --brand-red-dark: #be171c;
+  --brand-primary: #37b7ff;
+  --brand-primary-dark: #1f9eea;
 }
 
 @theme inline {
@@ -38,8 +38,8 @@ select:focus,
 input:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--brand-red);
-  box-shadow: 0 0 0 3px rgba(227, 30, 36, 0.16);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(55, 183, 255, 0.20);
 }
 
 button:hover {
