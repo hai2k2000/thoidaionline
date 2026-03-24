@@ -354,8 +354,8 @@ export default function Home() {
 
         <section className="mt-4 rounded-xl border bg-white p-4">
           <div className="flex flex-wrap gap-2">
-            <button onClick={loadAll} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tải dữ liệu</button>
-            <button onClick={sendDueSoonReminder} disabled={sendingReminder} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50">
+            <button onClick={loadAll} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Tải dữ liệu</button>
+            <button onClick={sendDueSoonReminder} disabled={sendingReminder} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50">
               {sendingReminder ? "Đang gửi nhắc việc..." : "Nhắc việc sắp đến hạn"}
             </button>
             <button onClick={sendOverdueDocReminder} disabled={sendingDocReminder} className="rounded bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">
@@ -492,7 +492,7 @@ export default function Home() {
           </div>
           <p className="mt-2 text-xs text-slate-500">(*) Bắt buộc: tiêu đề, mô tả, kiểu giao việc, deadline. Cá nhân: chọn owner. Nhóm: chọn owner + thành viên. Phòng ban: chỉ chọn phòng ban.</p>
           {hasPermission("can_create_task") ? (
-            <button onClick={createTask} className="mt-3 rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tạo việc</button>
+            <button onClick={createTask} className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Tạo việc</button>
           ) : (
             <p className="mt-3 text-sm text-amber-700">Bạn không có quyền tạo công việc.</p>
           )}

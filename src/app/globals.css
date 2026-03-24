@@ -84,11 +84,21 @@ table {
 
 /* Make main bordered white panels pop with soft 3D depth */
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white) {
-  border-color: #c7dcff !important;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%) !important;
-  box-shadow: 0 2px 0 #d8e8ff, 0 10px 24px rgba(59, 130, 246, 0.10);
+  border-color: #9ec5ff !important;
+  border-width: 1.5px;
+  background: linear-gradient(180deg, #ffffff 0%, #eef6ff 100%) !important;
+  box-shadow:
+    0 1px 0 #ffffff inset,
+    0 -1px 0 #d8e8ff inset,
+    0 4px 0 #c7ddff,
+    0 14px 30px rgba(37, 99, 235, 0.18);
 }
 
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white):hover {
-  box-shadow: 0 3px 0 #cfe2ff, 0 14px 28px rgba(59, 130, 246, 0.14);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 #ffffff inset,
+    0 -1px 0 #d1e4ff inset,
+    0 6px 0 #bdd8ff,
+    0 18px 34px rgba(37, 99, 235, 0.22);
 }

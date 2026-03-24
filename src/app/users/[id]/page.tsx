@@ -72,7 +72,7 @@ export default function UserDetailPage() {
             <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-50 hover:text-blue-800">Phân quyền</Link>
             <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-50 hover:text-blue-800">Theo user</Link>
             <span className="text-xs text-slate-600">{authUser?.full_name} ({authUser?.role_name})</span>
-            <button onClick={logout} className="rounded bg-rose-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
+            <button onClick={logout} className="rounded bg-blue-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
           </div>
         </div>
 

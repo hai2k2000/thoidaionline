@@ -90,7 +90,7 @@ export default function DocumentsPage() {
               <option value="incoming">Công văn đến</option>
               <option value="outgoing">Công văn đi</option>
             </select>
-            <button onClick={onCreate} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white">Tạo</button>
+            <button onClick={onCreate} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Tạo</button>
           </div>
 
           <h3 className="mt-4 mb-2 text-sm font-semibold">Giao xử lý</h3>

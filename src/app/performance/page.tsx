@@ -332,7 +332,7 @@ export default function PerformancePage() {
             <label className="text-xs">Việc khó (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.hardTaskWeight} onChange={(e) => setFormula((p) => ({ ...p, hardTaskWeight: Number(e.target.value || 0) }))} /></label>
             <label className="text-xs">Cải tiến (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.improvementWeight} onChange={(e) => setFormula((p) => ({ ...p, improvementWeight: Number(e.target.value || 0) }))} /></label>
             <label className="text-xs">Đóng góp (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.teamContributionWeight} onChange={(e) => setFormula((p) => ({ ...p, teamContributionWeight: Number(e.target.value || 0) }))} /></label>
-            <div className="flex items-end"><button onClick={saveFormula} className="w-full rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white">Lưu công thức</button></div>
+            <div className="flex items-end"><button onClick={saveFormula} className="w-full rounded bg-blue-600 px-3 py-2 text-sm font-semibold text-white">Lưu công thức</button></div>
           </div>
           <label className="text-sm">Tính đến ngày
             <input type="date" className="mt-1 ml-2 rounded border px-3 py-2" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />

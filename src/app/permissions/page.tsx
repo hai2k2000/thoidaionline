@@ -59,7 +59,7 @@ export default function PermissionsPage() {
           </div>
         </div>
         <div className="mb-2 flex gap-2">
-          <button onClick={load} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tải phân quyền</button>
+          <button onClick={load} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Tải phân quyền</button>
           <p className="self-center text-sm text-slate-600">{message}</p>
         </div>
         <section className="rounded-xl border bg-white p-4">

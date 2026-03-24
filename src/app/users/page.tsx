@@ -185,8 +185,8 @@ export default function UsersPage() {
             </select>
           </div>
           <div className="mt-3 flex gap-2">
-            <button onClick={createUser} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tạo user</button>
-            <button onClick={loadAll} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tải danh sách</button>
+            <button onClick={createUser} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Tạo user</button>
+            <button onClick={loadAll} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Tải danh sách</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>
@@ -208,7 +208,7 @@ export default function UsersPage() {
           </div>
 
           <p className="mb-2 text-xs text-slate-500">Danh sách tự sắp xếp theo: Ban biên tập → Phòng biên tập → Phòng trị sự → Phòng phóng viên; trong mỗi phòng ưu tiên chức vụ cao trước.</p>
-          <div className="overflow-auto rounded-lg border border-rose-100">
+          <div className="overflow-auto rounded-lg border border-blue-100">
             <table className="table-soft-red min-w-full text-left text-sm">
               <thead>
                 <tr>

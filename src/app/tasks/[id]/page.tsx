@@ -310,7 +310,7 @@ export default function TaskDetailPage() {
                       setMessage("✅ Đã trả lại công việc để chỉnh sửa.");
                       await loadData();
                     }}
-                    className="rounded bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                    className="rounded bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                   >
                     Trả lại công việc
                   </button>
@@ -427,7 +427,7 @@ export default function TaskDetailPage() {
                     <button
                       onClick={submitProgressReport}
                       disabled={submittingReport}
-                      className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                      className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
                     >
                       {submittingReport ? "Đang gửi báo cáo..." : "Gửi báo cáo tiến độ"}
                     </button>

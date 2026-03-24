@@ -175,7 +175,7 @@ export default function HrProfileDetailPage() {
           </div>
 
           <div className="mt-4">
-            <button onClick={save} disabled={saving} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
               {saving ? "Đang lưu..." : "Lưu cập nhật"}
             </button>
           </div>

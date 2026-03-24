@@ -37,7 +37,7 @@ const priorityTone: Record<Task["priority"], string> = {
   low: "bg-slate-100 text-slate-700",
   normal: "bg-gradient-to-r from-cyan-100 to-blue-300 text-blue-800",
   high: "bg-amber-100 text-amber-700",
-  urgent: "bg-rose-100 text-rose-700",
+  urgent: "bg-blue-100 text-blue-800",
 };
 
 const statusTone: Record<Task["status"], string> = {
@@ -45,7 +45,7 @@ const statusTone: Record<Task["status"], string> = {
   in_progress: "bg-indigo-100 text-indigo-700",
   pending_review: "bg-amber-100 text-amber-700",
   done: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-rose-100 text-rose-700",
+  rejected: "bg-blue-100 text-blue-800",
 };
 
 export default function TaskStatusTablePage({
@@ -110,7 +110,7 @@ export default function TaskStatusTablePage({
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-700">Tổng: {rows.length} công việc</div>
             </div>
-            <div className="overflow-x-auto rounded-lg border border-rose-100">
+            <div className="overflow-x-auto rounded-lg border border-blue-100">
               <table className="table-soft-red min-w-full text-left text-sm">
                 <thead className="text-xs uppercase">
                   <tr>
