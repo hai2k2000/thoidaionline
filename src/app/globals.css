@@ -84,6 +84,7 @@ table {
 
 /* Make main bordered white panels pop with soft 3D depth */
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white) {
+  position: relative;
   border-color: #9ec5ff !important;
   border-width: 1.5px;
   background: linear-gradient(180deg, #ffffff 0%, #eef6ff 100%) !important;
@@ -95,7 +96,6 @@ table {
 }
 
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white):hover {
-  transform: translateY(-1px);
   box-shadow:
     0 1px 0 #ffffff inset,
     0 -1px 0 #d1e4ff inset,

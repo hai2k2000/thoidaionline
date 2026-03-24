@@ -71,7 +71,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         ☰ Menu {mobileOpen ? "▴" : "▾"}
       </button>
 
-      <div className={`${mobileOpen ? "block" : "hidden"} rounded-xl border bg-white p-3 lg:block lg:sticky lg:top-4`}>
+      <div className={`${mobileOpen ? "block" : "hidden"} relative z-30 rounded-xl border bg-white p-3 lg:block lg:sticky lg:top-4`}>
         <p className="mb-3 text-sm font-bold text-slate-700">Menu</p>
 
         <div className="space-y-3">
