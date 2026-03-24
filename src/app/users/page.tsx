@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import AppNav from "@/components/AppNav";
 
 type Role = { id: string; code?: string; name: string; level?: number };
 type Department = { id: string; code?: string; name: string; active?: boolean };
@@ -94,7 +95,7 @@ export default function UsersPage() {
     setRoles((r.data ?? []) as Role[]);
     setDeps((d.data ?? []) as Department[]);
     setUsers((u.data ?? []) as User[]);
-    setMessage("✅ Đã tải user.");
+    setMessage("✅ Đã tải danh sách nhân viên.");
   };
 
   const createUser = async () => {
@@ -162,16 +163,10 @@ export default function UsersPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Quản trị user</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Công việc</Link>
-            <Link href="/users" className="rounded bg-sky-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-600">User</Link>
-            <Link href="/departments" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Phòng ban</Link>
-            <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Phân quyền</Link>
-            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Theo user</Link>
-            <span className="text-xs text-slate-600">{user?.full_name} ({user?.role_name})</span>
-            <button onClick={logout} className="rounded bg-sky-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold">Quản lý nhân viên</h1>
+          <div className="mt-2">
+            <AppNav currentPath="/users" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
           </div>
         </div>
 
@@ -190,8 +185,8 @@ export default function UsersPage() {
             </select>
           </div>
           <div className="mt-3 flex gap-2">
-            <button onClick={createUser} className="rounded bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600">Tạo user</button>
-            <button onClick={loadAll} className="rounded bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600">Tải danh sách</button>
+            <button onClick={createUser} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tạo user</button>
+            <button onClick={loadAll} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tải danh sách</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>
@@ -207,15 +202,15 @@ export default function UsersPage() {
               <option value="active">Trạng thái: Active</option>
               <option value="disabled">Trạng thái: Disable</option>
             </select>
-            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">
+            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-red-100 hover:text-red-700">
               Xóa bộ lọc
             </button>
           </div>
 
           <p className="mb-2 text-xs text-slate-500">Danh sách tự sắp xếp theo: Ban biên tập → Phòng biên tập → Phòng trị sự → Phòng phóng viên; trong mỗi phòng ưu tiên chức vụ cao trước.</p>
-          <div className="overflow-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50">
+          <div className="overflow-auto rounded-lg border border-rose-100">
+            <table className="table-soft-red min-w-full text-left text-sm">
+              <thead>
                 <tr>
                   <th className="px-2 py-2">Tên</th>
                   <th className="px-2 py-2">Username</th>
@@ -227,8 +222,12 @@ export default function UsersPage() {
               </thead>
               <tbody>
                 {filteredUsers.map((u) => (
-                  <tr key={u.id} className="border-t">
-                    <td className="px-2 py-2"><Link href={`/users/${u.id}`} className="text-blue-600 underline">{u.full_name}</Link></td>
+                  <tr key={u.id} className="align-middle">
+                    <td className="px-2 py-2">
+                      <Link href={`/users/${u.id}`} className="inline-flex items-center rounded bg-red-50 px-2 py-1 font-semibold text-red-700 hover:bg-red-100">
+                        {u.full_name}
+                      </Link>
+                    </td>
                     <td className="px-2 py-2">{u.username ?? "-"}</td>
                     <td className="px-2 py-2">
                       <select
