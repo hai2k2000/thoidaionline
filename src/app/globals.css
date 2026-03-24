@@ -3,8 +3,8 @@
 :root {
   --background: #f5f5f5;
   --foreground: #2f2f33;
-  --brand-primary: #37b7ff;
-  --brand-primary-dark: #1f9eea;
+  --brand-red: #e31e24;
+  --brand-red-dark: #be171c;
 }
 
 @theme inline {
@@ -30,7 +30,7 @@ textarea {
 select,
 input,
 textarea {
-  border-color: #d7d7dc;
+  border-color: #f1b7ba;
   background: #fff;
 }
 
@@ -38,8 +38,8 @@ select:focus,
 input:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px rgba(55, 183, 255, 0.20);
+  border-color: var(--brand-red);
+  box-shadow: 0 0 0 3px rgba(227, 30, 36, 0.16);
 }
 
 button:hover {
@@ -48,4 +48,37 @@ button:hover {
 
 button:active {
   transform: translateY(0);
+}
+
+a {
+  color: #b91c1c;
+}
+
+a:hover {
+  color: #991b1b;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+table thead {
+  background: #fee2e2;
+}
+
+table thead th {
+  color: #991b1b;
+  border-bottom: 1px solid #fca5a5;
+}
+
+table tbody tr {
+  border-top: 1px solid #fecaca;
+}
+
+table tbody tr:nth-child(even) {
+  background: #fff1f2;
+}
+
+table tbody tr:hover {
+  background: #ffe4e6;
 }
