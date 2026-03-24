@@ -11,7 +11,7 @@ type AppNavProps = {
 };
 
 type Group = {
-  key: "work" | "hr" | "docs" | "admin";
+  key: "work" | "hr" | "assets" | "docs" | "admin";
   label: string;
   items: { href: string; label: string }[];
 };
@@ -34,13 +34,23 @@ const groups: Group[] = [
       { href: "/hr-profiles", label: "Hồ sơ nhân sự" },
       { href: "/attendance", label: "Chấm công" },
       { href: "/performance", label: "Đánh giá" },
-      { href: "/assets", label: "Tài sản" },
+    ],
+  },
+  {
+    key: "assets",
+    label: "Quản lý tài sản",
+    items: [
+      { href: "/assets", label: "Danh sách tài sản" },
+      { href: "/assets/new", label: "Thêm tài sản" },
     ],
   },
   {
     key: "docs",
-    label: "Quản lý công văn",
-    items: [{ href: "/documents", label: "Công văn" }],
+    label: "Quản lý tài liệu",
+    items: [
+      { href: "/documents", label: "Danh sách tài liệu" },
+      { href: "/documents/new", label: "Thêm tài liệu" },
+    ],
   },
   {
     key: "admin",
@@ -56,6 +66,8 @@ const groups: Group[] = [
 const isActive = (currentPath: string, href: string) => {
   if (href === "/") return currentPath === "/";
   if (href.startsWith("/tasks/") && currentPath.startsWith("/tasks/")) return true;
+  if (href === "/documents" && currentPath.startsWith("/documents/")) return true;
+  if (href === "/assets" && currentPath.startsWith("/assets/")) return true;
   return currentPath === href;
 };
 

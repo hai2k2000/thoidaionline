@@ -91,7 +91,7 @@ export default function AssetsPage() {
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
       <div className="mx-auto max-w-6xl">
         <div className="mb-4">
-          <h1 className="text-2xl font-bold">Quản lý tài sản</h1>
+          <h1 className="text-2xl font-bold">Danh sách tài sản</h1>
           <div className="mt-2">
             <AppNav currentPath="/assets" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
           </div>
