@@ -103,7 +103,7 @@ export default function HrProfileDetailPage() {
 
         <section className="rounded-xl border bg-white p-4">
           <div className="mb-3">
-            <Link href="/hr-profiles" className="inline-flex items-center rounded bg-red-50 px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-100">
+            <Link href="/hr-profiles" className="inline-flex items-center rounded bg-blue-50 px-2 py-1 text-sm font-semibold text-blue-700 hover:bg-blue-100">
               ← Quay lại danh sách hồ sơ nhân sự
             </Link>
           </div>
@@ -164,7 +164,7 @@ export default function HrProfileDetailPage() {
               <div className="mt-2 text-sm">
                 <b>File hiện tại:</b>{" "}
                 {profile?.profile_file_url ? (
-                  <a href={profile.profile_file_url} target="_blank" rel="noreferrer" className="inline-flex items-center rounded bg-red-50 px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-100">
+                  <a href={profile.profile_file_url} target="_blank" rel="noreferrer" className="inline-flex items-center rounded bg-blue-50 px-2 py-1 text-sm font-semibold text-blue-700 hover:bg-blue-100">
                     Xem file đã upload
                   </a>
                 ) : (

@@ -88,7 +88,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
                       onClick={() => setMobileOpen(false)}
                       className={`block rounded border px-3 py-2 text-sm font-semibold transition ${
                         active
-                          ? "border-red-200 bg-red-50 text-red-700"
+                          ? "border-red-200 bg-blue-50 text-blue-700"
                           : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
                       }`}
                     >
@@ -109,7 +109,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
               onClick={() => setMobileOpen(false)}
               className={`block rounded border px-3 py-2 text-sm font-semibold ${
                 currentPath === "/profile"
-                  ? "border-red-200 bg-red-50 text-red-700"
+                  ? "border-red-200 bg-blue-50 text-blue-700"
                   : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >

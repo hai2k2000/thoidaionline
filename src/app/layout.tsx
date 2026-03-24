@@ -14,8 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "diditravel",
-  description: "Phần mềm giao việc nội bộ diditravel.vn",
+  title: "Thời Đại Work",
+  description: "Hệ thống quản lý công việc nội bộ Báo Thời Đại",
+  icons: {
+    icon: "/favicon-td.png",
+    shortcut: "/favicon-td.png",
+    apple: "/favicon-td.png",
+  },
 };
 
 export default function RootLayout({
@@ -24,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

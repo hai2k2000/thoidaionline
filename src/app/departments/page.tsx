@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import AppNav from "@/components/AppNav";
 
 type Department = { id: string; code: string; name: string; active: boolean };
 
@@ -53,16 +53,10 @@ export default function DepartmentsPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4">
           <h1 className="text-2xl font-bold">Quản trị phòng ban</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Công việc</Link>
-            <Link href="/users" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">User</Link>
-            <Link href="/departments" className="rounded bg-sky-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-600">Phòng ban</Link>
-            <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Phân quyền</Link>
-            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Theo user</Link>
-            <span className="text-xs text-slate-600">{user?.full_name} ({user?.role_name})</span>
-            <button onClick={logout} className="rounded bg-sky-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
+          <div className="mt-2">
+            <AppNav currentPath="/departments" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
           </div>
         </div>
 
@@ -71,7 +65,7 @@ export default function DepartmentsPage() {
           <div className="grid gap-2 md:grid-cols-3">
             <input className="rounded border px-3 py-2" placeholder="Mã phòng ban (vd: content)" value={code} onChange={(e) => setCode(e.target.value)} />
             <input className="rounded border px-3 py-2" placeholder="Tên phòng ban" value={name} onChange={(e) => setName(e.target.value)} />
-            <button onClick={createDepartment} className="rounded bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600">Tạo phòng ban</button>
+            <button onClick={createDepartment} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">Tạo phòng ban</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>

@@ -7,32 +7,35 @@ import { useAuth } from "@/lib/auth";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState("admin");
-  const [password, setPassword] = useState("123456");
-  const [message, setMessage] = useState("Đăng nhập bằng tài khoản nội bộ DiDiTravel.");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("Dùng username, email hoặc số điện thoại.");
 
   const submit = async () => {
-    const res = await login(identifier.trim(), password);
-    if (!res.ok) return setMessage(`❌ ${res.error}`);
-    setMessage("✅ Đăng nhập thành công.");
-    router.push("/");
+    try {
+      const res = await login(identifier.trim(), password);
+      if (!res.ok) return setMessage(`❌ ${res.error}`);
+      setMessage("✅ Đăng nhập thành công.");
+      router.push("/");
+    } catch {
+      setMessage("❌ Không kết nối được dữ liệu đăng nhập. Vui lòng thử lại.");
+    }
   };
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:p-6">
-      <div className="mx-auto mt-6 w-full max-w-md rounded-xl border bg-white p-4 shadow-sm sm:mt-12 sm:p-6">
+      <div className="mx-auto mt-6 w-full max-w-md rounded-xl border bg-white p-4 sm:mt-16 sm:p-6">
         <div className="mb-4 flex items-center gap-3">
-          <img src="/diditravel-logo.png" alt="DiDiTravel" className="h-24 w-24 rounded-2xl border border-sky-100 object-cover shadow-sm" />
+          <img src="/thoidai-logo.png" alt="Báo Thời Đại" className="h-14 w-auto object-contain" />
           <div>
-            <h1 className="text-xl font-bold text-sky-700 sm:text-2xl">DiDiTravel Task Manager</h1>
-            <p className="text-xs text-slate-500">Giải pháp giao việc nội bộ</p>
+            <h1 className="text-xl font-bold sm:text-2xl">Thời Đại Work</h1>
+            <p className="text-xs text-slate-500">Hệ thống quản lý công việc nội bộ</p>
           </div>
         </div>
-
-        <div className="space-y-3">
+        <div className="mt-4 space-y-3">
           <input
             className="w-full rounded border px-3 py-3 text-base"
-            placeholder="Tài khoản (vd: admin)"
+            placeholder="Username, email hoặc số điện thoại"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
           />
@@ -43,11 +46,10 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button onClick={submit} className="w-full rounded bg-sky-500 px-4 py-3 text-base font-semibold text-white hover:bg-sky-600">
+          <button onClick={submit} className="w-full rounded bg-slate-900 px-4 py-3 text-base font-semibold text-white">
             Đăng nhập
           </button>
           <p className="text-sm text-slate-600">{message}</p>
-          <p className="text-xs text-slate-500">Tài khoản mẫu: admin / ceo / coo / ketoantruong</p>
         </div>
       </div>
     </main>

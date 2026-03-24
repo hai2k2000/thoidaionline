@@ -107,7 +107,7 @@ export default function AssetDetailPage() {
 
         <section className="rounded-xl border bg-white p-4">
           <div className="mb-3">
-            <Link href="/assets" className="inline-flex items-center rounded bg-red-50 px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-100">← Quay lại danh sách tài sản</Link>
+            <Link href="/assets" className="inline-flex items-center rounded bg-blue-50 px-2 py-1 text-sm font-semibold text-blue-700 hover:bg-blue-100">← Quay lại danh sách tài sản</Link>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">

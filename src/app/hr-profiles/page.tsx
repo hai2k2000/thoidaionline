@@ -183,7 +183,7 @@ export default function HrProfilesPage() {
               {mergedRows.map(({ user: su, profile }) => (
                 <tr key={su.id} className="cursor-pointer border-t hover:bg-slate-50" onClick={() => router.push(`/hr-profiles/${su.id}`)}>
                   <td className="px-2 py-2">
-                    <Link href={`/hr-profiles/${su.id}`} className="inline-flex items-center rounded bg-red-50 px-2 py-1 font-semibold text-red-700 hover:bg-red-100" onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/hr-profiles/${su.id}`} className="inline-flex items-center rounded bg-blue-50 px-2 py-1 font-semibold text-blue-700 hover:bg-blue-100" onClick={(e) => e.stopPropagation()}>
                       {su.full_name}
                     </Link>
                   </td>
