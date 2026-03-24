@@ -251,7 +251,7 @@ export default function UsersPage() {
                     <td className="px-2 py-2">{u.active ? "active" : "disable"}</td>
                     <td className="px-2 py-2">
                       <div className="flex flex-wrap gap-2">
-                        <button onClick={() => updateUser(u.id, { active: !u.active })} className="rounded bg-slate-200 px-2 py-1 text-xs">{u.active ? "Disable" : "Enable"}</button>
+                        <button onClick={() => updateUser(u.id, { active: !u.active })} className="rounded bg-slate-200 px-2 py-1 text-xs">{u.active ? "Khóa" : "Mở"}</button>
                         <button onClick={() => resetPassword(u.id)} className="rounded bg-amber-500 px-2 py-1 text-xs text-white">Reset mật khẩu</button>
                       </div>
                     </td>

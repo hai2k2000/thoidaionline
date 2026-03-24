@@ -9,6 +9,13 @@ import AppNav from "@/components/AppNav";
 
 type StaffUser = { id: string; full_name: string; username?: string | null };
 
+const docStatusLabel: Record<string, string> = {
+  new: "Mới",
+  in_progress: "Đang xử lý",
+  done: "Hoàn thành",
+  archived: "Lưu trữ",
+};
+
 export default function DocumentsPage() {
   const router = useRouter();
   const { loading: authLoading, user, logout, canAccessModule } = useAuth();

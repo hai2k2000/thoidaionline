@@ -8,6 +8,26 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import type { OfficialDocument } from "@/lib/services";
 
+const urgencyLabel: Record<string, string> = {
+  normal: "Bình thường",
+  important: "Quan trọng",
+  urgent: "Khẩn",
+};
+
+const confidentialityLabel: Record<string, string> = {
+  normal: "Thường",
+  internal: "Nội bộ",
+  secret: "Mật",
+};
+
+const docStatusLabel: Record<string, string> = {
+  new: "Mới",
+  in_progress: "Đang xử lý",
+  done: "Hoàn thành",
+  archived: "Lưu trữ",
+  todo: "Chờ xử lý",
+};
+
 type Assignment = {
   id: string;
   assignee_id: string | null;
@@ -78,9 +98,9 @@ export default function DocumentDetailPage() {
             <div><b>Mã công văn:</b> {doc?.doc_code ?? "-"}</div>
             <div><b>Loại:</b> {doc?.direction === "incoming" ? "Công văn đến" : "Công văn đi"}</div>
             <div className="md:col-span-2"><b>Tiêu đề:</b> {doc?.title ?? "-"}</div>
-            <div><b>Mức độ khẩn:</b> {doc?.urgency ?? "normal"}</div>
-            <div><b>Bảo mật:</b> {doc?.confidentiality ?? "normal"}</div>
-            <div><b>Trạng thái:</b> {doc?.status ?? "new"}</div>
+            <div><b>Mức độ khẩn:</b> {urgencyLabel[doc?.urgency ?? "normal"] ?? (doc?.urgency ?? "-")}</div>
+            <div><b>Bảo mật:</b> {confidentialityLabel[doc?.confidentiality ?? "normal"] ?? (doc?.confidentiality ?? "-")}</div>
+            <div><b>Trạng thái:</b> {docStatusLabel[doc?.status ?? "new"] ?? (doc?.status ?? "-")}</div>
             <div><b>Hạn xử lý:</b> {doc?.processing_deadline ? new Date(doc.processing_deadline).toLocaleDateString("vi-VN") : "-"}</div>
             <div className="md:col-span-2"><b>Tóm tắt:</b> {doc?.summary ?? "-"}</div>
             <div className="md:col-span-2"><b>Ghi chú:</b> {doc?.note ?? "-"}</div>

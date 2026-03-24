@@ -94,7 +94,7 @@ export default function UserDetailPage() {
             <section className="mt-4 rounded-xl border bg-white p-4">
               <h3 className="mb-2 text-lg font-semibold">Công việc đang phụ trách</h3>
               <table className="table-soft-red min-w-full text-left text-sm">
-                <thead><tr><th className="px-2 py-2">Task</th><th className="px-2 py-2">Trạng thái</th><th className="px-2 py-2">Tiến độ</th><th className="px-2 py-2">Hạn</th><th className="px-2 py-2">Chi tiết</th></tr></thead>
+                <thead><tr><th className="px-2 py-2">Công việc</th><th className="px-2 py-2">Trạng thái</th><th className="px-2 py-2">Tiến độ</th><th className="px-2 py-2">Hạn</th><th className="px-2 py-2">Chi tiết</th></tr></thead>
                 <tbody>
                   {tasks.map((t) => (
                     <tr key={t.id}>
