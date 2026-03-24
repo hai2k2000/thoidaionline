@@ -104,7 +104,6 @@ export default function AssetsPage() {
             <input className="rounded border px-3 py-2" placeholder="Lọc theo nhóm" value={qCategory} onChange={(e) => setQCategory(e.target.value)} />
             <select className="rounded border px-3 py-2" value={qStatus} onChange={(e) => setQStatus(e.target.value)}>
               <option value="">Tất cả tình trạng</option>
-              <option value="available">{assetStatusLabel.available}</option>
               <option value="in_use">{assetStatusLabel.in_use}</option>
               <option value="maintenance">{assetStatusLabel.maintenance}</option>
               <option value="broken">{assetStatusLabel.broken}</option>
