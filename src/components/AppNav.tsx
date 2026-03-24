@@ -48,6 +48,7 @@ const groups: Group[] = [
     key: "docs",
     label: "Quản lý tài liệu",
     items: [
+      { href: "/documents/common", label: "Tài liệu chung" },
       { href: "/documents", label: "Danh sách tài liệu" },
       { href: "/documents/new", label: "Thêm tài liệu" },
     ],
@@ -73,19 +74,30 @@ const isActive = (currentPath: string, href: string) => {
 
 export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { hasPermission } = useAuth();
+  const { hasPermission, canAccessModule } = useAuth();
   const canCreateTask = hasPermission("can_create_task");
+  const canManageDocuments = canAccessModule("documents");
 
   const visibleGroups: Group[] = groups
     .map((g) => {
-      if (g.key !== "work") return g;
-      return {
-        ...g,
-        items: g.items.filter((i) => {
-          if (canCreateTask) return true;
-          return i.href === "/tasks/active" || i.href === "/tasks/done";
-        }),
-      };
+      if (g.key === "work") {
+        return {
+          ...g,
+          items: g.items.filter((i) => {
+            if (canCreateTask) return true;
+            return i.href === "/tasks/active" || i.href === "/tasks/done";
+          }),
+        };
+      }
+
+      if (g.key === "docs" && !canManageDocuments) {
+        return {
+          ...g,
+          items: g.items.filter((i) => i.href === "/documents/common"),
+        };
+      }
+
+      return g;
     })
     .filter((g) => g.items.length > 0);
 
