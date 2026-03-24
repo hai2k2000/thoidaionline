@@ -10,12 +10,13 @@ import { supabase } from "@/lib/supabase";
 type Task = {
   id: string;
   title: string;
+  assignee_id?: string | null;
   priority: "low" | "normal" | "high" | "urgent";
   status: "new" | "in_progress" | "pending_review" | "done" | "rejected";
   progress_percent: number;
   due_date: string | null;
   departments?: { name: string } | null;
-  task_assignees?: { staff_users?: { full_name: string } | null }[];
+  task_assignees?: { user_id: string; staff_users?: { full_name: string | null } | null }[];
 };
 
 const priorityLabel: Record<Task["priority"], string> = {
@@ -65,7 +66,7 @@ export default function TaskStatusTablePage({
   const loadData = async () => {
     const { data, error } = await supabase
       .from("tasks")
-      .select("id,title,priority,status,progress_percent,due_date,departments(name),task_assignees(staff_users(full_name))")
+      .select("id,title,assignee_id,priority,status,progress_percent,due_date,departments(name),task_assignees(user_id,staff_users(full_name))")
       .order("created_at", { ascending: false })
       .limit(500);
 
@@ -74,7 +75,10 @@ export default function TaskStatusTablePage({
     const fetched = (data ?? []) as unknown as Task[];
     const visible = hasPermission("can_edit_all_tasks")
       ? fetched
-      : fetched.filter((t) => (t.task_assignees ?? []).some((a) => a.staff_users));
+      : fetched.filter((t) => {
+          const inAssigneeList = (t.task_assignees ?? []).some((a) => a.user_id === user?.id);
+          return t.assignee_id === user?.id || inAssigneeList;
+        });
 
     setTasks(visible);
     setMessage(`✅ Đã tải ${visible.length} công việc.`);

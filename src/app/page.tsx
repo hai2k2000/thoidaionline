@@ -333,11 +333,15 @@ export default function Home() {
       router.push("/login");
       return;
     }
+    if (!hasPermission("can_create_task")) {
+      router.push("/tasks/active");
+      return;
+    }
     const t = setTimeout(() => {
       void loadAll();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, hasPermission]);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">

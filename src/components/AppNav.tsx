@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth";
 
 type AppNavProps = {
   currentPath: string;
@@ -60,6 +61,21 @@ const isActive = (currentPath: string, href: string) => {
 
 export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { hasPermission } = useAuth();
+  const canCreateTask = hasPermission("can_create_task");
+
+  const visibleGroups: Group[] = groups
+    .map((g) => {
+      if (g.key !== "work") return g;
+      return {
+        ...g,
+        items: g.items.filter((i) => {
+          if (canCreateTask) return true;
+          return i.href === "/tasks/active" || i.href === "/tasks/done";
+        }),
+      };
+    })
+    .filter((g) => g.items.length > 0);
 
   return (
     <aside className="w-full lg:float-left lg:mr-4 lg:w-[250px]">
@@ -75,7 +91,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         <p className="mb-3 text-sm font-bold text-slate-700">Menu</p>
 
         <div className="space-y-3">
-          {groups.map((g) => (
+          {visibleGroups.map((g) => (
             <div key={g.key}>
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">{g.label}</p>
               <div className="space-y-1">
