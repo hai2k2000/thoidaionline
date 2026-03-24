@@ -20,7 +20,7 @@ type StaffUser = {
 
 export default function HrProfilesPage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
 
   const [rows, setRows] = useState<EmployeeProfile[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
@@ -88,7 +88,7 @@ export default function HrProfilesPage() {
     if (usersRes.error) return setMessage(`❌ ${usersRes.error.message}`);
 
     setRows(profilesRes.data);
-    const normalizedUsers = ((usersRes.data ?? []) as Array<
+    let normalizedUsers = ((usersRes.data ?? []) as Array<
       StaffUser & {
         roles?: { code?: string | null } | null;
         departments?: { code?: string | null; name?: string | null } | null;
@@ -104,6 +104,10 @@ export default function HrProfilesPage() {
         department_code: u.departments?.code ?? null,
         department_name: u.departments?.name ?? null,
       }));
+
+    if (!hasPermission("can_edit_all_tasks")) {
+      normalizedUsers = normalizedUsers.filter((u) => u.id === user?.id);
+    }
 
     setStaffUsers(normalizedUsers);
     setMessage(`✅ Đã tải ${profilesRes.data.length} hồ sơ trên danh sách nhân viên hiện tại.`);
@@ -125,7 +129,7 @@ export default function HrProfilesPage() {
       void loadData();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router]);
+  }, [authLoading, user, canAccessModule, router, hasPermission]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">

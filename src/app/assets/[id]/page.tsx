@@ -19,7 +19,7 @@ const assetStatusLabel: Record<string, string> = {
 export default function AssetDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
 
   const [asset, setAsset] = useState<Asset | null>(null);
   const [message, setMessage] = useState("Đang tải...");
@@ -30,6 +30,23 @@ export default function AssetDetailPage() {
     const { data, error } = await supabase.from("assets").select("*").eq("id", id).single();
 
     if (error) return setMessage(`❌ ${error.message}`);
+
+    if (!hasPermission("can_edit_all_tasks") && user?.id) {
+      const { data: assignData, error: assignErr } = await supabase
+        .from("asset_assignments")
+        .select("id")
+        .eq("asset_id", id)
+        .eq("assignee_id", user.id)
+        .eq("status", "active")
+        .is("returned_at", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (assignErr || !assignData) {
+        setMessage("❌ Bạn không có quyền xem chi tiết tài sản này.");
+        return void router.push("/assets");
+      }
+    }
 
     setAsset((data ?? null) as Asset | null);
     setMessage("✅ Đã tải chi tiết tài sản.");
@@ -67,7 +84,7 @@ export default function AssetDetailPage() {
     if (!params?.id) return;
     const t = setTimeout(() => void load(params.id), 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, params?.id, router]);
+  }, [authLoading, user, canAccessModule, params?.id, router, hasPermission]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">

@@ -20,7 +20,7 @@ type Staff = {
 export default function HrProfileDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
 
   const [staff, setStaff] = useState<Staff | null>(null);
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
@@ -83,11 +83,14 @@ export default function HrProfileDetailPage() {
     if (!user) return void router.push("/login");
     if (!canAccessModule("hr")) return void router.push("/");
     if (!params?.id) return;
+    if (!hasPermission("can_edit_all_tasks") && params.id !== user.id) {
+      return void router.push(`/hr-profiles/${user.id}`);
+    }
     const t = setTimeout(() => {
       void load(params.id);
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, params?.id, router]);
+  }, [authLoading, user, canAccessModule, params?.id, router, hasPermission]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">

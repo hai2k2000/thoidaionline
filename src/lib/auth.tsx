@@ -185,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (module === "hr") return true;
     if (module === "assets") return true;
     if (module === "documents") return operations.has(user.role_code) || managers.has(user.role_code);
-    if (module === "performance") return true;
+    if (module === "performance") return managers.has(user.role_code) || operations.has(user.role_code);
 
     return false;
   };
