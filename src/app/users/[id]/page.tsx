@@ -102,7 +102,7 @@ export default function UserDetailPage() {
                       <td className="px-2 py-2">{t.status}</td>
                       <td className="px-2 py-2">{t.progress_percent}%</td>
                       <td className="px-2 py-2">{t.due_date ?? "-"}</td>
-                      <td className="px-2 py-2"><Link href={`/tasks/${t.id}`} className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-sky-50 to-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 hover:from-sky-100 hover:to-blue-200">Mở</Link></td>
+                      <td className="px-2 py-2"><Link href={`/tasks/${t.id}`} className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 text-xs font-semibold text-blue-800 hover:from-cyan-100 hover:to-blue-300">Mở</Link></td>
                     </tr>
                   ))}
                   {tasks.length === 0 ? <tr><td colSpan={5} className="px-2 py-6 text-center text-slate-500">User chưa có task.</td></tr> : null}

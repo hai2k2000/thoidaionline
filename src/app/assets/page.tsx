@@ -129,7 +129,7 @@ export default function AssetsPage() {
               {filteredRows.map((r) => (
                 <tr key={r.id ?? r.asset_code} className="cursor-pointer" onClick={() => router.push(`/assets/${r.id}`)}>
                   <td className="px-2 py-2">
-                    <span className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-sky-50 to-blue-100 px-2 py-1 font-semibold text-blue-800">{r.asset_name}</span>
+                    <span className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 font-semibold text-blue-800">{r.asset_name}</span>
                   </td>
                   <td className="px-2 py-2">{r.category}</td>
                   <td className="px-2 py-2">{r.assigned_to_label ?? "-"}</td>

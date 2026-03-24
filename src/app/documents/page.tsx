@@ -128,7 +128,7 @@ export default function DocumentsPage() {
                   <td className="px-2 py-2">{r.doc_code}</td>
                   <td className="px-2 py-2">{r.direction === "incoming" ? "Đến" : "Đi"}</td>
                   <td className="px-2 py-2">
-                    <span className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-sky-50 to-blue-100 px-2 py-1 font-semibold text-blue-800">{r.title}</span>
+                    <span className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 font-semibold text-blue-800">{r.title}</span>
                   </td>
                   <td className="px-2 py-2">{r.status ?? "new"}</td>
                 </tr>

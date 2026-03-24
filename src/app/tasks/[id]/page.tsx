@@ -275,7 +275,7 @@ export default function TaskDetailPage() {
               </div>
               <p className="mt-2 text-sm"><b>Người thực hiện:</b> {task.task_assignees?.map((a) => a.staff_users?.full_name).filter(Boolean).join(", ") || "-"}</p>
               {task.attachment_url ? (
-                <a href={task.attachment_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-sky-50 to-blue-100 px-2 py-1 text-sm font-semibold text-blue-800 hover:from-sky-100 hover:to-blue-200">
+                <a href={task.attachment_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 text-sm font-semibold text-blue-800 hover:from-cyan-100 hover:to-blue-300">
                   Mở file đính kèm
                 </a>
               ) : null}

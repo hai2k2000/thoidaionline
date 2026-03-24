@@ -224,7 +224,7 @@ export default function UsersPage() {
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="align-middle">
                     <td className="px-2 py-2">
-                      <Link href={`/users/${u.id}`} className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-sky-50 to-blue-100 px-2 py-1 font-semibold text-blue-800 hover:from-sky-100 hover:to-blue-200">
+                      <Link href={`/users/${u.id}`} className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 font-semibold text-blue-800 hover:from-cyan-100 hover:to-blue-300">
                         {u.full_name}
                       </Link>
                     </td>
