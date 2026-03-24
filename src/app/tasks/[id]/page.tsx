@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import AppNav from "@/components/AppNav";
 
 type TaskDetail = {
   id: string;
@@ -14,20 +14,27 @@ type TaskDetail = {
   status: string;
   progress_percent: number;
   due_date: string | null;
-  created_at: string;
   attachment_url: string | null;
   assignee_id: string | null;
   owner_id: string | null;
-  created_by: string | null;
   assignment_mode: "individual" | "multi_user" | "department" | "mixed";
   departments?: { name: string } | null;
   owner?: { full_name: string } | null;
-  requester?: { full_name: string } | null;
   task_assignees?: { user_id: string; assignment_role: string; status: string; staff_users?: { full_name: string } | null }[];
 };
 
 type Comment = { id: string; content: string; created_at: string; staff_users?: { full_name: string } | null };
 type ProgressLog = { id: string; old_progress: number | null; new_progress: number; note: string | null; created_at: string; staff_users?: { full_name: string } | null };
+type CompletionLevel = "not_done" | "done" | "excellent";
+type TaskEvalConfig = {
+  completion: CompletionLevel;
+  onTime: boolean;
+  hardTask: boolean;
+  improvement: boolean;
+  contribution: boolean;
+};
+
+const TASK_EVAL_STORAGE_KEY = "thoidai_task_eval_v1";
 
 export default function TaskDetailPage() {
   const router = useRouter();
@@ -43,6 +50,7 @@ export default function TaskDetailPage() {
   const [reportText, setReportText] = useState("");
   const [blockersText, setBlockersText] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [taskEval, setTaskEval] = useState<TaskEvalConfig>({ completion: "done", onTime: true, hardTask: false, improvement: false, contribution: true });
 
   const loadData = async () => {
     if (!taskId) return;
@@ -51,7 +59,7 @@ export default function TaskDetailPage() {
       supabase
         .from("tasks")
         .select(
-          "id,title,description,priority,status,progress_percent,due_date,created_at,attachment_url,assignee_id,owner_id,created_by,assignment_mode,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),requester:staff_users!tasks_created_by_fkey(full_name),task_assignees(user_id,assignment_role,status,staff_users(full_name))",
+          "id,title,description,priority,status,progress_percent,due_date,attachment_url,assignee_id,owner_id,assignment_mode,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),task_assignees(user_id,assignment_role,status,staff_users(full_name))",
         )
         .eq("id", taskId)
         .single(),
@@ -75,7 +83,7 @@ export default function TaskDetailPage() {
     const loadedTask = taskRes.data as unknown as TaskDetail;
 
     const isAssigned = !!loadedTask.task_assignees?.some((a) => a.user_id === user?.id);
-    const canViewTask = !!user && (hasPermission("can_edit_all_tasks") || loadedTask.created_by === user.id || loadedTask.owner_id === user.id || loadedTask.assignee_id === user.id || isAssigned);
+    const canViewTask = !!user && (hasPermission("can_edit_all_tasks") || loadedTask.owner_id === user.id || loadedTask.assignee_id === user.id || isAssigned);
     if (!canViewTask) {
       setTask(null);
       setComments([]);
@@ -86,10 +94,47 @@ export default function TaskDetailPage() {
     }
 
     setTask(loadedTask);
+    setTaskEval(loadTaskEvalFromStorage(loadedTask.id, loadedTask));
     setNewProgress(loadedTask.progress_percent ?? 0);
     setComments((commentRes.data ?? []) as unknown as Comment[]);
     setLogs((logRes.data ?? []) as unknown as ProgressLog[]);
     setMessage("✅ Đã tải chi tiết công việc.");
+  };
+
+  const loadTaskEvalFromStorage = (id: string, targetTask?: TaskDetail | null): TaskEvalConfig => {
+    if (typeof window === "undefined") return { completion: "done", onTime: true, hardTask: false, improvement: false, contribution: true };
+    try {
+      const raw = localStorage.getItem(TASK_EVAL_STORAGE_KEY);
+      const map = raw ? (JSON.parse(raw) as Record<string, TaskEvalConfig>) : {};
+      if (map[id]) return map[id];
+    } catch {
+      // ignore
+    }
+
+    const defaultCompletion: CompletionLevel = targetTask?.status === "done"
+      ? ((targetTask.progress_percent ?? 0) >= 95 ? "excellent" : "done")
+      : "not_done";
+    const onTime = targetTask?.due_date ? targetTask.due_date >= new Date().toISOString().slice(0, 10) : true;
+    const title = targetTask?.title ?? "";
+    return {
+      completion: defaultCompletion,
+      onTime,
+      hardTask: /\[HARD\]/i.test(title),
+      improvement: /\[IMPROVE\]/i.test(title),
+      contribution: !/\[NO_CONTRIB\]/i.test(title),
+    };
+  };
+
+  const saveTaskEvalToStorage = (id: string, cfg: TaskEvalConfig) => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(TASK_EVAL_STORAGE_KEY);
+      const map = raw ? (JSON.parse(raw) as Record<string, TaskEvalConfig>) : {};
+      map[id] = cfg;
+      localStorage.setItem(TASK_EVAL_STORAGE_KEY, JSON.stringify(map));
+    } catch {
+      // ignore
+    }
   };
 
   const canUserSubmitReport = (targetTask: TaskDetail, userId: string) => {
@@ -108,10 +153,11 @@ export default function TaskDetailPage() {
     setSubmittingReport(true);
     try {
       const oldProgress = task.progress_percent;
+      const nextStatus = newProgress >= 100 ? "pending_review" : (task.status === "new" ? "in_progress" : task.status);
 
       const { error: updateError } = await supabase
         .from("tasks")
-        .update({ progress_percent: newProgress, updated_at: new Date().toISOString() })
+        .update({ progress_percent: newProgress, status: nextStatus, updated_at: new Date().toISOString() })
         .eq("id", task.id);
       if (updateError) throw updateError;
 
@@ -140,7 +186,49 @@ export default function TaskDetailPage() {
 
       setReportText("");
       setBlockersText("");
-      setMessage("✅ Đã gửi báo cáo tiến triển và vướng mắc cho người giao việc.");
+      setMessage(newProgress >= 100
+        ? "✅ Đã gửi báo cáo hoàn thành cho người giao việc. Công việc chuyển sang trạng thái Chờ duyệt."
+        : "✅ Đã gửi báo cáo tiến triển và vướng mắc cho người giao việc.");
+      await loadData();
+    } catch (e) {
+      setMessage(`❌ ${(e as Error).message}`);
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
+  const markTaskDoneAndSubmit = async () => {
+    if (!task || !user) return;
+    const canSubmit = canUserSubmitReport(task, user.id);
+    if (!canSubmit) return setMessage("❌ Bạn không có quyền hoàn thành công việc này."), undefined;
+
+    setSubmittingReport(true);
+    try {
+      const oldProgress = task.progress_percent;
+      const { error: updateError } = await supabase
+        .from("tasks")
+        .update({ progress_percent: 100, status: "pending_review", updated_at: new Date().toISOString() })
+        .eq("id", task.id);
+      if (updateError) throw updateError;
+
+      const { error: logError } = await supabase.from("task_progress_logs").insert({
+        task_id: task.id,
+        user_id: user.id,
+        old_progress: oldProgress,
+        new_progress: 100,
+        note: "Đánh dấu hoàn thành, chuyển chờ phê duyệt",
+      });
+      if (logError) throw logError;
+
+      const { error: commentError } = await supabase.from("task_comments").insert({
+        task_id: task.id,
+        user_id: user.id,
+        content: "✅ Nhân viên đã đánh dấu hoàn thành. Công việc chuyển sang trạng thái Chờ duyệt.",
+      });
+      if (commentError) throw commentError;
+
+      setNewProgress(100);
+      setMessage("✅ Đã chuyển công việc sang Chờ duyệt. Chờ sếp phê duyệt để hoàn thành.");
       await loadData();
     } catch (e) {
       setMessage(`❌ ${(e as Error).message}`);
@@ -160,15 +248,15 @@ export default function TaskDetailPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:p-6">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-bold sm:text-2xl">Chi tiết yêu cầu IT</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-sky-100 hover:text-sky-700">Về danh sách yêu cầu</Link>
-            <span className="text-xs text-slate-600">{user?.full_name} ({user?.role_name})</span>
-            <button onClick={logout} className="rounded bg-sky-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
-          </div>
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
+        <div className="mb-4 lg:mb-0">
+          <AppNav currentPath="/tasks/[id]" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
         </div>
+
+        <div>
+          <div className="mb-4">
+            <h1 className="text-xl font-bold sm:text-2xl">Chi tiết công việc</h1>
+          </div>
 
         <p className="mb-3 text-sm text-slate-600">{message}</p>
 
@@ -177,19 +265,132 @@ export default function TaskDetailPage() {
             <section className="rounded-xl border bg-white p-4">
               <h2 className="text-xl font-semibold">{task.title}</h2>
               <p className="mt-2 text-sm text-slate-600">{task.description || "(Không có mô tả)"}</p>
-              <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+              <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
                 <p><b>Phòng:</b> {task.departments?.name ?? "-"}</p>
+                <p><b>Owner chính:</b> {task.owner?.full_name ?? "-"}</p>
+                <p><b>Hạn:</b> {task.due_date ?? "-"}</p>
+                <p><b>Ưu tiên:</b> {task.priority}</p>
                 <p><b>Trạng thái:</b> {task.status}</p>
-                <p><b>Người yêu cầu:</b> {task.requester?.full_name ?? "-"}</p>
-                <p><b>Thời gian yêu cầu:</b> {new Date(task.created_at).toLocaleString("vi-VN")}</p>
-                <p><b>Người phụ trách:</b> {task.owner?.full_name ?? "-"}</p>
-                <p><b>Tiến độ xử lý:</b> {task.progress_percent}%</p>
+                <p><b>Tiến độ:</b> {task.progress_percent}%</p>
               </div>
+              <p className="mt-2 text-sm"><b>Người thực hiện:</b> {task.task_assignees?.map((a) => a.staff_users?.full_name).filter(Boolean).join(", ") || "-"}</p>
               {task.attachment_url ? (
-                <a href={task.attachment_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm text-blue-600 underline">
+                <a href={task.attachment_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center rounded bg-red-50 px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-100">
                   Mở file đính kèm
                 </a>
               ) : null}
+
+              {hasPermission("can_edit_all_tasks") && task.status === "pending_review" ? (
+                <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+                  <button
+                    onClick={async () => {
+                      const { error } = await supabase.from("tasks").update({ status: "done", updated_at: new Date().toISOString() }).eq("id", task.id);
+                      if (error) return setMessage(`❌ ${error.message}`), undefined;
+                      await supabase.from("task_comments").insert({
+                        task_id: task.id,
+                        user_id: user?.id,
+                        content: "✅ Sếp đã phê duyệt. Công việc chuyển sang Hoàn thành.",
+                      });
+                      setMessage("✅ Đã phê duyệt công việc.");
+                      await loadData();
+                    }}
+                    className="rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                  >
+                    Phê duyệt hoàn thành
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const { error } = await supabase.from("tasks").update({ status: "rejected", updated_at: new Date().toISOString() }).eq("id", task.id);
+                      if (error) return setMessage(`❌ ${error.message}`), undefined;
+                      await supabase.from("task_comments").insert({
+                        task_id: task.id,
+                        user_id: user?.id,
+                        content: "↩️ Sếp từ chối hoàn thành. Công việc chuyển về Trả lại.",
+                      });
+                      setMessage("✅ Đã trả lại công việc để chỉnh sửa.");
+                      await loadData();
+                    }}
+                    className="rounded bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                  >
+                    Trả lại công việc
+                  </button>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="mt-4 rounded-xl border bg-white p-4">
+              <h3 className="mb-2 text-lg font-semibold">Đánh giá công việc (cho bảng điểm cá nhân)</h3>
+              <div className="grid gap-2 md:grid-cols-5">
+                <label className="text-sm">
+                  Mức hoàn thành
+                  <select
+                    className="mt-1 w-full rounded border px-3 py-2"
+                    value={taskEval.completion}
+                    onChange={(e) => {
+                      const next = { ...taskEval, completion: e.target.value as CompletionLevel };
+                      setTaskEval(next);
+                      if (task) saveTaskEvalToStorage(task.id, next);
+                    }}
+                  >
+                    <option value="not_done">Không hoàn thành</option>
+                    <option value="done">Hoàn thành</option>
+                    <option value="excellent">Xuất sắc</option>
+                  </select>
+                </label>
+
+                <label className="flex items-center gap-2 text-sm mt-6 md:mt-0">
+                  <input
+                    type="checkbox"
+                    checked={taskEval.onTime}
+                    onChange={(e) => {
+                      const next = { ...taskEval, onTime: e.target.checked };
+                      setTaskEval(next);
+                      if (task) saveTaskEvalToStorage(task.id, next);
+                    }}
+                  />
+                  Đúng tiến độ
+                </label>
+
+                <label className="flex items-center gap-2 text-sm mt-6 md:mt-0">
+                  <input
+                    type="checkbox"
+                    checked={taskEval.hardTask}
+                    onChange={(e) => {
+                      const next = { ...taskEval, hardTask: e.target.checked };
+                      setTaskEval(next);
+                      if (task) saveTaskEvalToStorage(task.id, next);
+                    }}
+                  />
+                  Việc khó
+                </label>
+
+                <label className="flex items-center gap-2 text-sm mt-6 md:mt-0">
+                  <input
+                    type="checkbox"
+                    checked={taskEval.improvement}
+                    onChange={(e) => {
+                      const next = { ...taskEval, improvement: e.target.checked };
+                      setTaskEval(next);
+                      if (task) saveTaskEvalToStorage(task.id, next);
+                    }}
+                  />
+                  Có cải tiến
+                </label>
+
+                <label className="flex items-center gap-2 text-sm mt-6 md:mt-0">
+                  <input
+                    type="checkbox"
+                    checked={taskEval.contribution}
+                    onChange={(e) => {
+                      const next = { ...taskEval, contribution: e.target.checked };
+                      setTaskEval(next);
+                      if (task) saveTaskEvalToStorage(task.id, next);
+                    }}
+                  />
+                  Có đóng góp
+                </label>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Mặc định: Cải tiến = Không, Đóng góp = Có. Dữ liệu này được dùng trực tiếp cho trang Đánh giá.</p>
             </section>
 
             <section className="mt-4 rounded-xl border bg-white p-4">
@@ -222,13 +423,22 @@ export default function TaskDetailPage() {
                     onChange={(e) => setBlockersText(e.target.value)}
                   />
 
-                  <button
-                    onClick={submitProgressReport}
-                    disabled={submittingReport}
-                    className="rounded bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:opacity-50"
-                  >
-                    {submittingReport ? "Đang gửi báo cáo..." : "Gửi báo cáo cho người giao việc"}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={submitProgressReport}
+                      disabled={submittingReport}
+                      className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {submittingReport ? "Đang gửi báo cáo..." : "Gửi báo cáo tiến độ"}
+                    </button>
+                    <button
+                      onClick={markTaskDoneAndSubmit}
+                      disabled={submittingReport || task.status === "pending_review" || task.status === "done"}
+                      className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {task.status === "pending_review" ? "Đang chờ duyệt" : task.status === "done" ? "Đã hoàn thành" : "Ấn hoàn thành"}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-slate-500">Với giao nhóm/phòng ban, chỉ người chịu trách nhiệm chính hoặc quản lý mới gửi báo cáo. Thành viên còn lại chỉ quan sát.</p>
@@ -262,6 +472,7 @@ export default function TaskDetailPage() {
             </section>
           </>
         ) : null}
+        </div>
       </div>
     </main>
   );
