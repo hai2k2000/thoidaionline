@@ -76,7 +76,7 @@ const generateDemoRangeRows = (users: StaffDemoRow[], fromDate: string, toDate: 
 
 export default function AttendancePage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
 
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
@@ -86,20 +86,25 @@ export default function AttendancePage() {
   const loadAttendance = async () => {
     const startMonth = monthStartOf(selectedDate);
 
-    const dayQuery = supabase
+    let dayQuery = supabase
       .from("attendance_logs")
       .select("id,work_date,check_in,check_out,note,status,staff_users(full_name)")
       .eq("work_date", selectedDate)
       .order("check_in", { ascending: true, nullsFirst: false })
       .limit(500);
 
-    const monthQuery = supabase
+    let monthQuery = supabase
       .from("attendance_logs")
       .select("id,work_date,check_in,check_out,note,status,staff_users(full_name)")
       .gte("work_date", startMonth)
       .lte("work_date", selectedDate)
       .order("work_date", { ascending: true })
       .limit(10000);
+
+    if (!hasPermission("can_edit_all_tasks") && user?.id) {
+      dayQuery = dayQuery.eq("user_id", user.id);
+      monthQuery = monthQuery.eq("user_id", user.id);
+    }
 
     const [dayRes, monthRes] = await Promise.all([dayQuery, monthQuery]);
 
@@ -121,8 +126,12 @@ export default function AttendancePage() {
         return;
       }
 
-      const users = ((usersRes.data ?? []) as unknown as StaffDemoRow[])
+      let users = ((usersRes.data ?? []) as unknown as StaffDemoRow[])
         .filter((u) => (u.roles?.code ?? "") !== "tong_bien_tap");
+
+      if (!hasPermission("can_edit_all_tasks") && user?.id) {
+        users = users.filter((u) => u.id === user.id);
+      }
 
       const demoDay = generateDemoDayRows(users, selectedDate);
       const demoMonth = generateDemoRangeRows(users, startMonth, selectedDate);
@@ -155,7 +164,7 @@ export default function AttendancePage() {
       void loadAttendance();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router, selectedDate]);
+  }, [authLoading, user, canAccessModule, router, selectedDate, hasPermission]);
 
   const stats = useMemo(() => {
     const total = rows.length;

@@ -125,7 +125,7 @@ function loadTaskEvalMap(): Record<string, TaskEvalConfig> {
 
 export default function PerformancePage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState(toDateInput());
   const [formula, setFormula] = useState<EvalFormula>(defaultFormula);
@@ -246,6 +246,7 @@ export default function PerformancePage() {
   const scoreRows = useMemo(() => {
     const users = allUsers
       .filter((u) => (u.roles?.code ?? "") !== "tong_bien_tap")
+      .filter((u) => (hasPermission("can_edit_all_tasks") ? true : u.id === user?.id))
       .slice()
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "vi"));
 
@@ -314,7 +315,7 @@ export default function PerformancePage() {
         rank,
       };
     });
-  }, [allUsers, attendanceRows, monthTargetWorkDays, tasks, taskEvalMap, chiefUserId, formula, selectedDate]);
+  }, [allUsers, attendanceRows, monthTargetWorkDays, tasks, taskEvalMap, chiefUserId, formula, selectedDate, hasPermission, user?.id]);
 
   const saveFormula = () => {
     if (typeof window === "undefined") return;

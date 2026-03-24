@@ -24,7 +24,7 @@ const assetStatusLabel: Record<string, string> = {
 
 export default function AssetsPage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
 
   const [rows, setRows] = useState<AssetRow[]>([]);
   const [message, setMessage] = useState("Đang tải...");
@@ -60,8 +60,12 @@ export default function AssetsPage() {
     });
 
     const mapped = assetsRes.data.map((a) => ({ ...a, assigned_to_label: assignedMap.get(a.id ?? "") ?? "-" }));
-    setRows(mapped);
-    setMessage(`✅ Đã tải ${mapped.length} tài sản.`);
+
+    const visible = hasPermission("can_edit_all_tasks")
+      ? mapped
+      : mapped.filter((a) => assignments.some((x) => x.asset_id === a.id && x.assignee_id === user?.id));
+    setRows(visible);
+    setMessage(`✅ Đã tải ${visible.length} tài sản.`);
   };
 
   useEffect(() => {
@@ -72,7 +76,7 @@ export default function AssetsPage() {
       void loadData();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router]);
+  }, [authLoading, user, canAccessModule, router, hasPermission]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
@@ -133,7 +137,7 @@ export default function AssetsPage() {
                   </td>
                   <td className="px-2 py-2">{r.category}</td>
                   <td className="px-2 py-2">{r.assigned_to_label ?? "-"}</td>
-                  <td className="px-2 py-2">{r.status ?? "available"}</td>
+                  <td className="px-2 py-2">{assetStatusLabel[r.status ?? "available"] ?? (r.status ?? "-")}</td>
                   <td className="px-2 py-2">{r.note ?? "-"}</td>
                   <td className="px-2 py-2">
                     <Link href={`/assets/${r.id}`} className="rounded bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-300" onClick={(e) => e.stopPropagation()}>
