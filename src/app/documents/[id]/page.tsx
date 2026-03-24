@@ -89,7 +89,7 @@ export default function DocumentDetailPage() {
 
         <section className="rounded-xl border bg-white p-4">
           <div className="mb-3">
-            <Link href="/documents" className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">
+            <Link href="/documents" className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">
               ← Quay lại danh sách công văn
             </Link>
           </div>

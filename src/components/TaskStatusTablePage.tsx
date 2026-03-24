@@ -36,9 +36,9 @@ const statusLabel: Record<Task["status"], string> = {
 
 const priorityTone: Record<Task["priority"], string> = {
   low: "bg-slate-100 text-slate-700",
-  normal: "bg-gradient-to-r from-rose-100 to-red-200 text-rose-800",
+  normal: "bg-gradient-to-r from-orange-100 to-amber-200 text-orange-800",
   high: "bg-amber-100 text-amber-700",
-  urgent: "bg-rose-100 text-rose-800",
+  urgent: "bg-orange-100 text-orange-800",
 };
 
 const statusTone: Record<Task["status"], string> = {
@@ -46,7 +46,7 @@ const statusTone: Record<Task["status"], string> = {
   in_progress: "bg-indigo-100 text-indigo-700",
   pending_review: "bg-amber-100 text-amber-700",
   done: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-rose-100 text-rose-800",
+  rejected: "bg-orange-100 text-orange-800",
 };
 
 export default function TaskStatusTablePage({

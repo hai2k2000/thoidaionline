@@ -81,7 +81,7 @@ export default function DocumentCreatePage() {
               <option value="incoming">Tài liệu đến</option>
               <option value="outgoing">Tài liệu đi</option>
             </select>
-            <button onClick={onCreate} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white">Thêm</button>
+            <button onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Thêm</button>
           </div>
 
           <h3 className="mt-4 mb-2 text-sm font-semibold">Giao xử lý tài liệu</h3>

@@ -128,7 +128,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
                       onClick={() => setMobileOpen(false)}
                       className={`block rounded border px-3 py-2 text-sm font-semibold transition ${
                         active
-                          ? "border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 text-rose-800"
+                          ? "border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 text-orange-800"
                           : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
                       }`}
                     >
@@ -149,7 +149,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
               onClick={() => setMobileOpen(false)}
               className={`block rounded border px-3 py-2 text-sm font-semibold ${
                 currentPath === "/profile"
-                  ? "border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 text-rose-800"
+                  ? "border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 text-orange-800"
                   : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
@@ -157,7 +157,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
             </Link>
             <button
               onClick={onLogout}
-              className="w-full rounded border border-rose-200 bg-rose-50 px-3 py-2 text-left text-sm font-semibold text-rose-800 hover:bg-rose-100"
+              className="w-full rounded border border-orange-200 bg-orange-50 px-3 py-2 text-left text-sm font-semibold text-orange-800 hover:bg-orange-100"
             >
               Đăng xuất
             </button>

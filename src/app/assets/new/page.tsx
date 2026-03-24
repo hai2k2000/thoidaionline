@@ -131,7 +131,7 @@ export default function AssetCreatePage() {
 
           <p className="mt-2 text-xs text-slate-500">Có thể chọn giao cho nhân viên hoặc phòng ban ngay khi thêm tài sản.</p>
           <div className="mt-3">
-            <button onClick={onCreate} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white">Thêm tài sản</button>
+            <button onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Thêm tài sản</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>

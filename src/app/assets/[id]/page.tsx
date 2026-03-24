@@ -83,8 +83,8 @@ export default function AssetDetailPage() {
 
         <section className="rounded-xl border bg-white p-4">
           <div className="mb-3 flex flex-wrap gap-2">
-            <Link href="/assets" className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">← Quay lại danh sách tài sản</Link>
-            <Link href="/assets/new" className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">+ Thêm/Cấp phát tài sản</Link>
+            <Link href="/assets" className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">← Quay lại danh sách tài sản</Link>
+            <Link href="/assets/new" className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">+ Thêm/Cấp phát tài sản</Link>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -116,7 +116,7 @@ export default function AssetDetailPage() {
           </div>
 
           <div className="mt-3">
-            <button onClick={saveAsset} disabled={saving} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Đang lưu..." : "Lưu thông tin tài sản"}</button>
+            <button onClick={saveAsset} disabled={saving} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Đang lưu..." : "Lưu thông tin tài sản"}</button>
           </div>
         </section>
 

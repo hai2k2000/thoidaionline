@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff6f7;
+  --background: #fffbf5;
   --foreground: #3a2b31;
-  --brand-red: #e11d48;
-  --brand-red-dark: #be123c;
-  --fresh-blue-50: #fff1f2;
-  --fresh-blue-100: #ffe4e6;
-  --fresh-blue-200: #fecdd3;
-  --fresh-blue-300: #fda4af;
-  --fresh-blue-700: #be123c;
-  --fresh-blue-800: #9f1239;
+  --brand-red: #f97316;
+  --brand-red-dark: #ea580c;
+  --fresh-blue-50: #fff7ed;
+  --fresh-blue-100: #ffedd5;
+  --fresh-blue-200: #fed7aa;
+  --fresh-blue-300: #fdba74;
+  --fresh-blue-700: #ea580c;
+  --fresh-blue-800: #9a3412;
 }
 
 @theme inline {
@@ -21,7 +21,7 @@
 }
 
 body {
-  background: linear-gradient(180deg, #fff8f9 0%, #ffeff2 100%);
+  background: linear-gradient(180deg, #fff8f9 0%, #fff4e8 100%);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -85,20 +85,20 @@ table {
 /* Make main bordered white panels pop with soft 3D depth */
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white) {
   position: relative;
-  border-color: #fdd5e2 !important;
+  border-color: #fed7aa !important;
   border-width: 1px;
-  background: linear-gradient(180deg, #ffffff 0%, #fff7f9 100%) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf5 100%) !important;
   box-shadow:
     0 1px 0 #ffffff inset,
-    0 -1px 0 #ffeaf0 inset,
-    0 1px 0 #ffe0ea,
-    0 4px 10px rgba(190, 24, 93, 0.06);
+    0 -1px 0 #ffefd8 inset,
+    0 1px 0 #ffd8b0,
+    0 4px 10px rgba(234, 88, 12, 0.07);
 }
 
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white):hover {
   box-shadow:
     0 1px 0 #ffffff inset,
-    0 -1px 0 #ffe7ef inset,
-    0 2px 0 #ffdbe7,
-    0 6px 14px rgba(190, 24, 93, 0.09);
+    0 -1px 0 #ffedd9 inset,
+    0 2px 0 #ffd2a6,
+    0 6px 14px rgba(234, 88, 12, 0.10);
 }

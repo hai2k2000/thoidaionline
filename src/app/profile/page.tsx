@@ -174,7 +174,7 @@ export default function ProfilePage() {
               {tasksAssignedToMe.map((t) => (
                 <tr key={`mine-${t.id}`} className="cursor-pointer" onClick={() => router.push(`/tasks/${t.id}`)}>
                   <td className="px-2 py-2">
-                    <span className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 font-semibold text-rose-800">{t.title}</span>
+                    <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{t.title}</span>
                   </td>
                   <td className="px-2 py-2">{t.departments?.name ?? "-"}</td>
                   <td className="px-2 py-2">{priorityLabel[t.priority]}</td>
@@ -204,7 +204,7 @@ export default function ProfilePage() {
               {tasksAssignedByMe.map((t) => (
                 <tr key={`byme-${t.id}`} className="cursor-pointer" onClick={() => router.push(`/tasks/${t.id}`)}>
                   <td className="px-2 py-2">
-                    <span className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 font-semibold text-rose-800">{t.title}</span>
+                    <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{t.title}</span>
                   </td>
                   <td className="px-2 py-2">{t.assignee?.full_name ?? "-"}</td>
                   <td className="px-2 py-2">{priorityLabel[t.priority]}</td>
@@ -232,7 +232,7 @@ export default function ProfilePage() {
               {myAssets.map((a) => (
                 <tr key={a.id} className="cursor-pointer" onClick={() => router.push(`/assets/${a.asset_id}`)}>
                   <td className="px-2 py-2">
-                    <span className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 font-semibold text-rose-800">{a.assets?.asset_name ?? "-"}</span>
+                    <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{a.assets?.asset_name ?? "-"}</span>
                   </td>
                   <td className="px-2 py-2">{a.assets?.category ?? "-"}</td>
                   <td className="px-2 py-2">{a.assets?.status ? (assetStatusLabel[a.assets.status] ?? a.assets.status) : "-"}</td>

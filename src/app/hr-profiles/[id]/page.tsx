@@ -103,7 +103,7 @@ export default function HrProfileDetailPage() {
 
         <section className="rounded-xl border bg-white p-4">
           <div className="mb-3">
-            <Link href="/hr-profiles" className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">
+            <Link href="/hr-profiles" className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">
               ← Quay lại danh sách hồ sơ nhân sự
             </Link>
           </div>
@@ -164,7 +164,7 @@ export default function HrProfileDetailPage() {
               <div className="mt-2 text-sm">
                 <b>File hiện tại:</b>{" "}
                 {profile?.profile_file_url ? (
-                  <a href={profile.profile_file_url} target="_blank" rel="noreferrer" className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">
+                  <a href={profile.profile_file_url} target="_blank" rel="noreferrer" className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">
                     Xem file đã upload
                   </a>
                 ) : (
@@ -175,7 +175,7 @@ export default function HrProfileDetailPage() {
           </div>
 
           <div className="mt-4">
-            <button onClick={save} disabled={saving} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
               {saving ? "Đang lưu..." : "Lưu cập nhật"}
             </button>
           </div>

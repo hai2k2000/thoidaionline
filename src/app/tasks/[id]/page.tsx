@@ -282,7 +282,7 @@ export default function TaskDetailPage() {
               </div>
               <p className="mt-2 text-sm"><b>Người thực hiện:</b> {task.task_assignees?.map((a) => a.staff_users?.full_name).filter(Boolean).join(", ") || "-"}</p>
               {task.attachment_url ? (
-                <a href={task.attachment_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">
+                <a href={task.attachment_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">
                   Mở file đính kèm
                 </a>
               ) : null}
@@ -317,7 +317,7 @@ export default function TaskDetailPage() {
                       setMessage("✅ Đã trả lại công việc để chỉnh sửa.");
                       await loadData();
                     }}
-                    className="rounded bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                    className="rounded bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600"
                   >
                     Trả lại công việc
                   </button>
@@ -434,7 +434,7 @@ export default function TaskDetailPage() {
                     <button
                       onClick={submitProgressReport}
                       disabled={submittingReport}
-                      className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+                      className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
                     >
                       {submittingReport ? "Đang gửi báo cáo..." : "Gửi báo cáo tiến độ"}
                     </button>
