@@ -202,7 +202,7 @@ export default function UsersPage() {
               <option value="active">Trạng thái: Active</option>
               <option value="disabled">Trạng thái: Disable</option>
             </select>
-            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-100 hover:text-blue-700">
+            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-50 hover:text-blue-800">
               Xóa bộ lọc
             </button>
           </div>
@@ -224,7 +224,7 @@ export default function UsersPage() {
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="align-middle">
                     <td className="px-2 py-2">
-                      <Link href={`/users/${u.id}`} className="inline-flex items-center rounded bg-blue-50 px-2 py-1 font-semibold text-blue-700 hover:bg-blue-100">
+                      <Link href={`/users/${u.id}`} className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-sky-50 to-blue-100 px-2 py-1 font-semibold text-blue-800 hover:from-sky-100 hover:to-blue-200">
                         {u.full_name}
                       </Link>
                     </td>

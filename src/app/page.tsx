@@ -430,7 +430,7 @@ export default function Home() {
                   {users.filter((u) => u.id !== assigneeId).map((u) => {
                     const checked = collaboratorIds.includes(u.id);
                     return (
-                      <label key={u.id} className={`flex cursor-pointer items-center justify-between px-3 py-2 text-sm transition ${checked ? "bg-blue-50 text-blue-700" : "hover:bg-neutral-100"}`}>
+                      <label key={u.id} className={`flex cursor-pointer items-center justify-between px-3 py-2 text-sm transition ${checked ? "bg-gradient-to-r from-sky-50 to-blue-100 text-blue-800" : "hover:bg-neutral-100"}`}>
                         <span>{u.full_name}</span>
                         <input
                           type="checkbox"

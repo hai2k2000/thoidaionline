@@ -35,7 +35,7 @@ const statusLabel: Record<Task["status"], string> = {
 
 const priorityTone: Record<Task["priority"], string> = {
   low: "bg-slate-100 text-slate-700",
-  normal: "bg-blue-100 text-blue-700",
+  normal: "bg-gradient-to-r from-sky-100 to-blue-200 text-blue-800",
   high: "bg-amber-100 text-amber-700",
   urgent: "bg-rose-100 text-rose-700",
 };
