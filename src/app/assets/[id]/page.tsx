@@ -5,11 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { assignAsset, type Asset } from "@/lib/services";
+import { type Asset } from "@/lib/services";
 import { supabase } from "@/lib/supabase";
-
-type StaffUser = { id: string; full_name: string };
-type Department = { id: string; name: string };
 
 const assetStatusLabel: Record<string, string> = {
   available: "Sẵn sàng",
@@ -28,24 +25,13 @@ export default function AssetDetailPage() {
   const [message, setMessage] = useState("Đang tải...");
   const [saving, setSaving] = useState(false);
 
-  const [users, setUsers] = useState<StaffUser[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [assigneeId, setAssigneeId] = useState("");
-  const [departmentId, setDepartmentId] = useState("");
 
   const load = async (id: string) => {
-    const [assetRes, usersRes, depRes] = await Promise.all([
-      supabase.from("assets").select("*").eq("id", id).single(),
-      supabase.from("staff_users").select("id,full_name").order("full_name"),
-      supabase.from("departments").select("id,name").order("name"),
-    ]);
+    const { data, error } = await supabase.from("assets").select("*").eq("id", id).single();
 
-    if (assetRes.error) return setMessage(`❌ ${assetRes.error.message}`);
-    if (usersRes.error || depRes.error) return setMessage(`❌ ${usersRes.error?.message || depRes.error?.message}`);
+    if (error) return setMessage(`❌ ${error.message}`);
 
-    setAsset((assetRes.data ?? null) as Asset | null);
-    setUsers((usersRes.data ?? []) as StaffUser[]);
-    setDepartments((depRes.data ?? []) as Department[]);
+    setAsset((data ?? null) as Asset | null);
     setMessage("✅ Đã tải chi tiết tài sản.");
   };
 
@@ -74,16 +60,6 @@ export default function AssetDetailPage() {
     }
   };
 
-  const assign = async () => {
-    if (!asset?.id) return;
-    const r = await assignAsset({ asset_id: asset.id, assignee_id: assigneeId || null, department_id: departmentId || null }, user?.id);
-    if (!r.ok) return setMessage(`❌ ${r.error}`);
-    setMessage("✅ Đã cấp phát tài sản.");
-    setAssigneeId("");
-    setDepartmentId("");
-    await load(asset.id);
-  };
-
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
@@ -106,8 +82,9 @@ export default function AssetDetailPage() {
         <p className="mb-3 text-sm text-slate-600">{message}</p>
 
         <section className="rounded-xl border bg-white p-4">
-          <div className="mb-3">
+          <div className="mb-3 flex flex-wrap gap-2">
             <Link href="/assets" className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">← Quay lại danh sách tài sản</Link>
+            <Link href="/assets/new" className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">+ Thêm/Cấp phát tài sản</Link>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -144,25 +121,6 @@ export default function AssetDetailPage() {
           </div>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4">
-          <h2 className="mb-2 text-lg font-semibold">Cấp phát tài sản</h2>
-          <div className="grid gap-2 md:grid-cols-3">
-            <select className="rounded border px-3 py-2" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-              <option value="">Chọn nhân sự nhận (optional)</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.full_name}</option>
-              ))}
-            </select>
-            <select className="rounded border px-3 py-2" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
-              <option value="">Chọn phòng ban nhận (optional)</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-            <button onClick={assign} className="rounded bg-slate-700 px-4 py-2 text-sm font-semibold text-white">Cấp phát</button>
-          </div>
-          <p className="mt-2 text-xs text-slate-500">Có thể cấp phát cho nhân sự hoặc phòng ban (ít nhất chọn 1).</p>
-        </section>
       </div>
     </main>
   );
