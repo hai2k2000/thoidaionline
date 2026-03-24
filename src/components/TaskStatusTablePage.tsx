@@ -19,10 +19,10 @@ type Task = {
 };
 
 const priorityLabel: Record<Task["priority"], string> = {
-  low: "Thấp",
-  normal: "Bình thường",
-  high: "Cao",
-  urgent: "Khẩn",
+  low: "Dễ",
+  normal: "Vừa",
+  high: "Khó",
+  urgent: "Rất khó",
 };
 
 const statusLabel: Record<Task["status"], string> = {
@@ -117,7 +117,7 @@ export default function TaskStatusTablePage({
                     <th className="px-3 py-2">Công việc</th>
                     <th className="px-3 py-2">Phòng</th>
                     <th className="px-3 py-2">Giao cho ai</th>
-                    <th className="px-3 py-2">Ưu tiên</th>
+                    <th className="px-3 py-2">Độ khó</th>
                     <th className="px-3 py-2">Đến hạn</th>
                     <th className="px-3 py-2">Tiến độ</th>
                     <th className="px-3 py-2">Trạng thái</th>

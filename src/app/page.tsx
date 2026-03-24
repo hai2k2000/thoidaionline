@@ -45,10 +45,10 @@ const statusLabel: Record<Task["status"], string> = {
 };
 
 const priorityLabel: Record<Task["priority"], string> = {
-  low: "Thấp",
-  normal: "Bình thường",
-  high: "Cao",
-  urgent: "Khẩn",
+  low: "Dễ",
+  normal: "Vừa",
+  high: "Khó",
+  urgent: "Rất khó",
 };
 
 export default function Home() {
@@ -484,7 +484,7 @@ export default function Home() {
 
             <label className="text-sm font-medium">Mức ưu tiên</label>
             <select className="rounded border px-3 py-2" value={priority} onChange={(e) => setPriority(e.target.value as Task["priority"])}>
-              <option value="low">Thấp</option><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option>
+              <option value="low">Dễ</option><option value="normal">Vừa</option><option value="high">Khó</option><option value="urgent">Rất khó</option>
             </select>
 
             <label className="text-sm font-medium">File đính kèm</label>

@@ -17,6 +17,7 @@ type TaskRow = {
   id: string;
   assignee_id?: string | null;
   owner_id?: string | null;
+  priority: "low" | "normal" | "high" | "urgent";
   status: "new" | "in_progress" | "pending_review" | "done" | "rejected";
   progress_percent: number;
   due_date: string | null;
@@ -62,6 +63,13 @@ const completionPoint: Record<CompletionLevel, number> = {
   not_done: 0,
   done: 75,
   excellent: 100,
+};
+
+const difficultyPoint: Record<TaskRow["priority"], number> = {
+  low: 25,
+  normal: 50,
+  high: 75,
+  urgent: 100,
 };
 
 const toDateInput = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -142,7 +150,7 @@ export default function PerformancePage() {
       supabase.from("staff_users").select("id,full_name,username,roles(code)").eq("active", true).order("full_name"),
       supabase
         .from("tasks")
-        .select("id,assignee_id,owner_id,status,progress_percent,due_date,task_assignees(user_id,assignment_role)")
+        .select("id,assignee_id,owner_id,priority,status,progress_percent,due_date,task_assignees(user_id,assignment_role)")
         .order("created_at", { ascending: false })
         .limit(3000),
       supabase
@@ -229,7 +237,7 @@ export default function PerformancePage() {
     return {
       completion,
       onTime,
-      hardTask: /\[HARD\]/i.test(title),
+      hardTask: ["high", "urgent"].includes(t.priority),
       improvement: /\[IMPROVE\]/i.test(title),
       contribution: !/\[NO_CONTRIB\]/i.test(title),
     };
@@ -263,7 +271,7 @@ export default function PerformancePage() {
         : 0;
 
       const hardTaskScore = evals.length > 0
-        ? clamp100((evals.filter((x) => x.cfg.hardTask).length / evals.length) * 100)
+        ? clamp100(evals.reduce((sum, x) => sum + difficultyPoint[x.task.priority], 0) / evals.length)
         : 0;
 
       const improvementScore = evals.length > 0
@@ -329,7 +337,7 @@ export default function PerformancePage() {
           <div className="mb-2 grid gap-2 md:grid-cols-6">
             <label className="text-xs">Ngày công (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.attendanceWeight} onChange={(e) => setFormula((p) => ({ ...p, attendanceWeight: Number(e.target.value || 0) }))} /></label>
             <label className="text-xs">Hoàn thành (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.completionWeight} onChange={(e) => setFormula((p) => ({ ...p, completionWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Việc khó (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.hardTaskWeight} onChange={(e) => setFormula((p) => ({ ...p, hardTaskWeight: Number(e.target.value || 0) }))} /></label>
+            <label className="text-xs">Độ khó công việc (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.hardTaskWeight} onChange={(e) => setFormula((p) => ({ ...p, hardTaskWeight: Number(e.target.value || 0) }))} /></label>
             <label className="text-xs">Cải tiến (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.improvementWeight} onChange={(e) => setFormula((p) => ({ ...p, improvementWeight: Number(e.target.value || 0) }))} /></label>
             <label className="text-xs">Đóng góp (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.teamContributionWeight} onChange={(e) => setFormula((p) => ({ ...p, teamContributionWeight: Number(e.target.value || 0) }))} /></label>
             <div className="flex items-end"><button onClick={saveFormula} className="w-full rounded bg-rose-600 px-3 py-2 text-sm font-semibold text-white">Lưu công thức</button></div>
@@ -338,7 +346,7 @@ export default function PerformancePage() {
             <input type="date" className="mt-1 ml-2 rounded border px-3 py-2" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
           </label>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
-          <p className="text-xs text-slate-500">Tiêu chí việc khó/cải tiến/đóng góp và mức hoàn thành được tích/chọn trong trang chi tiết từng việc.</p>
+          <p className="text-xs text-slate-500">Tiêu chí độ khó lấy trực tiếp từ trường Độ khó của công việc; các tiêu chí cải tiến/đóng góp và mức hoàn thành vẫn lấy từ trang chi tiết từng việc.</p>
         </section>
 
         <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
@@ -349,7 +357,7 @@ export default function PerformancePage() {
                 <th className="px-2 py-2">Nhân sự</th>
                 <th className="px-2 py-2">Ngày công</th>
                 <th className="px-2 py-2">Hoàn thành</th>
-                <th className="px-2 py-2">Việc khó</th>
+                <th className="px-2 py-2">Độ khó</th>
                 <th className="px-2 py-2">Cải tiến</th>
                 <th className="px-2 py-2">Đóng góp</th>
                 <th className="px-2 py-2">Điểm tổng</th>

@@ -25,6 +25,13 @@ type TaskDetail = {
 
 type Comment = { id: string; content: string; created_at: string; staff_users?: { full_name: string } | null };
 type ProgressLog = { id: string; old_progress: number | null; new_progress: number; note: string | null; created_at: string; staff_users?: { full_name: string } | null };
+
+const difficultyLabel: Record<string, string> = {
+  low: "Dễ",
+  normal: "Vừa",
+  high: "Khó",
+  urgent: "Rất khó",
+};
 type CompletionLevel = "not_done" | "done" | "excellent";
 type TaskEvalConfig = {
   completion: CompletionLevel;
@@ -269,7 +276,7 @@ export default function TaskDetailPage() {
                 <p><b>Phòng:</b> {task.departments?.name ?? "-"}</p>
                 <p><b>Owner chính:</b> {task.owner?.full_name ?? "-"}</p>
                 <p><b>Hạn:</b> {task.due_date ?? "-"}</p>
-                <p><b>Ưu tiên:</b> {task.priority}</p>
+                <p><b>Độ khó:</b> {difficultyLabel[task.priority] ?? task.priority}</p>
                 <p><b>Trạng thái:</b> {task.status}</p>
                 <p><b>Tiến độ:</b> {task.progress_percent}%</p>
               </div>

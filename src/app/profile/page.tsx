@@ -40,10 +40,10 @@ const statusLabel: Record<TaskRow["status"], string> = {
 };
 
 const priorityLabel: Record<TaskRow["priority"], string> = {
-  low: "Thấp",
-  normal: "Bình thường",
-  high: "Cao",
-  urgent: "Khẩn",
+  low: "Dễ",
+  normal: "Vừa",
+  high: "Khó",
+  urgent: "Rất khó",
 };
 
 const assetStatusLabel: Record<string, string> = {
@@ -164,7 +164,7 @@ export default function ProfilePage() {
               <tr>
                 <th className="px-2 py-2">Tiêu đề</th>
                 <th className="px-2 py-2">Phòng ban</th>
-                <th className="px-2 py-2">Ưu tiên</th>
+                <th className="px-2 py-2">Độ khó</th>
                 <th className="px-2 py-2">Trạng thái</th>
                 <th className="px-2 py-2">Tiến độ</th>
                 <th className="px-2 py-2">Deadline</th>
@@ -195,7 +195,7 @@ export default function ProfilePage() {
               <tr>
                 <th className="px-2 py-2">Tiêu đề</th>
                 <th className="px-2 py-2">Người phụ trách</th>
-                <th className="px-2 py-2">Ưu tiên</th>
+                <th className="px-2 py-2">Độ khó</th>
                 <th className="px-2 py-2">Trạng thái</th>
                 <th className="px-2 py-2">Deadline</th>
               </tr>
