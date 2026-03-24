@@ -50,35 +50,28 @@ button:active {
   transform: translateY(0);
 }
 
-a {
-  color: #b91c1c;
-}
-
-a:hover {
-  color: #991b1b;
-}
-
 table {
   border-collapse: collapse;
 }
 
-table thead {
-  background: #fee2e2;
+/* Soft red theme only for tables that opt-in */
+.table-soft-red thead {
+  background: #fef2f2;
 }
 
-table thead th {
-  color: #991b1b;
-  border-bottom: 1px solid #fca5a5;
+.table-soft-red thead th {
+  color: #9f1239;
+  border-bottom: 1px solid #fecaca;
 }
 
-table tbody tr {
-  border-top: 1px solid #fecaca;
+.table-soft-red tbody tr {
+  border-top: 1px solid #ffe4e6;
 }
 
-table tbody tr:nth-child(even) {
+.table-soft-red tbody tr:nth-child(even) {
+  background: #fff7f7;
+}
+
+.table-soft-red tbody tr:hover {
   background: #fff1f2;
-}
-
-table tbody tr:hover {
-  background: #ffe4e6;
 }
