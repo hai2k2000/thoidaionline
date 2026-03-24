@@ -77,6 +77,10 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
   const { hasPermission, canAccessModule } = useAuth();
   const canCreateTask = hasPermission("can_create_task");
   const canManageDocuments = canAccessModule("documents");
+  const canSeePerformance = canAccessModule("performance");
+  const canSeeHr = canAccessModule("hr");
+  const canSeeAssets = canAccessModule("assets");
+  const canManageUsers = hasPermission("can_manage_users") || hasPermission("can_manage_permissions");
 
   const visibleGroups: Group[] = groups
     .map((g) => {
@@ -94,6 +98,32 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         return {
           ...g,
           items: g.items.filter((i) => i.href === "/documents/common"),
+        };
+      }
+
+      if (g.key === "hr") {
+        if (!canSeeHr) return { ...g, items: [] };
+        return {
+          ...g,
+          items: g.items.filter((i) => {
+            if (i.href === "/performance") return canSeePerformance;
+            return true;
+          }),
+        };
+      }
+
+      if (g.key === "assets") {
+        if (!canSeeAssets) return { ...g, items: [] };
+        return {
+          ...g,
+          items: g.items.filter((i) => (canCreateTask ? true : i.href === "/assets")),
+        };
+      }
+
+      if (g.key === "admin") {
+        return {
+          ...g,
+          items: canManageUsers ? g.items : [],
         };
       }
 
