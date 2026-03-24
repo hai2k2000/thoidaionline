@@ -3,8 +3,8 @@
 :root {
   --background: #f3f8ff;
   --foreground: #24324a;
-  --brand-red: #e31e24;
-  --brand-red-dark: #be171c;
+  --brand-red: #2563eb;
+  --brand-red-dark: #1d4ed8;
   --fresh-blue-50: #eff8ff;
   --fresh-blue-100: #dbeafe;
   --fresh-blue-200: #bfdbfe;
@@ -36,7 +36,7 @@ textarea {
 select,
 input,
 textarea {
-  border-color: #f1b7ba;
+  border-color: #bfdbfe;
   background: #fff;
 }
 
@@ -45,7 +45,7 @@ input:focus,
 textarea:focus {
   outline: none;
   border-color: var(--brand-red);
-  box-shadow: 0 0 0 3px rgba(227, 30, 36, 0.16);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 
 button:hover {
