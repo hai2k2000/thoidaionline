@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { createAsset } from "@/lib/services";
+import { supabase } from "@/lib/supabase";
+import { assignAsset, createAsset } from "@/lib/services";
+
+type StaffUser = { id: string; full_name: string; username?: string | null; active?: boolean };
+type Department = { id: string; name: string; active?: boolean };
 
 export default function AssetCreatePage() {
   const router = useRouter();
@@ -16,12 +20,33 @@ export default function AssetCreatePage() {
   const [serialNumber, setSerialNumber] = useState("");
   const [status, setStatus] = useState<"available" | "in_use" | "maintenance" | "broken" | "liquidated">("available");
   const [note, setNote] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
   const [message, setMessage] = useState("");
+  const [users, setUsers] = useState<StaffUser[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
     if (!canAccessModule("assets")) return void router.push("/");
+
+    const t = setTimeout(async () => {
+      const [usersRes, depsRes] = await Promise.all([
+        supabase.from("staff_users").select("id,full_name,username,active").eq("active", true).order("full_name"),
+        supabase.from("departments").select("id,name,active").eq("active", true).order("name"),
+      ]);
+
+      if (usersRes.error || depsRes.error) {
+        setMessage(`⚠️ ${usersRes.error?.message || depsRes.error?.message}`);
+        return;
+      }
+
+      setUsers((usersRes.data ?? []) as StaffUser[]);
+      setDepartments((depsRes.data ?? []) as Department[]);
+    }, 0);
+
+    return () => clearTimeout(t);
   }, [authLoading, user, canAccessModule, router]);
 
   const onCreate = async () => {
@@ -38,6 +63,21 @@ export default function AssetCreatePage() {
     );
 
     if (!result.ok) return setMessage(`❌ ${result.error}`);
+
+    const created = result.data;
+    if (created?.id && (assigneeId || departmentId)) {
+      const assignRes = await assignAsset(
+        {
+          asset_id: created.id,
+          assignee_id: assigneeId || null,
+          department_id: departmentId || null,
+          status: "active",
+        },
+        user?.id,
+      );
+      if (!assignRes.ok) return setMessage(`⚠️ Đã thêm tài sản nhưng giao chưa thành công: ${assignRes.error}`);
+    }
+
     setMessage("✅ Đã thêm tài sản.");
     setAssetCode("");
     setAssetName("");
@@ -45,6 +85,8 @@ export default function AssetCreatePage() {
     setSerialNumber("");
     setStatus("available");
     setNote("");
+    setAssigneeId("");
+    setDepartmentId("");
   };
 
   return (
@@ -72,8 +114,23 @@ export default function AssetCreatePage() {
               <option value="liquidated">Thanh lý</option>
             </select>
             <input className="rounded border px-3 py-2" placeholder="Ghi chú" value={note} onChange={(e) => setNote(e.target.value)} />
+
+            <select className="rounded border px-3 py-2" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <option value="">Giao cho ai (không bắt buộc)</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.full_name}{u.username ? ` (${u.username})` : ""}</option>
+              ))}
+            </select>
+
+            <select className="rounded border px-3 py-2" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+              <option value="">Hoặc giao cho phòng ban (không bắt buộc)</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
           </div>
 
+          <p className="mt-2 text-xs text-slate-500">Có thể chọn giao cho nhân viên hoặc phòng ban ngay khi thêm tài sản.</p>
           <div className="mt-3">
             <button onClick={onCreate} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white">Thêm tài sản</button>
           </div>
