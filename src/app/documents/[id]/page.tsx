@@ -38,7 +38,7 @@ export default function DocumentDetailPage() {
         supabase.from("official_documents").select("*").eq("id", id).maybeSingle(),
         supabase
           .from("document_assignments")
-          .select("id,assignee_id,due_date,status,staff_users(full_name,username)")
+          .select("id,assignee_id,due_date,status,staff_users!document_assignments_assignee_id_fkey(full_name,username)")
           .eq("document_id", id)
           .order("created_at", { ascending: false }),
       ]);
