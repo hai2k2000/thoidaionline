@@ -65,7 +65,7 @@ export default function DepartmentsPage() {
           <div className="grid gap-2 md:grid-cols-3">
             <input className="rounded border px-3 py-2" placeholder="Mã phòng ban (vd: content)" value={code} onChange={(e) => setCode(e.target.value)} />
             <input className="rounded border px-3 py-2" placeholder="Tên phòng ban" value={name} onChange={(e) => setName(e.target.value)} />
-            <button onClick={createDepartment} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Tạo phòng ban</button>
+            <button onClick={createDepartment} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">Tạo phòng ban</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>

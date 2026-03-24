@@ -185,8 +185,8 @@ export default function UsersPage() {
             </select>
           </div>
           <div className="mt-3 flex gap-2">
-            <button onClick={createUser} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Tạo user</button>
-            <button onClick={loadAll} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Tải danh sách</button>
+            <button onClick={createUser} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">Tạo user</button>
+            <button onClick={loadAll} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">Tải danh sách</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>
@@ -202,7 +202,7 @@ export default function UsersPage() {
               <option value="active">Trạng thái: Active</option>
               <option value="disabled">Trạng thái: Disable</option>
             </select>
-            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-50 hover:text-blue-800">
+            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-rose-50 hover:text-rose-800">
               Xóa bộ lọc
             </button>
           </div>
@@ -224,7 +224,7 @@ export default function UsersPage() {
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="align-middle">
                     <td className="px-2 py-2">
-                      <Link href={`/users/${u.id}`} className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 font-semibold text-blue-800 hover:from-cyan-100 hover:to-blue-300">
+                      <Link href={`/users/${u.id}`} className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">
                         {u.full_name}
                       </Link>
                     </td>

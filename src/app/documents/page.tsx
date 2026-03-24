@@ -97,7 +97,7 @@ export default function DocumentsPage() {
               <option value="incoming">Công văn đến</option>
               <option value="outgoing">Công văn đi</option>
             </select>
-            <button onClick={onCreate} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Tạo</button>
+            <button onClick={onCreate} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white">Tạo</button>
           </div>
 
           <h3 className="mt-4 mb-2 text-sm font-semibold">Giao xử lý</h3>
@@ -135,7 +135,7 @@ export default function DocumentsPage() {
                   <td className="px-2 py-2">{r.doc_code}</td>
                   <td className="px-2 py-2">{r.direction === "incoming" ? "Đến" : "Đi"}</td>
                   <td className="px-2 py-2">
-                    <span className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 font-semibold text-blue-800">{r.title}</span>
+                    <span className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 font-semibold text-rose-800">{r.title}</span>
                   </td>
                   <td className="px-2 py-2">{r.status ?? "new"}</td>
                 </tr>

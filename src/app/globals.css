@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3f8ff;
-  --foreground: #24324a;
-  --brand-red: #2563eb;
-  --brand-red-dark: #1d4ed8;
-  --fresh-blue-50: #eff8ff;
-  --fresh-blue-100: #dbeafe;
-  --fresh-blue-200: #bfdbfe;
-  --fresh-blue-300: #93c5fd;
-  --fresh-blue-700: #1d4ed8;
-  --fresh-blue-800: #1e3a8a;
+  --background: #fff6f7;
+  --foreground: #3a2b31;
+  --brand-red: #e11d48;
+  --brand-red-dark: #be123c;
+  --fresh-blue-50: #fff1f2;
+  --fresh-blue-100: #ffe4e6;
+  --fresh-blue-200: #fecdd3;
+  --fresh-blue-300: #fda4af;
+  --fresh-blue-700: #be123c;
+  --fresh-blue-800: #9f1239;
 }
 
 @theme inline {
@@ -21,7 +21,7 @@
 }
 
 body {
-  background: linear-gradient(180deg, #f6fbff 0%, #eaf3ff 100%);
+  background: linear-gradient(180deg, #fff8f9 0%, #ffeff2 100%);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -85,20 +85,20 @@ table {
 /* Make main bordered white panels pop with soft 3D depth */
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white) {
   position: relative;
-  border-color: #9ec5ff !important;
-  border-width: 1.5px;
-  background: linear-gradient(180deg, #ffffff 0%, #eef6ff 100%) !important;
+  border-color: #fbcfe8 !important;
+  border-width: 1px;
+  background: linear-gradient(180deg, #ffffff 0%, #fff5f7 100%) !important;
   box-shadow:
     0 1px 0 #ffffff inset,
-    0 -1px 0 #d8e8ff inset,
-    0 4px 0 #c7ddff,
-    0 14px 30px rgba(37, 99, 235, 0.18);
+    0 -1px 0 #ffe4ea inset,
+    0 2px 0 #ffd6e2,
+    0 8px 18px rgba(190, 24, 93, 0.10);
 }
 
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white):hover {
   box-shadow:
     0 1px 0 #ffffff inset,
-    0 -1px 0 #d1e4ff inset,
-    0 6px 0 #bdd8ff,
-    0 18px 34px rgba(37, 99, 235, 0.22);
+    0 -1px 0 #ffdce6 inset,
+    0 3px 0 #ffcfdd,
+    0 10px 20px rgba(190, 24, 93, 0.13);
 }

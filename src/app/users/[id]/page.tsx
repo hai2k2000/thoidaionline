@@ -67,12 +67,12 @@ export default function UserDetailPage() {
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Chi tiết user</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-50 hover:text-blue-800">Công việc</Link>
-            <Link href="/users" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-50 hover:text-blue-800">User</Link>
-            <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-50 hover:text-blue-800">Phân quyền</Link>
-            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-blue-50 hover:text-blue-800">Theo user</Link>
+            <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-rose-50 hover:text-rose-800">Công việc</Link>
+            <Link href="/users" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-rose-50 hover:text-rose-800">User</Link>
+            <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-rose-50 hover:text-rose-800">Phân quyền</Link>
+            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-rose-50 hover:text-rose-800">Theo user</Link>
             <span className="text-xs text-slate-600">{authUser?.full_name} ({authUser?.role_name})</span>
-            <button onClick={logout} className="rounded bg-blue-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
+            <button onClick={logout} className="rounded bg-rose-600 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
           </div>
         </div>
 
@@ -102,7 +102,7 @@ export default function UserDetailPage() {
                       <td className="px-2 py-2">{t.status}</td>
                       <td className="px-2 py-2">{t.progress_percent}%</td>
                       <td className="px-2 py-2">{t.due_date ?? "-"}</td>
-                      <td className="px-2 py-2"><Link href={`/tasks/${t.id}`} className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 text-xs font-semibold text-blue-800 hover:from-cyan-100 hover:to-blue-300">Mở</Link></td>
+                      <td className="px-2 py-2"><Link href={`/tasks/${t.id}`} className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-xs font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">Mở</Link></td>
                     </tr>
                   ))}
                   {tasks.length === 0 ? <tr><td colSpan={5} className="px-2 py-6 text-center text-slate-500">User chưa có task.</td></tr> : null}

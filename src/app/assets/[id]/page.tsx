@@ -107,7 +107,7 @@ export default function AssetDetailPage() {
 
         <section className="rounded-xl border bg-white p-4">
           <div className="mb-3">
-            <Link href="/assets" className="inline-flex items-center rounded border border-blue-200 bg-gradient-to-r from-cyan-50 to-blue-200 px-2 py-1 text-sm font-semibold text-blue-800 hover:from-cyan-100 hover:to-blue-300">← Quay lại danh sách tài sản</Link>
+            <Link href="/assets" className="inline-flex items-center rounded border border-rose-200 bg-gradient-to-r from-rose-50 to-red-100 px-2 py-1 text-sm font-semibold text-rose-800 hover:from-rose-100 hover:to-red-200">← Quay lại danh sách tài sản</Link>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -140,7 +140,7 @@ export default function AssetDetailPage() {
           </div>
 
           <div className="mt-3">
-            <button onClick={saveAsset} disabled={saving} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Đang lưu..." : "Lưu thông tin tài sản"}</button>
+            <button onClick={saveAsset} disabled={saving} className="rounded bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Đang lưu..." : "Lưu thông tin tài sản"}</button>
           </div>
         </section>
 
