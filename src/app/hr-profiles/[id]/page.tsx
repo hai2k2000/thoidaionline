@@ -140,10 +140,10 @@ export default function HrProfileDetailPage() {
               <label className="mb-1 block text-xs font-semibold text-slate-600">Loại hợp đồng</label>
               <select className="w-full rounded border px-3 py-2" value={profile?.contract_type ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), contract_type: (e.target.value || null) as EmployeeProfile["contract_type"] }))}>
                 <option value="">-</option>
-                <option value="intern">intern</option>
-                <option value="probation">probation</option>
-                <option value="official">official</option>
-                <option value="contractor">contractor</option>
+                <option value="intern">Thực tập</option>
+                <option value="probation">Thử việc</option>
+                <option value="official">Chính thức</option>
+                <option value="contractor">Cộng tác viên</option>
               </select>
             </div>
             <div>

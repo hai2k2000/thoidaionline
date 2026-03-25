@@ -28,6 +28,13 @@ const docStatusLabel: Record<string, string> = {
   todo: "Chờ xử lý",
 };
 
+const assignmentStatusLabel: Record<string, string> = {
+  todo: "Chờ xử lý",
+  in_progress: "Đang xử lý",
+  done: "Hoàn thành",
+  overdue: "Quá hạn",
+};
+
 const directionLabel: Record<string, string> = {
   contract: "Hợp đồng",
   incoming: "Công văn đến",
@@ -133,7 +140,7 @@ export default function DocumentDetailPage() {
                   <td className="px-2 py-2">{a.staff_users?.full_name ?? "-"}</td>
                   <td className="px-2 py-2">{a.staff_users?.username ?? "-"}</td>
                   <td className="px-2 py-2">{a.due_date ? new Date(a.due_date).toLocaleDateString("vi-VN") : "-"}</td>
-                  <td className="px-2 py-2">{a.status ?? "todo"}</td>
+                  <td className="px-2 py-2">{assignmentStatusLabel[a.status ?? "todo"] ?? (a.status ?? "-")}</td>
                 </tr>
               ))}
               {assignments.length === 0 ? (

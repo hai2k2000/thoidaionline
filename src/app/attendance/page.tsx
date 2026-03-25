@@ -25,6 +25,13 @@ type MonthlySummaryRow = {
   workUnits: number;
 };
 
+const attendanceStatusLabel: Record<string, string> = {
+  present: "Có mặt",
+  absent: "Vắng",
+  late: "Đi trễ",
+  leave: "Nghỉ phép",
+};
+
 const toDateInput = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 const timeToMin = (t?: string | null) => {
@@ -255,7 +262,7 @@ export default function AttendancePage() {
                   <td className="px-2 py-2">{r.check_in ?? "-"}</td>
                   <td className="px-2 py-2">{r.check_out ?? "-"}</td>
                   <td className="px-2 py-2">{workedHours(r.check_in, r.check_out).toFixed(2)}</td>
-                  <td className="px-2 py-2">{r.status ?? "-"}</td>
+                  <td className="px-2 py-2">{attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</td>
                   <td className="px-2 py-2">{r.note ?? "-"}</td>
                 </tr>
               ))}

@@ -32,6 +32,14 @@ const difficultyLabel: Record<string, string> = {
   high: "Khó",
   urgent: "Rất khó",
 };
+
+const taskStatusLabel: Record<string, string> = {
+  new: "Mới",
+  in_progress: "Đang làm",
+  pending_review: "Chờ duyệt",
+  done: "Hoàn thành",
+  rejected: "Trả lại",
+};
 type CompletionLevel = "not_done" | "done" | "excellent";
 type TaskEvalConfig = {
   completion: CompletionLevel;
@@ -277,7 +285,7 @@ export default function TaskDetailPage() {
                 <p><b>Owner chính:</b> {task.owner?.full_name ?? "-"}</p>
                 <p><b>Hạn:</b> {task.due_date ?? "-"}</p>
                 <p><b>Độ khó:</b> {difficultyLabel[task.priority] ?? task.priority}</p>
-                <p><b>Trạng thái:</b> {task.status}</p>
+                <p><b>Trạng thái:</b> {taskStatusLabel[task.status] ?? task.status}</p>
                 <p><b>Tiến độ:</b> {task.progress_percent}%</p>
               </div>
               <p className="mt-2 text-sm"><b>Người thực hiện:</b> {task.task_assignees?.map((a) => a.staff_users?.full_name).filter(Boolean).join(", ") || "-"}</p>

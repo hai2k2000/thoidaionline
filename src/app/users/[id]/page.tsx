@@ -18,6 +18,14 @@ type UserDetail = {
 
 type Task = { id: string; title: string; status: string; progress_percent: number; due_date: string | null };
 
+const taskStatusLabel: Record<string, string> = {
+  new: "Mới",
+  in_progress: "Đang làm",
+  pending_review: "Chờ duyệt",
+  done: "Hoàn thành",
+  rejected: "Trả lại",
+};
+
 export default function UserDetailPage() {
   const router = useRouter();
   const { loading: authLoading, user: authUser, logout } = useAuth();
@@ -87,7 +95,7 @@ export default function UserDetailPage() {
                 <p><b>SĐT:</b> {user.phone ?? "-"}</p>
                 <p><b>Role:</b> {user.roles?.name ?? "-"}</p>
                 <p><b>Phòng ban:</b> {user.departments?.name ?? "-"}</p>
-                <p><b>Trạng thái:</b> {user.active ? "Active" : "Disabled"}</p>
+                <p><b>Trạng thái:</b> {user.active ? "Đang hoạt động" : "Đã khóa"}</p>
               </div>
             </section>
 
@@ -99,7 +107,7 @@ export default function UserDetailPage() {
                   {tasks.map((t) => (
                     <tr key={t.id}>
                       <td className="px-2 py-2">{t.title}</td>
-                      <td className="px-2 py-2">{t.status}</td>
+                      <td className="px-2 py-2">{taskStatusLabel[t.status] ?? t.status}</td>
                       <td className="px-2 py-2">{t.progress_percent}%</td>
                       <td className="px-2 py-2">{t.due_date ?? "-"}</td>
                       <td className="px-2 py-2"><Link href={`/tasks/${t.id}`} className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-xs font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">Mở</Link></td>
