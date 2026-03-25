@@ -142,12 +142,12 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
       </button>
 
       <div className={`${mobileOpen ? "block" : "hidden"} relative z-30 rounded-xl border bg-white p-3 lg:block lg:sticky lg:top-4`}>
-        <p className="mb-3 rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-extrabold text-orange-800">Menu</p>
+        <p className="mb-3 rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100 px-2 py-1 text-sm font-bold text-orange-600">Menu</p>
 
         <div className="space-y-3">
           {visibleGroups.map((g) => (
             <div key={g.key}>
-              <p className="mb-1 rounded border border-orange-200 bg-orange-50 px-2 py-1 text-xs font-extrabold uppercase tracking-wide text-orange-700">{g.label}</p>
+              <p className="mb-1 rounded border border-orange-200 bg-orange-50/80 px-2 py-1 text-xs font-bold text-orange-600">{g.label}</p>
               <div className="space-y-1">
                 {g.items.map((i) => {
                   const active = isActive(currentPath, i.href);
