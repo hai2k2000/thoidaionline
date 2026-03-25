@@ -91,50 +91,53 @@ export default function AssetCreatePage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold">Thêm tài sản</h1>
-          <div className="mt-2">
-            <AppNav currentPath="/assets/new" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
-          </div>
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
+        <div className="mb-4 lg:mb-0">
+          <AppNav currentPath="/assets/new" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
         </div>
 
-        <section className="rounded-xl border bg-white p-4">
-          <h2 className="mb-2 text-lg font-semibold">Tạo tài sản mới</h2>
-          <div className="grid gap-2 md:grid-cols-2">
-            <input className="rounded border px-3 py-2" placeholder="Mã tài sản (bỏ trống để tự sinh)" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} />
-            <input className="rounded border px-3 py-2" placeholder="Tên tài sản" value={assetName} onChange={(e) => setAssetName(e.target.value)} />
-            <input className="rounded border px-3 py-2" placeholder="Nhóm tài sản" value={category} onChange={(e) => setCategory(e.target.value)} />
-            <input className="rounded border px-3 py-2" placeholder="Số serial" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
-            <select className="rounded border px-3 py-2" value={status} onChange={(e) => setStatus(e.target.value as any)}>
-              <option value="in_use">Đang sử dụng</option>
-              <option value="maintenance">Bảo trì</option>
-              <option value="broken">Hỏng</option>
-              <option value="liquidated">Thanh lý</option>
-            </select>
-            <input className="rounded border px-3 py-2" placeholder="Ghi chú" value={note} onChange={(e) => setNote(e.target.value)} />
-
-            <select className="rounded border px-3 py-2" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-              <option value="">Giao cho ai (không bắt buộc)</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.full_name}{u.username ? ` (${u.username})` : ""}</option>
-              ))}
-            </select>
-
-            <select className="rounded border px-3 py-2" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
-              <option value="">Hoặc giao cho phòng ban (không bắt buộc)</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
+        <div>
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold">Thêm tài sản</h1>
           </div>
 
-          <p className="mt-2 text-xs text-slate-500">Có thể chọn giao cho nhân viên hoặc phòng ban ngay khi thêm tài sản.</p>
-          <div className="mt-3">
-            <button onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Thêm tài sản</button>
-          </div>
-          <p className="mt-2 text-sm text-slate-600">{message}</p>
-        </section>
+          <section className="rounded-xl border bg-white p-4">
+            <h2 className="mb-2 text-lg font-semibold">Tạo tài sản mới</h2>
+            <div className="grid gap-2 md:grid-cols-2">
+              <input className="rounded border px-3 py-2" placeholder="Mã tài sản (bỏ trống để tự sinh)" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} />
+              <input className="rounded border px-3 py-2" placeholder="Tên tài sản" value={assetName} onChange={(e) => setAssetName(e.target.value)} />
+              <input className="rounded border px-3 py-2" placeholder="Nhóm tài sản" value={category} onChange={(e) => setCategory(e.target.value)} />
+              <input className="rounded border px-3 py-2" placeholder="Số serial" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+              <select className="rounded border px-3 py-2" value={status} onChange={(e) => setStatus(e.target.value as any)}>
+                <option value="in_use">Đang sử dụng</option>
+                <option value="maintenance">Bảo trì</option>
+                <option value="broken">Hỏng</option>
+                <option value="liquidated">Thanh lý</option>
+              </select>
+              <input className="rounded border px-3 py-2" placeholder="Ghi chú" value={note} onChange={(e) => setNote(e.target.value)} />
+
+              <select className="rounded border px-3 py-2" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+                <option value="">Giao cho ai (không bắt buộc)</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.full_name}{u.username ? ` (${u.username})` : ""}</option>
+                ))}
+              </select>
+
+              <select className="rounded border px-3 py-2" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+                <option value="">Hoặc giao cho phòng ban (không bắt buộc)</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <p className="mt-2 text-xs text-slate-500">Có thể chọn giao cho nhân viên hoặc phòng ban ngay khi thêm tài sản.</p>
+            <div className="mt-3">
+              <button onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Thêm tài sản</button>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">{message}</p>
+          </section>
+        </div>
       </div>
     </main>
   );
