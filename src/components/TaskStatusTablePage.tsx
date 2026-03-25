@@ -121,7 +121,7 @@ export default function TaskStatusTablePage({
                     <th className="px-3 py-2">Công việc</th>
                     <th className="px-3 py-2">Phòng</th>
                     <th className="px-3 py-2">Giao cho ai</th>
-                    <th className="px-3 py-2">Độ khó</th>
+                    <th className="px-3 py-2 whitespace-nowrap">Độ khó</th>
                     <th className="px-3 py-2">Đến hạn</th>
                     <th className="px-3 py-2">Tiến độ</th>
                     <th className="px-3 py-2">Trạng thái</th>
@@ -137,7 +137,7 @@ export default function TaskStatusTablePage({
                       </td>
                       <td className="px-3 py-2">{t.departments?.name ?? "-"}</td>
                       <td className="px-3 py-2">{t.task_assignees?.map((a) => a.staff_users?.full_name).filter(Boolean).join(", ") || "-"}</td>
-                      <td className="px-3 py-2"><span className={`rounded px-2 py-1 text-xs font-semibold ${priorityTone[t.priority]}`}>{priorityLabel[t.priority]}</span></td>
+                      <td className="px-3 py-2 whitespace-nowrap"><span className={`inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold ${priorityTone[t.priority]}`}>{priorityLabel[t.priority]}</span></td>
                       <td className="px-3 py-2">{t.due_date ? new Date(t.due_date).toLocaleDateString("vi-VN") : "-"}</td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <div className="w-28">
