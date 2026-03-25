@@ -14,6 +14,7 @@ type StaffUser = {
   username?: string | null;
   active?: boolean;
   role_code?: string | null;
+  role_name?: string | null;
   department_code?: string | null;
   department_name?: string | null;
 };
@@ -80,7 +81,7 @@ export default function HrProfilesPage() {
       listEmployeeProfiles(),
       supabase
         .from("staff_users")
-        .select("id,full_name,username,active,roles(code),departments(code,name)")
+        .select("id,full_name,username,active,roles(code,name),departments(code,name)")
         .order("full_name"),
     ]);
 
@@ -90,7 +91,7 @@ export default function HrProfilesPage() {
     setRows(profilesRes.data);
     let normalizedUsers = ((usersRes.data ?? []) as Array<
       StaffUser & {
-        roles?: { code?: string | null } | null;
+        roles?: { code?: string | null; name?: string | null } | null;
         departments?: { code?: string | null; name?: string | null } | null;
       }
     >)
@@ -101,6 +102,7 @@ export default function HrProfilesPage() {
         username: u.username,
         active: u.active,
         role_code: u.roles?.code ?? null,
+        role_name: u.roles?.name ?? null,
         department_code: u.departments?.code ?? null,
         department_name: u.departments?.name ?? null,
       }));
@@ -178,6 +180,7 @@ export default function HrProfilesPage() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-2 py-2">Họ tên</th>
+                  <th className="px-2 py-2">Chức vụ</th>
                   <th className="px-2 py-2">Phòng ban</th>
                   <th className="px-2 py-2">Năm sinh</th>
                   <th className="px-2 py-2">Địa chỉ</th>
@@ -193,6 +196,7 @@ export default function HrProfilesPage() {
                         {su.full_name}
                       </Link>
                     </td>
+                    <td className="px-2 py-2">{su.role_name ?? "-"}</td>
                     <td className="px-2 py-2">{su.department_name ?? "-"}</td>
                     <td className="px-2 py-2">{profile?.date_of_birth ? new Date(profile.date_of_birth).getFullYear() : "-"}</td>
                     <td className="px-2 py-2">{profile?.address ?? "-"}</td>
