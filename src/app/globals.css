@@ -102,3 +102,14 @@ table {
     0 2px 0 #ffd2a6,
     0 6px 14px rgba(234, 88, 12, 0.10);
 }
+
+/* Make in-content section titles stand out more */
+main section > h2,
+main section > h3 {
+  display: inline-block;
+  color: #9a3412;
+  font-weight: 800;
+  border-left: 4px solid #f97316;
+  padding-left: 10px;
+  line-height: 1.2;
+}
