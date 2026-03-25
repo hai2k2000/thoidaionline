@@ -325,13 +325,15 @@ export default function PerformancePage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold">Đánh giá</h1>
-          <div className="mt-2">
-            <AppNav currentPath="/performance" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
-          </div>
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
+        <div className="mb-4 lg:mb-0">
+          <AppNav currentPath="/performance" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
         </div>
+
+        <div>
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold">Đánh giá</h1>
+          </div>
 
         <section className="rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Công thức tính điểm (lưu để thay đổi về sau)</h2>
@@ -382,6 +384,7 @@ export default function PerformancePage() {
             </tbody>
           </table>
         </section>
+        </div>
       </div>
     </main>
   );

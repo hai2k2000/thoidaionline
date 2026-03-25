@@ -94,13 +94,15 @@ export default function HrProfileDetailPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold">Chi tiết hồ sơ nhân sự</h1>
-          <div className="mt-2">
-            <AppNav currentPath="/hr-profiles" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
-          </div>
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
+        <div className="mb-4 lg:mb-0">
+          <AppNav currentPath="/hr-profiles" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
         </div>
+
+        <div>
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold">Chi tiết hồ sơ nhân sự</h1>
+          </div>
 
         <p className="mb-3 text-sm text-slate-600">{message}</p>
 
@@ -183,6 +185,7 @@ export default function HrProfileDetailPage() {
             </button>
           </div>
         </section>
+        </div>
       </div>
     </main>
   );

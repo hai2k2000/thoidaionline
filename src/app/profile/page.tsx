@@ -123,13 +123,15 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold">Trang cá nhân</h1>
-          <div className="mt-2">
-            <AppNav currentPath="/profile" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
-          </div>
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
+        <div className="mb-4 lg:mb-0">
+          <AppNav currentPath="/profile" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
         </div>
+
+        <div>
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold">Trang cá nhân</h1>
+          </div>
 
         <section className="rounded-xl border bg-white p-4">
           <h2 className="text-lg font-semibold">Thông tin cá nhân</h2>
@@ -243,6 +245,7 @@ export default function ProfilePage() {
             </tbody>
           </table>
         </section>
+        </div>
       </div>
     </main>
   );

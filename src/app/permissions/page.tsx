@@ -51,13 +51,15 @@ export default function PermissionsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold">Quản trị phân quyền</h1>
-          <div className="mt-2">
-            <AppNav currentPath="/permissions" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
-          </div>
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
+        <div className="mb-4 lg:mb-0">
+          <AppNav currentPath="/permissions" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
         </div>
+
+        <div>
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold">Quản trị phân quyền</h1>
+          </div>
         <div className="mb-2 flex gap-2">
           <button onClick={load} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600">Tải phân quyền</button>
           <p className="self-center text-sm text-slate-600">{message}</p>
@@ -77,6 +79,7 @@ export default function PermissionsPage() {
             </tbody>
           </table>
         </section>
+        </div>
       </div>
     </main>
   );
