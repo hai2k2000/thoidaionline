@@ -132,7 +132,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
     .filter((g) => g.items.length > 0);
 
   return (
-    <aside className="w-full lg:float-left lg:mr-4 lg:w-[250px]">
+    <aside className="w-full lg:w-[250px]">
       <button
         type="button"
         onClick={() => setMobileOpen((v) => !v)}
