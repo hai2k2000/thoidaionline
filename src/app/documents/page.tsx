@@ -13,6 +13,13 @@ const docStatusLabel: Record<string, string> = {
   archived: "Lưu trữ",
 };
 
+const directionLabel: Record<string, string> = {
+  contract: "Hợp đồng",
+  incoming: "Công văn đến",
+  outgoing: "Công văn đi",
+  common: "Tài liệu chung",
+};
+
 export default function DocumentsPage() {
   const router = useRouter();
   const { loading: authLoading, user, logout, canAccessModule } = useAuth();
@@ -75,7 +82,7 @@ export default function DocumentsPage() {
               {filteredRows.map((r) => (
                 <tr key={r.id ?? r.doc_code} className="cursor-pointer" onClick={() => r.id && router.push(`/documents/${r.id}`)}>
                   <td className="px-2 py-2">{r.doc_code}</td>
-                  <td className="px-2 py-2">{r.direction === "incoming" ? "Đến" : "Đi"}</td>
+                  <td className="px-2 py-2">{directionLabel[r.direction ?? ""] ?? r.direction ?? "-"}</td>
                   <td className="px-2 py-2">
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{r.title}</span>
                   </td>

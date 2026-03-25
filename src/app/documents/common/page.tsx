@@ -24,8 +24,9 @@ export default function CommonDocumentsPage() {
   const loadData = async () => {
     const docsRes = await listDocuments();
     if (!docsRes.ok) return setMessage(`❌ ${docsRes.error}`);
-    setRows(docsRes.data);
-    setMessage(`✅ Đã tải ${docsRes.data.length} tài liệu chung.`);
+    const commons = docsRes.data.filter((d) => d.direction === "common");
+    setRows(commons);
+    setMessage(`✅ Đã tải ${commons.length} tài liệu chung.`);
   };
 
   useEffect(() => {
@@ -74,7 +75,7 @@ export default function CommonDocumentsPage() {
               {filteredRows.map((r) => (
                 <tr key={r.id ?? r.doc_code} className="cursor-pointer" onClick={() => r.id && router.push(`/documents/${r.id}`)}>
                   <td className="px-2 py-2">{r.doc_code}</td>
-                  <td className="px-2 py-2">{r.direction === "incoming" ? "Đến" : "Đi"}</td>
+                  <td className="px-2 py-2">Tài liệu chung</td>
                   <td className="px-2 py-2">
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{r.title}</span>
                   </td>

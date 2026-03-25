@@ -28,6 +28,13 @@ const docStatusLabel: Record<string, string> = {
   todo: "Chờ xử lý",
 };
 
+const directionLabel: Record<string, string> = {
+  contract: "Hợp đồng",
+  incoming: "Công văn đến",
+  outgoing: "Công văn đi",
+  common: "Tài liệu chung",
+};
+
 type Assignment = {
   id: string;
   assignee_id: string | null;
@@ -98,7 +105,7 @@ export default function DocumentDetailPage() {
 
           <div className="grid gap-3 md:grid-cols-2">
             <div><b>Mã công văn:</b> {doc?.doc_code ?? "-"}</div>
-            <div><b>Loại:</b> {doc?.direction === "incoming" ? "Công văn đến" : "Công văn đi"}</div>
+            <div><b>Loại:</b> {directionLabel[doc?.direction ?? ""] ?? doc?.direction ?? "-"}</div>
             <div className="md:col-span-2"><b>Tiêu đề:</b> {doc?.title ?? "-"}</div>
             <div><b>Mức độ khẩn:</b> {urgencyLabel[doc?.urgency ?? "normal"] ?? (doc?.urgency ?? "-")}</div>
             <div><b>Bảo mật:</b> {confidentialityLabel[doc?.confidentiality ?? "normal"] ?? (doc?.confidentiality ?? "-")}</div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { assignDocument, createDocument, listDocuments, type OfficialDocument } from "@/lib/services";
+import { assignDocument, createDocument, listDocuments, type DocumentDirection, type OfficialDocument } from "@/lib/services";
 
 type StaffUser = { id: string; full_name: string; username?: string | null };
 
@@ -19,7 +19,7 @@ export default function DocumentCreatePage() {
 
   const [docCode, setDocCode] = useState("");
   const [title, setTitle] = useState("");
-  const [direction, setDirection] = useState<"incoming" | "outgoing">("incoming");
+  const [direction, setDirection] = useState<DocumentDirection>("incoming");
 
   const [documentId, setDocumentId] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
@@ -79,9 +79,11 @@ export default function DocumentCreatePage() {
           <div className="grid gap-2 md:grid-cols-4">
             <input className="rounded border px-3 py-2" placeholder="Mã tài liệu (bỏ trống để tự sinh)" value={docCode} onChange={(e) => setDocCode(e.target.value)} />
             <input className="rounded border px-3 py-2" placeholder="Tiêu đề" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <select className="rounded border px-3 py-2" value={direction} onChange={(e) => setDirection(e.target.value as "incoming" | "outgoing")}>
-              <option value="incoming">Tài liệu đến</option>
-              <option value="outgoing">Tài liệu đi</option>
+            <select className="rounded border px-3 py-2" value={direction} onChange={(e) => setDirection(e.target.value as DocumentDirection)}>
+              <option value="contract">Hợp đồng</option>
+              <option value="incoming">Công văn đến</option>
+              <option value="outgoing">Công văn đi</option>
+              <option value="common">Tài liệu chung</option>
             </select>
             <button onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Thêm</button>
           </div>
