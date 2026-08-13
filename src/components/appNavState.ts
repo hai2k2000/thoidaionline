@@ -39,6 +39,7 @@ export const groups: Group[] = [
       { href: "/tasks/active", label: "CV đang triển khai" },
       { href: "/tasks/pending-review", label: "CV chờ duyệt" },
       { href: "/tasks/done", label: "CV hoàn thành" },
+      { href: "/performance", label: "Đánh giá" },
     ],
   },
   {
@@ -47,7 +48,6 @@ export const groups: Group[] = [
     items: [
       { href: "/hr-profiles", label: "Hồ sơ nhân sự" },
       { href: "/attendance", label: "Chấm công" },
-      { href: "/performance", label: "Đánh giá" },
     ],
   },
   {

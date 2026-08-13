@@ -36,6 +36,8 @@ test("sidebar configuration hides assets and documents and renames admin", () =>
     groups.find((group) => group.key === "admin")?.label,
     "Cấu hình",
   );
+  assert.equal(groups.find((group) => group.key === "work")?.items.some((item) => item.href === "/performance"), true);
+  assert.equal(groups.find((group) => group.key === "hr")?.items.some((item) => item.href === "/performance"), false);
 });
 
 test("accordion closes the open group and replaces it with another group", () => {
@@ -50,6 +52,7 @@ test("current routes initialize only their visible parent group", () => {
 
   assert.equal(getInitialOpenGroup(visibleGroups, "/"), "work");
   assert.equal(getInitialOpenGroup(visibleGroups, "/tasks/[id]"), "work");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/performance"), "work");
   assert.equal(getInitialOpenGroup(visibleGroups, "/attendance"), "hr");
   assert.equal(getInitialOpenGroup(visibleGroups, "/users"), "admin");
   assert.equal(getInitialOpenGroup(visibleGroups, "/assets"), null);

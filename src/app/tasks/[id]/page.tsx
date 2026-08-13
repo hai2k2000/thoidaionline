@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
+import { RATING_OPTIONS, WEIGHT_OPTIONS, canEditTaskEvaluation, selectLatestFinalEvaluations, type CompletionLevel, type TaskEvaluationRow } from "@/lib/taskEvaluation";
 
 type TaskDetail = {
   id: string;
@@ -18,6 +19,7 @@ type TaskDetail = {
   assignee_id: string | null;
   owner_id: string | null;
   assignment_mode: "individual" | "multi_user" | "department" | "mixed";
+  effort_weight: number;
   departments?: { name: string } | null;
   owner?: { full_name: string } | null;
   task_assignees?: { user_id: string; assignment_role: string; status: string; staff_users?: { full_name: string } | null }[];
@@ -40,16 +42,26 @@ const taskStatusLabel: Record<string, string> = {
   done: "Hoàn thành",
   rejected: "Trả lại",
 };
-type CompletionLevel = "not_done" | "done" | "excellent";
-type TaskEvalConfig = {
+type TaskEvalForm = {
+  rating: number;
+  effortWeight: number;
   completion: CompletionLevel;
   onTime: boolean;
-  hardTask: boolean;
-  improvement: boolean;
-  contribution: boolean;
+  opinion: string;
+  checkpointDate: string;
+  isFinal: boolean;
 };
 
-const TASK_EVAL_STORAGE_KEY = "thoidai_task_eval_v1";
+const todayText = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const defaultTaskEvalForm = (weight = 1): TaskEvalForm => ({
+  rating: 7,
+  effortWeight: weight,
+  completion: "done",
+  onTime: true,
+  opinion: "",
+  checkpointDate: todayText(),
+  isFinal: true,
+});
 
 export default function TaskDetailPage() {
   const router = useRouter();
@@ -65,7 +77,10 @@ export default function TaskDetailPage() {
   const [reportText, setReportText] = useState("");
   const [blockersText, setBlockersText] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
-  const [taskEval, setTaskEval] = useState<TaskEvalConfig>({ completion: "done", onTime: true, hardTask: false, improvement: false, contribution: true });
+  const [evaluationRows, setEvaluationRows] = useState<TaskEvaluationRow[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [taskEval, setTaskEval] = useState<TaskEvalForm>(defaultTaskEvalForm());
+  const [savingEvaluation, setSavingEvaluation] = useState(false);
 
   const loadData = async () => {
     if (!taskId) return;
@@ -74,7 +89,7 @@ export default function TaskDetailPage() {
       supabase
         .from("tasks")
         .select(
-          "id,title,description,priority,status,progress_percent,due_date,attachment_url,assignee_id,owner_id,assignment_mode,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),task_assignees(user_id,assignment_role,status,staff_users(full_name))",
+          "id,title,description,priority,status,progress_percent,due_date,attachment_url,assignee_id,owner_id,assignment_mode,effort_weight,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),task_assignees(user_id,assignment_role,status,staff_users(full_name))",
         )
         .eq("id", taskId)
         .single(),
@@ -108,48 +123,76 @@ export default function TaskDetailPage() {
       return;
     }
 
+    const evaluator = canEditTaskEvaluation({ roleCode: user?.role_code, canManageUsers: hasPermission("can_manage_users") });
+    let evaluationQuery = supabase
+      .from("task_evaluation_checkpoints")
+      .select("id,task_id,employee_id,reviewer_id,rating,effort_weight,completion,on_time,opinion,checkpoint_date,is_final,created_at")
+      .eq("task_id", taskId)
+      .order("checkpoint_date", { ascending: false })
+      .order("created_at", { ascending: false });
+    if (!evaluator && user) evaluationQuery = evaluationQuery.eq("employee_id", user.id);
+    const evaluationRes = await evaluationQuery;
+    if (evaluationRes.error) {
+      setMessage(`❌ ${evaluationRes.error.message}`);
+      return;
+    }
+
+    const rows = (evaluationRes.data ?? []) as unknown as TaskEvaluationRow[];
+    const finalRows = selectLatestFinalEvaluations(rows);
+    const assignedIds = (loadedTask.task_assignees ?? [])
+      .filter((assignee) => assignee.assignment_role !== "watcher")
+      .map((assignee) => assignee.user_id);
+    if (loadedTask.assignee_id && !assignedIds.includes(loadedTask.assignee_id)) assignedIds.push(loadedTask.assignee_id);
+    const targetEmployeeId = evaluator ? (assignedIds[0] ?? "") : (user?.id ?? "");
+    const latest = finalRows.find((row) => row.employee_id === targetEmployeeId);
+
     setTask(loadedTask);
-    setTaskEval(loadTaskEvalFromStorage(loadedTask.id, loadedTask));
+    setEvaluationRows(rows);
+    setSelectedEmployeeId(targetEmployeeId);
+    setTaskEval(latest ? {
+      rating: latest.rating,
+      effortWeight: latest.effort_weight,
+      completion: latest.completion ?? "done",
+      onTime: latest.on_time ?? true,
+      opinion: latest.opinion ?? "",
+      checkpointDate: latest.checkpoint_date,
+      isFinal: latest.is_final,
+    } : defaultTaskEvalForm(loadedTask.effort_weight ?? 1));
     setNewProgress(loadedTask.progress_percent ?? 0);
     setComments((commentRes.data ?? []) as unknown as Comment[]);
     setLogs((logRes.data ?? []) as unknown as ProgressLog[]);
     setMessage("✅ Đã tải chi tiết công việc.");
   };
 
-  const loadTaskEvalFromStorage = (id: string, targetTask?: TaskDetail | null): TaskEvalConfig => {
-    if (typeof window === "undefined") return { completion: "done", onTime: true, hardTask: false, improvement: false, contribution: true };
-    try {
-      const raw = localStorage.getItem(TASK_EVAL_STORAGE_KEY);
-      const map = raw ? (JSON.parse(raw) as Record<string, TaskEvalConfig>) : {};
-      if (map[id]) return map[id];
-    } catch {
-      // ignore
+  const saveEvaluation = async () => {
+    if (!task || !user || !selectedEmployeeId) return;
+    if (!canEditTaskEvaluation({ roleCode: user.role_code, canManageUsers: hasPermission("can_manage_users") })) {
+      setMessage("❌ Bạn không có quyền lưu đánh giá công việc.");
+      return;
     }
 
-    const defaultCompletion: CompletionLevel = targetTask?.status === "done"
-      ? ((targetTask.progress_percent ?? 0) >= 95 ? "excellent" : "done")
-      : "not_done";
-    const onTime = targetTask?.due_date ? targetTask.due_date >= new Date().toISOString().slice(0, 10) : true;
-    const title = targetTask?.title ?? "";
-    return {
-      completion: defaultCompletion,
-      onTime,
-      hardTask: /\[HARD\]/i.test(title),
-      improvement: /\[IMPROVE\]/i.test(title),
-      contribution: !/\[NO_CONTRIB\]/i.test(title),
-    };
-  };
+    setSavingEvaluation(true);
+    const { error } = await supabase.rpc("save_task_evaluation_checkpoint", {
+      p_actor_id: user.id,
+      p_task_id: task.id,
+      p_employee_id: selectedEmployeeId,
+      p_rating: taskEval.rating,
+      p_effort_weight: taskEval.effortWeight,
+      p_completion: taskEval.completion,
+      p_on_time: taskEval.onTime,
+      p_opinion: taskEval.opinion,
+      p_checkpoint_date: taskEval.checkpointDate,
+      p_is_final: taskEval.isFinal,
+    });
+    setSavingEvaluation(false);
 
-  const saveTaskEvalToStorage = (id: string, cfg: TaskEvalConfig) => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(TASK_EVAL_STORAGE_KEY);
-      const map = raw ? (JSON.parse(raw) as Record<string, TaskEvalConfig>) : {};
-      map[id] = cfg;
-      localStorage.setItem(TASK_EVAL_STORAGE_KEY, JSON.stringify(map));
-    } catch {
-      // ignore
+    if (error) {
+      setMessage(`❌ ${error.message}`);
+      return;
     }
+
+    setMessage("✅ Đã lưu đánh giá công việc.");
+    await loadData();
   };
 
   const canUserSubmitReport = (targetTask: TaskDetail, userId: string) => {
@@ -261,6 +304,40 @@ export default function TaskDetailPage() {
   }, [taskId, authLoading, user, router]);
 
   const canSubmitReport = !!(task && user && canUserSubmitReport(task, user.id));
+  const canEditEvaluation = !!user && canEditTaskEvaluation({
+    roleCode: user.role_code,
+    canManageUsers: hasPermission("can_manage_users"),
+  });
+  const evaluationAssignees = (task?.task_assignees ?? []).filter((assignee) => assignee.assignment_role !== "watcher");
+  if (task?.assignee_id && !evaluationAssignees.some((assignee) => assignee.user_id === task.assignee_id)) {
+    evaluationAssignees.push({
+      user_id: task.assignee_id,
+      assignment_role: "assignee",
+      status: task.status === "done" ? "done" : "in_progress",
+      staff_users: { full_name: "Nhân viên được giao" },
+    });
+  }
+  const finalEvaluationRows = selectLatestFinalEvaluations(evaluationRows);
+  const visibleEvaluationRows = canEditEvaluation
+    ? finalEvaluationRows
+    : finalEvaluationRows.filter((row) => row.employee_id === user?.id);
+  const latestVisibleEvaluation = canEditEvaluation
+    ? (finalEvaluationRows.find((row) => row.employee_id === selectedEmployeeId) ?? null)
+    : (visibleEvaluationRows[0] ?? null);
+
+  const selectEmployeeEvaluation = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    const latest = finalEvaluationRows.find((row) => row.employee_id === employeeId);
+    setTaskEval(latest ? {
+      rating: latest.rating,
+      effortWeight: latest.effort_weight,
+      completion: latest.completion ?? "done",
+      onTime: latest.on_time ?? true,
+      opinion: latest.opinion ?? "",
+      checkpointDate: latest.checkpoint_date,
+      isFinal: latest.is_final,
+    } : defaultTaskEvalForm(task?.effort_weight ?? 1));
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:p-6">
@@ -334,82 +411,68 @@ export default function TaskDetailPage() {
               ) : null}
             </section>
 
-            {!isReadOnly() ? (
             <section className="mt-4 rounded-xl border bg-white p-4">
-              <h3 className="mb-2 text-lg font-semibold">Đánh giá công việc (cho bảng điểm cá nhân)</h3>
-              <div className="grid gap-2 md:grid-cols-5">
-                <label className="text-sm">
-                  Mức hoàn thành
-                  <select
-                    className="mt-1 w-full rounded border px-3 py-2"
-                    value={taskEval.completion}
-                    onChange={(e) => {
-                      const next = { ...taskEval, completion: e.target.value as CompletionLevel };
-                      setTaskEval(next);
-                      if (task) saveTaskEvalToStorage(task.id, next);
-                    }}
-                  >
-                    <option value="not_done">Không hoàn thành</option>
-                    <option value="done">Hoàn thành</option>
-                    <option value="excellent">Xuất sắc</option>
-                  </select>
-                </label>
-
-                <label className="flex items-center gap-2 text-sm mt-6 md:mt-0">
-                  <input
-                    type="checkbox"
-                    checked={taskEval.onTime}
-                    onChange={(e) => {
-                      const next = { ...taskEval, onTime: e.target.checked };
-                      setTaskEval(next);
-                      if (task) saveTaskEvalToStorage(task.id, next);
-                    }}
-                  />
-                  Đúng tiến độ
-                </label>
-
-                <label className="flex items-center gap-2 text-sm mt-6 md:mt-0">
-                  <input
-                    type="checkbox"
-                    checked={taskEval.hardTask}
-                    onChange={(e) => {
-                      const next = { ...taskEval, hardTask: e.target.checked };
-                      setTaskEval(next);
-                      if (task) saveTaskEvalToStorage(task.id, next);
-                    }}
-                  />
-                  Việc khó
-                </label>
-
-                <label className="flex items-center gap-2 text-sm mt-6 md:mt-0">
-                  <input
-                    type="checkbox"
-                    checked={taskEval.improvement}
-                    onChange={(e) => {
-                      const next = { ...taskEval, improvement: e.target.checked };
-                      setTaskEval(next);
-                      if (task) saveTaskEvalToStorage(task.id, next);
-                    }}
-                  />
-                  Có cải tiến
-                </label>
-
-                <label className="flex items-center gap-2 text-sm mt-6 md:mt-0">
-                  <input
-                    type="checkbox"
-                    checked={taskEval.contribution}
-                    onChange={(e) => {
-                      const next = { ...taskEval, contribution: e.target.checked };
-                      setTaskEval(next);
-                      if (task) saveTaskEvalToStorage(task.id, next);
-                    }}
-                  />
-                  Có đóng góp
-                </label>
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-lg font-semibold">Đánh giá công việc</h3>
+                  <p className="text-xs text-slate-500">Điểm cuối kỳ mới nhất được tính theo trọng số; checkpoint giữa kỳ chỉ lưu phản hồi.</p>
+                </div>
+                {latestVisibleEvaluation ? <span className="rounded bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">{latestVisibleEvaluation.rating}/10</span> : null}
               </div>
-              <p className="mt-2 text-xs text-slate-500">Mặc định: Cải tiến = Không, Đóng góp = Có. Dữ liệu này được dùng trực tiếp cho trang Đánh giá.</p>
+
+              {canEditEvaluation ? (
+                <div className="space-y-3">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <label className="text-sm">Nhân viên
+                      <select className="mt-1 w-full rounded border px-3 py-2" value={selectedEmployeeId} onChange={(e) => selectEmployeeEvaluation(e.target.value)}>
+                        {evaluationAssignees.map((assignee) => <option key={assignee.user_id} value={assignee.user_id}>{assignee.staff_users?.full_name ?? "Nhân viên"}</option>)}
+                      </select>
+                    </label>
+                    <label className="text-sm">Điểm (1-10)
+                      <select className="mt-1 w-full rounded border px-3 py-2" value={taskEval.rating} onChange={(e) => setTaskEval((current) => ({ ...current, rating: Number(e.target.value) }))}>
+                        {RATING_OPTIONS.map((score) => <option key={score} value={score}>{score}</option>)}
+                      </select>
+                    </label>
+                    <label className="text-sm">Trọng số / độ lớn
+                      <select className="mt-1 w-full rounded border px-3 py-2" value={taskEval.effortWeight} onChange={(e) => setTaskEval((current) => ({ ...current, effortWeight: Number(e.target.value) }))}>
+                        {WEIGHT_OPTIONS.map((weight) => <option key={weight} value={weight}>{weight}</option>)}
+                      </select>
+                    </label>
+                    <label className="text-sm">Mức hoàn thành
+                      <select className="mt-1 w-full rounded border px-3 py-2" value={taskEval.completion} onChange={(e) => setTaskEval((current) => ({ ...current, completion: e.target.value as CompletionLevel }))}>
+                        <option value="not_done">Không hoàn thành</option>
+                        <option value="done">Hoàn thành</option>
+                        <option value="excellent">Xuất sắc</option>
+                      </select>
+                    </label>
+                    <label className="text-sm">Ngày checkpoint
+                      <input type="date" className="mt-1 w-full rounded border px-3 py-2" value={taskEval.checkpointDate} onChange={(e) => setTaskEval((current) => ({ ...current, checkpointDate: e.target.value }))} />
+                    </label>
+                    <div className="flex flex-wrap items-center gap-4 pt-6 text-sm">
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={taskEval.onTime} onChange={(e) => setTaskEval((current) => ({ ...current, onTime: e.target.checked }))} />Đúng tiến độ</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={taskEval.isFinal} onChange={(e) => setTaskEval((current) => ({ ...current, isFinal: e.target.checked }))} />Đánh giá cuối kỳ</label>
+                    </div>
+                  </div>
+                  <label className="block text-sm">Ý kiến đánh giá
+                    <textarea className="mt-1 min-h-24 w-full rounded border px-3 py-2" value={taskEval.opinion} onChange={(e) => setTaskEval((current) => ({ ...current, opinion: e.target.value }))} placeholder="Nhận xét kết quả, điểm mạnh và nội dung cần cải thiện..." />
+                  </label>
+                  <button type="button" onClick={saveEvaluation} disabled={savingEvaluation || !selectedEmployeeId} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                    {savingEvaluation ? "Đang lưu..." : "Lưu đánh giá"}
+                  </button>
+                </div>
+              ) : latestVisibleEvaluation ? (
+                <div className="grid gap-2 text-sm sm:grid-cols-2">
+                  <p><b>Điểm:</b> {latestVisibleEvaluation.rating}/10</p>
+                  <p><b>Trọng số:</b> {latestVisibleEvaluation.effort_weight}</p>
+                  <p><b>Mức hoàn thành:</b> {latestVisibleEvaluation.completion === "excellent" ? "Xuất sắc" : latestVisibleEvaluation.completion === "done" ? "Hoàn thành" : "Không hoàn thành"}</p>
+                  <p><b>Tiến độ:</b> {latestVisibleEvaluation.on_time ? "Đúng tiến độ" : "Chậm tiến độ"}</p>
+                  <p><b>Kỳ đánh giá:</b> {latestVisibleEvaluation.is_final ? "Cuối kỳ" : "Giữa kỳ"} · {latestVisibleEvaluation.checkpoint_date}</p>
+                  <p className="sm:col-span-2"><b>Ý kiến đánh giá:</b> {latestVisibleEvaluation.opinion || "-"}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">Công việc chưa có kết quả đánh giá dành cho bạn.</p>
+              )}
             </section>
-            ) : null}
 
             <section className="mt-4 rounded-xl border bg-white p-4">
               <h3 className="mb-2 text-lg font-semibold">Báo cáo tiến triển & vướng mắc</h3>

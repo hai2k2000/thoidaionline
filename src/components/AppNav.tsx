@@ -25,7 +25,6 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
   const { user, hasPermission, canAccessModule } = useAuth();
   const canCreateTask = hasPermission("can_create_task");
   const canManageDocuments = canAccessModule("documents");
-  const canSeePerformance = canAccessModule("performance");
   const canSeeHr = canAccessModule("hr");
   const canSeeAssets = canAccessModule("assets");
   const canManageUsers = hasPermission("can_manage_users") || hasPermission("can_manage_permissions");
@@ -37,6 +36,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         return {
           ...g,
           items: g.items.filter((i) => {
+            if (i.href === "/performance") return true;
             if (canCreateTask) return true;
             return i.href === "/tasks/active" || i.href === "/tasks/done";
           }),
@@ -54,10 +54,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         if (!canSeeHr) return { ...g, items: [] };
         return {
           ...g,
-          items: g.items.filter((i) => {
-            if (i.href === "/performance") return canSeePerformance;
-            return true;
-          }),
+          items: g.items,
         };
       }
 

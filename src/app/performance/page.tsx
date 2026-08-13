@@ -5,326 +5,190 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import AppNav from "@/components/AppNav";
+import {
+  canEditTaskEvaluation,
+  selectLatestFinalEvaluations,
+  summarizeEmployeeEvaluation,
+  taskDetailUrl,
+  type TaskEvaluationRow,
+} from "@/lib/taskEvaluation";
 
 type StaffUser = {
   id: string;
   full_name: string;
-  username?: string | null;
   roles?: { code?: string | null } | null;
 };
 
 type TaskRow = {
   id: string;
+  title: string;
+  status: "new" | "in_progress" | "pending_review" | "done" | "rejected";
   assignee_id?: string | null;
   owner_id?: string | null;
-  priority: "low" | "normal" | "high" | "urgent";
-  status: "new" | "in_progress" | "pending_review" | "done" | "rejected";
-  progress_percent: number;
-  due_date: string | null;
+  effort_weight: number;
   task_assignees?: { user_id: string; assignment_role: string }[] | null;
 };
 
-type AttendanceRow = {
-  user_id: string;
-  work_date: string;
-  check_in: string | null;
-  check_out: string | null;
+type EmployeeScoreRow = {
+  userId: string;
+  fullName: string;
+  taskCount: number;
+  completedCount: number;
+  notCompletedCount: number;
+  totalWeight: number;
+  weightedPoints: number;
+  weightedAverage: number;
+  evaluatedTasks: Array<{
+    taskId: string;
+    title: string;
+    status: string;
+    rating: number;
+    effortWeight: number;
+    weightedPoints: number;
+    completion: string;
+    onTime: boolean;
+    opinion?: string | null;
+    checkpointDate: string;
+  }>;
 };
 
-type EvalFormula = {
-  attendanceWeight: number;
-  completionWeight: number;
-  hardTaskWeight: number;
-  improvementWeight: number;
-  teamContributionWeight: number;
+const statusLabel: Record<string, string> = {
+  new: "Mới",
+  in_progress: "Đang làm",
+  pending_review: "Chờ duyệt",
+  done: "Hoàn thành",
+  rejected: "Trả lại",
 };
 
-type CompletionLevel = "not_done" | "done" | "excellent";
-type TaskEvalConfig = {
-  completion: CompletionLevel;
-  onTime: boolean;
-  hardTask: boolean;
-  improvement: boolean;
-  contribution: boolean;
+const completionLabel: Record<string, string> = {
+  not_done: "Không hoàn thành",
+  done: "Hoàn thành",
+  excellent: "Xuất sắc",
 };
 
-const FORMULA_STORAGE_KEY = "thoidai_evaluation_formula_v1";
-const TASK_EVAL_STORAGE_KEY = "thoidai_task_eval_v1";
+type PageResult<T> = { data: T[] | null; error: { message: string } | null };
 
-const defaultFormula: EvalFormula = {
-  attendanceWeight: 30,
-  completionWeight: 30,
-  hardTaskWeight: 20,
-  improvementWeight: 10,
-  teamContributionWeight: 10,
-};
-
-const completionPoint: Record<CompletionLevel, number> = {
-  not_done: 0,
-  done: 75,
-  excellent: 100,
-};
-
-const difficultyPoint: Record<TaskRow["priority"], number> = {
-  low: 25,
-  normal: 50,
-  high: 75,
-  urgent: 100,
-};
-
-const toDateInput = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const monthStartOf = (dateText: string) => {
-  const d = new Date(dateText);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-};
-const monthKeyOf = (dateText: string) => {
-  const d = new Date(dateText);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-};
-const clamp100 = (n: number) => Math.max(0, Math.min(100, n));
-const timeToMin = (t?: string | null) => {
-  if (!t) return null;
-  const [h, m] = t.split(":").map((x) => Number(x));
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
-  return h * 60 + m;
-};
-const workedHours = (checkIn?: string | null, checkOut?: string | null) => {
-  const inMin = timeToMin(checkIn);
-  const outMin = timeToMin(checkOut);
-  if (inMin === null || outMin === null || outMin <= inMin) return 0;
-  return (outMin - inMin) / 60;
-};
-
-function loadFormula(): EvalFormula {
-  if (typeof window === "undefined") return defaultFormula;
-  try {
-    const raw = localStorage.getItem(FORMULA_STORAGE_KEY);
-    if (!raw) return defaultFormula;
-    const p = JSON.parse(raw) as Partial<EvalFormula>;
-    return {
-      attendanceWeight: Number(p.attendanceWeight ?? defaultFormula.attendanceWeight),
-      completionWeight: Number(p.completionWeight ?? defaultFormula.completionWeight),
-      hardTaskWeight: Number(p.hardTaskWeight ?? defaultFormula.hardTaskWeight),
-      improvementWeight: Number(p.improvementWeight ?? defaultFormula.improvementWeight),
-      teamContributionWeight: Number(p.teamContributionWeight ?? defaultFormula.teamContributionWeight),
-    };
-  } catch {
-    return defaultFormula;
-  }
-}
-
-function loadTaskEvalMap(): Record<string, TaskEvalConfig> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(TASK_EVAL_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
+async function fetchAllRows<T>(fetchPage: (from: number, to: number) => PromiseLike<PageResult<T>>) {
+  const pageSize = 1000;
+  const rows: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await fetchPage(from, from + pageSize - 1);
+    if (error) return { data: null, error };
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return { data: rows, error: null };
   }
 }
 
 export default function PerformancePage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule, hasPermission, isReadOnly, canViewAllWorkHr } = useAuth();
-
-  const [selectedDate, setSelectedDate] = useState(toDateInput());
-  const [formula, setFormula] = useState<EvalFormula>(defaultFormula);
-  const [taskEvalMap, setTaskEvalMap] = useState<Record<string, TaskEvalConfig>>({});
-
+  const { loading: authLoading, user, logout, hasPermission, canViewAllWorkHr } = useAuth();
   const [allUsers, setAllUsers] = useState<StaffUser[]>([]);
   const [tasks, setTasks] = useState<TaskRow[]>([]);
-  const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
+  const [evaluations, setEvaluations] = useState<TaskEvaluationRow[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeScoreRow | null>(null);
   const [message, setMessage] = useState("Đang tải dữ liệu đánh giá...");
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setFormula(loadFormula());
-      setTaskEvalMap(loadTaskEvalMap());
-    }
-  }, []);
+  const canEditEvaluation = !!user && canEditTaskEvaluation({
+    roleCode: user.role_code,
+    canManageUsers: hasPermission("can_manage_users"),
+  });
 
   const loadData = async () => {
-    const monthStart = monthStartOf(selectedDate);
-
-    const [usersRes, taskRes, attendanceRes] = await Promise.all([
-      supabase.from("staff_users").select("id,full_name,username,roles(code)").eq("active", true).order("full_name"),
-      supabase
+    const [usersRes, taskRes, evaluationRes] = await Promise.all([
+      fetchAllRows<StaffUser>((from, to) => supabase
+        .from("staff_users")
+        .select("id,full_name,roles(code)")
+        .eq("active", true)
+        .order("full_name")
+        .range(from, to) as unknown as PromiseLike<PageResult<StaffUser>>),
+      fetchAllRows<TaskRow>((from, to) => supabase
         .from("tasks")
-        .select("id,assignee_id,owner_id,priority,status,progress_percent,due_date,task_assignees(user_id,assignment_role)")
+        .select("id,title,status,assignee_id,owner_id,effort_weight,task_assignees(user_id,assignment_role)")
         .order("created_at", { ascending: false })
-        .limit(3000),
-      supabase
-        .from("attendance_logs")
-        .select("user_id,work_date,check_in,check_out")
-        .gte("work_date", monthStart)
-        .lte("work_date", selectedDate)
-        .limit(30000),
+        .range(from, to) as unknown as PromiseLike<PageResult<TaskRow>>),
+      fetchAllRows<TaskEvaluationRow>((from, to) => {
+        let query = supabase
+          .from("task_evaluation_checkpoints")
+          .select("id,task_id,employee_id,reviewer_id,rating,effort_weight,completion,on_time,opinion,checkpoint_date,is_final,created_at")
+          .order("checkpoint_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .range(from, to);
+        if (!canEditEvaluation && !canViewAllWorkHr() && user) query = query.eq("employee_id", user.id);
+        return query as unknown as PromiseLike<PageResult<TaskEvaluationRow>>;
+      }),
     ]);
 
-    if (usersRes.error || taskRes.error) {
-      setMessage(`❌ ${usersRes.error?.message || taskRes.error?.message}`);
+    if (usersRes.error || taskRes.error || evaluationRes.error) {
+      setMessage(`❌ ${usersRes.error?.message || taskRes.error?.message || evaluationRes.error?.message}`);
       return;
     }
 
-    const users = (usersRes.data ?? []) as unknown as StaffUser[];
-    const nonChief = users.filter((u) => (u.roles?.code ?? "") !== "tong_bien_tap");
-    setAllUsers(users);
-    setTasks((taskRes.data ?? []) as unknown as TaskRow[]);
-
-    if (attendanceRes.error) {
-      const missingTable = attendanceRes.error.message.includes("schema cache") || attendanceRes.error.message.includes("Could not find the table");
-      if (!missingTable) {
-        setAttendanceRows([]);
-        setMessage(`⚠️ ${attendanceRes.error.message}`);
-        return;
-      }
-
-      const from = new Date(monthStart);
-      const to = new Date(selectedDate);
-      const all: AttendanceRow[] = [];
-      for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() === 0) continue;
-        const text = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        nonChief.forEach((u, idx) => {
-          const inMin = 8 * 60 + 2 + (idx % 35);
-          const outMin = 17 * 60 + 8 + (idx % 40);
-          const toTime = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}:00`;
-          all.push({ user_id: u.id, work_date: text, check_in: toTime(inMin), check_out: toTime(outMin) });
-        });
-      }
-      setAttendanceRows(all);
-      setMessage("✅ Dùng attendance demo từ đầu tháng (attendance_logs chưa sẵn).");
-      return;
-    }
-
-    setAttendanceRows((attendanceRes.data ?? []) as AttendanceRow[]);
-    setMessage("✅ Đã tải dữ liệu đánh giá.");
+    setAllUsers(usersRes.data ?? []);
+    setTasks(taskRes.data ?? []);
+    setEvaluations(evaluationRes.data ?? []);
+    setMessage("✅ Đã tải dữ liệu đánh giá công việc.");
   };
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
-    if (!canAccessModule("performance")) return void router.push("/");
-    const t = setTimeout(() => void loadData(), 0);
-    return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router, selectedDate]);
-
-  const monthTargetWorkDays = useMemo(() => {
-    const from = new Date(monthStartOf(selectedDate));
-    const to = new Date(selectedDate);
-    let count = 0;
-    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-      if (d.getDay() !== 0) count += 1;
-    }
-    return count;
-  }, [selectedDate]);
-
-  const chiefUserId = useMemo(() => {
-    const u = allUsers.find((x) => (x.roles?.code ?? "") === "tong_bien_tap");
-    return u?.id ?? null;
-  }, [allUsers]);
-
-  const defaultTaskEval = (t: TaskRow): TaskEvalConfig => {
-    let completion: CompletionLevel = "done";
-    if (t.status === "done" && (t.progress_percent ?? 0) >= 95) completion = "excellent";
-    else if (t.status === "done") completion = "done";
-    else if (t.status === "rejected") completion = "not_done";
-    else completion = "not_done";
-
-    const onTime = !!t.due_date ? t.due_date >= selectedDate : true;
-    const title = (t as unknown as { title?: string }).title ?? "";
-
-    return {
-      completion,
-      onTime,
-      hardTask: ["high", "urgent"].includes(t.priority),
-      improvement: /\[IMPROVE\]/i.test(title),
-      contribution: !/\[NO_CONTRIB\]/i.test(title),
-    };
-  };
+    const timer = setTimeout(() => void loadData(), 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, router]);
 
   const scoreRows = useMemo(() => {
-    const users = allUsers
-      .filter((u) => (u.roles?.code ?? "") !== "tong_bien_tap")
-      .filter((u) => (hasPermission("can_edit_all_tasks") || canViewAllWorkHr() ? true : u.id === user?.id))
+    if (!user) return [];
+    const visibleUsers = allUsers
+      .filter((staff) => (canEditEvaluation || canViewAllWorkHr() ? true : staff.id === user.id))
       .slice()
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "vi"));
+    const latestFinal = selectLatestFinalEvaluations(evaluations);
 
-    return users.map((u) => {
-      const userAttendance = attendanceRows.filter((r) => r.user_id === u.id);
-      const totalHours = userAttendance.reduce((sum, r) => sum + workedHours(r.check_in, r.check_out), 0);
-      const workUnits = totalHours / 8;
-      const attendanceScore = monthTargetWorkDays > 0 ? clamp100((workUnits / monthTargetWorkDays) * 100) : 0;
-
-      const assignedTasks = tasks.filter((t) => {
-        const mine = t.assignee_id === u.id || (t.task_assignees ?? []).some((a) => a.user_id === u.id);
-        const fromChief = chiefUserId ? t.owner_id === chiefUserId : true;
-        return mine && fromChief;
+    return visibleUsers.map((staff): EmployeeScoreRow => {
+      const assignedTasks = tasks.filter((task) => {
+        if (task.assignee_id === staff.id) return true;
+        return (task.task_assignees ?? []).some(
+          (assignee) => assignee.user_id === staff.id && assignee.assignment_role !== "watcher",
+        );
       });
-
-      const evals = assignedTasks.map((t) => {
-        const cfg = taskEvalMap[t.id] ?? defaultTaskEval(t);
-        return { task: t, cfg };
-      });
-
-      const completionScore = evals.length > 0
-        ? clamp100(evals.reduce((sum, x) => sum + (x.cfg.onTime ? completionPoint[x.cfg.completion] : completionPoint[x.cfg.completion] * 0.7), 0) / evals.length)
-        : 0;
-
-      const hardTaskScore = evals.length > 0
-        ? clamp100(evals.reduce((sum, x) => sum + difficultyPoint[x.task.priority], 0) / evals.length)
-        : 0;
-
-      const improvementScore = evals.length > 0
-        ? clamp100((evals.filter((x) => x.cfg.improvement).length / evals.length) * 100)
-        : 0;
-
-      const teamContributionScore = evals.length > 0
-        ? clamp100((evals.filter((x) => x.cfg.contribution).length / evals.length) * 100)
-        : 0;
-
-      const totalWeight =
-        formula.attendanceWeight +
-        formula.completionWeight +
-        formula.hardTaskWeight +
-        formula.improvementWeight +
-        formula.teamContributionWeight;
-
-      const totalScore = totalWeight > 0
-        ? (
-          attendanceScore * formula.attendanceWeight +
-          completionScore * formula.completionWeight +
-          hardTaskScore * formula.hardTaskWeight +
-          improvementScore * formula.improvementWeight +
-          teamContributionScore * formula.teamContributionWeight
-        ) / totalWeight
-        : 0;
-
-      const rank = totalScore >= 85 ? "A" : totalScore >= 70 ? "B" : totalScore >= 50 ? "C" : "D";
+      const summary = summarizeEmployeeEvaluation({ tasks: assignedTasks, evaluations, employeeId: staff.id });
+      const taskById = new Map(assignedTasks.map((task) => [task.id, task]));
+      const evaluatedTasks = latestFinal
+        .filter((evaluation) => evaluation.employee_id === staff.id && taskById.has(evaluation.task_id))
+        .map((evaluation) => {
+          const task = taskById.get(evaluation.task_id)!;
+          return {
+            taskId: task.id,
+            title: task.title,
+            status: task.status,
+            rating: evaluation.rating,
+            effortWeight: evaluation.effort_weight,
+            weightedPoints: evaluation.rating * evaluation.effort_weight,
+            completion: evaluation.completion ?? "done",
+            onTime: evaluation.on_time ?? true,
+            opinion: evaluation.opinion,
+            checkpointDate: evaluation.checkpoint_date,
+          };
+        });
 
       return {
-        userId: u.id,
-        fullName: u.full_name,
-        workUnits,
-        attendanceScore,
-        completionScore,
-        hardTaskScore,
-        improvementScore,
-        teamContributionScore,
-        totalScore,
-        rank,
+        userId: staff.id,
+        fullName: staff.full_name,
+        taskCount: summary.taskCount,
+        completedCount: summary.completedCount,
+        notCompletedCount: summary.notCompletedCount,
+        totalWeight: summary.totalWeight,
+        weightedPoints: summary.weightedPoints,
+        weightedAverage: summary.weightedAverage,
+        evaluatedTasks,
       };
     });
-  }, [allUsers, attendanceRows, monthTargetWorkDays, tasks, taskEvalMap, chiefUserId, formula, selectedDate, hasPermission, user?.id]);
-
-  const saveFormula = () => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(FORMULA_STORAGE_KEY, JSON.stringify(formula));
-    setMessage("✅ Đã lưu công thức. Có thể chỉnh lại bất cứ lúc nào.");
-  };
+  }, [allUsers, canEditEvaluation, canViewAllWorkHr, evaluations, tasks, user]);
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
+    <main className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:p-6">
       <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
         <div className="mb-4 lg:mb-0">
           <AppNav currentPath="/performance" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
@@ -332,60 +196,82 @@ export default function PerformancePage() {
 
         <div>
           <div className="mb-4">
-            <h1 className="text-2xl font-bold">Đánh giá</h1>
+            <h1 className="text-2xl font-bold">Đánh giá công việc</h1>
+            <p className="mt-1 text-sm text-slate-600">So sánh công bằng bằng điểm trung bình có trọng số; tổng điểm có trọng số phản ánh cả chất lượng và độ lớn công việc.</p>
           </div>
 
-        <section className="rounded-xl border bg-white p-4">
-          <h2 className="mb-2 text-lg font-semibold">Công thức tính điểm (lưu để thay đổi về sau)</h2>
-          <div className="mb-2 grid gap-2 md:grid-cols-6">
-            <label className="text-xs">Ngày công (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.attendanceWeight} onChange={(e) => setFormula((p) => ({ ...p, attendanceWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Hoàn thành (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.completionWeight} onChange={(e) => setFormula((p) => ({ ...p, completionWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Độ khó công việc (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.hardTaskWeight} onChange={(e) => setFormula((p) => ({ ...p, hardTaskWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Cải tiến (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.improvementWeight} onChange={(e) => setFormula((p) => ({ ...p, improvementWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Đóng góp (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.teamContributionWeight} onChange={(e) => setFormula((p) => ({ ...p, teamContributionWeight: Number(e.target.value || 0) }))} /></label>
-            <div className="flex items-end"><button disabled={isReadOnly()} onClick={saveFormula} className="w-full rounded bg-orange-500 px-3 py-2 text-sm font-semibold text-white">Lưu công thức</button></div>
-          </div>
-          <label className="text-sm">Tính đến ngày
-            <input type="date" className="mt-1 ml-2 rounded border px-3 py-2" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-          </label>
-          <p className="mt-2 text-sm text-slate-600">{message}</p>
-          <p className="text-xs text-slate-500">Tiêu chí độ khó lấy trực tiếp từ trường Độ khó của công việc; các tiêu chí cải tiến/đóng góp và mức hoàn thành vẫn lấy từ trang chi tiết từng việc.</p>
-        </section>
+          <section className="rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-cyan-50 p-4 text-sm text-slate-700">
+            <p><b>Công thức:</b> Tổng điểm = Σ(điểm 1-10 × trọng số). Điểm trung bình = Tổng điểm / Tổng trọng số đã đánh giá.</p>
+            <p className="mt-1 text-xs text-slate-500">Chỉ checkpoint cuối kỳ mới nhất của từng công việc được cộng; checkpoint giữa kỳ chỉ lưu tiến độ và phản hồi.</p>
+            <p className="mt-2">{message}</p>
+          </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
-          <h2 className="mb-2 text-lg font-semibold">Bảng điểm cá nhân</h2>
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-2 py-2">Nhân sự</th>
-                <th className="px-2 py-2">Ngày công</th>
-                <th className="px-2 py-2">Hoàn thành</th>
-                <th className="px-2 py-2">Độ khó</th>
-                <th className="px-2 py-2">Cải tiến</th>
-                <th className="px-2 py-2">Đóng góp</th>
-                <th className="px-2 py-2">Điểm tổng</th>
-                <th className="px-2 py-2">Xếp loại</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scoreRows.map((r) => (
-                <tr key={r.userId} className="border-t">
-                  <td className="px-2 py-2 font-semibold">{r.fullName}</td>
-                  <td className="px-2 py-2">{r.attendanceScore.toFixed(1)} <span className="text-xs text-slate-500">({r.workUnits.toFixed(2)} công)</span></td>
-                  <td className="px-2 py-2">{r.completionScore.toFixed(1)}</td>
-                  <td className="px-2 py-2">{r.hardTaskScore.toFixed(1)}</td>
-                  <td className="px-2 py-2">{r.improvementScore.toFixed(1)}</td>
-                  <td className="px-2 py-2">{r.teamContributionScore.toFixed(1)}</td>
-                  <td className="px-2 py-2 font-semibold text-blue-700">{r.totalScore.toFixed(1)}</td>
-                  <td className="px-2 py-2"><span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold">{r.rank}</span></td>
+          <section className="mt-4 overflow-auto rounded-xl border bg-white p-4">
+            <h2 className="mb-3 text-lg font-semibold">Danh sách nhân viên</h2>
+            <table className="min-w-[850px] w-full text-left text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-3 py-2">Nhân viên</th>
+                  <th className="px-3 py-2 text-right">Số công việc</th>
+                  <th className="px-3 py-2 text-right">Hoàn thành</th>
+                  <th className="px-3 py-2 text-right">Không hoàn thành</th>
+                  <th className="px-3 py-2 text-right">Tổng trọng số</th>
+                  <th className="px-3 py-2 text-right">Tổng điểm có trọng số</th>
+                  <th className="px-3 py-2 text-right">Điểm TB có trọng số</th>
                 </tr>
-              ))}
-              {scoreRows.length === 0 ? <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={8}>Chưa có dữ liệu chấm điểm.</td></tr> : null}
-            </tbody>
-          </table>
-        </section>
+              </thead>
+              <tbody>
+                {scoreRows.map((row) => (
+                  <tr key={row.userId} className="cursor-pointer border-t transition hover:bg-blue-50" onClick={() => setSelectedEmployee(row)}>
+                    <td className="px-3 py-3 font-semibold text-blue-700">{row.fullName}</td>
+                    <td className="px-3 py-3 text-right">{row.taskCount}</td>
+                    <td className="px-3 py-3 text-right text-emerald-700">{row.completedCount}</td>
+                    <td className="px-3 py-3 text-right text-orange-700">{row.notCompletedCount}</td>
+                    <td className="px-3 py-3 text-right">{row.totalWeight}</td>
+                    <td className="px-3 py-3 text-right font-semibold">{row.weightedPoints.toFixed(1)}</td>
+                    <td className="px-3 py-3 text-right font-bold text-blue-700">{row.totalWeight > 0 ? row.weightedAverage.toFixed(2) : "-"}</td>
+                  </tr>
+                ))}
+                {scoreRows.length === 0 ? <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-500">Chưa có nhân viên hoặc dữ liệu công việc.</td></tr> : null}
+              </tbody>
+            </table>
+          </section>
         </div>
       </div>
+
+      {selectedEmployee ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-3" role="dialog" aria-modal="true" aria-label={`Công việc đã đánh giá của ${selectedEmployee.fullName}`}>
+          <div className="max-h-[88vh] w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b bg-slate-50 px-4 py-3">
+              <div>
+                <h2 className="text-lg font-bold">{selectedEmployee.fullName}</h2>
+                <p className="text-xs text-slate-500">{selectedEmployee.evaluatedTasks.length} công việc có đánh giá cuối kỳ</p>
+              </div>
+              <button type="button" onClick={() => setSelectedEmployee(null)} className="rounded border px-3 py-1 text-sm font-semibold hover:bg-white">Đóng</button>
+            </div>
+            <div className="max-h-[72vh] overflow-auto p-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg bg-blue-50 p-3"><p className="text-xs text-slate-500">Tổng điểm</p><p className="text-xl font-bold text-blue-700">{selectedEmployee.weightedPoints.toFixed(1)}</p></div>
+                <div className="rounded-lg bg-cyan-50 p-3"><p className="text-xs text-slate-500">Tổng trọng số</p><p className="text-xl font-bold text-cyan-700">{selectedEmployee.totalWeight}</p></div>
+                <div className="rounded-lg bg-emerald-50 p-3"><p className="text-xs text-slate-500">Điểm TB</p><p className="text-xl font-bold text-emerald-700">{selectedEmployee.totalWeight > 0 ? selectedEmployee.weightedAverage.toFixed(2) : "-"}</p></div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {selectedEmployee.evaluatedTasks.map((row) => (
+                  <button key={row.taskId} type="button" onClick={() => router.push(taskDetailUrl(row.taskId))} className="w-full rounded-xl border p-3 text-left transition hover:border-blue-300 hover:bg-blue-50">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div><p className="font-semibold text-blue-800">{row.title}</p><p className="text-xs text-slate-500">{statusLabel[row.status] ?? row.status} · {completionLabel[row.completion] ?? row.completion} · {row.onTime ? "Đúng tiến độ" : "Chậm tiến độ"}</p></div>
+                      <div className="text-right"><p className="font-bold">{row.rating}/10 × {row.effortWeight}</p><p className="text-xs text-slate-500">{row.weightedPoints} điểm · {row.checkpointDate}</p></div>
+                    </div>
+                    {row.opinion ? <p className="mt-2 line-clamp-2 text-sm text-slate-600">{row.opinion}</p> : null}
+                  </button>
+                ))}
+                {selectedEmployee.evaluatedTasks.length === 0 ? <p className="rounded border border-dashed p-6 text-center text-sm text-slate-500">Chưa có công việc được đánh giá cuối kỳ.</p> : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
