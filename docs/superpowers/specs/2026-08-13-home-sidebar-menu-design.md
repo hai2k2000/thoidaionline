@@ -15,7 +15,7 @@ data, permissions, or underlying modules.
   implementations unchanged.
 - Exclude the `assets` and `docs` groups at the final sidebar rendering filter.
   Direct URLs remain available to authorized users.
-- Change only the `admin` display label from `Qu?n tr? ph?n m?m` to `C?u h?nh`.
+- Change only the `admin` display label from `Quản trị phần mềm` to `Cấu hình`.
 - Store the open parent group as one nullable group key. Clicking a closed parent
   opens it and replaces any prior key; clicking the open parent sets the key to
   null.
@@ -39,6 +39,6 @@ Use Node's built-in test runner with TypeScript stripping for the focused
 behavior test. Then run ESLint, TypeScript checking, the production Next.js
 build, `git diff --check`, service health checks, local/public HTTP checks,
 and an HTML response check that confirms the removed labels are absent while
-`C?u h?nh` is present.
+`Cấu hình` is present.
 
 ## Rollback

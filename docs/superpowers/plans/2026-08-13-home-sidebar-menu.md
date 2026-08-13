@@ -16,7 +16,7 @@
 - Create: `src/components/appNavState.test.mjs`
 
 - [ ] Write assertions that the rendered group configuration excludes `assets`
-  and `docs`, and that the admin display label is `C?u h?nh`.
+  and `docs`, and that the admin display label is `Cấu hình`.
 - [ ] Write assertions that clicking the open group closes it and clicking a
   different group replaces the prior open group.
 - [ ] Write assertions that a visible current route opens its group while a

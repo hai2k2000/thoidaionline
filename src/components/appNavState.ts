@@ -9,47 +9,47 @@ export type Group = {
 export const groups: Group[] = [
   {
     key: "work",
-    label: "Qu?n l? c?ng vi?c",
+    label: "Quản lý công việc",
     items: [
-      { href: "/", label: "Giao vi?c" },
-      { href: "/tasks/active", label: "CV ?ang tri?n khai" },
-      { href: "/tasks/pending-review", label: "CV ch? duy?t" },
-      { href: "/tasks/done", label: "CV ho?n th?nh" },
+      { href: "/", label: "Giao việc" },
+      { href: "/tasks/active", label: "CV đang triển khai" },
+      { href: "/tasks/pending-review", label: "CV chờ duyệt" },
+      { href: "/tasks/done", label: "CV hoàn thành" },
     ],
   },
   {
     key: "hr",
-    label: "Qu?n l? nh?n s?",
+    label: "Quản lý nhân sự",
     items: [
-      { href: "/hr-profiles", label: "H? s? nh?n s?" },
-      { href: "/attendance", label: "Ch?m c?ng" },
-      { href: "/performance", label: "??nh gi?" },
+      { href: "/hr-profiles", label: "Hồ sơ nhân sự" },
+      { href: "/attendance", label: "Chấm công" },
+      { href: "/performance", label: "Đánh giá" },
     ],
   },
   {
     key: "assets",
-    label: "Qu?n l? t?i s?n",
+    label: "Quản lý tài sản",
     items: [
-      { href: "/assets", label: "Danh s?ch t?i s?n" },
-      { href: "/assets/new", label: "Th?m t?i s?n" },
+      { href: "/assets", label: "Danh sách tài sản" },
+      { href: "/assets/new", label: "Thêm tài sản" },
     ],
   },
   {
     key: "docs",
-    label: "Qu?n l? t?i li?u",
+    label: "Quản lý tài liệu",
     items: [
-      { href: "/documents/common", label: "T?i li?u chung" },
-      { href: "/documents", label: "Danh s?ch t?i li?u" },
-      { href: "/documents/new", label: "Th?m t?i li?u" },
+      { href: "/documents/common", label: "Tài liệu chung" },
+      { href: "/documents", label: "Danh sách tài liệu" },
+      { href: "/documents/new", label: "Thêm tài liệu" },
     ],
   },
   {
     key: "admin",
-    label: "C?u h?nh",
+    label: "Cấu hình",
     items: [
-      { href: "/users", label: "Qu?n l? nh?n vi?n" },
-      { href: "/departments", label: "Ph?ng ban" },
-      { href: "/permissions", label: "Ph?n quy?n" },
+      { href: "/users", label: "Quản lý nhân viên" },
+      { href: "/departments", label: "Phòng ban" },
+      { href: "/permissions", label: "Phân quyền" },
     ],
   },
 ];

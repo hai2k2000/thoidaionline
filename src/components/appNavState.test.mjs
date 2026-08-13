@@ -17,7 +17,7 @@ test("sidebar configuration hides assets and documents and renames admin", () =>
   );
   assert.equal(
     groups.find((group) => group.key === "admin")?.label,
-    "C?u h?nh",
+    "Cấu hình",
   );
 });
 
