@@ -39,7 +39,7 @@ export type EvaluationTask = {
 };
 
 export const canEditTaskEvaluation = ({ roleCode, canManageUsers }: EvaluationAccess) =>
-  roleCode === "tong_bien_tap" || canManageUsers === true;
+  roleCode === "tong_bien_tap" || roleCode === "tbt_read_only" || canManageUsers === true;
 
 export function normalizeEvaluationInput(input: TaskEvaluationInput & Record<string, unknown>): TaskEvaluationInput {
   if (!RATING_OPTIONS.includes(input.rating as (typeof RATING_OPTIONS)[number])) {

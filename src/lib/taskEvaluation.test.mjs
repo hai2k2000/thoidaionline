@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import * as evaluation from "./taskEvaluation.ts";
 
@@ -16,6 +16,7 @@ const {
 
 test("only editor-in-chief and existing administrators can edit task evaluations", () => {
   assert.equal(canEditTaskEvaluation({ roleCode: "tong_bien_tap", canManageUsers: false }), true);
+  assert.equal(canEditTaskEvaluation({ roleCode: "tbt_read_only", canManageUsers: false }), true);
   assert.equal(canEditTaskEvaluation({ roleCode: "pho_tong_bien_tap", canManageUsers: true }), true);
   assert.equal(canEditTaskEvaluation({ roleCode: "admin", canManageUsers: true }), true);
   assert.equal(canEditTaskEvaluation({ roleCode: "pho_tong_bien_tap", canManageUsers: false }), false);
@@ -99,6 +100,15 @@ test("migration contract protects task evaluations", () => {
   assert.match(sql, /tong_bien_tap[\s\S]*can_manage_users/i);
   assert.match(sql, /revoke[\s\S]*(insert|update|delete)[\s\S]*task_evaluation_checkpoints[\s\S]*anon/i);
   assert.match(sql, /grant execute[\s\S]*save_task_evaluation_checkpoint[\s\S]*anon/i);
+});
+
+test("forward migration grants TBT evaluation access without generic admin permissions", () => {
+  const migrationUrl = new URL("../../supabase/migrations/20260813155000_allow_tbt_task_evaluation.sql", import.meta.url);
+  assert.equal(existsSync(migrationUrl), true, "forward authorization migration must exist");
+  const sql = existsSync(migrationUrl) ? readFileSync(migrationUrl, "utf8") : "";
+  assert.match(sql, /r\.code\s+in\s*\(\s*'tong_bien_tap'\s*,\s*'tbt_read_only'\s*\)/i);
+  assert.match(sql, /coalesce\(rp\.can_manage_users,\s*false\)\s*=\s*true/i);
+  assert.doesNotMatch(sql, /update\s+public\.role_permissions/i);
 });
 
 test("task detail source hides mutations from employees and removes legacy controls", () => {

@@ -25,6 +25,19 @@ test("TBT role is read-only and limited to work and HR", () => {
   assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "admin"), false);
 });
 
+test("TBT evaluation access does not expose restricted navigation", () => {
+  const policy = navState.getRoleAccessPolicy("tbt_read_only");
+  const workGroup = navState.groups.find((group) => group.key === "work");
+
+  assert.equal(workGroup?.items.some((item) => item.href === "/performance"), true);
+  assert.deepEqual(policy.modules, ["work", "hr"]);
+  assert.equal(policy.admin, false);
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "assets"), false);
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "docs"), false);
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "admin"), false);
+});
+
+
 test("sidebar configuration hides assets and documents and renames admin", () => {
   const visibleGroups = groups.filter((group) => isSidebarGroupVisible(group.key));
 
