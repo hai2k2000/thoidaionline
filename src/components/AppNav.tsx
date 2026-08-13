@@ -3,73 +3,20 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import {
+  getInitialOpenGroup,
+  groups,
+  isActive,
+  isSidebarGroupVisible,
+  toggleOpenGroup,
+  type Group,
+  type GroupKey,
+} from "@/components/appNavState";
 
 type AppNavProps = {
   currentPath: string;
   userLabel?: string;
   onLogout: () => void;
-};
-
-type Group = {
-  key: "work" | "hr" | "assets" | "docs" | "admin";
-  label: string;
-  items: { href: string; label: string }[];
-};
-
-const groups: Group[] = [
-  {
-    key: "work",
-    label: "Quản lý công việc",
-    items: [
-      { href: "/", label: "Giao việc" },
-      { href: "/tasks/active", label: "CV đang triển khai" },
-      { href: "/tasks/pending-review", label: "CV chờ duyệt" },
-      { href: "/tasks/done", label: "CV hoàn thành" },
-    ],
-  },
-  {
-    key: "hr",
-    label: "Quản lý nhân sự",
-    items: [
-      { href: "/hr-profiles", label: "Hồ sơ nhân sự" },
-      { href: "/attendance", label: "Chấm công" },
-      { href: "/performance", label: "Đánh giá" },
-    ],
-  },
-  {
-    key: "assets",
-    label: "Quản lý tài sản",
-    items: [
-      { href: "/assets", label: "Danh sách tài sản" },
-      { href: "/assets/new", label: "Thêm tài sản" },
-    ],
-  },
-  {
-    key: "docs",
-    label: "Quản lý tài liệu",
-    items: [
-      { href: "/documents/common", label: "Tài liệu chung" },
-      { href: "/documents", label: "Danh sách tài liệu" },
-      { href: "/documents/new", label: "Thêm tài liệu" },
-    ],
-  },
-  {
-    key: "admin",
-    label: "Quản trị phần mềm",
-    items: [
-      { href: "/users", label: "Quản lý nhân viên" },
-      { href: "/departments", label: "Phòng ban" },
-      { href: "/permissions", label: "Phân quyền" },
-    ],
-  },
-];
-
-const isActive = (currentPath: string, href: string) => {
-  if (href === "/") return currentPath === "/";
-  if (href.startsWith("/tasks/") && currentPath.startsWith("/tasks/")) return true;
-  if (href === "/documents" && currentPath.startsWith("/documents/")) return true;
-  if (href === "/assets" && currentPath.startsWith("/assets/")) return true;
-  return currentPath === href;
 };
 
 export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps) {
@@ -129,7 +76,10 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
 
       return g;
     })
-    .filter((g) => g.items.length > 0);
+    .filter((g) => g.items.length > 0 && isSidebarGroupVisible(g.key));
+  const [openGroup, setOpenGroup] = useState<GroupKey | null>(() =>
+    getInitialOpenGroup(visibleGroups, currentPath),
+  );
 
   return (
     <aside className="w-full lg:w-[250px]">
@@ -147,8 +97,16 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         <div className="space-y-3">
           {visibleGroups.map((g) => (
             <div key={g.key}>
-              <p className="mb-1 rounded border border-orange-200 bg-orange-50/80 px-2 py-1 text-xs font-bold text-orange-600">{g.label}</p>
-              <div className="space-y-1">
+              <button
+                type="button"
+                aria-expanded={openGroup === g.key}
+                onClick={() => setOpenGroup((current) => toggleOpenGroup(current, g.key))}
+                className="mb-1 flex w-full items-center justify-between rounded border border-orange-200 bg-orange-50/80 px-2 py-1 text-left text-xs font-bold text-orange-600"
+              >
+                <span>{g.label}</span>
+                <span aria-hidden="true">{openGroup === g.key ? "-" : "+"}</span>
+              </button>
+              {openGroup === g.key ? <div className="space-y-1">
                 {g.items.map((i) => {
                   const active = isActive(currentPath, i.href);
                   return (
@@ -166,7 +124,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
                     </Link>
                   );
                 })}
-              </div>
+              </div> : null}
             </div>
           ))}
         </div>

@@ -1,0 +1,41 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  getInitialOpenGroup,
+  groups,
+  isSidebarGroupVisible,
+  toggleOpenGroup,
+} from "./appNavState.ts";
+
+test("sidebar configuration hides assets and documents and renames admin", () => {
+  const visibleGroups = groups.filter((group) => isSidebarGroupVisible(group.key));
+
+  assert.deepEqual(
+    visibleGroups.map((group) => group.key),
+    ["work", "hr", "admin"],
+  );
+  assert.equal(
+    groups.find((group) => group.key === "admin")?.label,
+    "C?u h?nh",
+  );
+});
+
+test("accordion closes the open group and replaces it with another group", () => {
+  assert.equal(toggleOpenGroup(null, "work"), "work");
+  assert.equal(toggleOpenGroup("work", "work"), null);
+  assert.equal(toggleOpenGroup("work", "hr"), "hr");
+  assert.equal(toggleOpenGroup("hr", "admin"), "admin");
+});
+
+test("current routes initialize only their visible parent group", () => {
+  const visibleGroups = groups.filter((group) => isSidebarGroupVisible(group.key));
+
+  assert.equal(getInitialOpenGroup(visibleGroups, "/"), "work");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/tasks/[id]"), "work");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/attendance"), "hr");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/users"), "admin");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/assets"), null);
+  assert.equal(getInitialOpenGroup(visibleGroups, "/documents"), null);
+  assert.equal(getInitialOpenGroup(visibleGroups, "/profile"), null);
+});
