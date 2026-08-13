@@ -83,7 +83,7 @@ const generateDemoRangeRows = (users: StaffDemoRow[], fromDate: string, toDate: 
 
 export default function AttendancePage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission, canViewAllWorkHr } = useAuth();
 
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
@@ -108,7 +108,7 @@ export default function AttendancePage() {
       .order("work_date", { ascending: true })
       .limit(10000);
 
-    if (!hasPermission("can_edit_all_tasks") && user?.id) {
+    if (!hasPermission("can_edit_all_tasks") && !canViewAllWorkHr() && user?.id) {
       dayQuery = dayQuery.eq("user_id", user.id);
       monthQuery = monthQuery.eq("user_id", user.id);
     }
@@ -136,7 +136,7 @@ export default function AttendancePage() {
       let users = ((usersRes.data ?? []) as unknown as StaffDemoRow[])
         .filter((u) => (u.roles?.code ?? "") !== "tong_bien_tap");
 
-      if (!hasPermission("can_edit_all_tasks") && user?.id) {
+      if (!hasPermission("can_edit_all_tasks") && !canViewAllWorkHr() && user?.id) {
         users = users.filter((u) => u.id === user.id);
       }
 

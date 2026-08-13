@@ -9,6 +9,7 @@ import {
   isActive,
   isSidebarGroupVisible,
   toggleOpenGroup,
+  isGroupAllowedForRole,
   type Group,
   type GroupKey,
 } from "@/components/appNavState";
@@ -21,7 +22,7 @@ type AppNavProps = {
 
 export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { hasPermission, canAccessModule } = useAuth();
+  const { user, hasPermission, canAccessModule } = useAuth();
   const canCreateTask = hasPermission("can_create_task");
   const canManageDocuments = canAccessModule("documents");
   const canSeePerformance = canAccessModule("performance");
@@ -30,6 +31,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
   const canManageUsers = hasPermission("can_manage_users") || hasPermission("can_manage_permissions");
 
   const visibleGroups: Group[] = groups
+    .filter((g) => isGroupAllowedForRole(user?.role_code ?? "", g.key))
     .map((g) => {
       if (g.key === "work") {
         return {

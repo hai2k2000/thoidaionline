@@ -53,7 +53,7 @@ const priorityLabel: Record<Task["priority"], string> = {
 
 export default function Home() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, hasPermission, isReadOnly, canViewAllWorkHr } = useAuth();
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -86,7 +86,7 @@ export default function Home() {
   const taskListRef = useRef<HTMLElement | null>(null);
 
   const loadAll = async () => {
-    const canViewAllTasks = hasPermission("can_edit_all_tasks");
+    const canViewAllTasks = hasPermission("can_edit_all_tasks") || canViewAllWorkHr();
 
     const taskQuery = supabase
       .from("tasks")
@@ -333,7 +333,7 @@ export default function Home() {
       router.push("/login");
       return;
     }
-    if (!hasPermission("can_create_task")) {
+    if (!hasPermission("can_create_task") && !isReadOnly()) {
       router.push("/tasks/active");
       return;
     }
@@ -341,7 +341,7 @@ export default function Home() {
       void loadAll();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, router, hasPermission]);
+  }, [authLoading, user, router, hasPermission, isReadOnly]);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -359,12 +359,14 @@ export default function Home() {
         <section className="mt-4 rounded-xl border bg-white p-4">
           <div className="flex flex-wrap gap-2">
             <button onClick={loadAll} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600">Tải dữ liệu</button>
+            {!isReadOnly() ? (<>
             <button onClick={sendDueSoonReminder} disabled={sendingReminder} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50">
               {sendingReminder ? "Đang gửi nhắc việc..." : "Nhắc việc sắp đến hạn"}
             </button>
             <button onClick={sendOverdueDocReminder} disabled={sendingDocReminder} className="rounded bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">
               {sendingDocReminder ? "Đang gửi cảnh báo..." : "Cảnh báo công văn quá hạn"}
             </button>
+            </>) : null}
             <button onClick={exportSummaryCsv} className="rounded bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-300">
               Xuất báo cáo CSV
             </button>
@@ -372,6 +374,7 @@ export default function Home() {
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>
 
+        {!isReadOnly() ? (
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-3 text-lg font-semibold">Tạo công việc</h2>
           <div className="grid gap-3 md:grid-cols-2">
@@ -501,6 +504,7 @@ export default function Home() {
             <p className="mt-3 text-sm text-amber-700">Bạn không có quyền tạo công việc.</p>
           )}
         </section>
+        ) : null}
 
         </div>
       </div>

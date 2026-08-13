@@ -15,7 +15,7 @@ const docStatusLabel: Record<string, string> = {
 
 export default function CommonDocumentsPage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
 
   const [rows, setRows] = useState<OfficialDocument[]>([]);
   const [message, setMessage] = useState("Đang tải...");
@@ -32,9 +32,10 @@ export default function CommonDocumentsPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
+    if (!canAccessModule("documents")) return void router.push("/");
     const t = setTimeout(() => void loadData(), 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, canAccessModule]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {

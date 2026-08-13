@@ -125,7 +125,7 @@ function loadTaskEvalMap(): Record<string, TaskEvalConfig> {
 
 export default function PerformancePage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission, isReadOnly, canViewAllWorkHr } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState(toDateInput());
   const [formula, setFormula] = useState<EvalFormula>(defaultFormula);
@@ -246,7 +246,7 @@ export default function PerformancePage() {
   const scoreRows = useMemo(() => {
     const users = allUsers
       .filter((u) => (u.roles?.code ?? "") !== "tong_bien_tap")
-      .filter((u) => (hasPermission("can_edit_all_tasks") ? true : u.id === user?.id))
+      .filter((u) => (hasPermission("can_edit_all_tasks") || canViewAllWorkHr() ? true : u.id === user?.id))
       .slice()
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "vi"));
 
@@ -338,12 +338,12 @@ export default function PerformancePage() {
         <section className="rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Công thức tính điểm (lưu để thay đổi về sau)</h2>
           <div className="mb-2 grid gap-2 md:grid-cols-6">
-            <label className="text-xs">Ngày công (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.attendanceWeight} onChange={(e) => setFormula((p) => ({ ...p, attendanceWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Hoàn thành (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.completionWeight} onChange={(e) => setFormula((p) => ({ ...p, completionWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Độ khó công việc (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.hardTaskWeight} onChange={(e) => setFormula((p) => ({ ...p, hardTaskWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Cải tiến (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.improvementWeight} onChange={(e) => setFormula((p) => ({ ...p, improvementWeight: Number(e.target.value || 0) }))} /></label>
-            <label className="text-xs">Đóng góp (%)<input type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.teamContributionWeight} onChange={(e) => setFormula((p) => ({ ...p, teamContributionWeight: Number(e.target.value || 0) }))} /></label>
-            <div className="flex items-end"><button onClick={saveFormula} className="w-full rounded bg-orange-500 px-3 py-2 text-sm font-semibold text-white">Lưu công thức</button></div>
+            <label className="text-xs">Ngày công (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.attendanceWeight} onChange={(e) => setFormula((p) => ({ ...p, attendanceWeight: Number(e.target.value || 0) }))} /></label>
+            <label className="text-xs">Hoàn thành (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.completionWeight} onChange={(e) => setFormula((p) => ({ ...p, completionWeight: Number(e.target.value || 0) }))} /></label>
+            <label className="text-xs">Độ khó công việc (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.hardTaskWeight} onChange={(e) => setFormula((p) => ({ ...p, hardTaskWeight: Number(e.target.value || 0) }))} /></label>
+            <label className="text-xs">Cải tiến (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.improvementWeight} onChange={(e) => setFormula((p) => ({ ...p, improvementWeight: Number(e.target.value || 0) }))} /></label>
+            <label className="text-xs">Đóng góp (%)<input disabled={isReadOnly()} type="number" className="mt-1 w-full rounded border px-2 py-1" value={formula.teamContributionWeight} onChange={(e) => setFormula((p) => ({ ...p, teamContributionWeight: Number(e.target.value || 0) }))} /></label>
+            <div className="flex items-end"><button disabled={isReadOnly()} onClick={saveFormula} className="w-full rounded bg-orange-500 px-3 py-2 text-sm font-semibold text-white">Lưu công thức</button></div>
           </div>
           <label className="text-sm">Tính đến ngày
             <input type="date" className="mt-1 ml-2 rounded border px-3 py-2" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />

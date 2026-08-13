@@ -28,7 +28,7 @@ const taskStatusLabel: Record<string, string> = {
 
 export default function UserDetailPage() {
   const router = useRouter();
-  const { loading: authLoading, user: authUser, logout } = useAuth();
+  const { loading: authLoading, user: authUser, logout, hasPermission } = useAuth();
   const params = useParams<{ id: string }>();
   const userId = params?.id;
 
@@ -65,9 +65,10 @@ export default function UserDetailPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!authUser) return void router.push("/login");
+    if (!hasPermission("can_manage_users")) return void router.push("/");
     void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, authLoading, authUser, router]);
+  }, [userId, authLoading, authUser, router, hasPermission]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">

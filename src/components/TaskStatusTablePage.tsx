@@ -59,7 +59,7 @@ export default function TaskStatusTablePage({
   mode: "active" | "pending_review" | "done";
 }) {
   const router = useRouter();
-  const { loading: authLoading, user, logout, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, hasPermission, canViewAllWorkHr } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [message, setMessage] = useState("Đang tải dữ liệu...");
 
@@ -73,7 +73,7 @@ export default function TaskStatusTablePage({
     if (error) return setMessage(`❌ ${error.message}`), undefined;
 
     const fetched = (data ?? []) as unknown as Task[];
-    const visible = hasPermission("can_edit_all_tasks")
+    const visible = hasPermission("can_edit_all_tasks") || canViewAllWorkHr()
       ? fetched
       : fetched.filter((t) => {
           const inAssigneeList = (t.task_assignees ?? []).some((a) => a.user_id === user?.id);

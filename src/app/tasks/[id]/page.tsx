@@ -53,7 +53,7 @@ const TASK_EVAL_STORAGE_KEY = "thoidai_task_eval_v1";
 
 export default function TaskDetailPage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, hasPermission, isReadOnly, canViewAllWorkHr } = useAuth();
   const params = useParams<{ id: string }>();
   const taskId = params?.id;
 
@@ -98,7 +98,7 @@ export default function TaskDetailPage() {
     const loadedTask = taskRes.data as unknown as TaskDetail;
 
     const isAssigned = !!loadedTask.task_assignees?.some((a) => a.user_id === user?.id);
-    const canViewTask = !!user && (hasPermission("can_edit_all_tasks") || loadedTask.owner_id === user.id || loadedTask.assignee_id === user.id || isAssigned);
+    const canViewTask = !!user && (hasPermission("can_edit_all_tasks") || canViewAllWorkHr() || loadedTask.owner_id === user.id || loadedTask.assignee_id === user.id || isAssigned);
     if (!canViewTask) {
       setTask(null);
       setComments([]);
@@ -153,6 +153,7 @@ export default function TaskDetailPage() {
   };
 
   const canUserSubmitReport = (targetTask: TaskDetail, userId: string) => {
+    if (isReadOnly()) return false;
     if (hasPermission("can_edit_all_tasks")) return true;
     if (targetTask.assignment_mode === "department" || targetTask.assignment_mode === "mixed") return targetTask.owner_id === userId;
     return targetTask.owner_id === userId || targetTask.assignee_id === userId;
@@ -333,6 +334,7 @@ export default function TaskDetailPage() {
               ) : null}
             </section>
 
+            {!isReadOnly() ? (
             <section className="mt-4 rounded-xl border bg-white p-4">
               <h3 className="mb-2 text-lg font-semibold">Đánh giá công việc (cho bảng điểm cá nhân)</h3>
               <div className="grid gap-2 md:grid-cols-5">
@@ -407,6 +409,7 @@ export default function TaskDetailPage() {
               </div>
               <p className="mt-2 text-xs text-slate-500">Mặc định: Cải tiến = Không, Đóng góp = Có. Dữ liệu này được dùng trực tiếp cho trang Đánh giá.</p>
             </section>
+            ) : null}
 
             <section className="mt-4 rounded-xl border bg-white p-4">
               <h3 className="mb-2 text-lg font-semibold">Báo cáo tiến triển & vướng mắc</h3>

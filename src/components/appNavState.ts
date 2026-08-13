@@ -1,5 +1,29 @@
 export type GroupKey = "work" | "hr" | "assets" | "docs" | "admin";
 
+type RoleAccessPolicy = {
+  modules: Array<"work" | "hr" | "assets" | "documents" | "performance" | "admin">;
+  readOnly: boolean;
+  viewAllWorkHr: boolean;
+  admin: boolean;
+};
+
+const DEFAULT_ACCESS_POLICY: RoleAccessPolicy = {
+  modules: ["work", "hr", "assets", "documents", "performance", "admin"],
+  readOnly: false,
+  viewAllWorkHr: false,
+  admin: false,
+};
+
+export const getRoleAccessPolicy = (roleCode: string): RoleAccessPolicy =>
+  roleCode === "tbt_read_only"
+    ? { modules: ["work", "hr"], readOnly: true, viewAllWorkHr: true, admin: false }
+    : DEFAULT_ACCESS_POLICY;
+
+export const isGroupAllowedForRole = (roleCode: string, group: GroupKey) => {
+  if (roleCode !== "tbt_read_only") return true;
+  return group === "work" || group === "hr";
+};
+
 export type Group = {
   key: GroupKey;
   label: string;

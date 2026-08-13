@@ -20,7 +20,7 @@ type Staff = {
 export default function HrProfileDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission, isReadOnly, canViewAllWorkHr } = useAuth();
 
   const [staff, setStaff] = useState<Staff | null>(null);
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
@@ -51,7 +51,7 @@ export default function HrProfileDetailPage() {
   };
 
   const save = async () => {
-    if (!profile || !params?.id) return;
+    if (!profile || !params?.id || isReadOnly()) return;
     setSaving(true);
     try {
       let payload: EmployeeProfile = { ...profile, user_id: params.id };
@@ -83,7 +83,7 @@ export default function HrProfileDetailPage() {
     if (!user) return void router.push("/login");
     if (!canAccessModule("hr")) return void router.push("/");
     if (!params?.id) return;
-    if (!hasPermission("can_edit_all_tasks") && params.id !== user.id) {
+    if (!hasPermission("can_edit_all_tasks") && !canViewAllWorkHr() && params.id !== user.id) {
       return void router.push(`/hr-profiles/${user.id}`);
     }
     const t = setTimeout(() => {
@@ -179,11 +179,13 @@ export default function HrProfileDetailPage() {
             </div>
           </div>
 
+          {!isReadOnly() ? (
           <div className="mt-4">
             <button onClick={save} disabled={saving} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
               {saving ? "Đang lưu..." : "Lưu cập nhật"}
             </button>
           </div>
+          ) : null}
         </section>
         </div>
       </div>

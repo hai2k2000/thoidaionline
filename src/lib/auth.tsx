@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { getRoleAccessPolicy } from "@/components/appNavState";
 import { supabase } from "@/lib/supabase";
 
 type PermissionKey =
@@ -61,6 +62,8 @@ type AuthContextType = {
   logout: () => void;
   hasPermission: (key: PermissionKey) => boolean;
   canAccessModule: (module: ModuleKey) => boolean;
+  isReadOnly: () => boolean;
+  canViewAllWorkHr: () => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -155,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasPermission = (key: PermissionKey) => {
     if (!user) return false;
+    if (getRoleAccessPolicy(user.role_code).readOnly) return false;
 
     const assignmentRoles = new Set([
       "tong_bien_tap",
@@ -176,6 +180,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const canAccessModule = (module: ModuleKey) => {
     if (!user) return false;
 
+    const rolePolicy = getRoleAccessPolicy(user.role_code);
+    if (rolePolicy.readOnly) {
+      return rolePolicy.modules.includes(module === "performance" ? "hr" : (module === "documents" ? "documents" : module));
+    }
+
     const leadership = new Set(["tong_bien_tap", "pho_tong_bien_tap"]);
     const operations = new Set(["phu_trach_phong_tri_su", "tri_su"]);
     const managers = new Set(["phu_trach_phong_bien_tap", "phu_trach_phong_phong_vien"]);
@@ -190,7 +199,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
-  return <AuthContext.Provider value={{ loading, user, login, logout, hasPermission, canAccessModule }}>{children}</AuthContext.Provider>;
+  const isReadOnly = () => !!user && getRoleAccessPolicy(user.role_code).readOnly;
+  const canViewAllWorkHr = () => !!user && getRoleAccessPolicy(user.role_code).viewAllWorkHr;
+
+  return <AuthContext.Provider value={{ loading, user, login, logout, hasPermission, canAccessModule, isReadOnly, canViewAllWorkHr }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

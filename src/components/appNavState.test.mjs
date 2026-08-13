@@ -1,12 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
+import * as navState from "./appNavState.ts";
+
+const {
   getInitialOpenGroup,
   groups,
   isSidebarGroupVisible,
   toggleOpenGroup,
-} from "./appNavState.ts";
+} = navState;
+
+test("TBT role is read-only and limited to work and HR", () => {
+  assert.equal(typeof navState.getRoleAccessPolicy, "function");
+  const policy = navState.getRoleAccessPolicy("tbt_read_only");
+  assert.deepEqual(policy.modules, ["work", "hr"]);
+  assert.equal(policy.readOnly, true);
+  assert.equal(policy.viewAllWorkHr, true);
+  assert.equal(policy.admin, false);
+  assert.equal(typeof navState.isGroupAllowedForRole, "function");
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "work"), true);
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "hr"), true);
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "assets"), false);
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "docs"), false);
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "admin"), false);
+});
 
 test("sidebar configuration hides assets and documents and renames admin", () => {
   const visibleGroups = groups.filter((group) => isSidebarGroupVisible(group.key));

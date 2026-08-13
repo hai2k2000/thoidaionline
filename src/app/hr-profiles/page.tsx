@@ -21,7 +21,7 @@ type StaffUser = {
 
 export default function HrProfilesPage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, canAccessModule, hasPermission, canViewAllWorkHr } = useAuth();
 
   const [rows, setRows] = useState<EmployeeProfile[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
@@ -107,7 +107,7 @@ export default function HrProfilesPage() {
         department_name: u.departments?.name ?? null,
       }));
 
-    if (!hasPermission("can_edit_all_tasks")) {
+    if (!hasPermission("can_edit_all_tasks") && !canViewAllWorkHr()) {
       normalizedUsers = normalizedUsers.filter((u) => u.id === user?.id);
     }
 
