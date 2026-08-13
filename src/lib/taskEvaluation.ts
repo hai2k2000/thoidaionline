@@ -46,7 +46,7 @@ export function normalizeEvaluationInput(input: TaskEvaluationInput & Record<str
     throw new RangeError("Điểm đánh giá phải từ 1 đến 10.");
   }
   if (!WEIGHT_OPTIONS.includes(input.effortWeight as (typeof WEIGHT_OPTIONS)[number])) {
-    throw new RangeError("Trọng số công việc không hợp lệ.");
+    throw new RangeError("\u004d\u1ee9c \u0111\u1ed9 kh\u00f3 c\u1ee7a c\u00f4ng vi\u1ec7c kh\u00f4ng h\u1ee3p l\u1ec7.");
   }
   if (!["not_done", "done", "excellent"].includes(input.completion)) {
     throw new RangeError("Mức hoàn thành không hợp lệ.");

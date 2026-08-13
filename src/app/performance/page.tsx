@@ -197,12 +197,12 @@ export default function PerformancePage() {
         <div>
           <div className="mb-4">
             <h1 className="text-2xl font-bold">Đánh giá công việc</h1>
-            <p className="mt-1 text-sm text-slate-600">So sánh công bằng bằng điểm trung bình có trọng số; tổng điểm có trọng số phản ánh cả chất lượng và độ lớn công việc.</p>
+            <p className="mt-1 text-sm text-slate-600">{"So s\u00e1nh c\u00f4ng b\u1eb1ng b\u1eb1ng \u0111i\u1ec3m trung b\u00ecnh c\u00f3 x\u00e9t m\u1ee9c \u0111\u1ed9 kh\u00f3; t\u1ed5ng \u0111i\u1ec3m quy \u0111\u1ed5i ph\u1ea3n \u00e1nh c\u1ea3 ch\u1ea5t l\u01b0\u1ee3ng v\u00e0 \u0111\u1ed9 l\u1edbn c\u00f4ng vi\u1ec7c."}</p>
           </div>
 
           <section className="rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-cyan-50 p-4 text-sm text-slate-700">
-            <p><b>Công thức:</b> Tổng điểm = Σ(điểm 1-10 × trọng số). Điểm trung bình = Tổng điểm / Tổng trọng số đã đánh giá.</p>
-            <p className="mt-1 text-xs text-slate-500">Chỉ checkpoint cuối kỳ mới nhất của từng công việc được cộng; checkpoint giữa kỳ chỉ lưu tiến độ và phản hồi.</p>
+            <p><b>{"C\u00f4ng th\u1ee9c:"}</b> {"T\u1ed5ng \u0111i\u1ec3m quy \u0111\u1ed5i = \u03a3(\u0111i\u1ec3m 1-10 \u00d7 m\u1ee9c \u0111\u1ed9 kh\u00f3). \u0110i\u1ec3m trung b\u00ecnh = T\u1ed5ng \u0111i\u1ec3m quy \u0111\u1ed5i / T\u1ed5ng m\u1ee9c \u0111\u1ed9 kh\u00f3 \u0111\u00e3 \u0111\u00e1nh gi\u00e1."}</p>
+            <p className="mt-1 text-xs text-slate-500">{"Ch\u1ec9 \u0111\u00e1nh gi\u00e1 cu\u1ed1i k\u1ef3 m\u1edbi nh\u1ea5t c\u1ee7a t\u1eebng c\u00f4ng vi\u1ec7c \u0111\u01b0\u1ee3c c\u1ed9ng; \u0111\u00e1nh gi\u00e1 gi\u1eefa k\u1ef3 ch\u1ec9 l\u01b0u ti\u1ebfn \u0111\u1ed9 v\u00e0 ph\u1ea3n h\u1ed3i."}</p>
             <p className="mt-2">{message}</p>
           </section>
 
@@ -215,9 +215,9 @@ export default function PerformancePage() {
                   <th className="px-3 py-2 text-right">Số công việc</th>
                   <th className="px-3 py-2 text-right">Hoàn thành</th>
                   <th className="px-3 py-2 text-right">Không hoàn thành</th>
-                  <th className="px-3 py-2 text-right">Tổng trọng số</th>
-                  <th className="px-3 py-2 text-right">Tổng điểm có trọng số</th>
-                  <th className="px-3 py-2 text-right">Điểm TB có trọng số</th>
+                  <th className="px-3 py-2 text-right">{"T\u1ed5ng m\u1ee9c \u0111\u1ed9 kh\u00f3"}</th>
+                  <th className="px-3 py-2 text-right">{"T\u1ed5ng \u0111i\u1ec3m quy \u0111\u1ed5i"}</th>
+                  <th className="px-3 py-2 text-right">{"\u0110i\u1ec3m TB quy \u0111\u1ed5i"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,7 +252,7 @@ export default function PerformancePage() {
             <div className="max-h-[72vh] overflow-auto p-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-lg bg-blue-50 p-3"><p className="text-xs text-slate-500">Tổng điểm</p><p className="text-xl font-bold text-blue-700">{selectedEmployee.weightedPoints.toFixed(1)}</p></div>
-                <div className="rounded-lg bg-cyan-50 p-3"><p className="text-xs text-slate-500">Tổng trọng số</p><p className="text-xl font-bold text-cyan-700">{selectedEmployee.totalWeight}</p></div>
+                <div className="rounded-lg bg-cyan-50 p-3"><p className="text-xs text-slate-500">{"T\u1ed5ng m\u1ee9c \u0111\u1ed9 kh\u00f3"}</p><p className="text-xl font-bold text-cyan-700">{selectedEmployee.totalWeight}</p></div>
                 <div className="rounded-lg bg-emerald-50 p-3"><p className="text-xs text-slate-500">Điểm TB</p><p className="text-xl font-bold text-emerald-700">{selectedEmployee.totalWeight > 0 ? selectedEmployee.weightedAverage.toFixed(2) : "-"}</p></div>
               </div>
 

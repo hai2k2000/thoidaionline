@@ -81,6 +81,7 @@ export default function TaskDetailPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [taskEval, setTaskEval] = useState<TaskEvalForm>(defaultTaskEvalForm());
   const [savingEvaluation, setSavingEvaluation] = useState(false);
+  const [evaluationOpen, setEvaluationOpen] = useState(false);
 
   const loadData = async () => {
     if (!taskId) return;
@@ -188,6 +189,7 @@ export default function TaskDetailPage() {
 
     if (error) {
       setMessage(`❌ ${error.message}`);
+      setEvaluationOpen(true);
       return;
     }
 
@@ -412,15 +414,26 @@ export default function TaskDetailPage() {
             </section>
 
             <section className="mt-4 rounded-xl border bg-white p-4">
-              <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setEvaluationOpen((open) => !open)}
+                aria-expanded={evaluationOpen}
+                aria-controls="task-evaluation-panel"
+                className="flex w-full items-start justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              >
                 <div>
                   <h3 className="text-lg font-semibold">Đánh giá công việc</h3>
-                  <p className="text-xs text-slate-500">Điểm cuối kỳ mới nhất được tính theo trọng số; checkpoint giữa kỳ chỉ lưu phản hồi.</p>
+                  <p className="text-xs text-slate-500">{"\u0110i\u1ec3m \u0111\u00e1nh gi\u00e1 \u0111\u01b0\u1ee3c t\u00ednh theo m\u1ee9c \u0111\u1ed9 kh\u00f3; \u0111\u00e1nh gi\u00e1 gi\u1eefa k\u1ef3 ch\u1ec9 l\u01b0u ph\u1ea3n h\u1ed3i."}</p>
                 </div>
-                {latestVisibleEvaluation ? <span className="rounded bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">{latestVisibleEvaluation.rating}/10</span> : null}
-              </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {latestVisibleEvaluation ? <span className="rounded bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">{latestVisibleEvaluation.rating}/10</span> : null}
+                  <span className="text-xs font-semibold text-blue-700">{evaluationOpen ? "Thu g\u1ecdn" : "M\u1edf chi ti\u1ebft"}</span>
+                </div>
+              </button>
 
-              {canEditEvaluation ? (
+              {evaluationOpen ? (
+                <div id="task-evaluation-panel" className="mt-4 border-t pt-4">
+                  {canEditEvaluation ? (
                 <div className="space-y-3">
                   <div className="grid gap-3 md:grid-cols-3">
                     <label className="text-sm">Nhân viên
@@ -433,7 +446,7 @@ export default function TaskDetailPage() {
                         {RATING_OPTIONS.map((score) => <option key={score} value={score}>{score}</option>)}
                       </select>
                     </label>
-                    <label className="text-sm">Trọng số / độ lớn
+                    <label className="text-sm">{"M\u1ee9c \u0111\u1ed9 kh\u00f3"}
                       <select className="mt-1 w-full rounded border px-3 py-2" value={taskEval.effortWeight} onChange={(e) => setTaskEval((current) => ({ ...current, effortWeight: Number(e.target.value) }))}>
                         {WEIGHT_OPTIONS.map((weight) => <option key={weight} value={weight}>{weight}</option>)}
                       </select>
@@ -445,7 +458,7 @@ export default function TaskDetailPage() {
                         <option value="excellent">Xuất sắc</option>
                       </select>
                     </label>
-                    <label className="text-sm">Ngày checkpoint
+                    <label className="text-sm">{"Ng\u00e0y \u0111\u00e1nh gi\u00e1"}
                       <input type="date" className="mt-1 w-full rounded border px-3 py-2" value={taskEval.checkpointDate} onChange={(e) => setTaskEval((current) => ({ ...current, checkpointDate: e.target.value }))} />
                     </label>
                     <div className="flex flex-wrap items-center gap-4 pt-6 text-sm">
@@ -463,15 +476,17 @@ export default function TaskDetailPage() {
               ) : latestVisibleEvaluation ? (
                 <div className="grid gap-2 text-sm sm:grid-cols-2">
                   <p><b>Điểm:</b> {latestVisibleEvaluation.rating}/10</p>
-                  <p><b>Trọng số:</b> {latestVisibleEvaluation.effort_weight}</p>
+                  <p><b>{"M\u1ee9c \u0111\u1ed9 kh\u00f3:"}</b> {latestVisibleEvaluation.effort_weight}</p>
                   <p><b>Mức hoàn thành:</b> {latestVisibleEvaluation.completion === "excellent" ? "Xuất sắc" : latestVisibleEvaluation.completion === "done" ? "Hoàn thành" : "Không hoàn thành"}</p>
                   <p><b>Tiến độ:</b> {latestVisibleEvaluation.on_time ? "Đúng tiến độ" : "Chậm tiến độ"}</p>
-                  <p><b>Kỳ đánh giá:</b> {latestVisibleEvaluation.is_final ? "Cuối kỳ" : "Giữa kỳ"} · {latestVisibleEvaluation.checkpoint_date}</p>
+                  <p><b>{"L\u1ea7n \u0111\u00e1nh gi\u00e1:"}</b> {latestVisibleEvaluation.is_final ? "\u0110\u00e1nh gi\u00e1 cu\u1ed1i k\u1ef3" : "\u0110\u00e1nh gi\u00e1 gi\u1eefa k\u1ef3"} {" \u00b7 "}{latestVisibleEvaluation.checkpoint_date}</p>
                   <p className="sm:col-span-2"><b>Ý kiến đánh giá:</b> {latestVisibleEvaluation.opinion || "-"}</p>
                 </div>
               ) : (
                 <p className="text-sm text-slate-500">Công việc chưa có kết quả đánh giá dành cho bạn.</p>
               )}
+                </div>
+              ) : null}
             </section>
 
             <section className="mt-4 rounded-xl border bg-white p-4">
