@@ -262,11 +262,44 @@ schema_state=$(docker exec supabase_db_thoidai-work \
 printf '%s\n' "$schema_state" > "$metadata_root/schema-state-before.txt"
 case "$schema_state" in
   "t|f|f|f|f")
-    docker exec -i supabase_db_thoidai-work \
-      psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
-      < supabase/migrations/20260813210000_password_reset_security.sql
+    migration=supabase/migrations/20260813210000_password_reset_security.sql
+    account_marker=$(sed -nE "s/.*lower\\(username\\)[[:space:]]*=[[:space:]]*'([^']+)'.*/\\1/p" "$migration" | head -1)
+    test -n "$account_marker"
+    {
+      printf '%s\n' 'begin;'
+      cat <<'SQL'
+insert into public.roles (id, code, name, level)
+values ('00000000-0000-4000-8000-000000000001', 'admin', 'Synthetic Admin', 1);
+insert into public.departments (id, code, name, active)
+values ('00000000-0000-4000-8000-000000000002', 'fixture', 'Synthetic Department', true);
+insert into public.staff_users (
+  id, full_name, username, email, phone, password, role_id, department_id, active
+) values (
+  '00000000-0000-4000-8000-000000000003',
+  'Synthetic Reset Admin',
+  :'account_marker',
+  'reset-admin@example.invalid',
+  null,
+  repeat('f', 64),
+  '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000002',
+  true
+);
+SQL
+      cat "$migration"
+      cat <<'SQL'
+delete from public.staff_users where id = '00000000-0000-4000-8000-000000000003';
+delete from public.roles where id = '00000000-0000-4000-8000-000000000001';
+delete from public.departments where id = '00000000-0000-4000-8000-000000000002';
+commit;
+SQL
+    } | docker exec -i supabase_db_thoidai-work \
+      psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -v account_marker="$account_marker"
+    printf '%s\n' "$migration" > "$metadata_root/baseline-migration.path"
     ;;
-  "t|t|t|t|t") ;;
+  "t|t|t|t|t")
+    printf '%s\n' 'already-present; migration-not-applied' > "$metadata_root/baseline-migration.path"
+    ;;
   *) echo "unexpected partial password-reset schema state" >&2; exit 1 ;;
 esac
 schema_state_after=$(docker exec supabase_db_thoidai-work \
@@ -281,6 +314,8 @@ schema_state_after=$(docker exec supabase_db_thoidai-work \
 printf '%s\n' "$schema_state_after" > "$metadata_root/schema-state-after.txt"
 test "$schema_state_after" = 't|t|t|t|t'
 ```
+
+The baseline migration contains a production-account assertion before it creates reset objects. Satisfy that assertion only inside the same transaction as the exact unmodified migration, using deterministic synthetic rows; delete all fixture rows before commit. Extract the required account marker from the migration without printing it, and never persist the migration's account/email literals as data.
 
 Verify that schema-only restore and migration copied no live authentication data, then checksum only metadata files:
 
@@ -301,6 +336,7 @@ sha256sum \
   "$metadata_root/test-db.name" \
   "$metadata_root/source-dump.path" \
   "$metadata_root/restore-mode.txt" \
+  "$metadata_root/baseline-migration.path" \
   "$metadata_root/schema-state-before.txt" \
   "$metadata_root/schema-state-after.txt" \
   "$metadata_root/row-counts.txt" \
