@@ -1656,19 +1656,16 @@ Expected: exactly three paths and no unrelated user-page changes.
 - [ ] **Step 1: Run all Node tests**
 
 ```bash
-node --test \
-  src/components/appNavState.test.mjs \
-  src/lib/evaluationUi.test.mjs \
-  src/lib/staffOrdering.test.mjs \
-  src/lib/taskEvaluation.test.mjs \
-  src/lib/taskPriorityRemoval.test.mjs \
-  src/lib/sessionToken.test.mjs \
-  src/lib/adminPasswordReset.test.mjs \
-  src/lib/adminPasswordResetRoute.test.mjs \
-  src/lib/adminPasswordResetUi.test.mjs
+mapfile -t node_tests < <(
+  git ls-files "*.test.mjs" | LC_ALL=C sort
+)
+test "${#node_tests[@]}" -gt 0
+printf "Node test manifest (%s files):\n" "${#node_tests[@]}"
+printf "%s\n" "${node_tests[@]}"
+node --test "${node_tests[@]}"
 ```
 
-Expected: 0 failed tests. The Node module-type warning is known and not a failure.
+Expected: the printed manifest is sorted, contains only tracked `*.test.mjs` files present in the clean feature worktree, and all tests pass with 0 failures. The Node module-type warning is known and not a failure. Do not import unrelated dirty-checkout tests to satisfy a stale external path.
 
 - [ ] **Step 2: Run the SQL smoke test on the disposable database**
 
