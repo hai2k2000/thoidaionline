@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,6 +50,7 @@ export default function LoginPage() {
           <button onClick={submit} className="w-full rounded bg-slate-900 px-4 py-3 text-base font-semibold text-white">
             Đăng nhập
           </button>
+          <Link className="block text-center text-sm text-blue-700 underline" href="/forgot-password">Quên mật khẩu?</Link>
           <p className="text-sm text-slate-600">{message}</p>
         </div>
       </div>

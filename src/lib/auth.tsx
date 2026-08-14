@@ -93,33 +93,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  const loadById = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("staff_users")
-      .select(
-        "id,full_name,email,phone,active,roles(code,name,role_permissions(can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment))",
-      )
-      .eq("id", userId)
-      .single();
-
-    if (error || !data) {
+  const loadSession = async () => {
+    const response = await fetch("/api/auth/session", { cache: "no-store" });
+    if (!response.ok) {
       setUser(null);
       return;
     }
-
-    setUser(toAuthUser(data as unknown as StaffProfileRow));
+    const payload = await response.json() as { user?: AuthUser };
+    setUser(payload.user ?? null);
   };
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const userId = localStorage.getItem(SESSION_KEY);
-      if (!userId) {
-        setLoading(false);
-        return;
-      }
-
       void (async () => {
-        await loadById(userId);
+        await loadSession();
         setLoading(false);
       })();
     }, 0);
@@ -131,27 +118,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const normalizedIdentifier = identifier.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
-    const { data, error } = await supabase
-      .from("staff_users")
-      .select("id,email,phone,username,password,active")
-      .or(`username.eq.${normalizedIdentifier},email.ilike.${normalizedIdentifier},phone.eq.${normalizedIdentifier}`)
-      .limit(1)
-      .maybeSingle();
-
-    const row = data as LoginRow | null;
-
-    if (error || !row) return { ok: false, error: "Sai tài khoản hoặc mật khẩu." };
-    if (!row.active) return { ok: false, error: "Tài khoản đã bị khóa." };
-
-    const storedPassword = (row.password ?? "123456").trim();
-    if (storedPassword !== normalizedPassword) return { ok: false, error: "Sai tài khoản hoặc mật khẩu." };
-
-    localStorage.setItem(SESSION_KEY, row.id);
-    await loadById(row.id);
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ identifier: normalizedIdentifier, password: normalizedPassword }),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      return { ok: false, error: payload?.error || "Sai tài khoản hoặc mật khẩu." };
+    }
+    localStorage.removeItem(SESSION_KEY);
+    await loadSession();
     return { ok: true };
   };
 
   const logout = () => {
+    void fetch("/api/auth/logout", { method: "POST" });
     localStorage.removeItem(SESSION_KEY);
     setUser(null);
   };
@@ -160,8 +142,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return false;
     if (getRoleAccessPolicy(user.role_code).readOnly) return false;
 
+    if (user.role_code === "admin") return true;
+
     const assignmentRoles = new Set([
-      "tong_bien_tap",
       "pho_tong_bien_tap",
       "phu_trach_phong_tri_su",
       "phu_trach_phong_phong_vien",
@@ -173,7 +156,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return assignmentRoles.has(user.role_code);
     }
 
-    if (user.role_code === "tong_bien_tap") return true;
     return !!user.permissions[key];
   };
 
@@ -185,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return rolePolicy.modules.includes(module === "performance" ? "hr" : (module === "documents" ? "documents" : module));
     }
 
-    const leadership = new Set(["tong_bien_tap", "pho_tong_bien_tap"]);
+    const leadership = new Set(["admin", "pho_tong_bien_tap"]);
     const operations = new Set(["phu_trach_phong_tri_su", "tri_su"]);
     const managers = new Set(["phu_trach_phong_bien_tap", "phu_trach_phong_phong_vien"]);
 

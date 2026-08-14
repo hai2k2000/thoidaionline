@@ -6,69 +6,101 @@ import * as navState from "./appNavState.ts";
 const {
   getInitialOpenGroup,
   groups,
+  isActive,
   isSidebarGroupVisible,
   toggleOpenGroup,
 } = navState;
 
-test("TBT role is read-only and limited to work and HR", () => {
-  assert.equal(typeof navState.getRoleAccessPolicy, "function");
+test("assignment and planning links live only in their required accordions", () => {
+  const work = groups.find((group) => group.key === "work");
+  const planning = groups.find((group) => group.key === "planning");
+
+  assert.equal("primaryItems" in navState, false);
+  assert.deepEqual(work?.items, [
+    { href: "/", label: "Giao việc" },
+    { href: "/tasks/active", label: "CV đang triển khai" },
+    { href: "/tasks/pending-review", label: "CV chờ duyệt" },
+    { href: "/tasks/done", label: "CV hoàn thành" },
+    { href: "/performance", label: "Đánh giá" },
+  ]);
+  assert.deepEqual(planning?.items, [
+    { href: "/planning", label: "Lập kế hoạch" },
+    { href: "/planning/reports", label: "Báo cáo kế hoạch" },
+  ]);
+});
+
+test("TBT role remains read-only and cannot see planning or admin groups", () => {
   const policy = navState.getRoleAccessPolicy("tbt_read_only");
+
   assert.deepEqual(policy.modules, ["work", "hr"]);
   assert.equal(policy.readOnly, true);
   assert.equal(policy.viewAllWorkHr, true);
   assert.equal(policy.admin, false);
-  assert.equal(typeof navState.isGroupAllowedForRole, "function");
   assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "work"), true);
   assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "hr"), true);
+  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "planning"), false);
   assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "assets"), false);
   assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "docs"), false);
   assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "admin"), false);
+  assert.equal(navState.isGroupAllowedForRole("tong_bien_tap", "planning"), false);
 });
 
-test("TBT evaluation access does not expose restricted navigation", () => {
-  const policy = navState.getRoleAccessPolicy("tbt_read_only");
-  const workGroup = navState.groups.find((group) => group.key === "work");
-
-  assert.equal(workGroup?.items.some((item) => item.href === "/performance"), true);
-  assert.deepEqual(policy.modules, ["work", "hr"]);
-  assert.equal(policy.admin, false);
-  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "assets"), false);
-  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "docs"), false);
-  assert.equal(navState.isGroupAllowedForRole("tbt_read_only", "admin"), false);
-});
-
-
-test("sidebar configuration hides assets and documents and renames admin", () => {
+test("sidebar keeps work and planning visible and preserves existing hidden modules", () => {
   const visibleGroups = groups.filter((group) => isSidebarGroupVisible(group.key));
 
   assert.deepEqual(
     visibleGroups.map((group) => group.key),
-    ["work", "hr", "admin"],
+    ["work", "planning", "hr", "admin"],
   );
+  assert.equal(groups.find((group) => group.key === "admin")?.label, "Cấu hình");
   assert.equal(
-    groups.find((group) => group.key === "admin")?.label,
-    "Cấu hình",
+    groups.find((group) => group.key === "admin")?.items.some(
+      (item) => item.href === "/job-titles" && item.label === "Quản lý chức vụ",
+    ),
+    true,
   );
-  assert.equal(groups.find((group) => group.key === "work")?.items.some((item) => item.href === "/performance"), true);
-  assert.equal(groups.find((group) => group.key === "hr")?.items.some((item) => item.href === "/performance"), false);
 });
 
 test("accordion closes the open group and replaces it with another group", () => {
   assert.equal(toggleOpenGroup(null, "work"), "work");
   assert.equal(toggleOpenGroup("work", "work"), null);
-  assert.equal(toggleOpenGroup("work", "hr"), "hr");
-  assert.equal(toggleOpenGroup("hr", "admin"), "admin");
+  assert.equal(toggleOpenGroup("work", "planning"), "planning");
+  assert.equal(toggleOpenGroup("planning", "hr"), "hr");
 });
 
-test("current routes initialize only their visible parent group", () => {
+test("work opens by default while planning routes open the planning accordion", () => {
   const visibleGroups = groups.filter((group) => isSidebarGroupVisible(group.key));
 
   assert.equal(getInitialOpenGroup(visibleGroups, "/"), "work");
-  assert.equal(getInitialOpenGroup(visibleGroups, "/tasks/[id]"), "work");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/tasks/active"), "work");
   assert.equal(getInitialOpenGroup(visibleGroups, "/performance"), "work");
-  assert.equal(getInitialOpenGroup(visibleGroups, "/attendance"), "hr");
-  assert.equal(getInitialOpenGroup(visibleGroups, "/users"), "admin");
-  assert.equal(getInitialOpenGroup(visibleGroups, "/assets"), null);
-  assert.equal(getInitialOpenGroup(visibleGroups, "/documents"), null);
-  assert.equal(getInitialOpenGroup(visibleGroups, "/profile"), null);
+  assert.equal(getInitialOpenGroup(visibleGroups, "/planning"), "planning");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/planning/reports"), "planning");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/my-tasks"), "planning");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/attendance"), "work");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/profile"), "work");
+});
+
+test("active routes distinguish planning reports and work status pages", () => {
+  assert.equal(isActive("/", "/"), true);
+  assert.equal(isActive("/tasks/active", "/"), false);
+  assert.equal(isActive("/planning", "/planning"), true);
+  assert.equal(isActive("/my-tasks", "/planning"), true);
+  assert.equal(isActive("/planning/reports", "/planning"), false);
+  assert.equal(isActive("/planning/reports", "/planning/reports"), true);
+  assert.equal(isActive("/tasks/active", "/tasks/active"), true);
+  assert.equal(isActive("/tasks/active", "/tasks/pending-review"), false);
+  assert.equal(isActive("/tasks/pending-review", "/tasks/pending-review"), true);
+  assert.equal(isActive("/tasks/done", "/tasks/done"), true);
+});
+
+test("active-route fallback is preserved when work is not visible", () => {
+  const groupsWithoutWork = groups.filter(
+    (group) => group.key !== "work" && isSidebarGroupVisible(group.key),
+  );
+
+  assert.equal(getInitialOpenGroup(groupsWithoutWork, "/planning/reports"), "planning");
+  assert.equal(getInitialOpenGroup(groupsWithoutWork, "/attendance"), "hr");
+  assert.equal(getInitialOpenGroup(groupsWithoutWork, "/users"), "admin");
+  assert.equal(getInitialOpenGroup(groupsWithoutWork, "/profile"), null);
 });

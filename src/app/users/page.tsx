@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
+import { sortStaffRows } from "@/lib/staffOrdering";
 
 type Role = { id: string; code?: string; name: string; level?: number };
+type JobTitle = { id: string; code?: string; name: string; display_order?: number; active?: boolean };
 type Department = { id: string; code?: string; name: string; active?: boolean };
 type User = {
   id: string;
@@ -15,261 +15,134 @@ type User = {
   username?: string | null;
   email: string | null;
   role_id: string;
+  job_title_id?: string | null;
   department_id: string;
   active: boolean;
+  list_order?: number | null;
   roles?: { code?: string; name?: string; level?: number } | null;
+  job_titles?: { code?: string; name?: string; display_order?: number; active?: boolean } | null;
+  departments?: { code?: string; name?: string } | null;
 };
+type UsersPayload = { error?: string; roles?: Role[]; job_titles?: JobTitle[]; departments?: Department[]; users?: User[] };
+
+const canViewUsers = (code: string) => ["admin", "tong_bien_tap", "tbt_read_only"].includes(code);
 
 export default function UsersPage() {
   const router = useRouter();
-  const { loading: authLoading, user, hasPermission, logout } = useAuth();
-
+  const { loading: authLoading, user, logout } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [deps, setDeps] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [message, setMessage] = useState("Đang tải...");
-
-  const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [roleId, setRoleId] = useState("");
-  const [depId, setDepId] = useState("");
-
   const [filterDepId, setFilterDepId] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "disabled">("all");
+  const [selected, setSelected] = useState<User | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState("");
+  const [editJobTitle, setEditJobTitle] = useState("");
+  const [editDep, setEditDep] = useState("");
+  const [editActive, setEditActive] = useState(true);
+  const [newUser, setNewUser] = useState({ full_name: "", username: "", role_id: "", job_title_id: "", department_id: "" });
+  const isAdmin = user?.role_code === "admin";
 
-  const depNameMap = useMemo(() => {
-    const m = new Map<string, string>();
-    deps.forEach((d) => m.set(d.id, d.name));
-    return m;
-  }, [deps]);
-
-  const filteredUsers = useMemo(() => {
-    const roleRank: Record<string, number> = {
-      tong_bien_tap: 1, // đứng đầu ban biên tập
-      pho_tong_bien_tap: 2,
-      phu_trach_phong_tri_su: 3,
-      phu_trach_phong_bien_tap: 3,
-      phu_trach_phong_phong_vien: 3,
-      tri_su: 4,
-      bien_tap_vien: 4,
-      phong_vien: 5,
-    };
-
-    const departmentRank: Record<string, number> = {
-      leadership: 1, // Ban biên tập
-      editorial: 2, // Phòng biên tập
-      admin: 3, // Phòng trị sự
-      reporter: 4, // Phòng phóng viên
-      general: 5,
-    };
-
-    return users
-      .filter((u) => {
-        const okDep = !filterDepId || u.department_id === filterDepId;
-        const okStatus = filterStatus === "all" || (filterStatus === "active" ? u.active : !u.active);
-        return okDep && okStatus;
-      })
-      .sort((a, b) => {
-        const roleA = roleRank[a.roles?.code ?? ""] ?? 99;
-        const roleB = roleRank[b.roles?.code ?? ""] ?? 99;
-        if (roleA !== roleB) return roleA - roleB;
-
-        const codeA = deps.find((d) => d.id === a.department_id)?.code ?? "";
-        const codeB = deps.find((d) => d.id === b.department_id)?.code ?? "";
-        const depA = departmentRank[codeA] ?? 99;
-        const depB = departmentRank[codeB] ?? 99;
-        if (depA !== depB) return depA - depB;
-
-        return a.full_name.localeCompare(b.full_name, "vi");
-      });
-  }, [users, filterDepId, filterStatus, deps]);
-
-  const loadAll = async () => {
-    const [r, d, u] = await Promise.all([
-      supabase.from("roles").select("id,code,name,level").order("level", { ascending: false }),
-      supabase.from("departments").select("id,code,name,active").order("name"),
-      supabase.from("staff_users").select("id,full_name,username,email,role_id,department_id,active,roles(code,name,level)").order("created_at", { ascending: false }),
-    ]);
-    if (r.error || d.error || u.error) return setMessage(`❌ ${r.error?.message || d.error?.message || u.error?.message}`), undefined;
-    setRoles((r.data ?? []) as Role[]);
-    setDeps((d.data ?? []) as Department[]);
-    setUsers((u.data ?? []) as User[]);
-    setMessage("✅ Đã tải danh sách nhân viên.");
+  const fetchAll = async () => {
+    const response = await fetch("/api/users", { cache: "no-store" });
+    const payload = await response.json().catch(() => null) as UsersPayload | null;
+    if (!response.ok) throw new Error(payload?.error || "Không thể tải danh sách.");
+    return payload ?? {};
   };
 
-  const createUser = async () => {
-    if (!fullName.trim() || !username.trim() || !roleId || !depId) return setMessage("❌ Thiếu dữ liệu user."), undefined;
-    const { error } = await supabase.from("staff_users").insert({
-      full_name: fullName.trim(),
-      username: username.trim().toLowerCase(),
-      email: email || null,
-      role_id: roleId,
-      department_id: depId,
-      active: true,
-      password: "123456",
-    });
-    if (error) return setMessage(`❌ ${error.message}`), undefined;
-    setFullName("");
-    setUsername("");
-    setEmail("");
-    await loadAll();
+  const applyPayload = (payload: UsersPayload) => {
+    setRoles(payload?.roles ?? []);
+    setJobTitles(payload?.job_titles ?? []);
+    setDeps(payload?.departments ?? []);
+    setUsers(payload?.users ?? []);
   };
 
-  const updateUser = async (id: string, patch: Partial<User>) => {
-    const { error } = await supabase.from("staff_users").update(patch).eq("id", id);
-    if (error) return setMessage(`❌ ${error.message}`), undefined;
-    await loadAll();
-  };
-
-  const updateUserRoleWithDepartment = async (u: User, newRoleId: string) => {
-    const role = roles.find((r) => r.id === newRoleId);
-    const roleCode = role?.code ?? "";
-
-    let autoDepartmentId = u.department_id;
-    if (roleCode === "phu_trach_phong_phong_vien" || roleCode === "phong_vien") {
-      autoDepartmentId = deps.find((d) => d.code === "reporter")?.id ?? autoDepartmentId;
-    } else if (roleCode === "phu_trach_phong_tri_su" || roleCode === "tri_su") {
-      autoDepartmentId = deps.find((d) => d.code === "admin")?.id ?? autoDepartmentId;
-    } else if (roleCode === "phu_trach_phong_bien_tap" || roleCode === "bien_tap_vien") {
-      autoDepartmentId = deps.find((d) => d.code === "editorial")?.id ?? autoDepartmentId;
-    } else if (roleCode === "tong_bien_tap" || roleCode === "pho_tong_bien_tap") {
-      autoDepartmentId = deps.find((d) => d.code === "leadership")?.id ?? autoDepartmentId;
+  const loadAll = async (successMessage = "✅ Đã tải danh sách nhân viên.") => {
+    try {
+      const payload = await fetchAll();
+      applyPayload(payload);
+      setMessage(successMessage);
+    } catch (error) {
+      setMessage(`❌ ${(error as Error).message}`);
     }
-
-    const { error } = await supabase.from("staff_users").update({ role_id: newRoleId, department_id: autoDepartmentId }).eq("id", u.id);
-    if (error) return setMessage(`❌ ${error.message}`), undefined;
-
-    setMessage("✅ Đã cập nhật chức vụ và tự động xếp lại phòng ban phù hợp.");
-    await loadAll();
-  };
-
-  const resetPassword = async (id: string) => {
-    const { error } = await supabase.from("staff_users").update({ password: "123456" }).eq("id", id);
-    if (error) return setMessage(`❌ Reset mật khẩu lỗi: ${error.message}`), undefined;
-    setMessage("✅ Đã reset mật khẩu về mặc định 123456.");
   };
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
-    if (!hasPermission("can_manage_users")) return void router.push("/");
-    const t = setTimeout(() => {
-      void loadAll();
-    }, 0);
+    if (!canViewUsers(user.role_code)) return void router.push("/");
+    const t = setTimeout(() => { void loadAll(); }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, hasPermission, router]);
+  }, [authLoading, user, router]);
 
-  return (
-    <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
-      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
-        <div className="mb-4 lg:mb-0">
-          <AppNav currentPath="/users" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
-        </div>
+  const filteredUsers = useMemo(() => {
+    const filtered = users.filter((u) => {
+      const okDep = !filterDepId || u.department_id === filterDepId;
+      const okStatus = filterStatus === "all" || (filterStatus === "active" ? u.active : !u.active);
+      return okDep && okStatus;
+    });
+    return sortStaffRows(filtered);
+  }, [users, filterDepId, filterStatus]);
 
-        <div>
-          <div className="mb-4">
-            <h1 className="text-2xl font-bold">Quản lý nhân viên</h1>
-          </div>
+  const setEditState = (u: User) => {
+    setSelected(u);
+    setEditName(u.full_name);
+    setEditRole(u.role_id);
+    setEditJobTitle(u.job_title_id ?? "");
+    setEditDep(u.department_id);
+    setEditActive(u.active);
+  };
 
-        <section className="rounded-xl border bg-white p-4">
-          <div className="grid gap-2 md:grid-cols-5">
-            <input className="rounded border px-3 py-2" placeholder="Họ tên" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            <input className="rounded border px-3 py-2" placeholder="Username (vd: quangthien)" value={username} onChange={(e) => setUsername(e.target.value)} />
-            <input className="rounded border px-3 py-2" placeholder="Email (optional)" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <select className="rounded border px-3 py-2" value={roleId} onChange={(e) => setRoleId(e.target.value)}>
-              <option value="">Role</option>
-              {roles.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </select>
-            <select className="rounded border px-3 py-2" value={depId} onChange={(e) => setDepId(e.target.value)}>
-              <option value="">Phòng ban</option>
-              {deps.filter((x) => x.active !== false).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </select>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <button onClick={createUser} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600">Tạo user</button>
-            <button onClick={loadAll} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600">Tải danh sách</button>
-          </div>
-          <p className="mt-2 text-sm text-slate-600">{message}</p>
-        </section>
+  const openUser = async (u: User) => {
+    setMessage("Đang tải thông tin mới nhất...");
+    try {
+      const payload = await fetchAll();
+      applyPayload(payload);
+      const freshUser = (payload.users ?? []).find((row) => row.id === u.id);
+      if (!freshUser) throw new Error("Không tìm thấy user.");
+      setEditState(freshUser);
+      setMessage("✅ Đã tải thông tin mới nhất.");
+    } catch (error) {
+      setSelected(null);
+      setMessage(`❌ ${(error as Error).message}`);
+    }
+  };
 
-        <section className="mt-4 rounded-xl border bg-white p-4">
-          <div className="mb-3 grid gap-2 md:grid-cols-3">
-            <select className="rounded border px-3 py-2" value={filterDepId} onChange={(e) => setFilterDepId(e.target.value)}>
-              <option value="">Lọc theo phòng ban (tất cả)</option>
-              {deps.filter((x) => x.active !== false).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </select>
-            <select className="rounded border px-3 py-2" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as "all" | "active" | "disabled")}>
-              <option value="all">Trạng thái: Tất cả</option>
-              <option value="active">Trạng thái: Active</option>
-              <option value="disabled">Trạng thái: Disable</option>
-            </select>
-            <button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-orange-50 hover:text-orange-800">
-              Xóa bộ lọc
-            </button>
-          </div>
+  const saveUser = async () => {
+    if (!selected || !isAdmin) return;
+    if (!editJobTitle) return setMessage("❌ Vui lòng chọn chức vụ.");
+    const changes: Record<string, string | boolean> = { user_id: selected.id };
+    if (editName.trim() !== selected.full_name) changes.full_name = editName;
+    if (editRole !== selected.role_id) changes.role_id = editRole;
+    if (editJobTitle !== (selected.job_title_id ?? "")) changes.job_title_id = editJobTitle;
+    if (editDep !== selected.department_id) changes.department_id = editDep;
+    if (editActive !== selected.active) changes.active = editActive;
+    if (Object.keys(changes).length === 1) return setMessage("Không có thay đổi để lưu.");
+    const response = await fetch("/api/users", { method: "PATCH", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify(changes) });
+    const payload = await response.json().catch(() => null) as { error?: string } | null;
+    if (!response.ok) return setMessage(`❌ ${payload?.error || "Không thể cập nhật user."}`);
+    setSelected(null);
+    await loadAll("✅ Đã cập nhật thông tin user.");
+    router.refresh();
+  };
 
-          <p className="mb-2 text-xs text-slate-500">Danh sách tự sắp xếp theo: Ban biên tập → Phòng biên tập → Phòng trị sự → Phòng phóng viên; trong mỗi phòng ưu tiên chức vụ cao trước.</p>
-          <div className="overflow-auto rounded-lg border border-blue-100">
-            <table className="table-soft-red min-w-full text-left text-sm">
-              <thead>
-                <tr>
-                  <th className="px-2 py-2">Tên</th>
-                  <th className="px-2 py-2">Username</th>
-                  <th className="px-2 py-2">Chức vụ</th>
-                  <th className="px-2 py-2">Phòng ban</th>
-                  <th className="px-2 py-2">Trạng thái</th>
-                  <th className="px-2 py-2">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="align-middle">
-                    <td className="px-2 py-2">
-                      <Link href={`/users/${u.id}`} className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">
-                        {u.full_name}
-                      </Link>
-                    </td>
-                    <td className="px-2 py-2">{u.username ?? "-"}</td>
-                    <td className="px-2 py-2">
-                      <select
-                        className="rounded border px-2 py-1"
-                        value={u.role_id}
-                        onChange={(e) => updateUserRoleWithDepartment(u, e.target.value)}
-                      >
-                        {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                      </select>
-                    </td>
-                    <td className="px-2 py-2">
-                      <select
-                        className="rounded border px-2 py-1"
-                        value={u.department_id}
-                        onChange={(e) => updateUser(u.id, { department_id: e.target.value })}
-                      >
-                        {deps.filter((x) => x.active !== false).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                      </select>
-                      <div className="mt-1 text-xs text-slate-500">Hiện tại: {depNameMap.get(u.department_id) ?? "-"}</div>
-                    </td>
-                    <td className="px-2 py-2">{u.active ? "active" : "disable"}</td>
-                    <td className="px-2 py-2">
-                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => updateUser(u.id, { active: !u.active })} className="rounded bg-slate-200 px-2 py-1 text-xs">{u.active ? "Khóa" : "Mở"}</button>
-                        <button onClick={() => resetPassword(u.id)} className="rounded bg-amber-500 px-2 py-1 text-xs text-white">Reset mật khẩu</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td className="px-2 py-6 text-center text-slate-500" colSpan={6}>Không có user phù hợp bộ lọc.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        </div>
-      </div>
-    </main>
-  );
+  const createUser = async () => {
+    if (!isAdmin) return;
+    const response = await fetch("/api/users", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify(newUser) });
+    const payload = await response.json().catch(() => null) as { error?: string } | null;
+    if (!response.ok) return setMessage(`❌ ${payload?.error || "Không thể tạo user."}`);
+    setNewUser({ full_name: "", username: "", role_id: "", job_title_id: "", department_id: "" });
+    await loadAll("✅ Đã tạo user.");
+    router.refresh();
+  };
+
+  return <main className="min-h-screen bg-slate-50 p-6 text-slate-900"><div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4"><div className="mb-4 lg:mb-0"><AppNav currentPath="/users" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} /></div><div>
+    <h1 className="mb-4 text-2xl font-bold">Quản lý nhân viên</h1>
+    {isAdmin ? <section className="rounded-xl border bg-white p-4"><h2 className="mb-2 font-semibold">Tạo user</h2><div className="grid gap-2 md:grid-cols-5"><input className="rounded border px-3 py-2" placeholder="Họ tên" value={newUser.full_name} onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })} /><input className="rounded border px-3 py-2" placeholder="Username" value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} /><select className="rounded border px-3 py-2" value={newUser.job_title_id} onChange={(e) => setNewUser({ ...newUser, job_title_id: e.target.value })}><option value="">Chức vụ</option>{jobTitles.filter((j) => j.active !== false).map((j) => <option key={j.id} value={j.id}>{j.name}</option>)}</select><select className="rounded border px-3 py-2" value={newUser.role_id} onChange={(e) => setNewUser({ ...newUser, role_id: e.target.value })}><option value="">Role quyền</option>{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select><select className="rounded border px-3 py-2" value={newUser.department_id} onChange={(e) => setNewUser({ ...newUser, department_id: e.target.value })}><option value="">Phòng ban</option>{deps.filter((d) => d.active !== false).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div><button onClick={createUser} className="mt-3 rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Tạo user</button></section> : null}
+    <section className="mt-4 rounded-xl border bg-white p-4"><div className="mb-3 grid gap-2 md:grid-cols-3"><select className="rounded border px-3 py-2" value={filterDepId} onChange={(e) => setFilterDepId(e.target.value)}><option value="">Lọc theo phòng ban (tất cả)</option>{deps.filter((d) => d.active !== false).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select><select className="rounded border px-3 py-2" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as "all" | "active" | "disabled")}><option value="all">Trạng thái: Tất cả</option><option value="active">Active</option><option value="disabled">Disable</option></select><button onClick={() => { setFilterDepId(""); setFilterStatus("all"); }} className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold">Xóa bộ lọc</button></div><p className="mb-2 text-sm text-slate-600">{message}</p><div className="overflow-auto rounded-lg border"><table className="min-w-full text-left text-sm"><thead><tr><th className="px-2 py-2">Họ tên</th><th className="px-2 py-2">Username</th><th className="px-2 py-2">Chức vụ</th><th className="px-2 py-2">Role quyền</th><th className="px-2 py-2">Phòng ban</th><th className="px-2 py-2">Trạng thái</th></tr></thead><tbody>{filteredUsers.map((u) => <tr key={u.id} className="border-t"><td className="px-2 py-2"><button onClick={() => void openUser(u)} className="font-semibold text-orange-800 underline-offset-2 hover:underline">{u.full_name}</button></td><td className="px-2 py-2">{u.username ?? "-"}</td><td className="px-2 py-2">{u.job_titles?.name ?? "-"}</td><td className="px-2 py-2">{u.roles?.name ?? "-"}</td><td className="px-2 py-2">{deps.find((d) => d.id === u.department_id)?.name ?? "-"}</td><td className="px-2 py-2">{u.active ? "active" : "disable"}</td></tr>)}{filteredUsers.length === 0 ? <tr><td colSpan={6} className="px-2 py-6 text-center text-slate-500">Không có user phù hợp bộ lọc.</td></tr> : null}</tbody></table></div></section>
+    {selected ? <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelected(null); }}><div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl"><div className="flex items-center justify-between"><h2 className="text-xl font-semibold">Thông tin nhân sự</h2><button onClick={() => setSelected(null)} className="text-xl" aria-label="Đóng">×</button></div><div className="mt-4 space-y-3"><label className="block text-sm">Họ tên<input disabled={!isAdmin} className="mt-1 w-full rounded border px-3 py-2 disabled:bg-slate-100" value={editName} onChange={(e) => setEditName(e.target.value)} /></label><p className="text-sm"><b>Username:</b> {selected.username ?? "-"}</p><p className="text-sm"><b>Email:</b> {selected.email ?? "-"} <span className="text-xs text-slate-500">(không chỉnh sửa tại đây)</span></p><label className="block text-sm">Chức vụ<select disabled={!isAdmin} className="mt-1 w-full rounded border px-3 py-2 disabled:bg-slate-100" value={editJobTitle} onChange={(e) => setEditJobTitle(e.target.value)}><option value="" disabled>Chọn chức vụ</option>{jobTitles.filter((j) => j.active !== false || j.id === editJobTitle).map((j) => <option key={j.id} value={j.id}>{j.name}{j.active === false ? " (đã ngừng sử dụng)" : ""}</option>)}</select></label><label className="block text-sm">Role quyền<select disabled={!isAdmin} className="mt-1 w-full rounded border px-3 py-2 disabled:bg-slate-100" value={editRole} onChange={(e) => setEditRole(e.target.value)}>{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label><label className="block text-sm">Phòng ban<select disabled={!isAdmin} className="mt-1 w-full rounded border px-3 py-2 disabled:bg-slate-100" value={editDep} onChange={(e) => setEditDep(e.target.value)}>{deps.filter((d) => d.active !== false).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={!isAdmin} checked={editActive} onChange={(e) => setEditActive(e.target.checked)} /> Đang hoạt động</label></div><div className="mt-5 flex justify-end gap-2"><button onClick={() => setSelected(null)} className="rounded bg-slate-200 px-3 py-2 text-sm">Đóng</button>{isAdmin ? <button onClick={saveUser} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Lưu thay đổi</button> : null}</div>{!isAdmin ? <p className="mt-3 text-xs text-slate-500">TBT chỉ được xem thông tin; chỉ Admin mới được lưu.</p> : null}</div></div> : null}
+  </div></div></main>;
 }

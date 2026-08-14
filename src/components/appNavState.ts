@@ -1,4 +1,4 @@
-export type GroupKey = "work" | "hr" | "assets" | "docs" | "admin";
+export type GroupKey = "work" | "planning" | "hr" | "assets" | "docs" | "admin";
 
 type RoleAccessPolicy = {
   modules: Array<"work" | "hr" | "assets" | "documents" | "performance" | "admin">;
@@ -15,12 +15,12 @@ const DEFAULT_ACCESS_POLICY: RoleAccessPolicy = {
 };
 
 export const getRoleAccessPolicy = (roleCode: string): RoleAccessPolicy =>
-  roleCode === "tbt_read_only"
+  (roleCode === "tbt_read_only" || roleCode === "tong_bien_tap")
     ? { modules: ["work", "hr"], readOnly: true, viewAllWorkHr: true, admin: false }
     : DEFAULT_ACCESS_POLICY;
 
 export const isGroupAllowedForRole = (roleCode: string, group: GroupKey) => {
-  if (roleCode !== "tbt_read_only") return true;
+  if (roleCode !== "tbt_read_only" && roleCode !== "tong_bien_tap") return true;
   return group === "work" || group === "hr";
 };
 
@@ -40,6 +40,14 @@ export const groups: Group[] = [
       { href: "/tasks/pending-review", label: "CV chờ duyệt" },
       { href: "/tasks/done", label: "CV hoàn thành" },
       { href: "/performance", label: "Đánh giá" },
+    ],
+  },
+  {
+    key: "planning",
+    label: "Kế hoạch",
+    items: [
+      { href: "/planning", label: "Lập kế hoạch" },
+      { href: "/planning/reports", label: "Báo cáo kế hoạch" },
     ],
   },
   {
@@ -72,6 +80,7 @@ export const groups: Group[] = [
     label: "Cấu hình",
     items: [
       { href: "/users", label: "Quản lý nhân viên" },
+      { href: "/job-titles", label: "Quản lý chức vụ" },
       { href: "/departments", label: "Phòng ban" },
       { href: "/permissions", label: "Phân quyền" },
     ],
@@ -80,9 +89,13 @@ export const groups: Group[] = [
 
 export const isActive = (currentPath: string, href: string) => {
   if (href === "/") return currentPath === "/";
-  if (href.startsWith("/tasks/") && currentPath.startsWith("/tasks/")) return true;
-  if (href === "/documents" && currentPath.startsWith("/documents/")) return true;
-  if (href === "/assets" && currentPath.startsWith("/assets/")) return true;
+  if (href === "/planning") return currentPath === "/planning" || currentPath === "/my-tasks";
+  if (href === "/planning/reports") return currentPath === "/planning/reports";
+  if (href === "/tasks/active") return currentPath === "/tasks/active";
+  if (href === "/tasks/pending-review") return currentPath === "/tasks/pending-review";
+  if (href === "/tasks/done") return currentPath === "/tasks/done";
+  if (href === "/documents") return currentPath === "/documents";
+  if (href === "/assets") return currentPath === "/assets";
   return currentPath === href;
 };
 
@@ -92,4 +105,7 @@ export const toggleOpenGroup = (openGroup: GroupKey | null, nextGroup: GroupKey)
   openGroup === nextGroup ? null : nextGroup;
 
 export const getInitialOpenGroup = (visibleGroups: Group[], currentPath: string): GroupKey | null =>
-  visibleGroups.find((group) => group.items.some((item) => isActive(currentPath, item.href)))?.key ?? null;
+  visibleGroups.find((group) => group.key === "planning" && group.items.some((item) => isActive(currentPath, item.href)))?.key
+    ?? visibleGroups.find((group) => group.key === "work")?.key
+    ?? visibleGroups.find((group) => group.items.some((item) => isActive(currentPath, item.href)))?.key
+    ?? null;
