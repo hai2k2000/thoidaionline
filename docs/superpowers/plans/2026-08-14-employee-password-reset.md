@@ -13,9 +13,11 @@
 ## Execution constraints discovered on 2026-08-14
 
 - The approved design is commit `0fb2af9b57c4c2e6c2bc14398cd7e63c74b36df9` at `docs/superpowers/specs/2026-08-14-employee-password-reset-design.md`.
-- `src/app/users/page.tsx` is tracked but already modified by the user. Its modal is compressed into one long line, so feature changes overlap that pre-existing hunk and cannot be safely separated with blind path staging.
-- These implementation baselines are currently untracked: `src/app/api/auth/admin-reset/route.ts`, `src/app/api/auth/login/route.ts`, `src/app/api/auth/reset-password/route.ts`, `src/lib/passwordReset.ts`, `src/lib/serverSession.ts`, `src/lib/services/audit.ts`, and `supabase/migrations/20260813210000_password_reset_security.sql`.
-- An untracked file cannot be hunk-staged relative to `HEAD` without committing its entire pre-existing content. Do not commit any of those baselines as if this feature authored them.
+- The tracked runtime baseline is already modified in `package.json`, `package-lock.json`, `src/app/login/page.tsx`, `src/app/users/page.tsx`, `src/lib/auth.tsx`, and `src/components/appNavState.ts`; `src/components/appNavState.test.mjs` is its modified companion test. The users modal is compressed into one long line, so feature changes overlap that pre-existing hunk and cannot be safely separated with blind path staging.
+- These runtime baselines are currently untracked: all six active routes under `src/app/api/auth/`, both forgot/reset password pages, `src/lib/password.ts`, `src/lib/passwordReset.ts`, `src/lib/serverSession.ts`, `src/lib/serverSupabase.ts`, `src/lib/services/audit.ts`, `src/lib/services/common.ts`, and `supabase/migrations/20260813210000_password_reset_security.sql`.
+- `src/lib/supabase.ts` is the tracked-clean direct local dependency of `src/lib/auth.tsx` and `src/lib/services/common.ts`. External auth dependencies are represented by the reviewed `package.json` and `package-lock.json` pair, including `bcryptjs` and `@supabase/supabase-js`.
+- The untracked `*.pre-forgot` files are archival copies, are not imported or compiled, and are not part of the canonical runtime manifest. Preserve them in the active checkout, but do not stage them as feature or baseline code.
+- An untracked file cannot be hunk-staged relative to `HEAD` without committing its entire pre-existing content. Do not claim any reviewed baseline as authored by this feature.
 - PostgreSQL already contains `password_hash`, reset-token tables, and `consume_password_reset`, but migration history does not list `20260813210000`. Do not run `supabase db push`; it could replay unrelated unrecorded migrations.
 - Production is single-slot: `thoidai-work.service` uses `WorkingDirectory=/opt/thoidai-work`, `ExecStart=/usr/bin/npm run start -- --hostname 0.0.0.0 --port 3001`, and Nginx proxies `thoidai.online` to `127.0.0.1:3001`.
 - Preserve the active Codex provider/model and CLIProxyAPI/9router routing. Never read or print runtime environment values, credentials, cookies, raw reset tokens, password values, token hashes, or provider payloads.
@@ -44,8 +46,16 @@
 
 ### Verify without changing
 
+- `package.json` and `package-lock.json`: preserve the reviewed `bcryptjs` and `@supabase/supabase-js` dependency baseline required by the current password/session routes.
+- `src/app/login/page.tsx`, `src/lib/auth.tsx`, `src/components/appNavState.ts`, and `src/components/appNavState.test.mjs`: preserve the existing forgot-password link, cookie-session client, Admin role policy, and its companion tests before feature work starts.
+- `src/app/api/auth/forgot-password/route.ts`, `src/app/api/auth/logout/route.ts`, and `src/app/api/auth/session/route.ts`: preserve the existing forgot-password request and session lifecycle endpoints.
 - `src/app/api/auth/reset-password/route.ts`: continue calling `consume_password_reset` with the same signature.
-- `src/lib/passwordReset.ts`: reuse `createResetToken()` and `sendResetEmail()`; change only if an explicit typed delivery result is needed.
+- `src/app/forgot-password/page.tsx` and `src/app/reset-password/page.tsx`: preserve the existing user-facing reset flow and its token query-parameter contract.
+- `src/lib/password.ts`: preserve bcrypt hashing and verification used by login and password consumption.
+- `src/lib/passwordReset.ts`: reuse `createResetToken()`, `hashResetToken()`, and `sendResetEmail()`; change only if an explicit typed delivery result is needed.
+- `src/lib/serverSupabase.ts`: preserve the service-role server client used by every auth/reset route; never print its environment values.
+- `src/lib/services/common.ts`, `src/lib/services/audit.ts`, and `src/lib/supabase.ts`: preserve the direct audit dependency chain and its existing client boundary.
+- `supabase/migrations/20260813210000_password_reset_security.sql`: preserve the existing reset-token schema/RPC baseline while adding only the separately numbered admin-reset migration.
 - `/etc/systemd/system/thoidai-work.service` and `/etc/systemd/system/thoidai-work.service.d/10-memory-guard.conf`: deployment topology only; no edits in this feature.
 - `/etc/nginx/sites-available/thoidai-work`: health/rollback verification only; no edits in this feature.
 
@@ -68,46 +78,38 @@ git -C /opt/thoidai-work show --stat --oneline 0fb2af9
 
 Expected: `HEAD` is at or descends from `0fb2af9`; status still shows the known dirty paths. If the spec commit is missing, stop.
 
-- [ ] **Step 2: Classify overlap paths before any implementation edit**
+- [ ] **Step 2: Classify overlap paths and audit direct imports before any implementation edit**
 
-Run:
+Run from `/opt/thoidai-work`:
 
 ```bash
-git -C /opt/thoidai-work status --short -- \
-  src/app/users/page.tsx \
-  src/app/api/auth/admin-reset/route.ts \
-  src/app/api/auth/login/route.ts \
-  src/app/api/auth/reset-password/route.ts \
-  src/lib/serverSession.ts \
-  src/lib/passwordReset.ts \
-  src/lib/services/audit.ts \
+baseline_files=(
+  package.json package-lock.json
+  src/app/login/page.tsx src/app/users/page.tsx
+  src/components/appNavState.ts src/components/appNavState.test.mjs
+  src/lib/auth.tsx src/lib/supabase.ts
+  src/app/api/auth/admin-reset/route.ts
+  src/app/api/auth/forgot-password/route.ts
+  src/app/api/auth/login/route.ts
+  src/app/api/auth/logout/route.ts
+  src/app/api/auth/reset-password/route.ts
+  src/app/api/auth/session/route.ts
+  src/app/forgot-password/page.tsx src/app/reset-password/page.tsx
+  src/lib/password.ts src/lib/passwordReset.ts
+  src/lib/serverSession.ts src/lib/serverSupabase.ts
+  src/lib/services/audit.ts src/lib/services/common.ts
   supabase/migrations/20260813210000_password_reset_security.sql
+)
+git status --short -- "${baseline_files[@]}"
+for file in "${baseline_files[@]}"; do
+  test -f "$file"
+  grep -nE '^(import|export)' "$file" || true
+done
 ```
 
-Expected today: one modified tracked UI file and seven untracked auth/migration files. This is an execution gate, not a prompt to stage them.
+Expected: seven listed tracked files are modified, fifteen listed runtime files are untracked, and `src/lib/supabase.ts` is tracked-clean; archival `*.pre-forgot` files remain outside this manifest. The import scan must show only the reviewed local dependencies (`serverSession`, `serverSupabase`, `password`, `passwordReset`, `auth`, `appNavState`, `services/common`, and `supabase`) plus approved external packages. This is an execution gate, not a prompt to stage files.
 
-- [ ] **Step 3: Stop for a canonical-base decision when overlap remains**
-
-The safe default is: the owner reviews and places the pre-existing auth baseline on a separately authorized canonical commit before this plan starts feature commits. Do not create that baseline commit under this feature, and do not use `git add -A`, `git add .`, `git commit -a`, `git reset`, `git clean`, `git stash`, or checkout-based overwrite.
-
-If the owner does not authorize canonicalization, stop implementation. Hunk staging is acceptable only for tracked files when `git diff --cached` proves every staged line belongs to this feature. It is not acceptable for the currently untracked auth files, and the one-line modal overlap makes UI hunk staging unsafe.
-
-- [ ] **Step 4: Create the isolated feature worktree after the canonical base exists**
-
-At execution time invoke `superpowers:using-git-worktrees`, then run:
-
-```bash
-test ! -e /opt/thoidai-worktrees/employee-password-reset
-git -C /opt/thoidai-work worktree add \
-  -b feat/employee-password-reset \
-  /opt/thoidai-worktrees/employee-password-reset \
-  main
-git -C /opt/thoidai-worktrees/employee-password-reset status --short
-```
-
-Expected: the new worktree is clean and contains the reviewed auth baseline. If any required baseline file is absent, stop rather than copying untracked files into a commit.
-
-- [ ] **Step 5: Create a timestamped source backup outside Git**
+- [ ] **Step 3: Create a timestamped source backup and canonical baseline manifest before any commit**
 
 Run from `/opt/thoidai-work`:
 
@@ -115,38 +117,80 @@ Run from `/opt/thoidai-work`:
 feature_stamp=$(date -u +%Y%m%dT%H%M%SZ)
 backup_root=/opt/thoidai-backups/employee-password-reset/$feature_stamp
 install -d -m 0700 "$backup_root/source"
+baseline_files=(
+  package.json package-lock.json
+  src/app/login/page.tsx src/app/users/page.tsx
+  src/components/appNavState.ts src/components/appNavState.test.mjs
+  src/lib/auth.tsx src/lib/supabase.ts
+  src/app/api/auth/admin-reset/route.ts
+  src/app/api/auth/forgot-password/route.ts
+  src/app/api/auth/login/route.ts
+  src/app/api/auth/logout/route.ts
+  src/app/api/auth/reset-password/route.ts
+  src/app/api/auth/session/route.ts
+  src/app/forgot-password/page.tsx src/app/reset-password/page.tsx
+  src/lib/password.ts src/lib/passwordReset.ts
+  src/lib/serverSession.ts src/lib/serverSupabase.ts
+  src/lib/services/audit.ts src/lib/services/common.ts
+  supabase/migrations/20260813210000_password_reset_security.sql
+)
+printf '%s\n' "${baseline_files[@]}" > "$backup_root/canonical-baseline-files.txt"
 git status --short > "$backup_root/git-status-before.txt"
 git rev-parse HEAD > "$backup_root/head-before.txt"
-git diff --binary -- \
-  src/app/users/page.tsx \
-  src/app/api/auth/admin-reset/route.ts \
-  src/app/api/auth/login/route.ts \
-  src/app/api/auth/reset-password/route.ts \
-  src/lib/serverSession.ts \
-  src/lib/passwordReset.ts \
-  src/lib/services/audit.ts \
-  supabase/migrations/20260813210000_password_reset_security.sql \
-  > "$backup_root/pre-feature-tracked.patch"
-cp --parents \
-  src/app/users/page.tsx \
-  src/app/api/auth/admin-reset/route.ts \
-  src/app/api/auth/login/route.ts \
-  src/app/api/auth/reset-password/route.ts \
-  src/lib/serverSession.ts \
-  src/lib/passwordReset.ts \
-  src/lib/services/audit.ts \
-  supabase/migrations/20260813210000_password_reset_security.sql \
-  "$backup_root/source"
+git diff --binary -- "${baseline_files[@]}" > "$backup_root/pre-feature-tracked.patch"
+cp --parents "${baseline_files[@]}" "$backup_root/source"
+(
+  cd "$backup_root/source"
+  find . -type f -print0 | sort -z | xargs -0 sha256sum
+) > "$backup_root/source-checksums.txt"
+test "$(find "$backup_root/source" -type f | wc -l)" -eq 23
+sha256sum "$backup_root/canonical-baseline-files.txt" > "$backup_root/canonical-baseline-files.sha256"
+sha256sum "$backup_root/source-checksums.txt" > "$backup_root/source-checksums.sha256"
 chmod -R go-rwx "$backup_root"
-find "$backup_root/source" -type f -print0 \
-  | sort -z \
-  | xargs -0 sha256sum \
-  > "$backup_root/source-checksums.txt"
+printf '%s\n' "$backup_root" > /opt/thoidai-backups/employee-password-reset/latest-source-backup.path
 ```
 
-Expected: the directory is root-only, each named source file is recoverable, and no secret-bearing environment file was copied.
+Expected: the root-only backup contains all twenty-three named baseline files, `source-checksums.txt` is a relative-path SHA-256 manifest, and no secret-bearing environment file was copied.
 
-- [ ] **Step 6: Create and verify a recoverable source/schema backup without copying authentication material**
+- [ ] **Step 4: Create the separately authorized canonical baseline commit**
+
+After Step 3 succeeds, review the saved status, tracked patch, and `source-checksums.txt`. The owner-authorized canonicalization may then use only the exact manifest paths:
+
+```bash
+cd /opt/thoidai-work
+read -r backup_root < /opt/thoidai-backups/employee-password-reset/latest-source-backup.path
+mapfile -t baseline_files < "$backup_root/canonical-baseline-files.txt"
+test ! -e .git/index.lock
+git diff --cached --quiet
+git add -- "${baseline_files[@]}"
+git diff --cached --name-status -- "${baseline_files[@]}"
+test "$(git diff --cached --name-only | wc -l)" -eq 22
+git commit -m "chore: record existing auth reset baseline" -- "${baseline_files[@]}"
+```
+
+Expected: the pre-commit index is empty, the staged list contains exactly the twenty-two dirty/untracked manifest paths, and tracked-clean `src/lib/supabase.ts` remains inherited from the parent commit and verified by the checksum manifest. The canonical commit contains no unrelated dirty path or feature implementation. Never use `git add -A`, `git add .`, `git commit -a`, `git reset`, `git clean`, `git stash`, or checkout-based overwrite.
+
+- [ ] **Step 5: Create and checksum-verify the isolated feature worktree after canonicalization**
+
+At execution time invoke `superpowers:using-git-worktrees`, then run:
+
+```bash
+read -r backup_root < /opt/thoidai-backups/employee-password-reset/latest-source-backup.path
+test ! -e /opt/thoidai-worktrees/employee-password-reset
+git -C /opt/thoidai-work worktree add \
+  -b feat/employee-password-reset \
+  /opt/thoidai-worktrees/employee-password-reset \
+  main
+(
+  cd /opt/thoidai-worktrees/employee-password-reset
+  sha256sum -c "$backup_root/source-checksums.txt"
+  test -z "$(git status --short)"
+)
+```
+
+Expected: every baseline checksum passes, the new worktree is clean, and it contains the reviewed auth/reset baseline. If any required file is absent or differs, stop before writing tests or implementation code; do not copy untracked files into the feature worktree.
+
+- [ ] **Step 6: Create and verify a recoverable schema inventory without copying authentication material**
 
 Run:
 
