@@ -886,7 +886,7 @@ test "$pids_limit" -eq 256
 test "$restart_policy" = no
 test "$auto_remove" = false
 docker inspect -f '{{range .Mounts}}{{printf "%s|%s|%s|%s|%t\n" .Type .Name .Source .Destination .RW}}{{end}}' \
-  "$container_name" > "$run_dir/mounts.assertion.tsv"
+  "$container_name" | sed '/^$/d' > "$run_dir/mounts.assertion.tsv"
 awk -F '|' -v volume="$volume_name" -v secret="$secret_file" '
  $1=="volume" && $2==volume && $4=="/var/lib/postgresql/data" && $5=="true" {data++}
  $1=="bind" && $2=="" && $3==secret && $4=="/run/secrets/bootstrap-password" && $5=="false" {password++}
