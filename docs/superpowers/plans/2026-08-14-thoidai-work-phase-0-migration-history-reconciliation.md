@@ -4,7 +4,7 @@
 
 **Goal:** Verify the exact application status of eleven THỜI ĐẠI WORK migration versions and reconcile them with `supabase_migrations.schema_migrations` only if every version becomes `exact-applied` under the all-or-nothing gate, without blindly replaying SQL, weakening password-reset/session protections, changing application routing, or exposing production identities or secrets.
 
-**Architecture:** Preserve the sealed production/source evidence, then restore the exact schema archive into one uniquely named PostgreSQL 17 container that uses the pinned local image, Docker `none` networking, zero published ports, a retained named volume, and a root-only password-file secret. Bootstrap archive roles with a unique isolated superuser, restore ownership and privileges exactly, and replay the locked chain only as the isolated non-superuser `postgres`; production remains read-only except for the unreachable all-exact history transaction. Classify every target as `exact-applied`, `semantically-applied-but-source-differs`, `partially-applied`, or `not-applied`, with no production migration replay or rehearsal path.
+**Architecture:** Preserve the sealed production/source evidence, then restore the exact schema archive into one uniquely named PostgreSQL 17 container that uses the pinned local image, Docker `none` networking, zero published ports, a retained named volume, and a root-only password-file secret. Bootstrap archive roles with a unique isolated superuser, restore ownership and privileges without weakened flags, apply only the measured PUBLIC-USAGE normalization under archive/production/replay/TDD guards as isolated non-superuser database owner `postgres`, and replay the locked chain only as that role; production remains read-only except for the unreachable all-exact history transaction. Classify every target as `exact-applied`, `semantically-applied-but-source-differs`, `partially-applied`, or `not-applied`, with no production migration replay or rehearsal path.
 
 **Tech Stack:** PostgreSQL 17, Supabase migration history, Docker, Bash, `psql`, `pg_dump`/`pg_restore`, Git, SHA-256 manifests, systemd, nginx, and non-interactive SSH to `vps-aylaspa`.
 
@@ -82,7 +82,7 @@ Completed Tasks 1–3 are sealed at `/opt/thoidai-reconciliation/phase0-20260814
 | Design section | Implementation location |
 |---|---|
 | 1. Purpose | Scope boundary; Tasks 6–8 all-exact gate |
-| 2. Observed baseline | Audited starting evidence; Task 4 Steps 1–6 and `image-metadata.tsv` |
+| 2. Observed baseline | Audited starting evidence; Task 4 Steps 1–6 and 14; `image-metadata.tsv` and measured archive-normalization evidence |
 | 3. Goals | Tasks 4–7 evidence lifecycle; Task 9 preservation |
 | 4. Non-goals | Scope boundary; Task 7 production-execution prohibition |
 | 5. Rejected alternatives | Task 4 Step 2 retained RED evidence |
@@ -90,14 +90,14 @@ Completed Tasks 1–3 are sealed at `/opt/thoidai-reconciliation/phase0-20260814
 | 7. Secret handling | Task 4 Steps 7–9 |
 | 8. Cluster and role bootstrap | Task 4 Steps 10–11 |
 | 9. Extension compatibility | Task 4 Steps 6, 9, and 11 |
-| 10. Schema restore and fidelity | Task 4 Steps 12–14 |
+| 10. Schema restore and fidelity | Task 4 Steps 12–15 |
 | 11. Synthetic state | Task 5 Step 1 |
 | 12. Locked chronological replay | Task 5 Steps 2–5 |
-| 13. Evidence flow | Tasks 4–7; Task 9 final index |
+| 13. Evidence flow | Task 4 Steps 1–16; Tasks 5–7; Task 9 final index |
 | 14. Error handling | Every hard-stop assertion; Task 7 retention |
 | 15. Threat model | Task 4 persisted image/volume/container metadata plus runtime, mount, secret, and resource gates |
 | 16. Rollback and cleanup | Task 7 Step 6; Task 8 Step 5 |
-| 17. Testing strategy | Task 4 RED/GREEN; Task 5 replay/idempotency |
+| 17. Testing strategy | Task 4 Steps 2, 14, and 15 RED/TDD/GREEN; Task 5 replay/idempotency |
 | 18. Exact success criteria | Task 6 Step 1; Task 9 preservation matrix |
 | 19. Execution boundary | Task 10 inline `/root/aylaspa_thoidai` handoff |
 
@@ -499,6 +499,8 @@ Expected: all production metadata files verify.
 - Create outside Git: one mode-0600 bootstrap password file, one retained Docker volume, and one retained Docker container
 - Read production only; create no object in `supabase_db_thoidai-work`
 
+> **Execution status note (2026-08-15):** Tasks 1–3 are sealed and checked. Task 4 Steps 1–13 have completed execution evidence. The former fidelity Step 14 stopped on the single measured `schema_acl|6` versus expected `7` mismatch before zero-row baseline, sealing, fixtures, Step 15, or Task 5. A later rollback-only TDD transaction proved the new normalization but made no persistent database change. Under this plan's checklist convention, Task 4 boxes remain unchecked until the revised Task 4 is reviewed and executed; new Steps 14–16 and every Task 5 step are pending.
+
 - [ ] **Step 1: Verify the approved design commit and every sealed prerequisite**
 
 ```bash
@@ -508,7 +510,7 @@ evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
 design=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
 cd "$repo"
 git merge-base --is-ancestor 9fab6a11600004d6b70da1f0530e0c215eafb1fc HEAD
-test "$(git show 9fab6a11600004d6b70da1f0530e0c215eafb1fc:"$design" | sha256sum | awk '{print $1}')" = bbad7e6e0188ec2d802cb1111af3b2e3bce8646739d163d62a989ee392bb37cf
+test "$(sha256sum "$design" | awk '{print $1}')" = bd45e65f6f825a3e2bcae241669c7f6debd803a5446db31d818d3f813889ddb5
 test "$(stat -c %a "$evidence_root")" = 700
 test "$(find "$evidence_root" -maxdepth 1 -type f | wc -l)" -eq 44
 test "$(find "$evidence_root" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
@@ -525,7 +527,7 @@ docker exec -i supabase_db_thoidai-work pg_restore --list \
   < "$evidence_root/public-history-schema.dump" >/dev/null
 ```
 
-Expected: every command exits `0`; the design SHA is exact, all sixteen sources verify, both PostgreSQL-17 archives list successfully, and the 44 sealed top-level files remain root-only. Do not print archive contents.
+Expected: every command exits `0`; the approved base-design commit is an ancestor and the measured-addendum design bytes have SHA-256 `bd45e65f…ddb5`; all sixteen sources verify, both PostgreSQL-17 archives list successfully, and the 44 sealed top-level files remain root-only. Do not print archive contents.
 
 - [ ] **Step 2: Preserve the measured RED architecture evidence without repeating it**
 
@@ -1104,13 +1106,209 @@ test "$restore_status" -eq 0
 
 Expected: exact archive bytes stream over stdin, raw output is reduced to SHA-256/status, and restore exits `0` with no ignored errors. The command contains no `--no-owner`, `--no-privileges`, filtered TOC, or production credential and creates no migration copy in `/tmp` or the volume.
 
-- [ ] **Step 14: Prove every GREEN restore-fidelity gate before fixtures**
+- [ ] **Step 14: Apply the one guarded isolated-only public-schema ACL normalization**
+
+```bash
+set -euo pipefail
+umask 077
+evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
+archive="$evidence_root/public-history-schema.dump"
+read -r run_dir < "$evidence_root/isolated-run.current"
+IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
+test "$(docker inspect -f '{{.State.Running}}' "$container_name")" = true
+test "$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$container_name")" = none
+port_bindings_json=$(docker inspect -f '{{json .HostConfig.PortBindings}}' "$container_name")
+[[ "$port_bindings_json" = '{}' || "$port_bindings_json" = null ]]
+test -z "$(docker port "$container_name")"
+test "$(sha256sum "$archive" | awk '{print $1}')" = 674fa9610e9de26afe3716efe4554db9706247c0930dda3e90fd90ec26bb117b
+
+archive_counts="$run_dir/archive-public-schema-acl.counts.tsv"
+{
+  printf 'archive_sha256|674fa9610e9de26afe3716efe4554db9706247c0930dda3e90fd90ec26bb117b\n'
+  docker exec -i "$container_name" pg_restore --list < "$archive" |
+    awk '$4=="ACL" && $5=="-" && $6=="SCHEMA" && ($7=="public" || $7=="\"public\"") {n++}
+         END {printf "schema_acl_toc_items|%d\n",n+0}'
+  docker exec -i "$container_name" pg_restore --schema-only --file=- < "$archive" |
+    awk '
+      function normalize(value) {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+        gsub(/[[:space:]]+/, " ", value)
+        return toupper(value)
+      }
+      {
+        statement=normalize($0)
+        if (statement ~ /^(GRANT|REVOKE) .* ON SCHEMA (PUBLIC|"PUBLIC") (TO|FROM) /) {
+          commands++
+          if (statement ~ /^GRANT /) grants++
+          if (statement ~ /^REVOKE /) revokes++
+          if (statement ~ /^GRANT .* TO PUBLIC;$/) public_grants++
+          if (statement ~ /^GRANT (USAGE|ALL|ALL PRIVILEGES) ON SCHEMA (PUBLIC|"PUBLIC") TO PUBLIC;$/) public_usage++
+        }
+      }
+      END {
+        printf "public_schema_acl_commands|%d\n",commands+0
+        printf "public_schema_grants|%d\n",grants+0
+        printf "public_schema_revokes|%d\n",revokes+0
+        printf "public_schema_grants_to_public|%d\n",public_grants+0
+        printf "semantic_public_usage_grants|%d\n",public_usage+0
+      }'
+} > "$archive_counts"
+chmod 0600 "$archive_counts"
+grep -Fx 'schema_acl_toc_items|1' "$archive_counts"
+grep -Fx 'public_schema_acl_commands|4' "$archive_counts"
+grep -Fx 'public_schema_grants|4' "$archive_counts"
+grep -Fx 'public_schema_revokes|0' "$archive_counts"
+grep -Fx 'public_schema_grants_to_public|0' "$archive_counts"
+grep -Fx 'semantic_public_usage_grants|0' "$archive_counts"
+
+mapfile -d '' -t tdd_debug_files < <(
+  find "$run_dir" -maxdepth 1 -type f -name 'schema-acl-transaction-debug-*.tsv' -print0
+)
+test "${#tdd_debug_files[@]}" -eq 1
+tdd_debug=${tdd_debug_files[0]}
+test "$(stat -c %a "$tdd_debug")" = 600
+test "$(sha256sum "$tdd_debug" | awk '{print $1}')" = 9b784790cfbb06c6d641c2efdf3650d9d147e708dcc5128d6d7b6f542a62bb6c
+grep -Fx 'status|PASS' "$tdd_debug"
+grep -Fx 'green_default_acl|6/3/3' "$tdd_debug"
+grep -Fx 'green_schema_acl|7' "$tdd_debug"
+grep -Fx 'green_table_acl|653' "$tdd_debug"
+grep -Fx 'green_function_acl|46' "$tdd_debug"
+grep -Fx 'green_table_effective|571/588' "$tdd_debug"
+grep -Fx 'green_function_effective|40/56' "$tdd_debug"
+grep -Fx 'green_schema_effective|5/8' "$tdd_debug"
+grep -Fx 'green_public_usage|1' "$tdd_debug"
+grep -Fx 'rollback_schema_acl|6' "$tdd_debug"
+grep -Fx 'rollback_public_usage|0' "$tdd_debug"
+grep -Fx 'production_preserved|1' "$tdd_debug"
+grep -Fx 'container_isolation_preserved|1' "$tdd_debug"
+
+production_before="$run_dir/production-acl-normalization.before.tsv"
+isolated_pre="$run_dir/isolated-acl-normalization.pre.tsv"
+docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
+with acl as (
+  select e.* from pg_namespace n cross join lateral aclexplode(coalesce(n.nspacl,'{}'::aclitem[])) e
+  where n.nspname='public'
+)
+select 'production',count(*),count(*) filter(where grantee=0 and privilege_type='USAGE') from acl;" \
+  > "$production_before"
+docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
+with acl as (
+  select e.* from pg_namespace n cross join lateral aclexplode(coalesce(n.nspacl,'{}'::aclitem[])) e
+  where n.nspname='public'
+)
+select 'isolated_pre',count(*),count(*) filter(where grantee=0 and privilege_type='USAGE') from acl;" \
+  > "$isolated_pre"
+chmod 0600 "$production_before" "$isolated_pre"
+grep -Fx 'production|7|1' "$production_before"
+grep -Fx 'isolated_pre|6|0' "$isolated_pre"
+
+normalization_hash_file="$run_dir/isolated-acl-normalization.output.sha256"
+install -m 0600 /dev/null "$normalization_hash_file"
+set +e
+{
+  docker exec -i "$container_name" psql -X -U postgres -d "$replay_db" -v ON_ERROR_STOP=1 <<'SQL'
+BEGIN;
+do $pre_guard$
+declare
+  schema_acl_count bigint;
+  public_usage_count bigint;
+begin
+  if current_user <> 'postgres' or (select rolsuper from pg_roles where rolname=current_user) then
+    raise exception 'normalization must run as non-superuser postgres';
+  end if;
+  if not exists (
+    select 1 from pg_database d join pg_roles r on r.oid=d.datdba
+    where d.datname=current_database() and r.rolname='postgres'
+  ) then
+    raise exception 'postgres is not the replay database owner';
+  end if;
+  select count(*),count(*) filter(where e.grantee=0 and e.privilege_type='USAGE')
+    into schema_acl_count,public_usage_count
+  from pg_namespace n
+  cross join lateral aclexplode(coalesce(n.nspacl,'{}'::aclitem[])) e
+  where n.nspname='public';
+  if schema_acl_count <> 6 or public_usage_count <> 0 then
+    raise exception 'isolated public-schema ACL precondition mismatch';
+  end if;
+end
+$pre_guard$;
+GRANT USAGE ON SCHEMA public TO PUBLIC;
+do $post_guard$
+declare
+  schema_acl_count bigint;
+  public_usage_count bigint;
+begin
+  select count(*),count(*) filter(where e.grantee=0 and e.privilege_type='USAGE')
+    into schema_acl_count,public_usage_count
+  from pg_namespace n
+  cross join lateral aclexplode(coalesce(n.nspacl,'{}'::aclitem[])) e
+  where n.nspname='public';
+  if schema_acl_count <> 7 or public_usage_count <> 1 then
+    raise exception 'isolated public-schema ACL postcondition mismatch';
+  end if;
+end
+$post_guard$;
+COMMIT;
+SQL
+} 2>&1 | sha256sum | awk '{print $1}' > "$normalization_hash_file"
+normalization_pipeline=("${PIPESTATUS[@]}")
+set -e
+normalization_status=${normalization_pipeline[0]}
+test "${normalization_pipeline[1]}" -eq 0
+test "${normalization_pipeline[2]}" -eq 0
+read -r normalization_hash < "$normalization_hash_file"
+[[ "$normalization_hash" =~ ^[0-9a-f]{64}$ ]]
+printf 'normalization_status|%s\noutput_sha256|%s\ntransaction|single\nreplay_role|postgres\npre_guard|6/0\npost_guard|7/1\nproduction_mutation|false\n' \
+  "$normalization_status" "$normalization_hash" \
+  > "$run_dir/isolated-acl-normalization.status.tsv"
+chmod 0600 "$run_dir/isolated-acl-normalization.status.tsv"
+test "$normalization_status" -eq 0
+
+isolated_post="$run_dir/isolated-acl-normalization.post.tsv"
+production_after="$run_dir/production-acl-normalization.after.tsv"
+docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
+with acl as (
+  select e.* from pg_namespace n cross join lateral aclexplode(coalesce(n.nspacl,'{}'::aclitem[])) e
+  where n.nspname='public'
+)
+select 'isolated_post',count(*),count(*) filter(where grantee=0 and privilege_type='USAGE') from acl;" \
+  > "$isolated_post"
+docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
+with acl as (
+  select e.* from pg_namespace n cross join lateral aclexplode(coalesce(n.nspacl,'{}'::aclitem[])) e
+  where n.nspname='public'
+)
+select 'production',count(*),count(*) filter(where grantee=0 and privilege_type='USAGE') from acl;" \
+  > "$production_after"
+chmod 0600 "$isolated_post" "$production_after" "$normalization_hash_file"
+grep -Fx 'isolated_post|7|1' "$isolated_post"
+grep -Fx 'production|7|1' "$production_after"
+cmp -s "$production_before" "$production_after"
+grep -Fx 'normalization_status|0' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'transaction|single' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'replay_role|postgres' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'pre_guard|6/0' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'post_guard|7/1' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'production_mutation|false' "$run_dir/isolated-acl-normalization.status.tsv"
+test "$(find "$run_dir" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
+```
+
+Expected: aggregate-only archive evidence proves one schema-ACL TOC item, four public-schema grants, and zero PUBLIC/PUBLIC-USAGE grants; production is `7/1`; replay pre-state is `6/0`; and the retained TDD evidence has the exact approved hash/status, seven GREEN fidelity aggregates, and PUBLIC-USAGE `1`. Only isolated non-superuser database owner `postgres` runs one transaction containing the guarded `6/0` precondition, exactly `GRANT USAGE ON SCHEMA public TO PUBLIC`, guarded `7/1` postcondition, and commit. Raw output is reduced to SHA-256/status; persistent isolated post-evidence is `7/1`, production remains byte-identical `7/1`, every new file is `0600`, and any mismatch stops before the grant or before fidelity.
+
+- [ ] **Step 15: Prove every GREEN restore-plus-normalization fidelity gate before fixtures**
 
 ```bash
 set -euo pipefail
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
 read -r run_dir < "$evidence_root/isolated-run.current"
 IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
+grep -Fx 'normalization_status|0' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'transaction|single' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'pre_guard|6/0' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'post_guard|7/1' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'production_mutation|false' "$run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'isolated_post|7|1' "$run_dir/isolated-acl-normalization.post.tsv"
+cmp -s "$run_dir/production-acl-normalization.before.tsv" "$run_dir/production-acl-normalization.after.tsv"
 docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
 select
  (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r'),
@@ -1170,9 +1368,9 @@ grep -Fx '0|0' "$run_dir/isolated-zero-row-baseline.tsv"
 chmod 0600 "$run_dir"/*
 ```
 
-Expected GREEN: exact `21/53/96/5/39/14`, default ACL `6 (3+3)`, schema/table/function ACL `7/653/46`, effective privileges `571/588`, `40/56`, `5/8`, byte-identical five-line owner distribution, public owner `pg_database_owner`, and zero staff/history rows. Any mismatch stops before fixtures.
+Expected GREEN: the isolated-only normalization status and post-evidence are exact, production ACL evidence is unchanged, core counts are `21/53/96/5/39/14`, default ACL is `6 (3+3)`, schema/table/function ACL is `7/653/46`, effective privileges are `571/588`, `40/56`, `5/8`, the five-line owner distribution is byte-identical, public owner is `pg_database_owner`, and staff/history rows are zero. Any mismatch stops before fixtures.
 
-- [ ] **Step 15: Seal Task 4 evidence while retaining the running isolated container and volume**
+- [ ] **Step 16: Seal Task 4 evidence while retaining the running isolated container and volume**
 
 ```bash
 set -euo pipefail
@@ -1192,7 +1390,7 @@ test "$(find "$run_dir" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
 (cd / && sha256sum -c "$run_dir/TASK4-SHA256SUMS" >/dev/null)
 ```
 
-Expected: all non-secret Task-4 evidence verifies, every evidence file is `0600`, and the secret/container/volume are retained. The secret itself is deliberately excluded from checksum manifests.
+Expected: all non-secret Task-4 evidence—including archive normalization counts, retained TDD proof, transaction output/status, persistent `7/1` post-state, and production-preservation files—verifies automatically; every evidence file is `0600`; and the secret/container/volume are retained. The secret itself is deliberately excluded from checksum manifests.
 
 ## Task 5: Seed synthetic metadata and replay the exact chain only as isolated `postgres`
 
@@ -2118,12 +2316,15 @@ Expected: the final root-only index covers source/history decisions, backup vali
 ## Task 10: Execution handoff and current stop state
 
 **Files:**
+- Modify during planning review only: `docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md`
 - Modify during planning review only: `docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md`
 - No execution action in this task
 
 - [ ] **Step 1: Honor the audited STOP while still completing preservation health checks**
 
-The current evidence does not authorize history writes because `20260813210000`, `20260813230000`, `20260813233000`, and `20260814130000` lack exact independent production execution proof. Execute approved Tasks 4–7 sequentially, skip Task 8 when the exact STOP gate is present, then execute Task 9 preservation/health checks. Never treat isolated replay success as permission to write history.
+Current execution evidence records Tasks 1–3 complete and Task 4 Steps 1–13 complete. The former fidelity Step 14 stopped at schema ACL `6` versus expected `7`; no zero-row baseline, Task-4 seal, fixture, replay, classification, history, cleanup, or Task 5 action followed. The rollback-only TDD diagnostic is retained, but new Task 4 Step 14 has not committed the normalization and revised Steps 15–16 remain pending. The Task 4 checkboxes stay unchecked under the existing documentation convention until primary review approves and execution re-enters at the new Step 14.
+
+The current evidence does not authorize history writes because `20260813210000`, `20260813230000`, `20260813233000`, and `20260814130000` lack exact independent production execution proof. Execute the approved remainder of Tasks 4–7 sequentially, skip Task 8 when the exact STOP gate is present, then execute Task 9 preservation/health checks. Never treat isolated replay success or the ACL normalization as permission to write history.
 
 Expected: the audited path completes Tasks 4–7 and Task 9, records exact STOP, and performs zero Task-8 history writes.
 
@@ -2133,14 +2334,17 @@ When primary review later authorizes implementation, continue inline through the
 
 Expected: one sequential execution context uses only the existing Aylaspa agent; no parallel or replacement VPS worker is created.
 
-- [ ] **Step 3: Keep this rewritten plan modified, unstaged, and uncommitted for primary review**
+- [ ] **Step 3: Keep both rewritten documents modified, unstaged, and uncommitted for primary review**
 
 ```bash
 set -euo pipefail
 cd /opt/thoidai-work
+spec=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
 plan=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
-test "$(git status --porcelain=v1 --untracked-files=all -- "$plan")" = " M $plan"
+test "$(git status --porcelain=v1 --untracked-files=all -- "$spec" "$plan" | wc -l)" -eq 2
+git status --porcelain=v1 --untracked-files=all -- "$spec" "$plan" | grep -Fx " M $spec"
+git status --porcelain=v1 --untracked-files=all -- "$spec" "$plan" | grep -Fx " M $plan"
 test "$(git diff --cached --name-only | wc -l)" -eq 0
 ```
 
-Expected during this writing-plans phase: exactly one unstaged modification for this tracked plan and an empty index. Do not commit or begin implementation until primary review explicitly approves the draft.
+Expected during this writing-plans phase: exactly two unstaged tracked-document modifications—the design and this plan—and an empty index. Do not commit or execute the new Step 14 until primary review explicitly approves both drafts.
