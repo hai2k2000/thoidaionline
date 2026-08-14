@@ -25,7 +25,23 @@ export async function POST(request: Request) {
   }
 
   if (!isBcryptHash(row.password_hash)) {
-    await serverSupabase.from("staff_users").update({ password_hash: await hashPassword(password), password: null }).eq("id", row.id);
+    let upgradeQuery = serverSupabase
+      .from("staff_users")
+      .update({ password_hash: await hashPassword(password), password: null })
+      .eq("id", row.id)
+      .eq("session_version", row.session_version);
+    upgradeQuery = row.password_hash === null
+      ? upgradeQuery.is("password_hash", null)
+      : upgradeQuery.eq("password_hash", row.password_hash);
+    upgradeQuery = row.password === null
+      ? upgradeQuery.is("password", null)
+      : upgradeQuery.eq("password", row.password);
+    const { data: upgraded, error: upgradeError } = await upgradeQuery
+      .select("id")
+      .maybeSingle();
+    if (upgradeError || !upgraded) {
+      return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
+    }
   }
 
   const response = NextResponse.json({ ok: true });
