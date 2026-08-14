@@ -1034,7 +1034,7 @@ read -r run_dir < "$evidence_root/isolated-run.current"
 IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
 docker exec -i "$container_name" psql -X -U "$bootstrap_role" -d "$bootstrap_db" -v ON_ERROR_STOP=1 \
   -v replay_db="$replay_db" <<'SQL'
-  create database :\"replay_db\" with owner postgres template template0 encoding 'UTF8' locale_provider icu icu_locale 'en-US' locale 'en_US.UTF-8';
+  create database :"replay_db" with owner postgres template template0 encoding 'UTF8' locale_provider icu icu_locale 'en-US' locale 'en_US.UTF-8';
 SQL
 docker exec "$container_name" psql -X -U "$bootstrap_role" -d "$replay_db" -v ON_ERROR_STOP=1 -c \
   "create schema extensions authorization postgres;"
