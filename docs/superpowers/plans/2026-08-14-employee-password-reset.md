@@ -209,20 +209,104 @@ sha256sum "$backup_root/database/schema-inventory.txt" \
 
 Expected: `test -s` exits 0. Do not create, read, print, or copy a raw database dump containing password hashes, reset tokens, or other authentication material. A full encrypted database snapshot must be taken and restored only through an already-approved operations mechanism; if no such mechanism exists, stop and request it rather than inventing a dump workflow.
 
-- [ ] **Step 7: Verify the approved disposable database is available**
+- [ ] **Step 7: Create a dynamic schema-only disposable database with synthetic-data guards**
 
-Use the existing controlled restore created by the approved operations mechanism:
+The fixed database name is unsafe because it can collide and was never provisioned. Create a unique validated name and persist only its name, source path, schema state, and aggregate row counts under a root-only metadata directory. Never perform a full restore.
+
+Run from `/opt/thoidai-worktrees/employee-password-reset`:
 
 ```bash
-docker exec supabase_db_thoidai-work \
-  psql -U postgres -d thoidai_employee_reset_test_20260814 -Atc \
-  'select current_database();'
-docker exec supabase_db_thoidai-work \
-  psql -U postgres -d thoidai_employee_reset_test_20260814 -Atc \
-  'select to_regclass('"'"'public.staff_users'"'"'), to_regclass('"'"'public.password_reset_tokens'"'"'), to_regclass('"'"'public.audit_logs'"'"');'
+set -euo pipefail
+feature_stamp=$(date -u +%Y%m%dT%H%M%SZ)
+metadata_root=/opt/thoidai-backups/employee-password-reset/$feature_stamp/disposable-db
+install -d -m 0700 "$metadata_root"
+test_db="thoidai_employee_reset_test_$(date -u +%Y%m%d%H%M%S)"
+case "$test_db" in
+  thoidai_employee_reset_test_[0-9]*) ;;
+  *) echo "invalid disposable database name" >&2; exit 1 ;;
+esac
+schema_dump=/opt/thoidai-backups/20260731T085309Z/database/thoidai-work.dump
+test -s "$schema_dump"
+printf '%s\n' "$test_db" > "$metadata_root/test-db.name"
+printf '%s\n' "$schema_dump" > "$metadata_root/source-dump.path"
+chmod 0600 "$metadata_root/test-db.name" "$metadata_root/source-dump.path"
+printf '%s\n' "$metadata_root" > /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
+chmod 0600 /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
+if docker exec supabase_db_thoidai-work psql -U postgres -d postgres -Atc \
+  "select 1 from pg_database where datname='$test_db';" | grep -q '^1$'; then
+  echo "disposable database name collision" >&2
+  exit 1
+fi
+docker exec supabase_db_thoidai-work psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+  -c "create database $test_db"
+cat "$schema_dump" | docker exec -i supabase_db_thoidai-work \
+  pg_restore -U postgres -d "$test_db" \
+  --schema-only --no-owner --no-privileges --exit-on-error
 ```
 
-Expected: the database name and all three relation names are returned. If it does not exist, stop for the approved restore procedure; do not create a dump from live authentication tables. Dropping this disposable database later is dangerous; obtain explicit user confirmation immediately before `dropdb`. If confirmation is not granted, retain it.
+Record schema state using metadata-only queries. Apply the exact existing password-reset migration only when all reset objects are absent:
+
+```bash
+read -r metadata_root < /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
+read -r test_db < "$metadata_root/test-db.name"
+schema_state=$(docker exec supabase_db_thoidai-work \
+  psql -U postgres -d "$test_db" -Atc \
+  "select to_regclass('public.staff_users') is not null,
+          to_regclass('public.password_reset_tokens') is not null,
+          to_regclass('public.password_reset_attempts') is not null,
+          to_regprocedure('public.consume_password_reset(text,text)') is not null,
+          exists (select 1 from information_schema.columns
+                  where table_schema='public' and table_name='staff_users'
+                    and column_name='password_hash');")
+printf '%s\n' "$schema_state" > "$metadata_root/schema-state-before.txt"
+case "$schema_state" in
+  "t|f|f|f|f")
+    docker exec -i supabase_db_thoidai-work \
+      psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+      < supabase/migrations/20260813210000_password_reset_security.sql
+    ;;
+  "t|t|t|t|t") ;;
+  *) echo "unexpected partial password-reset schema state" >&2; exit 1 ;;
+esac
+schema_state_after=$(docker exec supabase_db_thoidai-work \
+  psql -U postgres -d "$test_db" -Atc \
+  "select to_regclass('public.staff_users') is not null,
+          to_regclass('public.password_reset_tokens') is not null,
+          to_regclass('public.password_reset_attempts') is not null,
+          to_regprocedure('public.consume_password_reset(text,text)') is not null,
+          exists (select 1 from information_schema.columns
+                  where table_schema='public' and table_name='staff_users'
+                    and column_name='password_hash');")
+printf '%s\n' "$schema_state_after" > "$metadata_root/schema-state-after.txt"
+test "$schema_state_after" = 't|t|t|t|t'
+```
+
+Verify that schema-only restore and migration copied no live authentication data, then checksum only metadata files:
+
+```bash
+read -r metadata_root < /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
+read -r test_db < "$metadata_root/test-db.name"
+case "$test_db" in thoidai_employee_reset_test_[0-9]*) ;; *) exit 1 ;; esac
+row_counts=$(docker exec supabase_db_thoidai-work \
+  psql -U postgres -d "$test_db" -Atc \
+  "select 'staff_users', count(*) from public.staff_users
+   union all select 'password_reset_tokens', count(*) from public.password_reset_tokens
+   union all select 'password_reset_attempts', count(*) from public.password_reset_attempts
+   union all select 'audit_logs', count(*) from public.audit_logs
+   order by 1;")
+printf '%s\n' "$row_counts" > "$metadata_root/row-counts.txt"
+test "$(printf '%s\n' "$row_counts" | awk -F'|' '$2 != 0 { print; bad=1 } END { exit bad }')" = ""
+sha256sum \
+  "$metadata_root/test-db.name" \
+  "$metadata_root/source-dump.path" \
+  "$metadata_root/schema-state-before.txt" \
+  "$metadata_root/schema-state-after.txt" \
+  "$metadata_root/row-counts.txt" \
+  > "$metadata_root/sha256.txt"
+chmod -R go-rwx "$metadata_root"
+```
+
+Expected: the dynamic name matches the allowlisted prefix, schema state is `t|t|t|t|t`, all four row counts are zero, and only root-owned metadata/checksums are persisted. Never insert fixture rows in this step; later fixtures must use deterministic UUIDs, `example.invalid` addresses, and synthetic bcrypt hashes rather than seed credential literals. Retain the database for the checkpoint; dropping it requires explicit confirmation immediately before execution.
 
 ### Task 2: Add the database contract with a failing SQL smoke test
 
@@ -239,26 +323,43 @@ begin;
 
 do $$
 declare
-  actor_id_value uuid;
+  role_id_value uuid := '00000000-0000-4000-8000-000000000001';
+  department_id_value uuid := '00000000-0000-4000-8000-000000000002';
+  actor_id_value uuid := '00000000-0000-4000-8000-000000000003';
   version_before bigint;
-  old_hash text := encode(digest(gen_random_uuid()::text, 'sha256'), 'hex');
-  new_hash text := encode(digest(gen_random_uuid()::text, 'sha256'), 'hex');
+  old_hash text := encode(digest('employee-reset-old-token-fixture', 'sha256'), 'hex');
+  new_hash text := encode(digest('employee-reset-new-token-fixture', 'sha256'), 'hex');
+  fixture_password_hash text := crypt(
+    encode(digest('employee-reset-fixture-password', 'sha256'), 'hex'),
+    '$2a$04$abcdefghijklmnopqrstuu'
+  );
   prepared record;
   consumed boolean;
 begin
-  select u.id, u.session_version
-    into actor_id_value, version_before
-    from public.staff_users u
-    join public.roles r on r.id = u.role_id
-   where r.code = 'admin'
-     and u.active = true
-     and nullif(btrim(u.email), '') is not null
-   order by u.id
-   limit 1;
+  insert into public.roles (id, code, name, level)
+  values (role_id_value, 'admin', 'Synthetic Admin', 1);
 
-  if actor_id_value is null then
-    raise exception 'Disposable fixture requires one active Admin with email';
-  end if;
+  insert into public.departments (id, code, name, active)
+  values (department_id_value, 'fixture', 'Synthetic Department', true);
+
+  insert into public.staff_users (
+    id, full_name, email, phone, password, password_hash,
+    role_id, department_id, active
+  ) values (
+    actor_id_value,
+    'Synthetic Reset Admin',
+    'reset-admin@example.invalid',
+    null,
+    null,
+    fixture_password_hash,
+    role_id_value,
+    department_id_value,
+    true
+  );
+
+  select session_version into version_before
+    from public.staff_users
+   where id = actor_id_value;
 
   insert into public.password_reset_tokens (user_id, token_hash, expires_at)
   values (actor_id_value, old_hash, now() + interval '60 minutes');
@@ -302,7 +403,7 @@ begin
 
   select public.consume_password_reset(
     new_hash,
-    crypt(gen_random_uuid()::text, gen_salt('bf', 12))
+    fixture_password_hash
   ) into consumed;
 
   if consumed is not true then
@@ -316,7 +417,7 @@ begin
 
   if public.consume_password_reset(
     new_hash,
-    crypt(gen_random_uuid()::text, gen_salt('bf', 12))
+    fixture_password_hash
   ) then
     raise exception 'Token was consumed twice';
   end if;
@@ -327,13 +428,18 @@ rollback;
 select 'employee_password_reset_security ok' as result;
 ```
 
+The fixture is created inside the transaction and rolled back. Its UUIDs and `example.invalid` email are deterministic; its password is generated as a deterministic synthetic bcrypt value from a fixture-only digest. It must never use the seed file's credential literals or any live identifier.
+
 - [ ] **Step 2: Run the SQL test before the migration**
 
 Run:
 
 ```bash
+read -r metadata_root < /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
+read -r test_db < "$metadata_root/test-db.name"
+case "$test_db" in thoidai_employee_reset_test_[0-9]*) ;; *) exit 1 ;; esac
 docker exec -i supabase_db_thoidai-work \
-  psql -U postgres -d thoidai_employee_reset_test_20260814 \
+  psql -U postgres -d "$test_db" \
   -v ON_ERROR_STOP=1 \
   < supabase/tests/employee_password_reset_security.sql
 ```
@@ -544,8 +650,11 @@ grant execute on function public.consume_password_reset(text, text)
 Run:
 
 ```bash
+read -r metadata_root < /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
+read -r test_db < "$metadata_root/test-db.name"
+case "$test_db" in thoidai_employee_reset_test_[0-9]*) ;; *) exit 1 ;; esac
 docker exec -i supabase_db_thoidai-work \
-  psql -U postgres -d thoidai_employee_reset_test_20260814 \
+  psql -U postgres -d "$test_db" \
   -v ON_ERROR_STOP=1 \
   < supabase/migrations/20260814160000_employee_password_reset_admin.sql
 ```
@@ -563,14 +672,17 @@ Expected: PASS and final output `employee_password_reset_security ok`.
 Run:
 
 ```bash
+read -r metadata_root < /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
+read -r test_db < "$metadata_root/test-db.name"
+case "$test_db" in thoidai_employee_reset_test_[0-9]*) ;; *) exit 1 ;; esac
 docker exec supabase_db_thoidai-work \
-  psql -U postgres -d thoidai_employee_reset_test_20260814 \
+  psql -U postgres -d "$test_db" \
   -P pager=off -c '\d public.staff_users'
 docker exec supabase_db_thoidai-work \
-  psql -U postgres -d thoidai_employee_reset_test_20260814 \
+  psql -U postgres -d "$test_db" \
   -P pager=off -c '\df+ public.prepare_admin_password_reset'
 docker exec supabase_db_thoidai-work \
-  psql -U postgres -d thoidai_employee_reset_test_20260814 \
+  psql -U postgres -d "$test_db" \
   -P pager=off -c '\df+ public.finalize_admin_password_reset'
 ```
 
@@ -1523,8 +1635,11 @@ Expected: 0 failed tests. The Node module-type warning is known and not a failur
 - [ ] **Step 2: Run the SQL smoke test on the disposable database**
 
 ```bash
+read -r metadata_root < /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
+read -r test_db < "$metadata_root/test-db.name"
+case "$test_db" in thoidai_employee_reset_test_[0-9]*) ;; *) exit 1 ;; esac
 docker exec -i supabase_db_thoidai-work \
-  psql -U postgres -d thoidai_employee_reset_test_20260814 \
+  psql -U postgres -d "$test_db" \
   -v ON_ERROR_STOP=1 \
   < supabase/tests/employee_password_reset_security.sql
 ```
@@ -1637,7 +1752,7 @@ Expected: `session_version` exists; Admin functions are not executable by anon/a
 
 - [ ] **Step 6: Do not run mutation smoke tests against production data**
 
-The behavioral SQL test already passed on the restored disposable database. Production verification is schema/ACL-only until a controlled test account is explicitly selected.
+The behavioral SQL test already passed on the schema-only disposable database with transactional synthetic fixtures. Production verification is schema/ACL-only until a controlled test account is explicitly selected.
 
 ### Task 9: Merge and deploy the application through the actual single-slot service
 
