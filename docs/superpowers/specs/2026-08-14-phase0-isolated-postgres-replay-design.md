@@ -24,7 +24,11 @@ The required image already exists locally; implementation must not pull or subst
 | Image ID | `sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d` |
 | PostgreSQL | `17.10-1.pgdg13+1` |
 | Architecture | `linux/amd64` |
-| Size | 640 MB |
+| `docker image inspect .Size` | 161,234,888 bytes |
+| `docker image ls` displayed size | 640 MB |
+| `docker system df -v` image usage | size 640 MB; shared size 0 B; unique size 640.1 MB; containers 0 |
+
+The byte count and the human-readable size/usage values are distinct metrics reported by this Docker daemon. Evidence must name the reporting surface and field rather than treating `161234888` bytes and `640 MB` as conversions of the same measurement. Image verification reads only the approved ID, RepoDigest count/match, OS, architecture, and `.Size` fields; it never dumps image Config, Env, or history.
 
 The image patch version is newer than production, but the major version is identical. The PostgreSQL 17.6 custom archive has already been listed successfully by PostgreSQL 17 tooling. Exact restore fidelity remains a runtime gate rather than an assumption.
 
