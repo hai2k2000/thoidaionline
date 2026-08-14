@@ -619,7 +619,7 @@ free_kib=$(df -Pk /var/lib/docker | awk 'NR==2{print $4}')
 load_one=$(awk '{print $1}' /proc/loadavg)
 test "$available_mib" -ge 2048
 test "$free_kib" -ge 5242880
-awk -v load="$load_one" 'BEGIN{exit !(load<4.0)}'
+awk -v load_value="$load_one" 'BEGIN{exit !(load_value<4.0)}'
 local_login=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code}' http://127.0.0.1:3001/login)
 public_login=$(curl -sS -o /dev/null --max-time 15 -w '%{http_code}' https://thoidai.online/login)
 local_session=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code}' http://127.0.0.1:3001/api/auth/session)
