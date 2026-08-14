@@ -535,8 +535,8 @@ evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
 (cd "$evidence_root" && sha256sum -c ACLTEST-SHA256SUMS >/dev/null)
 (cd "$evidence_root" && sha256sum -c TOCTEST-SHA256SUMS >/dev/null)
 grep -Fx 'supabase_admin_socket_connection|false' "$evidence_root/ownertest-socket-check.tsv"
-grep -Fx 'restore_status|1' "$evidence_root/acltest-restore-status.tsv"
-grep -Fx 'failed_default_acl_items|3' "$evidence_root/acltest-restore-status.tsv"
+grep -Fx 'restore_status|1' "$evidence_root/acltest-red-reference.tsv"
+grep -Fx 'failed_default_acl_items|3' "$evidence_root/acltest-red-reference.tsv"
 grep -Fx 'green|schema_acl_entries|0' "$evidence_root/acltest-grants.tsv"
 grep -Fx 'green|table_acl_entries|0' "$evidence_root/acltest-grants.tsv"
 grep -Fx 'green|function_acl_entries|0' "$evidence_root/acltest-grants.tsv"
