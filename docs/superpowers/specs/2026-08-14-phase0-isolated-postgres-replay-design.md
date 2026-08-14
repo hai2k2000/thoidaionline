@@ -1,14 +1,14 @@
 # THỜI ĐẠI WORK Phase 0: Isolated PostgreSQL Replay Design
 
-**Status:** Approved architecture with measured Task-4 restore/TDD addendum; documentation review draft, not an implementation plan.
+**Status:** Approved corrected architecture after the measured Task-5 protected-selector stop; design-only authority, not an implementation plan or runtime authorization.
 
-**Decision:** Run Phase-0 schema restoration and migration replay inside one uniquely named, retained, network-isolated PostgreSQL 17 container backed by one uniquely named retained volume. Preserve the exact archive restore, then apply one guarded isolated-only public-schema ACL normalization before fidelity checks. Production remains read-only throughout this design.
+**Decision:** Keep the halted identity-free database as immutable failure/rollback evidence inside the existing retained, network-isolated PostgreSQL 17 container and volume. In that same cluster, create and fidelity-seal one fresh normalized template database from the locked schema archive, then create one successor database from that pre-fixture template. The halted original lane proves the identity-free `20260814130000` rollback; the successor lane holds one non-production protected-selector shell and runs the complete chronological chain; the fresh template remains an inert retained clone source. Production remains read-only throughout this design.
 
-**Design authority:** The user selected this option after three shared-cluster restore approaches produced measured fidelity or authentication failures, then approved the single normalization only after a rollback-only TDD transaction proved that it closes the one measured ACL gap without changing any other fidelity metric. Execution remains sequential through the existing Aylaspa agent only.
+**Design authority:** The user selected the isolated-container option after three shared-cluster restore approaches produced measured fidelity or authentication failures, approved the single normalization after rollback-only TDD, and approved this recommended same-container successor correction after Task 5 stopped safely at `20260813210000`. Execution remains sequential through the existing Aylaspa agent only.
 
 ## 1. Purpose
 
-The design provides a faithful PostgreSQL environment for evaluating the exact sixteen-file migration chain without sharing production cluster roles, authentication, databases, networking, or storage. It must reproduce the production database's relevant version, encoding, locale, owners, default ACLs, explicit ACLs, effective privileges, extensions, and application schema before any synthetic fixture or migration runs.
+The design provides two evidence lanes plus one inert normalized template database in the existing isolated PostgreSQL cluster for evaluating the exact sixteen-file migration chain without sharing production cluster roles, authentication, networking, or storage. The fresh template and successor must reproduce the production database's relevant version, encoding, locale, owners, default ACLs, explicit ACLs, effective privileges, extensions, and application schema before any successor fixture or migration runs.
 
 The isolated environment is evidence infrastructure. A successful isolated replay does not by itself prove that protected one-time production DML ran historically, and it never authorizes a migration-history write. The all-exact classification gate remains controlling.
 
@@ -91,23 +91,34 @@ An exact owner-and-privilege restore therefore produced six exploded public-sche
 
 A rollback-only TDD transaction, executed as the isolated non-superuser database owner `postgres`, added exactly the missing PUBLIC-USAGE grant. Inside that transaction all seven fidelity aggregates became exact: default ACL `6/3/3`, schema ACL `7`, table ACL `653`, function ACL `46`, effective table privileges `571/588`, effective function privileges `40/56`, and effective schema privileges `5/8`. Rollback restored schema ACL `6` and PUBLIC-USAGE `0`; production remained `7/1`. The sanitized mode-0600 debug evidence has SHA-256 `9b784790cfbb06c6d641c2efdf3650d9d147e708dcc5128d6d7b6f542a62bb6c`.
 
+### 2.7 Measured Task-5 stop and successor feasibility
+
+Task 5 seeded exactly six synthetic roles and six matching permission rows, with zero staff, departments, tasks, audit rows, or migration-history rows. The first four migrations returned zero. `20260813210000` then returned `3` from `psql` with SQLSTATE `P0001`: its guarded exact-one protected-account selector found zero rows. The single-transaction invocation rolled back, source and manifest hashes remained exact, and no later replay, idempotency, classification, history, retry, or cleanup step ran.
+
+The failure is a design contradiction, not source drift. The identity-free fixture rule deliberately forbids the one selector-bearing shell required by `20260813210000`, while the replay gate requires that migration to return zero. Treating it like the deliberately failing `20260814130000` migration is invalid because `20260814160000` and `20260814170000` consume password-reset objects established by `20260813210000`, and the fifteen-file idempotency gate includes it.
+
+Fresh read-only catalog checks prove that a same-container database clone is technically sound: the retained PostgreSQL-17 container remains network-none and portless; the replay owner is non-superuser `postgres` with `CREATEDB`; the database is owned by `postgres`, allows connections, is not a template, has no other active connection, and is approximately 9.23 MB. The host and volume filesystem each have 20,450,512 KiB free at 76% use. These observations authorize only this design correction; they do not authorize cloning or replay.
+
+The current failed database is retained evidence and is not a pre-Task-5 template: fixtures and four successful replay transactions already exist. Fresh catalog inspection found no second application database holding the clean checkpoint. The corrected recovery therefore creates a separately named fresh database from `template0` inside the same retained cluster, restores the sealed archive, applies the already approved isolated-only normalization, and seals the full pre-fixture fidelity matrix. Only that inert database may become the successor's `CREATE DATABASE ... TEMPLATE` source. All three database identities are retained; no current database is rewound, deleted, renamed, or reused as an implicit template.
+
 ## 3. Goals
 
 1. Restore the sealed schema archive with ownership and privileges enabled, then apply the one measured, guarded isolated-only PUBLIC-USAGE normalization required to reproduce production ACL semantics.
-2. Replay the exact locked chronological chain only against zero-production-row synthetic state.
+2. Preserve the halted identity-free original for the targeted list-order rollback, reconstruct one fresh normalized same-container template from sealed inputs, and clone one successor for the complete chronological replay.
 3. Execute migrations as a role matching production `postgres`, not as the isolated bootstrap superuser.
 4. Produce root-only, hash-addressed evidence without printing SQL bodies, identities, secrets, or raw error output.
 5. Leave production database, history, application, source, configuration, routing, services, and retained evidence unchanged.
-6. Retain the isolated container and volume on both success and failure until cleanup receives immediate explicit confirmation.
+6. Retain the halted original, fresh template, successor, isolated container, and volume on both success and failure until cleanup receives immediate explicit confirmation.
 
 ## 4. Non-goals
 
 - No production migration replay or rehearsal.
 - No production migration-history write.
 - No production rows in the isolated cluster.
+- No claim that the selector-bearing shell is a real employee or that source-written protected values are production copies.
 - No provider/model, CLIProxyAPI, `9router`, password-reset, or session behavior change.
 - No application build, deployment, source edit, service restart, firewall change, image pull, or repository Docker integration.
-- No automatic cleanup, database drop, volume removal, container removal, or deletion of prior evidence.
+- No automatic cleanup, database drop, volume removal, container removal, or deletion of any of the three database identities or prior evidence.
 - No claim that disposable replay proves protected historical identity-based DML.
 
 ## 5. Alternatives and measured rejection reasons
@@ -133,21 +144,27 @@ Selected. A private cluster can bootstrap every archive role, use a disposable i
 ### 6.1 Components
 
 1. **Sequential Aylaspa operator** — the existing custom VPS agent performs all preflight, lifecycle, restore, replay, verification, and retention steps sequentially.
-2. **Root-only evidence directory** — a new mode-0700 subdirectory under the sealed evidence root contains names, image metadata, password file, status records, hashes, and aggregate fingerprints. Every file is mode 0600.
+2. **Root-only recovery evidence directory** — a new mode-0700 subdirectory under the sealed evidence root contains the two new database names, retained-resource references, status records, hashes, and aggregate fingerprints. Every file is mode 0600. The existing password file remains in its original root-only run directory and is never copied.
 3. **Pinned PostgreSQL container** — one uniquely named retained container based only on the observed digest. It has `--network none`, no published ports, no host PID/IPC namespace, no Docker socket, no device access, and no privileged mode.
 4. **Named data volume** — one uniquely named retained Docker volume stores only the isolated PostgreSQL data directory.
 5. **Disposable bootstrap superuser** — a uniquely named isolated-only initial superuser initializes the cluster and restores ownership/ACL metadata. It never becomes an archive object owner and is never used for migration replay.
-6. **Production-equivalent replay role** — isolated role `postgres` mirrors the audited production attributes and owns the isolated target database. Every locked migration runs as this role.
-7. **Restore fidelity verifier** — compares isolated metadata with sealed production fingerprints before fixtures or replay.
-8. **Guarded ACL normalizer** — verifies the archive, production, replay-precondition, and retained TDD counts; then, as non-superuser database owner `postgres`, commits only `GRANT USAGE ON SCHEMA public TO PUBLIC` inside one guarded isolated transaction.
-9. **Replay evidence runner** — streams each checksum-verified source into isolated `psql`, hashes combined output, records exit status, and never persists migration bodies in the container or volume.
-10. **Classification gate** — consumes sealed production evidence plus isolated replay evidence and emits the all-or-nothing STOP/EXACT decision without writing production history.
+6. **Production-equivalent replay role** — isolated role `postgres` mirrors the audited production attributes and owns the halted original, fresh template, and successor. Every locked migration runs as this role.
+7. **Halted original identity-free database** — the retained Task-5 database remains the zero-staff evidence lane with its six approved role/permission fixtures and four successful migrations. It supplies only the isolated rollback-only `20260814130000` test and never acquires the protected selector.
+8. **Fresh normalized template database** — one uniquely named database is created from `template0`, restored from the sealed archive, normalized, fidelity-sealed, and retained without fixtures or replay. It is never a replay lane and is the only allowed successor clone source.
+9. **Successor replay database** — one separately unique and unpredictable database is cloned inside the same cluster from the fresh sealed template before fixture or replay state. It is the only lane that receives the protected-selector shell and the complete chronological replay.
+10. **Restore and clone fidelity verifier** — compares the fresh normalized template with sealed production fingerprints, then proves the successor clone has the identical baseline before successor fixtures.
+11. **Guarded ACL normalizer** — verifies the archive, production, template-precondition, and retained TDD counts; then, as non-superuser database owner `postgres`, commits only `GRANT USAGE ON SCHEMA public TO PUBLIC` inside one guarded fresh-template transaction before the clone boundary.
+12. **Selector-safe fixture client** — one binding-capable database client reads the SHA-locked source from fd 0, validates the locked syntax occurrences as one consistent unique value, binds it directly into the successor fixture transaction, captures/sanitizes errors internally, and never writes the value or raw error fields to fd 1/2.
+13. **Replay evidence runner** — streams each checksum-verified source into isolated `psql`, hashes combined output, records exit status, and never persists migration bodies in the container or volume.
+14. **Classification gate** — consumes sealed production evidence plus lane-specific replay evidence and emits the all-or-nothing STOP/EXACT decision without writing production history.
 
 ### 6.2 Naming and retention
 
-The container, named volume, database, and evidence subdirectory use one shared run identifier composed of a UTC timestamp and random suffix. Names must be unique, length-bounded, and validated before creation. They are recorded before any restore begins.
+The container, named volume, halted original database, fresh template database, successor database, and evidence subdirectory use one shared run identifier composed of a UTC timestamp and cryptographically random suffix. The two new database names are separately unique, length-bounded, and restricted to a validated lowercase ASCII identifier grammar before use. Every dynamic identifier is still passed through identifier-aware quoting; string-literal quoting is never substituted for identifier quoting. Names are recorded before creation, but no protected account value is recorded with them.
 
-The container and volume are retained on success and failure. A stopped container remains stopped but present; the volume remains attached or independently retained. No lifecycle action removes earlier disposable databases or their evidence.
+The fresh template is created from `template0` through a different administrative database connection with the audited encoding/locale and owner `postgres`, then restored and normalized exactly as the original Task-4 path. The successor is created only from another administrative connection after a fresh gate proves zero active sessions on the fresh template. Each operation names its source explicitly, assigns owner `postgres`, and fails closed on any name collision. It never terminates a connection, changes `datallowconn`, marks a database as a template, or broadens the replay role.
+
+The halted original, fresh template, successor, container, and volume are retained on success and failure. A stopped container remains stopped but present; the volume remains attached or independently retained. No lifecycle action removes any database identity, earlier disposable database, or evidence.
 
 ### 6.3 Network and port isolation
 
@@ -157,7 +174,9 @@ Network isolation is a mandatory runtime assertion after creation and before eve
 
 ### 6.4 Resource controls
 
-The isolated container ceiling is exactly 1 vCPU, 1 GiB RAM, and 256 PIDs. Creation is allowed only while host available RAM is at least 2 GiB, free filesystem space is at least 5 GiB, one-minute load is below 4.0, production services are healthy, and Docker reports zero unhealthy containers.
+The retained isolated container ceiling remains exactly 1 vCPU, 1 GiB RAM, and 256 PIDs. Continued use and any fresh database creation are allowed only while host available RAM is at least 2 GiB, free filesystem space is at least 5 GiB, filesystem use is below 80%, one-minute load is below 4.0, production services are healthy, and Docker reports zero unhealthy containers.
+
+Immediately before creating the fresh template, both the host Docker filesystem and the container data-volume filesystem must have at least 5 GiB free and less than 80% use. The measured halted database size must be at most 256 MiB, and the combined projected allocation for the fresh restore plus successor clone must be no more than 20% of then-free space. The same gates repeat before cloning. After each new database, both filesystems must remain below 80% use with at least 4 GiB free; each new database must remain at most 256 MiB; and combined measured allocation growth must be no greater than the larger of 256 MiB or four times the sealed fresh-template size. Any pre/post mismatch stops before the next database or fixture step; the design never deletes retained evidence to manufacture headroom.
 
 Crossing a limit stops replay and retains evidence. The design does not restart or throttle production services to make room.
 
@@ -169,13 +188,15 @@ The password reaches the official image only through a read-only secret-file mou
 
 Archive roles receive no usable password. Restore and replay processes connect through the container-local Unix socket under the controlled operator; only the bootstrap role has the disposable password-file credential. The bootstrap credential is never reused outside the isolated container.
 
+Recovery creates no second credential. It verifies only the retained password file's existence, mode, mount destination, and absence from reported environment values; it never reads, copies, rehashes, or emits the credential value.
+
 ## 8. Cluster and role bootstrap
 
 The official image initializes with a unique bootstrap role rather than `postgres`. This prevents the image's initial superuser from colliding with the production-equivalent replay role.
 
-Bootstrap then creates the five archive-referenced roles with audited attributes. `pg_database_owner` remains the PostgreSQL built-in role. The isolated target database is owned by the newly created production-equivalent `postgres` role and uses UTF8, ICU `en-US`, and the audited collation/character-type settings. Patch-version differences are accepted only if every metadata fidelity gate passes.
+Bootstrap has already created the five archive-referenced roles with audited attributes. `pg_database_owner` remains the PostgreSQL built-in role. The halted original, fresh template, and successor are owned by the production-equivalent `postgres` role and use UTF8, ICU `en-US`, and the audited collation/character-type settings. Patch-version differences are accepted only if every metadata fidelity gate passes.
 
-The bootstrap superuser performs the exact archive restore with ownership and privileges enabled. It does not use `--no-owner`, `--no-privileges`, a filtered TOC, or a production role credential. After restore, the isolated non-superuser database owner `postgres` performs the separately evidenced PUBLIC-USAGE normalization and every later replay connection uses that same role.
+For recovery, the existing isolated bootstrap superuser performs the exact archive restore into the fresh template with ownership and privileges enabled. It does not use `--no-owner`, `--no-privileges`, a filtered TOC, or a production role credential. After restore, the isolated non-superuser database owner `postgres` performs the separately evidenced PUBLIC-USAGE normalization; the halted original is not restored or normalized again. Every later fixture/replay connection uses `postgres`.
 
 Role bootstrap evidence records names, boolean attributes, memberships, and counts only. It never records passwords or role secrets.
 
@@ -189,11 +210,11 @@ The isolated cluster creates only required extensions in the same schemas as pro
 
 The sealed custom schema archive is streamed from the host into PostgreSQL 17 restore tooling. It is never copied into the data volume. Restore output is reduced to a SHA-256 and exit status; raw SQL and error bodies are not printed.
 
-Restore must exit zero with no ignored errors. Before fixtures, the isolated database must have zero `staff_users` rows and zero migration-history rows.
+The fresh-template restore must exit zero with no ignored errors. Before the clone boundary, that template must have zero `staff_users`, departments, fixture roles, fixture permissions, tasks, audit rows, reset rows, and migration-history rows. The halted original's existing `6/6/0` state and partial replay evidence are verified but not compared to this zero-row gate.
 
 PostgreSQL 17.6 archive generation normalizes the built-in public schema's default PUBLIC-USAGE privilege out of this archive even though the archive recreates that schema after the verified-empty template schema is dropped. This is a measured archive-semantic exception, not permission to weaken restore flags or alter production. Exact archive bytes alone therefore do not satisfy ACL fidelity.
 
-Immediately after restore and before the fidelity gate, implementation must verify aggregate-only evidence for all of the following: the archive contains zero semantic PUBLIC-USAGE grants; production has schema ACL `7` and PUBLIC-USAGE `1`; the isolated replay has schema ACL `6` and PUBLIC-USAGE `0`; and the retained rollback-only TDD evidence has the approved SHA-256 and `PASS` status. Only then may non-superuser database owner `postgres` execute one isolated transaction with an internal `6/0` pre-guard, exactly `GRANT USAGE ON SCHEMA public TO PUBLIC`, an internal `7/1` post-guard, and commit. Any mismatch or SQL error stops before the grant commits or before fidelity begins. Raw transaction output is hashed, post-normalization aggregate evidence is mode 0600, and production is re-read only to prove it remains `7/1`.
+Immediately after restore and before the fresh-template fidelity gate, implementation must verify aggregate-only evidence for all of the following: the archive contains zero semantic PUBLIC-USAGE grants; production has schema ACL `7` and PUBLIC-USAGE `1`; the fresh template has schema ACL `6` and PUBLIC-USAGE `0`; and the retained rollback-only TDD evidence has the approved SHA-256 and `PASS` status. Only then may non-superuser database owner `postgres` execute one isolated transaction with an internal `6/0` pre-guard, exactly `GRANT USAGE ON SCHEMA public TO PUBLIC`, an internal `7/1` post-guard, and commit. Any mismatch or SQL error stops before the grant commits or before fidelity begins. Raw transaction output is hashed, post-normalization aggregate evidence is mode 0600, and production is re-read only to prove it remains `7/1`.
 
 The exception reproduces the one production ACL semantic that the archive omitted. It does not modify production, add privileges beyond production, weaken the restore, or support a claim that archive-byte fidelity alone is sufficient.
 
@@ -217,11 +238,31 @@ The following production values must match exactly:
 
 Owner-distribution files for schemas, relations, and functions must be byte-identical to sealed production equivalents. The public schema must retain `pg_database_owner`; public relations and functions must retain their audited owners. Any mismatch stops the run before fixtures.
 
+The normalized fresh template is sealed before cloning. The successor must then reproduce, byte-for-byte or by the same exact aggregate gate as appropriate, core counts `21/53/96/5/39/14`, default ACL `6/3/3`, schema/table/function ACL `7/653/46`, effective privileges `571/588`, `40/56`, and `5/8`, public owner `pg_database_owner`, the five-line owner distribution, extension inventory, encoding/locale, database owner `postgres`, and all zero-row counts. Fresh template and successor must report PUBLIC-USAGE `1`; the halted original separately retains its previously sealed `7/1`. A clone is not accepted merely because `CREATE DATABASE` returns zero.
+
 ## 11. Synthetic state
 
-After a green restore, the runner adds only the six synthetic application role/permission fixtures already defined by the committed Phase-0 plan. Synthetic identifiers are reserved and non-production. No staff, identity, email, password, password hash, reset token, task, audit, or production row is inserted.
+### 11.1 Clone boundary and lane separation
 
-The zero-row baseline and post-fixture aggregate counts are sealed before replay. The targeted list-order migration must fail safely on identity-free fixtures; no production identity is guessed or recreated.
+After the new restore, normalization, and complete fidelity sealing, the fresh template remains free of fixtures and replay state while the successor is created from it. Clone evidence records only database counts, ownership, connection count, size, disk headroom, status, and hashes. All three database names are recorded, but no row identifier or selector is.
+
+Only after the successor passes the full clone-fidelity gate may the runner seed it. The halted original already contains exactly the six synthetic application roles and six matching permission rows created by the measured Task-5 Step 1, with zero departments and zero staff; those rows are not reinserted or changed. It remains the identity-free lane for the isolated `20260814130000` rollback fingerprint. The fresh template remains empty. The successor receives six synthetic role/permission pairs plus the minimal protected-selector shell below. No fixture is copied from production.
+
+The retained database from the measured failed execution and all of its evidence remain untouched except for the separately bounded rollback-only `20260814130000` diagnostic, whose transaction must leave the database byte-equivalent under the targeted fingerprint. The corrected implementation distinguishes halted original, fresh template, and successor through separately generated names, database OIDs, owners, zero/fixture counts, phase markers, and sealed hashes, never by position or a name assumption. A failure to create, restore, normalize, or seal the fresh template stops before successor creation; it does not delete fixtures, reverse successful migrations, or modify retained evidence to manufacture a template.
+
+### 11.2 Minimal successor-only shell
+
+The successor fixture adds exactly one reserved synthetic department and exactly one synthetic staff shell. The department uses an isolated-only generated identifier plus synthetic code and name. The staff shell uses an isolated-only generated identifier, a synthetic `full_name`, one reserved fixture `role_id`, that synthetic `department_id`, schema defaults for `active`, `created_at`, `list_order`, and `session_version`, and the exact protected selector in `username`. `email`, `phone`, `password`, `password_hash`, and `job_title_id` are omitted or null. No real employee row, production UUID, email, phone, password, hash, token, credential, or production data is inserted.
+
+The protected selector is an unavoidable source precondition, not a claim that the shell represents that employee. The SHA-locked `20260813210000` file is verified immediately before extraction. A purpose-built parser must find the locked two syntactic occurrences used by the guarded `public.staff_users.username` exact-one logic, prove that they resolve to exactly one identical validated selector value, and reject malformed UTF-8, control characters, embedded line breaks, NUL bytes, excess length, an unexpected occurrence count, inconsistent values, or any unexpected statement shape. Evidence exposes only occurrence count `2`, unique-value count `1`, consistency status, and validation status.
+
+Extraction and insertion occur inside one root-controlled, tracing-disabled, binding-capable database-client process running within the isolated container. The verified source enters that client only on fd 0; the client parses the source in memory and uses a bound SQL parameter for the selector. The selector is never transferred on fd 1 or fd 2, through a shell pipeline between processes, or through SQL text. Client/library availability and parameter binding are preflight gates; no package installation or fallback to interpolation is allowed.
+
+Before parsing, the client redirects its own fd 1 and fd 2 to internal capture sinks and installs a generic exception boundary. It retains raw database fields only in process memory long enough to replace every exact selector occurrence with `<protected-account>` and discard all other row-valued detail. Only the sanitized generic status is eligible for hashing. Raw commands, SQL text, server error fields, notices, and Docker-exec output never reach the terminal, an evidence file, Docker logs, or a hash-input stream. The value exists only in the locked source, client memory, bound protocol parameter, and required isolated successor row; it never appears in an argument, environment variable, generated file, evidence record, shell trace, stdout, stderr, or final report.
+
+The fixture transaction verifies aggregate-only pre/post counts: successor roles `6`, permissions `6`, departments `1`, staff `1`, exact-selector matches `1`; non-null staff email, phone, password, and password-hash counts `0`; and reset-token, task, audit, and migration-history row counts `0` before replay. It also verifies the role and department foreign keys, non-production marker values, username unique-index compatibility, and schema defaults without selecting any row value. Any mismatch rolls back the fixture and stops.
+
+If a locked migration itself writes protected account data into the shell, that source effect remains confined to the successor database and is never selected or emitted at row level. Only aggregate invariants may be read afterward. The design does not alter the migration to suppress, replace, or generalize its protected DML.
 
 ## 12. Locked chronological replay
 
@@ -244,42 +285,58 @@ The runner verifies the source manifest immediately before every replay phase an
 15. `20260814160000`
 16. `20260814170000`
 
-Every source is streamed through one single-transaction invocation as the isolated production-equivalent `postgres` role. No migration changes current role, session authorization, connection, or owner to `supabase_admin`; implementation must verify these source-scan counts before replay without printing source bodies.
+Every source is streamed through one single-transaction invocation in the successor as the isolated production-equivalent `postgres` role. No migration changes current role, session authorization, connection, or owner to `supabase_admin`; implementation must verify these source-scan counts before replay without printing source bodies.
 
 Only `20260814130000` may return nonzero, and its transaction must roll back cleanly. Every other nonzero status is an immediate stop. Output is stored only as status plus SHA-256.
 
-The fifteen safe migrations then run a second pass to prove technical idempotency. Idempotency never upgrades a protected historical-DML classification by itself.
+The successor must produce fifteen zero exits, with only `20260814130000` nonzero and its before/after aggregate/constraint fingerprint byte-identical. `20260813210000` must succeed so that `20260814160000` and `20260814170000` can consume the expected password-reset column, table, and function surface. The thirteen terminal function fingerprints, downstream password-reset invariants, TBT terminal state, owners, ACLs, and permissions must match the locked terminal chain.
+
+The same fifteen safe migrations then run a second successor pass and must all return zero. This is technical idempotency only. It never proves that protected production DML ran historically, never upgrades a classification, and never authorizes production replay or history writes.
+
+Separately, the original identity-free lane runs only the approved isolated `20260814130000` rollback test at the defined schema boundary. Its exact pre/post staff/list-order/constraint fingerprint must be byte-identical and no transaction effect may persist. That targeted diagnostic is not represented as a full chronological replay and cannot substitute for successor results.
+
+### 12.1 Classification and history boundary
+
+Lane evidence remains separate. Original-lane rollback proves only that `20260814130000` fails cleanly without its targeted identities. Successor-lane success proves only that the exact chain is replayable and technically idempotent when its source precondition is supplied by a non-production shell.
+
+The production history gate remains `STOP` for `20260813210000`, `20260813230000`, `20260813233000`, and `20260814130000`. Current production postconditions and successor replay do not prove historical protected DML for those versions. Task 8 remains unreachable, all eleven target history counts remain zero, and no lane result grants permission to write or replay production migrations.
 
 ## 13. Evidence flow
 
-1. Verify image digest, host resources, Docker health, production health, Git fingerprint, sealed dump hashes, and all sixteen source hashes.
-2. Create the root-only run directory, password file, unique names, and hash-sealed preflight manifest.
-3. Create the named volume and network-none container with explicit resource limits and no production mounts.
-4. Initialize the cluster, roles, database, locale, and required extensions.
-5. Stream the sealed schema archive and record only hashed output/status.
-6. Verify archive/production/replay/TDD normalization guards, commit the one isolated PUBLIC-USAGE grant as non-superuser `postgres`, hash its output/status, and prove production remains unchanged.
-7. Capture owner, ACL, privilege, schema, function, and zero-row fingerprints; compare with production.
-8. Seed synthetic fixtures and seal aggregate counts.
-9. Stream the exact sixteen-file replay and record per-version status/output hash.
-10. Prove the expected targeted rollback, terminal TBT state, terminal function hashes, and fifteen-file idempotency pass.
-11. Re-read production history and protected aggregates read-only; compare with pre-change evidence.
-12. Generate classifications and the all-or-nothing gate. Stop before history writes unless all eleven versions are exact-applied under the committed taxonomy.
-13. Seal all evidence and retain the isolated container and volume.
+1. Verify image digest, retained container/volume identity and controls, host resources, Docker health, production health, Git fingerprint, sealed dump hashes, and all sixteen source hashes.
+2. Create a new root-only evidence child directory, generate unique fresh-template and successor names, and seal the recovery preflight manifest; reuse the retained password-file path without reading its value.
+3. Re-assert network-none, zero ports, resource limits, mounts, PostgreSQL readiness, archive roles, and the halted original's exact retained failure aggregates/evidence.
+4. Recheck disk thresholds; create the fresh template database from `template0` through an administrative connection with owner `postgres` and the audited locale/encoding.
+5. Stream the sealed schema archive into the fresh template and record only hashed output/status.
+6. Verify archive/production/template/TDD normalization guards, commit the one isolated PUBLIC-USAGE grant as non-superuser `postgres`, hash its output/status, and prove production remains unchanged.
+7. Capture owner, ACL, privilege, schema, function, extension, and zero-row fingerprints; compare with production and seal the fresh template.
+8. Recheck disk thresholds and zero active fresh-template connections; create the uniquely named successor from another database connection with owner `postgres` and safe identifier quoting.
+9. Recheck disk allocation, all three database identities, ownership, encoding/locale, PUBLIC-USAGE `7/1`, all core/owner/default/ACL/effective gates, and all fresh-template/successor zero-row counts.
+10. Verify the halted original's existing six role/permission pairs without changing them; seed six pairs in the successor and add its department/staff shell only through the binding-capable selector client; seal aggregate-only fixture evidence.
+11. Produce the halted original's identity-free `20260814130000` rollback fingerprint without a persistent database change.
+12. Stream the exact sixteen-file chronological replay into the successor and record per-version status/output hash.
+13. Prove the successor's expected `20260814130000` rollback, terminal TBT state, downstream password-reset state, terminal function hashes, and fifteen-file idempotency pass.
+14. Re-read production history and protected aggregates SELECT-only; compare with pre-change evidence.
+15. Generate lane-separated classifications and the all-or-nothing STOP gate; Task 8 remains unreachable for the four unresolved versions.
+16. Recheck Git, provider/model, CLIProxyAPI/`9router`, services, HTTP behavior, database readiness, Docker health, all three retained database identities, and disk thresholds.
+17. Seal all evidence and retain the halted original, fresh template, successor, isolated container, volume, and password file.
 
 No step streams data from production tables into the isolated cluster. The only production-derived payload is the sealed schema-only archive and aggregate/catalog evidence.
 
 ## 14. Error handling
 
 - A missing pinned image, image digest mismatch, incompatible architecture, or missing required extension stops before container creation.
-- Insufficient resource headroom or unhealthy production service stops before container creation.
+- Insufficient resource/disk headroom or unhealthy production service stops before container creation or cloning.
 - Any unexpected network, port, mount, privilege, role, locale, owner, ACL, or schema mismatch stops before fixtures.
 - Any archive semantic count, production ACL count, replay precondition, retained TDD hash/status, transaction pre-guard, transaction post-guard, or production-preservation mismatch stops before the normalization grant or before fidelity. Transaction failure rolls back and is never retried with a broader grant or stronger role.
-- Any fixture identity collision or nonzero production-row count stops before replay.
-- Any replay failure other than `20260814130000` stops immediately.
+- Any fresh-template creation/restore/normalization/fidelity error, active template connection, invalid/colliding database name, unsafe identifier quoting, non-`postgres` owner, clone error, disk threshold breach, or clone-fidelity mismatch stops before fixture creation. The halted original is never modified to make a template or clone succeed.
+- A missing binding-capable client, unproven parameter binding, fd-capture failure, selector source-hash mismatch, syntax-shape mismatch, occurrence count other than two, unique-value count other than one, inconsistent occurrence, invalid value encoding, fixture identity collision, unexpected fixture aggregate, or nonzero production-row count rolls back the successor fixture and stops before replay. The client emits only a generic sanitized failure record; the selector and raw database fields are never emitted or hashed.
+- Any original-lane `20260814130000` fingerprint mismatch or rollback leak stops before successor replay.
+- Any successor replay failure other than `20260814130000`, or any `20260814130000` rollback-fingerprint mismatch, stops immediately.
 - Any rollback leak, idempotency failure, function-hash drift, permission drift, or Git/production invariant change stops immediately.
 - Raw restore/replay output is hashed; only non-sensitive status metadata is reported.
 - Failure never triggers an automatic retry with weaker flags, a different role, a different image, or a filtered archive.
-- Failure retains the container, volume, password file, and evidence for review.
+- Failure retains the halted original, fresh template if created, successor if created, container, volume, password file, and evidence for review.
 
 ## 15. Threat model
 
@@ -311,13 +368,19 @@ Controls: immutable SHA-256 manifests, pre/post verification at every boundary, 
 
 Threat: a green disposable replay is treated as proof of historical protected DML.
 
-Controls: version-by-version classification taxonomy, explicit one-time-DML limitations, preserved trusted apply manifests, and the all-exact gate. Disposable success is necessary evidence, never sufficient authorization.
+Controls: version-by-version classification taxonomy, lane-separated evidence, explicit one-time-DML limitations, preserved trusted apply manifests, and the all-exact gate. Disposable success is necessary evidence, never sufficient authorization.
+
+### 15.6 Protected-selector disclosure or lane confusion
+
+Threat: the protected selector appears in process metadata, logs, evidence, or reports, or successor results are attributed to the identity-free original.
+
+Controls: locked-source hash verification, two-occurrence/one-value parsing, a single binding-capable client, source input only on fd 0, no selector transfer on fd 1/2, internal raw-error capture and selector redaction, tracing disabled, no value in arguments/environment/files/output/hash-input streams, aggregate-only evidence, three distinct unpredictable database names or identities, per-lane evidence prefixes, explicit database/session assertions before every SQL phase, and independent classification records. Source-written protected row values are never selected or printed.
 
 ## 16. Rollback and cleanup
 
 The design makes no production change, so normal rollback is to stop and retain evidence. The verified full production dump remains recovery evidence but is never restored by this design.
 
-Container, volume, password file, schema archive, and replay evidence are never removed automatically. Cleanup is a separate dangerous action requiring explicit confirmation immediately before the exact container, volume, password file, or retained database is removed. Cleanup must first verify evidence hashes and record the exact approved targets.
+Halted original, fresh template, successor, container, volume, password file, schema archive, and replay evidence are never removed automatically. Cleanup is a separate dangerous action requiring explicit confirmation immediately before the exact database, container, volume, password file, or retained evidence is removed. Cleanup must first verify evidence hashes and record the exact approved targets. Failure or disk pressure never authorizes deletion.
 
 ## 17. Testing strategy
 
@@ -333,44 +396,66 @@ Direct `supabase_admin` socket use is a separately rejected authentication path:
 
 The retained exact isolated restore is an additional focused RED: schema ACL `6` and PUBLIC-USAGE `0` versus production `7/1`, with the other six ACL/effective-privilege aggregates exact. Offline archive inspection independently proves the archive contains zero semantic PUBLIC-USAGE grant.
 
+The measured Task-5 RED is `6/6/0/0/0/0` synthetic fixtures followed by `20260813210000` exit `3` and SQLSTATE `P0001`, with all source, transaction-rollback, production, Git, service, and HTTP preservation gates intact. Aggregate-only documentation RED also proves that the former design contained zero successor-lane descriptions while simultaneously requiring zero staff and fifteen successful migrations. The retained RED record contains only counts, return codes, document hash, and its own SHA-256; it contains no selector or row identity.
+
 ### 17.2 GREEN criteria
 
 The rollback-only normalization TDD test is green only when one isolated PUBLIC-USAGE grant changes schema ACL `6→7` and PUBLIC-USAGE `0→1`, all six other fidelity aggregates remain exact, rollback restores `6/0`, and production remains `7/1`.
 
-The isolated restore-plus-normalization path is green only if image, resource, network, secret, role, locale, extension, normalization guards, zero-row, core schema, owner, default ACL, explicit ACL, and effective-privilege gates all pass exactly.
+The fresh-template restore-plus-normalization path is green only if retained image/container/volume, resource, network, secret path, role, locale, extension, normalization guards, zero-row, core schema, owner, default ACL, explicit ACL, and effective-privilege gates all pass exactly before cloning.
 
-Replay is green only if fifteen versions exit zero, `20260814130000` alone fails and rolls back cleanly, fifteen safe migrations pass idempotency, two synthetic TBT rows reach the exact terminal state, and thirteen terminal function fingerprints match.
+Clone and fixture preparation are green only if both new database allocations pass disk pre/post thresholds, the fresh template has zero active sessions, fresh template and successor have unique names and owner `postgres`, all baseline fidelity and zero-row gates match template/successor, the selector client reports two expected syntax occurrences resolving to one valid unique value without emitting it, the halted original remains at its measured `6/6/0` state, and successor fixtures are `6/6/1/1` with one aggregate selector match and no real employee fixture payload.
+
+Replay is green only if the original identity-free `20260814130000` transaction rolls back with a byte-identical fingerprint, the successor produces fifteen zero exits with `20260814130000` alone nonzero and rollback-clean, all fifteen safe migrations pass the successor idempotency pass, downstream `20260814160000`/`20260814170000` and thirteen terminal functions verify, and the exact terminal TBT state matches.
 
 Production preservation is green only if history counts, protected aggregate bytes, function/grant fingerprints, HEAD, tree, index, dirty count/hash, restart count, nginx, Docker, database readiness, and HTTP behavior remain unchanged.
 
 ### 17.3 No automatic promotion
 
-Green infrastructure and replay tests do not change classification rows automatically. The classification task must explicitly evaluate each version. Any non-exact row writes `STOP`; production history remains unchanged.
+Green infrastructure, original rollback, successor replay, and successor idempotency tests do not change classification rows automatically. The classification task must explicitly evaluate each version. `20260813210000`, `20260813230000`, `20260813233000`, and `20260814130000` remain `STOP`; production history remains unchanged and Task 8 remains unreachable.
+
+### 17.4 Correction coverage
+
+| Required correction | Controlling sections |
+|---|---|
+| Measured failure and technical clone feasibility | 2.7 |
+| Same-container fresh template, pre-fixture successor, and safe database naming | 6.1–6.2, 11.1 |
+| Exact clone fidelity, ownership, ACL, and connection gates | 6.2, 10 |
+| Retained halted-original identity-free rollback lane | 11.1, 12 |
+| Successor-only minimal shell and selector containment | 11.2, 15.6 |
+| Full successor chronology, downstream dependencies, and idempotency | 12 |
+| Separate classification semantics and unreachable history write | 12.1, 17.3 |
+| Disk pre/post thresholds and retained-resource recovery | 6.4, 14, 16 |
+| Aggregate-only RED/GREEN and production preservation | 17.1–17.2 |
+| Current execution stop and documentation-only authority | 19 |
 
 ## 18. Exact success criteria
 
 The isolated Phase-0 evidence batch succeeds only when all of the following are true:
 
 1. The local image digest exactly matches the approved digest; no pull occurs.
-2. The container is unique, retained, network-none, portless, non-privileged, resource-limited, and backed by one unique named volume.
+2. The existing container remains retained, network-none, portless, non-privileged, resource-limited, and backed by its retained named volume; fresh-template and clone disk thresholds pass before and after each allocation.
 3. The password exists only in a root-only file and is absent from reported/container configuration values.
-4. PostgreSQL major, encoding, locale provider, locale, database owner, and required extensions match the design.
+4. PostgreSQL major, encoding, locale provider, locale, all three database owners, and required extensions match the design.
 5. Archive roles and attributes match the audited production metadata.
-6. Restore exits zero; the guarded isolated-only PUBLIC-USAGE normalization proves archive `0`, production `7/1`, replay pre `6/0`, replay post `7/1`, and retained TDD `PASS`; then core counts, owner distribution, default ACLs, explicit ACLs, and effective privileges match exactly.
-7. Production-row counts in the isolated database remain zero; only approved synthetic fixtures exist.
-8. All sixteen source hashes verify immediately before replay.
-9. Replay results are fifteen zero exits plus the single expected `20260814130000` rollback.
-10. All fifteen safe migrations pass the second idempotency run.
-11. Terminal TBT and function-hash evidence matches the exact chronological source chain.
-12. Production history and protected aggregates remain unchanged.
-13. Git HEAD/tree/index/dirty fingerprint, provider/model, CLIProxyAPI, `9router`, password-reset/session behavior, services, and active build remain unchanged.
-14. Evidence modes/hashes verify and the container/volume remain retained.
-15. The history-write path remains unreachable unless all eleven classifications become exact-applied.
+6. Fresh-template restore exits zero; the guarded isolated-only PUBLIC-USAGE normalization proves archive `0`, production `7/1`, template pre `6/0`, template post `7/1`, and retained TDD `PASS`; then core counts, owner distribution, default ACLs, explicit ACLs, and effective privileges match exactly.
+7. The successor is cloned from the inert fresh template before fixture/replay state with zero template connections, safe identifier quoting, unique unpredictable name, owner `postgres`, and byte-identical or exact aggregate baseline fidelity including ACL `7/1`.
+8. The halted original remains identity-free with six roles, six permissions, zero departments, and zero staff; the fresh template remains empty; the successor alone has six roles, six permissions, one synthetic department, one synthetic staff shell, one exact selector match, and no real employee fixture payload or copied production data.
+9. The selector client verifies the SHA-locked source, two expected syntax occurrences resolving to one valid unique value, fd-0-only source input, bound-parameter insertion, internal raw-error sanitization, aggregate-only evidence, and zero selector disclosure on fd 1/2, logs, files, or hash-input streams.
+10. All sixteen source hashes verify immediately before successor replay.
+11. Original identity-free `20260814130000` evidence rolls back byte-identically; successor replay results are fifteen zero exits plus the single expected `20260814130000` rollback.
+12. All fifteen safe migrations pass the second successor idempotency run, including `20260813210000`, `20260814160000`, and `20260814170000`.
+13. Terminal TBT, downstream password-reset, and thirteen function-hash fingerprints match the exact chronological source chain.
+14. Production history and protected aggregates remain unchanged; the four unresolved versions retain `STOP` and Task 8 remains unreachable.
+15. Git HEAD/tree/index/dirty fingerprint, provider/model, CLIProxyAPI, `9router`, password-reset/session behavior, services, HTTP responses, and active build remain unchanged.
+16. Evidence modes/hashes verify and halted original, fresh template, successor, container, volume, and password file remain retained.
 
 ## 19. Execution and review boundary
 
-This document is a design, not permission to execute the new persistent normalization. It contains no full lifecycle commands. The separately reviewed implementation plan incorporates the measured Task-4 exception while preserving the security/classification gates and keeping production read-only.
+This document is a design, not permission to clone a database, insert a fixture, retry Task 5, or execute any persistent normalization. It contains no full lifecycle commands. The separately reviewed implementation plan must incorporate the measured Task-4 exception and this two-lane correction while preserving the security/classification gates and keeping production SELECT-only.
 
-Implementation must remain inline and sequential through the existing Aylaspa custom agent. No parallel worker may create containers, volumes, roles, restore schemas, replay migrations, classify versions, or write history.
+Implementation must remain inline and sequential through the existing Aylaspa custom agent. No parallel worker may create databases, containers, volumes, roles, restore schemas, replay migrations, classify versions, or write history.
 
-The design draft remains uncommitted until primary review explicitly approves it.
+At this design revision boundary, Task 5 remains stopped immediately after the rolled-back `20260813210000` attempt. The original database, container, volume, password file, source, runbook, production history, provider/model, CLIProxyAPI/`9router`, application, services, and evidence remain unchanged. No retry, cleanup, or history write is authorized by this document.
+
+The approved design revision is committed only after scope verification proves one changed design file, an empty index before staging, strict UTF-8, no incomplete markers or exact protected-selector literal, clean whitespace, byte-identical review mirrors, a green requirement matrix, and independent review with every Critical and Important finding resolved.
