@@ -211,7 +211,7 @@ Expected: `test -s` exits 0. Do not create, read, print, or copy a raw database 
 
 - [ ] **Step 7: Create a dynamic schema-only disposable database with synthetic-data guards**
 
-The fixed database name is unsafe because it can collide and was never provisioned. Create a unique validated name and persist only its name, source path, schema state, and aggregate row counts under a root-only metadata directory. Never perform a full restore.
+The fixed database name is unsafe because it can collide and was never provisioned. Create a unique validated name and persist only its name, source path, schema state, and aggregate row counts under a root-only metadata directory. Restore only the `public` schema: the dump also contains managed `realtime`, `auth`, and `storage` objects, and the container's non-superuser `postgres` role cannot restore their privileged function settings. Never perform a full or all-schema restore.
 
 Run from `/opt/thoidai-worktrees/employee-password-reset`:
 
@@ -229,7 +229,8 @@ schema_dump=/opt/thoidai-backups/20260731T085309Z/database/thoidai-work.dump
 test -s "$schema_dump"
 printf '%s\n' "$test_db" > "$metadata_root/test-db.name"
 printf '%s\n' "$schema_dump" > "$metadata_root/source-dump.path"
-chmod 0600 "$metadata_root/test-db.name" "$metadata_root/source-dump.path"
+printf '%s\n' 'schema-only --schema=public --no-owner --no-privileges' > "$metadata_root/restore-mode.txt"
+chmod 0600 "$metadata_root/test-db.name" "$metadata_root/source-dump.path" "$metadata_root/restore-mode.txt"
 printf '%s\n' "$metadata_root" > /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
 chmod 0600 /opt/thoidai-backups/employee-password-reset/latest-test-db-metadata.path
 if docker exec supabase_db_thoidai-work psql -U postgres -d postgres -Atc \
@@ -241,7 +242,7 @@ docker exec supabase_db_thoidai-work psql -U postgres -d postgres -v ON_ERROR_ST
   -c "create database $test_db"
 cat "$schema_dump" | docker exec -i supabase_db_thoidai-work \
   pg_restore -U postgres -d "$test_db" \
-  --schema-only --no-owner --no-privileges --exit-on-error
+  --schema-only --schema=public --no-owner --no-privileges --exit-on-error
 ```
 
 Record schema state using metadata-only queries. Apply the exact existing password-reset migration only when all reset objects are absent:
@@ -299,6 +300,7 @@ test "$(printf '%s\n' "$row_counts" | awk -F'|' '$2 != 0 { print; bad=1 } END { 
 sha256sum \
   "$metadata_root/test-db.name" \
   "$metadata_root/source-dump.path" \
+  "$metadata_root/restore-mode.txt" \
   "$metadata_root/schema-state-before.txt" \
   "$metadata_root/schema-state-after.txt" \
   "$metadata_root/row-counts.txt" \
@@ -306,7 +308,7 @@ sha256sum \
 chmod -R go-rwx "$metadata_root"
 ```
 
-Expected: the dynamic name matches the allowlisted prefix, schema state is `t|t|t|t|t`, all four row counts are zero, and only root-owned metadata/checksums are persisted. Never insert fixture rows in this step; later fixtures must use deterministic UUIDs, `example.invalid` addresses, and synthetic bcrypt hashes rather than seed credential literals. Retain the database for the checkpoint; dropping it requires explicit confirmation immediately before execution.
+Expected: the dynamic name matches the allowlisted prefix, the restore excludes managed schemas, schema state is `t|t|t|t|t`, all four row counts are zero, and only root-owned metadata/checksums are persisted. Never retry an all-schema restore after the known managed-schema permission failure. Never insert fixture rows in this step; later fixtures must use deterministic UUIDs, `example.invalid` addresses, and synthetic bcrypt hashes rather than seed credential literals. Retain the database for the checkpoint; dropping it requires explicit confirmation immediately before execution.
 
 ### Task 2: Add the database contract with a failing SQL smoke test
 
