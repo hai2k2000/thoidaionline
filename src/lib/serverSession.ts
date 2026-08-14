@@ -1,13 +1,14 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { serverSupabase } from "@/lib/serverSupabase";
+import {
+  createSignedSessionToken,
+  SESSION_TTL_SECONDS,
+  verifySignedSessionToken,
+} from "@/lib/sessionToken";
 
 export const SESSION_COOKIE = "thoidai_work_session";
-const SESSION_TTL_SECONDS = 8 * 60 * 60;
-
-type SessionPayload = { userId: string; expiresAt: number };
 
 export type ServerAuthUser = {
   id: string;
@@ -26,33 +27,12 @@ function secret() {
   return value;
 }
 
-function sign(value: string) {
-  return createHmac("sha256", secret()).update(value).digest("base64url");
+export function createSessionToken(userId: string, sessionVersion: number) {
+  return createSignedSessionToken({ userId, sessionVersion, secret: secret() });
 }
 
-export function createSessionToken(userId: string) {
-  const payload = Buffer.from(JSON.stringify({
-    userId,
-    expiresAt: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
-  } satisfies SessionPayload)).toString("base64url");
-  return `${payload}.${sign(payload)}`;
-}
-
-export function verifySessionToken(token: string | undefined): SessionPayload | null {
-  if (!token) return null;
-  const [payload, signature, extra] = token.split(".");
-  if (!payload || !signature || extra) return null;
-  const expected = sign(payload);
-  const actualBytes = Buffer.from(signature);
-  const expectedBytes = Buffer.from(expected);
-  if (actualBytes.length !== expectedBytes.length || !timingSafeEqual(actualBytes, expectedBytes)) return null;
-  try {
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as SessionPayload;
-    if (!parsed.userId || !parsed.expiresAt || parsed.expiresAt <= Math.floor(Date.now() / 1000)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+export function verifySessionToken(token: string | undefined) {
+  return verifySignedSessionToken({ token, secret: secret() });
 }
 
 export async function getSessionUser(): Promise<ServerAuthUser | null> {
@@ -61,15 +41,16 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   if (!session) return null;
   const { data, error } = await serverSupabase
     .from("staff_users")
-    .select("id,full_name,email,username,active,roles(code,name,role_permissions(can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment))")
+    .select("id,full_name,email,username,active,session_version,roles(code,name,role_permissions(can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment))")
     .eq("id", session.userId)
     .eq("active", true)
     .single();
   if (error || !data) return null;
   const row = data as unknown as {
-    id: string; full_name: string; email: string | null; username: string | null; active: boolean;
+    id: string; full_name: string; email: string | null; username: string | null; active: boolean; session_version: number;
     roles: { code: string; name: string; role_permissions: ServerAuthUser["permissions"] | null } | null;
   };
+  if (session.sessionVersion !== row.session_version) return null;
   const permissions = row.roles?.role_permissions;
   return {
     id: row.id,

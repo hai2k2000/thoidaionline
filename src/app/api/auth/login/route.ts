@@ -12,11 +12,11 @@ export async function POST(request: Request) {
 
   const { data, error } = await serverSupabase
     .from("staff_users")
-    .select("id,password,password_hash,active")
+    .select("id,password,password_hash,active,session_version")
     .or(`username.eq.${identifier},email.ilike.${identifier},phone.eq.${identifier}`)
     .limit(1)
     .maybeSingle();
-  const row = data as { id: string; password: string | null; password_hash: string | null; active: boolean } | null;
+  const row = data as { id: string; password: string | null; password_hash: string | null; active: boolean; session_version: number } | null;
   const valid = row && row.active && (isBcryptHash(row.password_hash)
     ? await verifyPassword(password, row.password_hash)
     : (row.password ?? "123456").trim() === password);
@@ -29,6 +29,6 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(SESSION_COOKIE, createSessionToken(row.id), sessionCookieOptions);
+  response.cookies.set(SESSION_COOKIE, createSessionToken(row.id, row.session_version), sessionCookieOptions);
   return response;
 }
