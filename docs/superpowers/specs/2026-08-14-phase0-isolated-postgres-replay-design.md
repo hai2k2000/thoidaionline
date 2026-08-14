@@ -1,10 +1,10 @@
 # THỜI ĐẠI WORK Phase 0: Isolated PostgreSQL Replay Design
 
-**Status:** Approved architecture, design review draft; not an implementation plan.
+**Status:** Approved architecture with measured Task-4 restore/TDD addendum; documentation review draft, not an implementation plan.
 
-**Decision:** Run Phase-0 schema restoration and migration replay inside one uniquely named, retained, network-isolated PostgreSQL 17 container backed by one uniquely named retained volume. Production remains read-only throughout this design.
+**Decision:** Run Phase-0 schema restoration and migration replay inside one uniquely named, retained, network-isolated PostgreSQL 17 container backed by one uniquely named retained volume. Preserve the exact archive restore, then apply one guarded isolated-only public-schema ACL normalization before fidelity checks. Production remains read-only throughout this design.
 
-**Design authority:** The user selected this option after three shared-cluster restore approaches produced measured fidelity or authentication failures. Execution remains sequential through the existing Aylaspa agent only.
+**Design authority:** The user selected this option after three shared-cluster restore approaches produced measured fidelity or authentication failures, then approved the single normalization only after a rollback-only TDD transaction proved that it closes the one measured ACL gap without changing any other fidelity metric. Execution remains sequential through the existing Aylaspa agent only.
 
 ## 1. Purpose
 
@@ -83,9 +83,17 @@ Observed at design time: 4 vCPU, 7,937 MiB RAM with 3,289 MiB available, approxi
 
 The repository contains no tracked Dockerfile or Compose manifest. Production uses externally managed Docker conventions, a Supabase bridge network, an `unless-stopped` restart policy, and named volumes. The isolated replay therefore remains a one-off evidence component and is not added to application Compose configuration.
 
+### 2.6 Measured PostgreSQL-17 archive normalization
+
+The sealed schema archive was produced by PostgreSQL `pg_dump 17.6` in custom dump format `1.16-0` and inspected offline with PostgreSQL `pg_restore 17.10`. Its single public-schema ACL TOC item emits four public-schema `GRANT` commands, zero `REVOKE` commands, zero grants to the `PUBLIC` pseudo-role, and zero semantic `GRANT USAGE ON SCHEMA public TO PUBLIC` commands. The archive still creates the public schema once.
+
+An exact owner-and-privilege restore therefore produced six exploded public-schema ACL rows and zero explicit PUBLIC-USAGE rows, while production has seven and one. The untouched PostgreSQL-17 bootstrap database also has the PUBLIC-USAGE row. Owner, default ACL, table ACL, function ACL, and effective-privilege evidence otherwise matched production.
+
+A rollback-only TDD transaction, executed as the isolated non-superuser database owner `postgres`, added exactly the missing PUBLIC-USAGE grant. Inside that transaction all seven fidelity aggregates became exact: default ACL `6/3/3`, schema ACL `7`, table ACL `653`, function ACL `46`, effective table privileges `571/588`, effective function privileges `40/56`, and effective schema privileges `5/8`. Rollback restored schema ACL `6` and PUBLIC-USAGE `0`; production remained `7/1`. The sanitized mode-0600 debug evidence has SHA-256 `9b784790cfbb06c6d641c2efdf3650d9d147e708dcc5128d6d7b6f542a62bb6c`.
+
 ## 3. Goals
 
-1. Restore the sealed schema archive with exact owners, default ACLs, explicit ACLs, policies, and effective privileges.
+1. Restore the sealed schema archive with ownership and privileges enabled, then apply the one measured, guarded isolated-only PUBLIC-USAGE normalization required to reproduce production ACL semantics.
 2. Replay the exact locked chronological chain only against zero-production-row synthetic state.
 3. Execute migrations as a role matching production `postgres`, not as the isolated bootstrap superuser.
 4. Produce root-only, hash-addressed evidence without printing SQL bodies, identities, secrets, or raw error output.
@@ -118,7 +126,7 @@ Rejected. Removing exactly the three failing `supabase_admin` default-ACL entrie
 
 ### 5.4 Approved isolated PostgreSQL cluster
 
-Selected. A private cluster can bootstrap every archive role, use a disposable isolated superuser to restore exact ownership and ACLs, and then run migrations as a production-equivalent non-superuser `postgres` role. It removes dependence on production host-based authentication and shared cluster roles while preserving database semantics.
+Selected. A private cluster can bootstrap every archive role, use a disposable isolated superuser to restore exact ownership and archive ACLs, apply the single measured PUBLIC-USAGE normalization as production-equivalent non-superuser database owner `postgres`, and then run migrations as that role. It removes dependence on production host-based authentication and shared cluster roles while preserving database semantics.
 
 ## 6. Architecture
 
@@ -131,8 +139,9 @@ Selected. A private cluster can bootstrap every archive role, use a disposable i
 5. **Disposable bootstrap superuser** — a uniquely named isolated-only initial superuser initializes the cluster and restores ownership/ACL metadata. It never becomes an archive object owner and is never used for migration replay.
 6. **Production-equivalent replay role** — isolated role `postgres` mirrors the audited production attributes and owns the isolated target database. Every locked migration runs as this role.
 7. **Restore fidelity verifier** — compares isolated metadata with sealed production fingerprints before fixtures or replay.
-8. **Replay evidence runner** — streams each checksum-verified source into isolated `psql`, hashes combined output, records exit status, and never persists migration bodies in the container or volume.
-9. **Classification gate** — consumes sealed production evidence plus isolated replay evidence and emits the all-or-nothing STOP/EXACT decision without writing production history.
+8. **Guarded ACL normalizer** — verifies the archive, production, replay-precondition, and retained TDD counts; then, as non-superuser database owner `postgres`, commits only `GRANT USAGE ON SCHEMA public TO PUBLIC` inside one guarded isolated transaction.
+9. **Replay evidence runner** — streams each checksum-verified source into isolated `psql`, hashes combined output, records exit status, and never persists migration bodies in the container or volume.
+10. **Classification gate** — consumes sealed production evidence plus isolated replay evidence and emits the all-or-nothing STOP/EXACT decision without writing production history.
 
 ### 6.2 Naming and retention
 
@@ -166,7 +175,7 @@ The official image initializes with a unique bootstrap role rather than `postgre
 
 Bootstrap then creates the five archive-referenced roles with audited attributes. `pg_database_owner` remains the PostgreSQL built-in role. The isolated target database is owned by the newly created production-equivalent `postgres` role and uses UTF8, ICU `en-US`, and the audited collation/character-type settings. Patch-version differences are accepted only if every metadata fidelity gate passes.
 
-The bootstrap superuser performs the exact archive restore with ownership and privileges enabled. It does not use `--no-owner`, `--no-privileges`, a filtered TOC, or a production role credential. After restore, all replay connections use the isolated non-superuser `postgres` role.
+The bootstrap superuser performs the exact archive restore with ownership and privileges enabled. It does not use `--no-owner`, `--no-privileges`, a filtered TOC, or a production role credential. After restore, the isolated non-superuser database owner `postgres` performs the separately evidenced PUBLIC-USAGE normalization and every later replay connection uses that same role.
 
 Role bootstrap evidence records names, boolean attributes, memberships, and counts only. It never records passwords or role secrets.
 
@@ -181,6 +190,12 @@ The isolated cluster creates only required extensions in the same schemas as pro
 The sealed custom schema archive is streamed from the host into PostgreSQL 17 restore tooling. It is never copied into the data volume. Restore output is reduced to a SHA-256 and exit status; raw SQL and error bodies are not printed.
 
 Restore must exit zero with no ignored errors. Before fixtures, the isolated database must have zero `staff_users` rows and zero migration-history rows.
+
+PostgreSQL 17.6 archive generation normalizes the built-in public schema's default PUBLIC-USAGE privilege out of this archive even though the archive recreates that schema after the verified-empty template schema is dropped. This is a measured archive-semantic exception, not permission to weaken restore flags or alter production. Exact archive bytes alone therefore do not satisfy ACL fidelity.
+
+Immediately after restore and before the fidelity gate, implementation must verify aggregate-only evidence for all of the following: the archive contains zero semantic PUBLIC-USAGE grants; production has schema ACL `7` and PUBLIC-USAGE `1`; the isolated replay has schema ACL `6` and PUBLIC-USAGE `0`; and the retained rollback-only TDD evidence has the approved SHA-256 and `PASS` status. Only then may non-superuser database owner `postgres` execute one isolated transaction with an internal `6/0` pre-guard, exactly `GRANT USAGE ON SCHEMA public TO PUBLIC`, an internal `7/1` post-guard, and commit. Any mismatch or SQL error stops before the grant commits or before fidelity begins. Raw transaction output is hashed, post-normalization aggregate evidence is mode 0600, and production is re-read only to prove it remains `7/1`.
+
+The exception reproduces the one production ACL semantic that the archive omitted. It does not modify production, add privileges beyond production, weaken the restore, or support a claim that archive-byte fidelity alone is sufficient.
 
 The following production values must match exactly:
 
@@ -242,13 +257,14 @@ The fifteen safe migrations then run a second pass to prove technical idempotenc
 3. Create the named volume and network-none container with explicit resource limits and no production mounts.
 4. Initialize the cluster, roles, database, locale, and required extensions.
 5. Stream the sealed schema archive and record only hashed output/status.
-6. Capture owner, ACL, privilege, schema, function, and zero-row fingerprints; compare with production.
-7. Seed synthetic fixtures and seal aggregate counts.
-8. Stream the exact sixteen-file replay and record per-version status/output hash.
-9. Prove the expected targeted rollback, terminal TBT state, terminal function hashes, and fifteen-file idempotency pass.
-10. Re-read production history and protected aggregates read-only; compare with pre-change evidence.
-11. Generate classifications and the all-or-nothing gate. Stop before history writes unless all eleven versions are exact-applied under the committed taxonomy.
-12. Seal all evidence and retain the isolated container and volume.
+6. Verify archive/production/replay/TDD normalization guards, commit the one isolated PUBLIC-USAGE grant as non-superuser `postgres`, hash its output/status, and prove production remains unchanged.
+7. Capture owner, ACL, privilege, schema, function, and zero-row fingerprints; compare with production.
+8. Seed synthetic fixtures and seal aggregate counts.
+9. Stream the exact sixteen-file replay and record per-version status/output hash.
+10. Prove the expected targeted rollback, terminal TBT state, terminal function hashes, and fifteen-file idempotency pass.
+11. Re-read production history and protected aggregates read-only; compare with pre-change evidence.
+12. Generate classifications and the all-or-nothing gate. Stop before history writes unless all eleven versions are exact-applied under the committed taxonomy.
+13. Seal all evidence and retain the isolated container and volume.
 
 No step streams data from production tables into the isolated cluster. The only production-derived payload is the sealed schema-only archive and aggregate/catalog evidence.
 
@@ -257,6 +273,7 @@ No step streams data from production tables into the isolated cluster. The only 
 - A missing pinned image, image digest mismatch, incompatible architecture, or missing required extension stops before container creation.
 - Insufficient resource headroom or unhealthy production service stops before container creation.
 - Any unexpected network, port, mount, privilege, role, locale, owner, ACL, or schema mismatch stops before fixtures.
+- Any archive semantic count, production ACL count, replay precondition, retained TDD hash/status, transaction pre-guard, transaction post-guard, or production-preservation mismatch stops before the normalization grant or before fidelity. Transaction failure rolls back and is never retried with a broader grant or stronger role.
 - Any fixture identity collision or nonzero production-row count stops before replay.
 - Any replay failure other than `20260814130000` stops immediately.
 - Any rollback leak, idempotency failure, function-hash drift, permission drift, or Git/production invariant change stops immediately.
@@ -314,9 +331,13 @@ The design carries forward three measured architecture failures rather than repe
 
 Direct `supabase_admin` socket use is a separately rejected authentication path: its non-interactive gate was false without credentials. The isolated design must restore all ownership and ACL evidence exactly without production authentication or privilege weakening.
 
+The retained exact isolated restore is an additional focused RED: schema ACL `6` and PUBLIC-USAGE `0` versus production `7/1`, with the other six ACL/effective-privilege aggregates exact. Offline archive inspection independently proves the archive contains zero semantic PUBLIC-USAGE grant.
+
 ### 17.2 GREEN criteria
 
-The isolated restore is green only if image, resource, network, secret, role, locale, extension, zero-row, core schema, owner, default ACL, explicit ACL, and effective-privilege gates all pass exactly.
+The rollback-only normalization TDD test is green only when one isolated PUBLIC-USAGE grant changes schema ACL `6→7` and PUBLIC-USAGE `0→1`, all six other fidelity aggregates remain exact, rollback restores `6/0`, and production remains `7/1`.
+
+The isolated restore-plus-normalization path is green only if image, resource, network, secret, role, locale, extension, normalization guards, zero-row, core schema, owner, default ACL, explicit ACL, and effective-privilege gates all pass exactly.
 
 Replay is green only if fifteen versions exit zero, `20260814130000` alone fails and rolls back cleanly, fifteen safe migrations pass idempotency, two synthetic TBT rows reach the exact terminal state, and thirteen terminal function fingerprints match.
 
@@ -335,7 +356,7 @@ The isolated Phase-0 evidence batch succeeds only when all of the following are 
 3. The password exists only in a root-only file and is absent from reported/container configuration values.
 4. PostgreSQL major, encoding, locale provider, locale, database owner, and required extensions match the design.
 5. Archive roles and attributes match the audited production metadata.
-6. Restore exits zero with exact core counts, owner distribution, default ACLs, explicit ACLs, and effective privileges.
+6. Restore exits zero; the guarded isolated-only PUBLIC-USAGE normalization proves archive `0`, production `7/1`, replay pre `6/0`, replay post `7/1`, and retained TDD `PASS`; then core counts, owner distribution, default ACLs, explicit ACLs, and effective privileges match exactly.
 7. Production-row counts in the isolated database remain zero; only approved synthetic fixtures exist.
 8. All sixteen source hashes verify immediately before replay.
 9. Replay results are fifteen zero exits plus the single expected `20260814130000` rollback.
@@ -348,7 +369,7 @@ The isolated Phase-0 evidence batch succeeds only when all of the following are 
 
 ## 19. Execution and review boundary
 
-This document is a design, not permission to implement. It contains no full lifecycle commands. The next artifact, after primary review, is a separately reviewed implementation plan that replaces the failed shared-cluster Task-4 architecture while preserving the committed plan's security/classification gates.
+This document is a design, not permission to execute the new persistent normalization. It contains no full lifecycle commands. The separately reviewed implementation plan incorporates the measured Task-4 exception while preserving the security/classification gates and keeping production read-only.
 
 Implementation must remain inline and sequential through the existing Aylaspa custom agent. No parallel worker may create containers, volumes, roles, restore schemas, replay migrations, classify versions, or write history.
 
