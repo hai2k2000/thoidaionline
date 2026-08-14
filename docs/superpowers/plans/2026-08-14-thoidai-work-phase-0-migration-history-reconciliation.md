@@ -1041,9 +1041,7 @@ docker exec "$container_name" psql -X -U "$bootstrap_role" -d "$replay_db" -v ON
 docker exec "$container_name" psql -X -U postgres -d "$replay_db" -v ON_ERROR_STOP=1 -c \
   "create extension pgcrypto with schema extensions;"
 docker exec "$container_name" psql -X -U "$bootstrap_role" -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
-select current_database(),count(*)
-from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public'
-group by current_database();" > "$run_dir/template-public.guard.tsv"
+select current_database(), (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public');" > "$run_dir/template-public.guard.tsv"
 grep -Fx "$replay_db|0" "$run_dir/template-public.guard.tsv"
 test "$replay_db" != postgres
 test "$replay_db" != "$bootstrap_db"
