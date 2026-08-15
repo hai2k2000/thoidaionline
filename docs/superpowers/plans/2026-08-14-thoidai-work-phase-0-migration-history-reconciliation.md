@@ -1,10 +1,10 @@
 # THỜI ĐẠI WORK Phase 0: Migration-History Reconciliation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Execution model:** Run sequentially through the Aylaspa-only operator on `vps-aylaspa`. Do not delegate runtime work or run database/container steps in parallel. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Verify the exact application status of eleven THỜI ĐẠI WORK migration versions and reconcile them with `supabase_migrations.schema_migrations` only if every version becomes `exact-applied` under the all-or-nothing gate, without blindly replaying SQL, weakening password-reset/session protections, changing application routing, or exposing production identities or secrets.
 
-**Architecture:** Preserve the sealed production/source evidence, then restore the exact schema archive into one uniquely named PostgreSQL 17 container that uses the pinned local image, Docker `none` networking, zero published ports, a retained named volume, and a root-only password-file secret. Bootstrap archive roles with a unique isolated superuser, restore ownership and privileges without weakened flags, apply only the measured PUBLIC-USAGE normalization under archive/production/replay/TDD guards as isolated non-superuser database owner `postgres`, and replay the locked chain only as that role; production remains read-only except for the unreachable all-exact history transaction. Classify every target as `exact-applied`, `semantically-applied-but-source-differs`, `partially-applied`, or `not-applied`, with no production migration replay or rehearsal path.
+**Architecture:** Quarantine the existing retained PostgreSQL container, volume, databases, secret, and Docker log as historical Tasks 1–4 evidence: no log read, no runtime session, and no mutation. After an immutable committed handoff package passes before any runtime creation, build a newly named PostgreSQL 17 container and volume from the pinned image with network mode `none`, no ports, log driver `none`, exact resource/security limits, and statement/error-statement logging disabled. Restore and normalize a fresh zero-row template, clone a new identity-free diagnostic database and a separate protected-shell successor, run both expected-negative paths only in that new lane with exact sanitized SQLSTATE `P0001`, and preserve the all-or-nothing STOP. Production remains SELECT-only and Task 8 contains zero history-write SQL.
 
 **Tech Stack:** PostgreSQL 17, Supabase migration history, Docker, Bash, `psql`, `pg_dump`/`pg_restore`, Git, SHA-256 manifests, systemd, nginx, and non-interactive SSH to `vps-aylaspa`.
 
@@ -75,31 +75,23 @@ History repair is all-or-nothing for these eleven versions. If even one row is n
 
 ## Locked execution artifacts
 
-Completed Tasks 1–3 are sealed at `/opt/thoidai-reconciliation/phase0-20260814T135943Z`; their production dump, schema dump, manifests, and failed shared-cluster evidence are inputs and are never regenerated, weakened, or deleted. Task 4 creates one unique mode-0700 child run directory, one retained named volume, one retained network-isolated container, one root-only password file, one unique bootstrap role/database, and one unique replay database. No repository source file is created or modified by execution, and no image pull is permitted.
+Completed Tasks 1–4 and the measured stop are sealed at `/opt/thoidai-reconciliation/phase0-20260814T135943Z`. Their dump, archive, manifests, retained container/volume/secret/databases, and log are quarantine inputs: never regenerated, queried, read for log content, hashed for log content, deleted, truncated, renamed, restarted, or rewound. Corrected execution creates a separate mode-0700 evidence directory, separate secret, separate named volume, separate no-log container, one fresh template, one identity-free diagnostic clone, and one successor clone. No repository source file is created or modified by runtime execution, and no image pull, package installation, production-row copy, or automatic cleanup is permitted.
 
 ## Approved design coverage
 
-| Design section | Implementation location |
+| Design boundary | Implementation location |
 |---|---|
-| 1. Purpose | Scope boundary; Tasks 6–8 all-exact gate |
-| 2. Observed baseline | Audited starting evidence; Task 4 Steps 1–6 and 14; `image-metadata.tsv` and measured archive-normalization evidence |
-| 3. Goals | Tasks 4–7 evidence lifecycle; Task 9 preservation |
-| 4. Non-goals | Scope boundary; Task 7 production-execution prohibition |
-| 5. Rejected alternatives | Task 4 Step 2 retained RED evidence |
-| 6. Architecture | Task 4 isolated lifecycle, `volume-metadata.tsv`, `container-security.tsv`, and runtime assertions |
-| 7. Secret handling | Task 4 Steps 7–9 |
-| 8. Cluster and role bootstrap | Task 4 Steps 10–11 |
-| 9. Extension compatibility | Task 4 Steps 6, 9, and 11 |
-| 10. Schema restore and fidelity | Task 4 Steps 12–15 |
-| 11. Synthetic state | Task 5 Step 1 |
-| 12. Locked chronological replay | Task 5 Steps 2–5 |
-| 13. Evidence flow | Task 4 Steps 1–16; Tasks 5–7; Task 9 final index |
-| 14. Error handling | Every hard-stop assertion; Task 7 retention |
-| 15. Threat model | Task 4 persisted image/volume/container metadata plus runtime, mount, secret, and resource gates |
-| 16. Rollback and cleanup | Task 7 Step 6; Task 8 Step 5 |
-| 17. Testing strategy | Task 4 Steps 2, 14, and 15 RED/TDD/GREEN; Task 5 replay/idempotency |
-| 18. Exact success criteria | Task 6 Step 1; Task 9 preservation matrix |
-| 19. Execution boundary | Task 10 inline `/root/aylaspa_thoidai` handoff |
+| Quarantine of retained container/volume/database/log | Task 4 corrected failure branch; Task 5 Steps 2 and 6; Task 9 Step 2 |
+| Immutable committed-package gate | Task 5 Step 1; Task 10 |
+| New pinned-image no-log lane | Task 5 Steps 3–4 |
+| Fresh template plus diagnostic/successor clones | Task 5 Step 5 |
+| Selector containment and successor-only fixture | Task 6 Step 1 |
+| Exact sanitized `P0001` in both negative paths | Task 6 Steps 2–3 |
+| Chronological replay and safe idempotency | Task 6 Steps 3–4 |
+| Four-class taxonomy and mandatory STOP | Task 7 |
+| Unreachable zero-SQL history boundary | Task 8 |
+| Production, provider/routing/build, quarantine, and lane preservation | Task 9 |
+| Post-review/post-commit atomic handoff | Task 10 |
 
 ---
 
@@ -499,9 +491,9 @@ Expected: all production metadata files verify.
 - Create outside Git: one mode-0600 bootstrap password file, one retained Docker volume, and one retained Docker container
 - Read production only; create no object in `supabase_db_thoidai-work`
 
-> **Execution status note (2026-08-15):** Tasks 1–3 are sealed and checked. Task 4 Steps 1–13 have completed execution evidence. The former fidelity Step 14 stopped on the single measured `schema_acl|6` versus expected `7` mismatch before zero-row baseline, sealing, fixtures, Step 15, or Task 5. A later rollback-only TDD transaction proved the new normalization but made no persistent database change. Under this plan's checklist convention, Task 4 boxes remain unchecked until the revised Task 4 is reviewed and executed; new Steps 14–16 and every Task 5 step are pending.
+> **Execution status note (2026-08-15):** Tasks 1–4 are complete and sealed. The guarded isolated-only PUBLIC-USAGE normalization committed in the original replay database, all Task-4 fidelity gates passed, and `TASK4-SHA256SUMS` verifies. The former Task 5 then inserted exactly six role/permission pairs, ran the first four migrations with exit `0`, and stopped safely when `20260813210000` returned `3`/SQLSTATE `P0001`; its transaction rolled back cleanly and no later migration, classification, history, or cleanup step ran. That database, its container, volume, secret, and log are now quarantine-only historical evidence: host-side selected metadata inspection is the sole permitted access. No runtime session, database query, replay, diagnostic, log read/hash, stop, restart, rename, removal, or other mutation is permitted in the retained lane.
 
-- [ ] **Step 1: Verify the approved design commit and every sealed prerequisite**
+- [x] **Step 1: Verify the approved design commit and every sealed prerequisite**
 
 ```bash
 set -euo pipefail
@@ -509,8 +501,8 @@ repo=/opt/thoidai-work
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
 design=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
 cd "$repo"
-git merge-base --is-ancestor 9fab6a11600004d6b70da1f0530e0c215eafb1fc HEAD
-test "$(sha256sum "$design" | awk '{print $1}')" = bd45e65f6f825a3e2bcae241669c7f6debd803a5446db31d818d3f813889ddb5
+git merge-base --is-ancestor f707279ad9028d452d871fddb39d4f0f767ca155 HEAD
+test "$(sha256sum "$design" | awk '{print $1}')" = 8cec52675a8d409a5c8e449299aed773adcb05c537f5869396cdd45b2545f637
 test "$(stat -c %a "$evidence_root")" = 700
 test "$(find "$evidence_root" -maxdepth 1 -type f | wc -l)" -eq 44
 test "$(find "$evidence_root" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
@@ -527,9 +519,9 @@ docker exec -i supabase_db_thoidai-work pg_restore --list \
   < "$evidence_root/public-history-schema.dump" >/dev/null
 ```
 
-Expected: every command exits `0`; the approved base-design commit is an ancestor and the measured-addendum design bytes have SHA-256 `bd45e65f…ddb5`; all sixteen sources verify, both PostgreSQL-17 archives list successfully, and the 44 sealed top-level files remain root-only. Do not print archive contents.
+Expected: every command exits `0`; the approved successor-design commit is an ancestor and the protected design bytes have SHA-256 `8cec526…f637`; all sixteen sources verify, both PostgreSQL-17 archives list successfully, and the 44 sealed top-level files remain root-only. Do not print archive contents.
 
-- [ ] **Step 2: Preserve the measured RED architecture evidence without repeating it**
+- [x] **Step 2: Preserve the measured RED architecture evidence without repeating it**
 
 ```bash
 set -euo pipefail
@@ -553,7 +545,7 @@ cmp -s "$evidence_root/toctest-owner-production.tsv" "$evidence_root/toctest-own
 
 Expected: retained evidence proves direct `supabase_admin` authentication was unavailable, exact shared-cluster restore failed three default ACLs, `--no-privileges` destroyed ACL/effective-privilege fidelity, and filtered TOC retained only five schema ACL entries with a non-identical owner fingerprint. No failed architecture is rerun.
 
-- [ ] **Step 3: Allocate one validated unique run identity without touching Docker**
+- [x] **Step 3: Allocate one validated unique run identity without touching Docker**
 
 ```bash
 set -euo pipefail
@@ -594,7 +586,7 @@ test "$(stat -c %a "$current_file")" = 600
 
 Expected: one new root-only run directory and a validated names record exist; no container, volume, database, password, network, or production object has been created.
 
-- [ ] **Step 4: Capture fresh Git, resource, service, HTTP, and production baselines before container creation**
+- [x] **Step 4: Capture fresh Git, resource, service, HTTP, and production baselines before container creation**
 
 ```bash
 set -euo pipefail
@@ -642,7 +634,7 @@ chmod 0600 "$run_dir"/*
 
 Expected: index `0`, dirty count `358`, dirty fingerprint `20115c…97a`, at least 2 GiB available RAM, at least 5 GiB Docker-filesystem headroom, load below `4.0`, zero unhealthy containers, healthy production services/database, login `200`, session `401`, and no printed dirty paths.
 
-- [ ] **Step 5: Capture and seal fresh read-only production fingerprints before container creation**
+- [x] **Step 5: Capture and seal fresh read-only production fingerprints before container creation**
 
 ```bash
 set -euo pipefail
@@ -717,7 +709,7 @@ chmod 0600 "$run_dir"/*
 
 Expected: aggregate, history, function, and owner files are byte-identical to sealed production evidence. The owner distribution is five lines: public schema `pg_database_owner`, 21 tables/53 indexes/one sequence owned by `postgres`, and 14 public functions owned by `postgres`. No row identity or function body is emitted.
 
-- [ ] **Step 6: Prove the pinned image is local and scan exact source/extension dependencies without pulling**
+- [x] **Step 6: Prove the pinned image is local and scan exact source/extension dependencies without pulling**
 
 ```bash
 set -euo pipefail
@@ -776,7 +768,7 @@ chmod 0600 "$run_dir/source-dependency-scan.tsv" "$run_dir/required-extensions.l
 
 Expected: root-only `image-metadata.tsv` contains exactly six approved fields and proves the exact image ID, one RepoDigest with one pinned match, linux/amd64, and Docker image-inspect `.Size` value `161234888` bytes without dumping Config, Env, or history. The design baseline separately names the observed `docker image ls` display size `640 MB` and `docker system df -v` size/shared/unique metrics; they are not substituted for `.Size`. No pull command runs; the archive has zero extension TOC items; the sources reference one pgcrypto declaration and two pgcrypto call lines; and all sixteen sources have zero `SET ROLE`, `SET SESSION AUTHORIZATION`, and `supabase_admin` references.
 
-- [ ] **Step 7: Generate the isolated-only bootstrap secret directly into its root-only file**
+- [x] **Step 7: Generate the isolated-only bootstrap secret directly into its root-only file**
 
 ```bash
 set -euo pipefail
@@ -796,7 +788,7 @@ chmod 0600 "$run_dir/secret-metadata.tsv"
 
 Expected: the value is never read into a shell variable, printed, hashed, passed as an argument, placed in an environment value, or stored in a label. Only its path, mode, and byte length are used later.
 
-- [ ] **Step 8: Create the retained volume and container with the exact isolation/resource envelope**
+- [x] **Step 8: Create the retained volume and container with the exact isolation/resource envelope**
 
 ```bash
 set -euo pipefail
@@ -843,7 +835,7 @@ test "$(docker inspect -f '{{.Id}}' "$container_name")" = "$(cat "$run_dir/conta
 
 Expected: root-only `volume-metadata.tsv` has exactly three lines proving the validated name, `local` driver, and `local` scope without recording the mountpoint. Docker uses the already-present digest because `--pull=never` is mandatory. The named volume and stopped container are retained even if a later gate fails; no user-created network is created.
 
-- [ ] **Step 9: Assert stopped-container security and required extension controls before initialization**
+- [x] **Step 9: Assert stopped-container security and required extension controls before initialization**
 
 ```bash
 set -euo pipefail
@@ -940,7 +932,7 @@ chmod 0600 "$run_dir/mounts.assertion.tsv" "$run_dir/container-security.tsv" "$r
 
 Expected: root-only `container-security.tsv` has exactly eighteen approved aggregate lines proving created state, exact image ID, network mode `none`, zero published ports, exactly two mounts, no privileged/host PID/host IPC/device/cap-add access, exact 1 CPU/1 GiB/256 PID limits, restart `no`, auto-remove false, zero password-value environment keys, and one password-file-path key. It records no raw environment values or mount paths; both required PostgreSQL-17 control files are present before cluster initialization.
 
-- [ ] **Step 10: Start the retained container and verify the official-image initialization**
+- [x] **Step 10: Start the retained container and verify the official-image initialization**
 
 ```bash
 set -euo pipefail
@@ -957,8 +949,8 @@ for attempt in $(seq 1 45); do
   sleep 1
 done
 if test "$ready" != true; then
-  docker logs "$container_name" 2>&1 | sha256sum | awk '{print $1}' > "$run_dir/init-log.output.sha256"
-  chmod 0600 "$run_dir/init-log.output.sha256"
+  printf 'ready|false\nlog_read|forbidden\nretained|true\n' > "$run_dir/init-readiness.failure.tsv"
+  chmod 0600 "$run_dir/init-readiness.failure.tsv"
   exit 42
 fi
 docker exec "$container_name" postgres --version > "$run_dir/postgresql-version.tsv"
@@ -972,7 +964,7 @@ chmod 0600 "$run_dir"/*
 
 Expected: PostgreSQL `17.10` is ready only on the container-local socket; the unique bootstrap role is the sole initial superuser session. Raw container logs are never printed, even on failure.
 
-- [ ] **Step 11: Bootstrap only the archive roles and guard the built-in role**
+- [x] **Step 11: Bootstrap only the archive roles and guard the built-in role**
 
 ```bash
 set -euo pipefail
@@ -1027,7 +1019,7 @@ chmod 0600 "$run_dir"/*
 
 Expected: `postgres` is the audited non-superuser replay role, `supabase_admin` has audited superuser attributes, the three API roles match production, `pg_database_owner` was not recreated, the seven allowed built-in/archive memberships exist, no unrelated Supabase service role exists, and every archive role has no usable password.
 
-- [ ] **Step 12: Create the exact replay database/extensions and remove only its empty template public schema**
+- [x] **Step 12: Create the exact replay database/extensions and remove only its empty template public schema**
 
 ```bash
 set -euo pipefail
@@ -1068,7 +1060,7 @@ chmod 0600 "$run_dir"/*
 
 Expected: one isolated database owned by non-superuser `postgres` has UTF8, ICU provider `i`, ICU locale `en-US`, `en_US.UTF-8` collation/type, checksums off, `plpgsql 1.0` in `pg_catalog`, and `pgcrypto 1.3` in `extensions`. Only the verified-empty public schema inside this isolated database is dropped, without `CASCADE`.
 
-- [ ] **Step 13: Stream the full archive as bootstrap superuser with ownership and privileges enabled**
+- [x] **Step 13: Stream the full archive as bootstrap superuser with ownership and privileges enabled**
 
 ```bash
 set -euo pipefail
@@ -1106,7 +1098,7 @@ test "$restore_status" -eq 0
 
 Expected: exact archive bytes stream over stdin, raw output is reduced to SHA-256/status, and restore exits `0` with no ignored errors. The command contains no `--no-owner`, `--no-privileges`, filtered TOC, or production credential and creates no migration copy in `/tmp` or the volume.
 
-- [ ] **Step 14: Apply the one guarded isolated-only public-schema ACL normalization**
+- [x] **Step 14: Apply the one guarded isolated-only public-schema ACL normalization**
 
 ```bash
 set -euo pipefail
@@ -1295,7 +1287,7 @@ test "$(find "$run_dir" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
 
 Expected: aggregate-only archive evidence proves one schema-ACL TOC item, four public-schema grants, and zero PUBLIC/PUBLIC-USAGE grants; production is `7/1`; replay pre-state is `6/0`; and the retained TDD evidence has the exact approved hash/status, seven GREEN fidelity aggregates, and PUBLIC-USAGE `1`. Only isolated non-superuser database owner `postgres` runs one transaction containing the guarded `6/0` precondition, exactly `GRANT USAGE ON SCHEMA public TO PUBLIC`, guarded `7/1` postcondition, and commit. Raw output is reduced to SHA-256/status; persistent isolated post-evidence is `7/1`, production remains byte-identical `7/1`, every new file is `0600`, and any mismatch stops before the grant or before fidelity.
 
-- [ ] **Step 15: Prove every GREEN restore-plus-normalization fidelity gate before fixtures**
+- [x] **Step 15: Prove every GREEN restore-plus-normalization fidelity gate before fixtures**
 
 ```bash
 set -euo pipefail
@@ -1370,7 +1362,7 @@ chmod 0600 "$run_dir"/*
 
 Expected GREEN: the isolated-only normalization status and post-evidence are exact, production ACL evidence is unchanged, core counts are `21/53/96/5/39/14`, default ACL is `6 (3+3)`, schema/table/function ACL is `7/653/46`, effective privileges are `571/588`, `40/56`, `5/8`, the five-line owner distribution is byte-identical, public owner is `pg_database_owner`, and staff/history rows are zero. Any mismatch stops before fixtures.
 
-- [ ] **Step 16: Seal Task 4 evidence while retaining the running isolated container and volume**
+- [x] **Step 16: Seal Task 4 evidence while retaining the running isolated container and volume**
 
 ```bash
 set -euo pipefail
@@ -1392,103 +1384,966 @@ test "$(find "$run_dir" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
 
 Expected: all non-secret Task-4 evidence—including archive normalization counts, retained TDD proof, transaction output/status, persistent `7/1` post-state, and production-preservation files—verifies automatically; every evidence file is `0600`; and the secret/container/volume are retained. The secret itself is deliberately excluded from checksum manifests.
 
-## Task 5: Seed synthetic metadata and replay the exact chain only as isolated `postgres`
+## Task 5: Gate the committed handoff and build the new no-log replay lane
+
+> **Quarantine boundary:** the retained Tasks 1–4 container, volume, databases, secret, and container log are historical evidence only. This task never opens a session in that container and never reads its log. Only selected host-side container/volume metadata may be inspected. All new database work occurs in a new container and a new volume.
 
 **Files:**
-- Verify only: `/opt/thoidai-work/supabase/migrations/*.sql` listed in the sealed sixteen-source manifest
-- Create outside Git: replay, rollback, terminal-state, function-hash, and idempotency evidence in the isolated run directory
-- Stream sources directly from the repository; create no migration copy in `/tmp`, the container, or the volume
-- No production database write
+- Verify only: canonical plan/design, committed execution package, sealed Tasks 1–4 evidence, production and quarantine metadata
+- Create outside Git only after the immutable gate: one root-only v5 execution directory, new secret, new volume, new container, three new databases, safe evidence
+- Modify no repository, production, service, nginx, application, provider/model, CLIProxyAPI, `9router`, retained resource, or history state
 
-- [ ] **Step 1: Seed exactly six synthetic role/permission fixture pairs and nothing else**
+- [ ] **Step 1: Invoke the sealed full immutable gate before creating anything**
 
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
-docker exec -i "$container_name" psql -X -U postgres -d "$replay_db" \
-  --single-transaction -v ON_ERROR_STOP=1 <<'SQL'
-insert into public.roles(id,code,name,level) values
-('71000000-0000-4000-8000-000000000001','tong_bien_tap','Synthetic TBT',4),
-('71000000-0000-4000-8000-000000000002','tbt_read_only','Synthetic Read Only',0),
-('71000000-0000-4000-8000-000000000003','pho_tong_bien_tap','Synthetic Deputy',3),
-('71000000-0000-4000-8000-000000000004','phu_trach_phong_tri_su','Synthetic Manager A',3),
-('71000000-0000-4000-8000-000000000005','phu_trach_phong_phong_vien','Synthetic Manager B',3),
-('71000000-0000-4000-8000-000000000006','phu_trach_phong_bien_tap','Synthetic Manager C',3);
-
-insert into public.role_permissions(
- role_id,can_manage_users,can_manage_permissions,
- can_create_task,can_edit_all_tasks,can_comment
-)
-select id,false,false,true,true,true from public.roles
-where code in (
- 'tong_bien_tap','tbt_read_only','pho_tong_bien_tap',
- 'phu_trach_phong_tri_su','phu_trach_phong_phong_vien',
- 'phu_trach_phong_bien_tap'
-);
-SQL
-docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
-select
- (select count(*) from public.roles),
- (select count(*) from public.role_permissions),
- (select count(*) from public.staff_users),
- (select count(*) from public.tasks),
- (select count(*) from public.audit_logs),
- (select count(*) from supabase_migrations.schema_migrations);" \
-  > "$run_dir/synthetic-fixtures.tsv"
-grep -Fx '6|6|0|0|0|0' "$run_dir/synthetic-fixtures.tsv"
-chmod 0600 "$run_dir/synthetic-fixtures.tsv"
-```
-
-Expected: exactly six synthetic role rows and six matching permission rows exist; staff, task, audit, and migration-history counts remain zero. No staff identifier, identity, email, password, token, or production row is created.
-
-- [ ] **Step 2: Re-assert isolation, source integrity, source risk scan, and replay identity**
+This gate is entirely read-only. A failure stops before an evidence directory, secret, volume, container, or database is created. The small bootstrap below authenticates the package and its single reusable `VERIFY.sh`; that helper then performs the complete approval/package/commit/canonical/unrelated-state validation. The exact same invocation is repeated in Step 6.
 
 ```bash
 set -euo pipefail
 repo=/opt/thoidai-work
+handoff_pointer=/opt/thoidai-reconciliation/HANDOFF.current
+invoke_full_immutable_gate() {
+  local pointer=$1 package payload
+  test -f "$pointer"
+  test ! -L "$pointer"
+  test "$(stat -c '%U|%G|%a' "$pointer")" = 'root|root|600'
+  test "$(awk 'END{print NR+0}' "$pointer")" -eq 1
+  IFS= read -r package < "$pointer"
+  case "$package" in
+    /opt/thoidai-reconciliation/phase0-execution-handoff-*) ;;
+    *) return 41 ;;
+  esac
+  test -d "$package"
+  test ! -L "$package"
+  test "$(stat -c '%U|%G|%a' "$package")" = 'root|root|700'
+  printf 'COMMIT.tsv\nREVIEW.tsv\nSHA256SUMS\nVERIFY.sh\ndesign.md\nplan.md\n' | cmp -s - \
+    <(find "$package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+  for payload in plan.md design.md COMMIT.tsv REVIEW.tsv VERIFY.sh SHA256SUMS; do
+    test -f "$package/$payload"
+    test ! -L "$package/$payload"
+    test "$(stat -c '%U|%G|%a' "$package/$payload")" = 'root|root|600'
+  done
+  test "$(awk 'END{print NR+0}' "$package/SHA256SUMS")" -eq 5
+  awk 'NF!=2 || $1 !~ /^[0-9a-f]{64}$/ {exit 41}' "$package/SHA256SUMS"
+  printf 'plan.md\ndesign.md\nCOMMIT.tsv\nREVIEW.tsv\nVERIFY.sh\n' | cmp -s - <(awk '{print $2}' "$package/SHA256SUMS")
+  (cd "$package" && sha256sum -c SHA256SUMS >/dev/null)
+  bash "$package/VERIFY.sh" "$pointer"
+  printf '%s\n' "$package"
+}
+handoff_package=$(invoke_full_immutable_gate "$handoff_pointer")
+test -n "$handoff_package"
+```
+
+Expected: the one sealed full gate rejects any pointer, package, payload, schema, approval, Git object, canonical byte, or unrelated-worktree ambiguity. `REVIEW.tsv` must have exactly the ten approved keys and no duplicate/conflicting/extra record; `COMMIT.tsv` must have exactly its complete bound schema. HEAD is a non-merge direct child of the authorized predecessor with exactly the two documentation paths; the index and canonical paths are clean against HEAD; reviewed, packaged, canonical, and committed bytes are identical.
+
+- [ ] **Step 2: Record quarantine metadata and safe production/application baselines**
+
+Only after Step 1 passes, create the execution directory. Quarantine inspection selects metadata fields and never inspects environment values, mounts containing secrets, database state, or log content.
+
+```bash
+set -euo pipefail
+umask 077
+repo=/opt/thoidai-work
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
+read -r old_run_dir < "$evidence_root/isolated-run.current"
+IFS='|' read -r old_run_id quarantine_container quarantine_volume old_bootstrap old_bootstrap_db old_database < "$old_run_dir/names.tsv"
+test -n "$quarantine_container"
+test -n "$quarantine_volume"
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+nonce=$(openssl rand -hex 6)
+recovery_dir="/opt/thoidai-reconciliation/phase0-v5-execution-$stamp-$nonce"
+install -d -m 0700 "$recovery_dir"
+printf '%s\n' "$recovery_dir" > "$recovery_dir/self.path"
+chmod 0600 "$recovery_dir/self.path"
+pending_tmp=$(mktemp /opt/thoidai-reconciliation/.phase0-v5-execution.pending.XXXXXX)
+printf '%s\n' "$recovery_dir" > "$pending_tmp"
+chmod 0600 "$pending_tmp"
+mv -T "$pending_tmp" /opt/thoidai-reconciliation/phase0-v5-execution.pending
+docker inspect -f 'container_id|{{.Id}}{{println}}state|{{.State.Status}}{{println}}image_id|{{.Image}}{{println}}network|{{.HostConfig.NetworkMode}}{{println}}log_driver|{{.HostConfig.LogConfig.Type}}{{println}}privileged|{{.HostConfig.Privileged}}{{println}}restart|{{.HostConfig.RestartPolicy.Name}}{{println}}auto_remove|{{.HostConfig.AutoRemove}}' \
+  "$quarantine_container" > "$recovery_dir/quarantine-container.before.tsv"
+docker volume inspect -f 'name|{{.Name}}{{println}}driver|{{.Driver}}{{println}}scope|{{.Scope}}' \
+  "$quarantine_volume" > "$recovery_dir/quarantine-volume.before.tsv"
+printf 'runtime_session|forbidden\nlog_read|forbidden\ncontainer_mutation|false\nvolume_mutation|false\n' \
+  > "$recovery_dir/quarantine-policy.tsv"
 cd "$repo"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
-test "$(wc -l < "$evidence_root/source.sha256")" -eq 16
-grep -Fx 'set_role|0' "$run_dir/source-dependency-scan.tsv"
-grep -Fx 'session_authorization|0' "$run_dir/source-dependency-scan.tsv"
-grep -Fx 'supabase_admin|0' "$run_dir/source-dependency-scan.tsv"
-test "$(docker inspect -f '{{.State.Running}}' "$container_name")" = true
-test "$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$container_name")" = none
-port_bindings_json=$(docker inspect -f '{{json .HostConfig.PortBindings}}' "$container_name")
-[[ "$port_bindings_json" = '{}' || "$port_bindings_json" = null ]]
-test -z "$(docker port "$container_name")"
-test "$(docker inspect -f '{{.HostConfig.Privileged}}' "$container_name")" = false
-test "$(docker inspect -f '{{len .Mounts}}' "$container_name")" -eq 2
-test "$(docker inspect -f '{{.HostConfig.NanoCpus}}' "$container_name")" -eq 1000000000
-test "$(docker inspect -f '{{.HostConfig.Memory}}' "$container_name")" -eq 1073741824
-test "$(docker inspect -f '{{.HostConfig.PidsLimit}}' "$container_name")" -eq 256
-docker exec "$container_name" pg_isready -q -U postgres -d "$replay_db"
-docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c \
-  "select current_user,session_user,usesuper from pg_user where usename=current_user;" \
-  > "$run_dir/replay-session.tsv"
-grep -Fx 'postgres|postgres|f' "$run_dir/replay-session.tsv"
+git rev-parse HEAD > "$recovery_dir/head.before"
+git rev-parse HEAD^{tree} > "$recovery_dir/tree.before"
+git status --porcelain=v1 --untracked-files=all > "$recovery_dir/root-status.before"
+sha256sum "$recovery_dir/root-status.before" | awk '{print $1}' > "$recovery_dir/root-status.before.sha256"
+test "$(git diff --cached --name-only | wc -l)" -eq 0
+systemctl show thoidai-work -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStartTimestampMonotonic --value \
+  > "$recovery_dir/application-systemd.before.tsv"
+systemctl cat thoidai-work | sha256sum | awk '{print $1}' > "$recovery_dir/application-unit.before.sha256"
+main_pid=$(systemctl show thoidai-work -p MainPID --value)
+test "$main_pid" -gt 1
+readlink -f "/proc/$main_pid/exe" | sha256sum | awk '{print $1}' > "$recovery_dir/application-exe-path.before.sha256"
+sha256sum "$(readlink -f "/proc/$main_pid/exe")" | awk '{print $1}' > "$recovery_dir/application-exe.before.sha256"
+sha256sum "$repo/.next/BUILD_ID" | awk '{print $1}' > "$recovery_dir/build-id.before.sha256"
+stat -c '%d|%i|%s|%Y|%F' "$repo/.next" > "$recovery_dir/next-stat.before.tsv"
+ss -H -lntup | awk '{print $1"|"$5"|"$7}' | LC_ALL=C sort | sha256sum | awk '{print $1}' \
+  > "$recovery_dir/socket-topology.before.sha256"
+docker ps --format '{{.Names}}|{{.Image}}' | LC_ALL=C sort | sha256sum | awk '{print $1}' \
+  > "$recovery_dir/docker-topology.before.sha256"
+printf 'provider_model_mutation_authorized|false\nprovider_model_mutation_count|0\nCLIProxyAPI_mutation_authorized|false\nCLIProxyAPI_mutation_count|0\n9router_mutation_authorized|false\n9router_mutation_count|0\nproc_environment_read|false\nprovider_secret_read_or_hash|false\n' \
+  > "$recovery_dir/routing-preservation.before.tsv"
 test "$(systemctl is-active thoidai-work)" = active
 test "$(systemctl is-active nginx)" = active
+nginx -t
+test "$(docker inspect -f '{{.State.Running}}' supabase_db_thoidai-work)" = true
 docker exec supabase_db_thoidai-work pg_isready -q -U postgres -d postgres
-test "$(docker ps --filter health=unhealthy -q | wc -l)" -eq 0
-chmod 0600 "$run_dir/replay-session.tsv"
+curl -sS -o /dev/null --max-time 10 -w '%{http_code}\n' http://127.0.0.1:3001/login > "$recovery_dir/login-http.before.tsv"
+test "$(cat "$recovery_dir/login-http.before.tsv")" = 200
+curl -sS -o /dev/null --max-time 10 -w '%{http_code}\n' http://127.0.0.1:3001/api/auth/session > "$recovery_dir/session-http.before.tsv"
+test "$(cat "$recovery_dir/session-http.before.tsv")" = 401
+docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "begin read only;
+select (select count(*) from supabase_migrations.schema_migrations),
+       (select count(*) from supabase_migrations.schema_migrations where version in
+       ('20260813172000','20260813210000','20260813220000','20260813230000','20260813233000','20260813234500','20260814070000','20260814102000','20260814130000','20260814160000','20260814170000'));
+commit;" > "$recovery_dir/production-history.before.tsv"
+grep -Fx '9|0' "$recovery_dir/production-history.before.tsv"
+docker exec -i supabase_db_thoidai-work psql -X -U postgres -d postgres -qAtF '|' -v ON_ERROR_STOP=1 <<'SQL' \
+  > "$recovery_dir/production-data.before.tsv"
+begin read only;
+select 'ADMIN_POLICY',count(*) filter(where r.code='admin'),
+ count(*) filter(where r.code='admin' and rp.can_manage_users and rp.can_manage_permissions
+   and rp.can_create_task and rp.can_edit_all_tasks and rp.can_comment)
+from public.roles r join public.role_permissions rp on rp.role_id=r.id;
+select 'TBT_POLICY',count(*) filter(where r.code in ('tong_bien_tap','tbt_read_only')),
+ count(*) filter(where r.code in ('tong_bien_tap','tbt_read_only')
+   and not rp.can_manage_users and not rp.can_manage_permissions
+   and not rp.can_create_task and not rp.can_edit_all_tasks and not rp.can_comment)
+from public.roles r join public.role_permissions rp on rp.role_id=r.id;
+select 'JOB_TITLE',count(*),(select count(*) from public.staff_users where job_title_id is not null),
+ (select count(*) from public.staff_users su left join public.job_titles jt on jt.id=su.job_title_id
+   where su.job_title_id is not null and jt.id is null)
+from public.job_titles;
+select 'LIST_ORDER',count(*) filter(where list_order<0),count(*) filter(where list_order>0),
+ count(distinct list_order) filter(where list_order>0),
+ coalesce(min(list_order) filter(where list_order>0),0),coalesce(max(list_order) filter(where list_order>0),0)
+from public.staff_users;
+commit;
+SQL
+test "$(sha256sum "$recovery_dir/production-data.before.tsv" | awk '{print $1}')" = 8a3630780d584b8d75c2ec87ec400d2f6262949e606c08c1465b97b769eaf807
+docker exec -i supabase_db_thoidai-work psql -X -U postgres -d postgres -qAtF '|' -v ON_ERROR_STOP=1 <<'SQL' \
+  > "$recovery_dir/production-functions.before.tsv"
+begin read only;
+select p.proname,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),
+       p.prosecdef,pg_get_userbyid(p.proowner),md5(p.prosrc),coalesce(array_to_string(p.proconfig,','),''),
+       has_function_privilege('anon',p.oid,'EXECUTE'),
+       has_function_privilege('authenticated',p.oid,'EXECUTE'),
+       has_function_privilege('service_role',p.oid,'EXECUTE')
+from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname in (
+ 'validate_task_report_recipient','claim_task_plan','save_task_evaluation_checkpoint',
+ 'ensure_staff_password_hash','consume_password_reset','can_administer_users',
+ 'touch_job_titles_updated_at','guard_staff_job_title_write','create_bulk_task_plan',
+ 'report_task_progress','review_task_completion','prepare_admin_password_reset','finalize_admin_password_reset')
+order by p.proname,pg_get_function_identity_arguments(p.oid);
+commit;
+SQL
+test "$(sha256sum "$recovery_dir/production-functions.before.tsv" | awk '{print $1}')" = eeaf94c0015d930e3abf84f7309030ba5700fe6df8410430cf9bf6f6f0eddc52
+chmod 0600 "$recovery_dir"/*
 ```
 
-Expected: all source hashes remain exact; no source can change role/session authorization or name `supabase_admin`; the only replay role is isolated non-superuser `postgres`; container isolation/resources are unchanged; and production remains healthy and read-only.
+Expected: quarantine policy is explicit; selected metadata, Git, production history `9|0`, service, build, process, HTTP, and topology baselines are sealed. No environment or provider-secret bytes are read or hashed.
 
-- [ ] **Step 3: Stream the sixteen files chronologically, each in one transaction, and hash output/status**
+- [ ] **Step 3: Verify image/headroom, allocate unique names, and create a new secret**
 
 ```bash
 set -euo pipefail
+umask 077
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.pending
+test -d "$recovery_dir"
+test "$(stat -c '%U|%a' "$recovery_dir")" = 'root|700'
+approved_image='postgres@sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d'
+approved_image_id='sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d'
+test "$(docker image inspect -f '{{.Id}}' "$approved_image")" = "$approved_image_id"
+test "$(docker image inspect -f '{{.Os}}|{{.Architecture}}' "$approved_image")" = 'linux|amd64'
+available_kib=$(df -Pk /var/lib/docker | awk 'NR==2{print $4}')
+available_mem_kib=$(awk '/MemAvailable:/{print $2}' /proc/meminfo)
+test "$available_kib" -ge 5242880
+test "$available_mem_kib" -ge 2097152
+nonce=$(openssl rand -hex 6)
+lane_container="thoidai_phase0_v3_$nonce"
+lane_volume="thoidai_phase0_v3_data_$nonce"
+fresh_db="phase0_fresh_$nonce"
+diagnostic_db="phase0_diag_$nonce"
+successor_db="phase0_successor_$nonce"
+for safe_name in "$lane_container" "$lane_volume" "$fresh_db" "$diagnostic_db" "$successor_db"; do
+  [[ "$safe_name" =~ ^[a-z][a-z0-9_]{5,62}$ ]]
+done
+! docker container inspect "$lane_container" >/dev/null 2>&1
+! docker volume inspect "$lane_volume" >/dev/null 2>&1
+secret_file="$recovery_dir/postgres-password.secret"
+test ! -e "$secret_file"
+openssl rand -base64 48 > "$secret_file"
+chown root:root "$secret_file"
+chmod 0600 "$secret_file"
+test -s "$secret_file"
+printf 'container|%s\nvolume|%s\nfresh_template|%s\ndiagnostic|%s\nsuccessor|%s\n' \
+  "$lane_container" "$lane_volume" "$fresh_db" "$diagnostic_db" "$successor_db" \
+  > "$recovery_dir/lane-names.tsv"
+printf 'image_id|%s\nnetwork|none\nports|0\nlog_driver|none\ncpu_nano|1000000000\nmemory|1073741824\nmemory_swap|1073741824\npids|256\nrestart|no\nauto_remove|false\nprivileged|false\n' \
+  "$approved_image_id" > "$recovery_dir/lane-policy.expected.tsv"
+chmod 0600 "$recovery_dir/lane-names.tsv" "$recovery_dir/lane-policy.expected.tsv"
+```
+
+Expected: local pinned image and headroom pass; five noncolliding safe names and a new unread/unhashed secret are created. No image pull occurs.
+
+- [ ] **Step 4: Create and start the new isolated container with logging disabled**
+
+```bash
+set -euo pipefail
+umask 077
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.pending
+test -d "$recovery_dir"
+test "$(stat -c '%U|%a' "$recovery_dir")" = 'root|700'
+lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
+lane_volume=$(awk -F '|' '$1=="volume"{print $2}' "$recovery_dir/lane-names.tsv")
+secret_file="$recovery_dir/postgres-password.secret"
+approved_image='postgres@sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d'
+docker volume create "$lane_volume" >/dev/null
+docker volume inspect -f 'name|{{.Name}}{{println}}driver|{{.Driver}}{{println}}scope|{{.Scope}}' \
+  "$lane_volume" > "$recovery_dir/lane-volume.before.tsv"
+docker create --name "$lane_container" \
+  --network none \
+  --log-driver none \
+  --cpus 1 \
+  --memory 1g \
+  --memory-swap 1g \
+  --pids-limit 256 \
+  --restart no \
+  --mount "type=volume,src=$lane_volume,dst=/var/lib/postgresql/data" \
+  --mount "type=bind,src=$secret_file,dst=/run/secrets/phase0-postgres-password,readonly" \
+  --tmpfs /run/phase0:rw,noexec,nosuid,size=16m,mode=0700 \
+  --env POSTGRES_USER=phase0_bootstrap \
+  --env POSTGRES_DB=postgres \
+  --env POSTGRES_PASSWORD_FILE=/run/secrets/phase0-postgres-password \
+  --env 'POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale-provider=icu --icu-locale=en-US --locale=en_US.UTF-8' \
+  "$approved_image" \
+  -c log_statement=none \
+  -c log_min_error_statement=panic \
+  -c logging_collector=off \
+  -c log_destination=stderr \
+  -c log_error_verbosity=terse >/dev/null
+test "$(docker inspect -f '{{.Image}}' "$lane_container")" = 'sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d'
+test "$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$lane_container")" = none
+test "$(docker inspect -f '{{.HostConfig.LogConfig.Type}}' "$lane_container")" = none
+test "$(docker inspect -f '{{.HostConfig.Privileged}}' "$lane_container")" = false
+test "$(docker inspect -f '{{.HostConfig.NanoCpus}}' "$lane_container")" -eq 1000000000
+test "$(docker inspect -f '{{.HostConfig.Memory}}' "$lane_container")" -eq 1073741824
+test "$(docker inspect -f '{{.HostConfig.MemorySwap}}' "$lane_container")" -eq 1073741824
+test "$(docker inspect -f '{{.HostConfig.PidsLimit}}' "$lane_container")" -eq 256
+test "$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$lane_container")" = no
+test "$(docker inspect -f '{{.HostConfig.AutoRemove}}' "$lane_container")" = false
+test -z "$(docker port "$lane_container")"
+test "$(docker inspect -f '{{len .Mounts}}' "$lane_container")" -eq 2
+test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Type}}|{{.Name}}|{{.RW}}{{end}}{{end}}' "$lane_container")" = "volume|$lane_volume|true"
+test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/run/secrets/phase0-postgres-password"}}{{.Type}}|{{.Source}}|{{.RW}}{{end}}{{end}}' "$lane_container")" = "bind|$secret_file|false"
+test "$(docker inspect -f '{{index .HostConfig.Tmpfs "/run/phase0"}}' "$lane_container")" = 'rw,noexec,nosuid,size=16m,mode=0700'
+test -z "$(docker inspect -f '{{.HostConfig.PidMode}}' "$lane_container")"
+test "$(docker inspect -f '{{.HostConfig.IpcMode}}' "$lane_container")" = private
+test "$(docker inspect -f '{{len .HostConfig.CapAdd}}|{{len .HostConfig.Devices}}' "$lane_container")" = '0|0'
+docker inspect -f 'image_id|{{.Image}}{{println}}network|{{.HostConfig.NetworkMode}}{{println}}ports|{{len .NetworkSettings.Ports}}{{println}}log_driver|{{.HostConfig.LogConfig.Type}}{{println}}cpu_nano|{{.HostConfig.NanoCpus}}{{println}}memory|{{.HostConfig.Memory}}{{println}}memory_swap|{{.HostConfig.MemorySwap}}{{println}}pids|{{.HostConfig.PidsLimit}}{{println}}restart|{{.HostConfig.RestartPolicy.Name}}{{println}}auto_remove|{{.HostConfig.AutoRemove}}{{println}}privileged|{{.HostConfig.Privileged}}' \
+  "$lane_container" > "$recovery_dir/lane-policy.actual.tsv"
+cmp -s "$recovery_dir/lane-policy.expected.tsv" "$recovery_dir/lane-policy.actual.tsv"
+docker start "$lane_container" >/dev/null
+ready=false
+for attempt in $(seq 1 45); do
+  if docker exec "$lane_container" pg_isready -q -U phase0_bootstrap -d postgres; then
+    ready=true
+    break
+  fi
+  sleep 1
+done
+if test "$ready" != true; then
+  printf 'ready|false\nlog_read|forbidden\nretained|true\n' > "$recovery_dir/lane-start.failure.tsv"
+  chmod 0600 "$recovery_dir/lane-start.failure.tsv"
+  exit 42
+fi
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select name,setting from pg_settings where name in
+   ('log_statement','log_min_error_statement','logging_collector','log_destination','log_error_verbosity') order by name;" \
+  > "$recovery_dir/postgres-logging.actual.tsv"
+cat > "$recovery_dir/postgres-logging.expected.tsv" <<'EOF'
+log_destination|stderr
+log_error_verbosity|terse
+log_min_error_statement|panic
+log_statement|none
+logging_collector|off
+EOF
+cmp -s "$recovery_dir/postgres-logging.expected.tsv" "$recovery_dir/postgres-logging.actual.tsv"
+chmod 0600 "$recovery_dir"/*
+```
+
+Expected: the container is running with exact image, network, port, log-driver, resource, privilege, restart, mount, tmpfs, and PostgreSQL logging controls. Readiness failure records only generic status and retains the container without restart or cleanup.
+
+- [ ] **Step 5: Bootstrap roles, restore the fresh template, normalize, and clone two new lanes**
+
+```bash
+set -euo pipefail
+umask 077
 repo=/opt/thoidai-work
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.pending
+test -d "$recovery_dir"
+test "$(stat -c '%U|%a' "$recovery_dir")" = 'root|700'
+lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
+fresh_db=$(awk -F '|' '$1=="fresh_template"{print $2}' "$recovery_dir/lane-names.tsv")
+diagnostic_db=$(awk -F '|' '$1=="diagnostic"{print $2}' "$recovery_dir/lane-names.tsv")
+successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
+archive="$evidence_root/public-history-schema.dump"
+test "$(sha256sum "$archive" | awk '{print $1}')" = 674fa9610e9de26afe3716efe4554db9706247c0930dda3e90fd90ec26bb117b
+cd "$repo"
+sha256sum -c "$evidence_root/source.sha256" >/dev/null
+old_run_dir="$evidence_root/isolated-20260814163047_c35634c9"
+(cd "$old_run_dir" && sha256sum -c TASK4-SHA256SUMS >/dev/null)
+docker exec -i "$lane_container" psql -X -U phase0_bootstrap -d postgres -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+do $guard$
+begin
+  if not exists (select 1 from pg_roles where rolname='pg_database_owner') then raise exception 'built-in database-owner role missing'; end if;
+  if exists (select 1 from pg_roles where rolname in ('postgres','supabase_admin','anon','authenticated','service_role')) then raise exception 'archive role collision'; end if;
+end
+$guard$;
+create role postgres nosuperuser inherit createrole createdb login replication bypassrls password null;
+create role supabase_admin superuser inherit createrole createdb login replication bypassrls password null;
+create role anon nosuperuser inherit nocreaterole nocreatedb nologin noreplication nobypassrls password null;
+create role authenticated nosuperuser inherit nocreaterole nocreatedb nologin noreplication nobypassrls password null;
+create role service_role nosuperuser inherit nocreaterole nocreatedb nologin noreplication bypassrls password null;
+grant anon,authenticated,service_role,pg_create_subscription,pg_monitor,pg_read_all_data,pg_signal_backend to postgres with admin option;
+SQL
+awk -F '|' 'BEGIN{OFS="|"}{print $1,$2,$3,$5,$4,$6,$7,$8,-1,$9}' "$old_run_dir/archive-roles.expected.tsv" > "$recovery_dir/role-manifest.expected.unsorted.tsv"
+cat >> "$recovery_dir/role-manifest.expected.unsorted.tsv" <<'EOF'
+phase0_bootstrap|t|t|t|t|t|t|t|-1|f
+pg_create_subscription|f|t|f|f|f|f|f|-1|t
+pg_monitor|f|t|f|f|f|f|f|-1|t
+pg_read_all_data|f|t|f|f|f|f|f|-1|t
+pg_signal_backend|f|t|f|f|f|f|f|-1|t
+EOF
+LC_ALL=C sort "$recovery_dir/role-manifest.expected.unsorted.tsv" > "$recovery_dir/role-manifest.expected.tsv"
+rm -f "$recovery_dir/role-manifest.expected.unsorted.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select rolname,rolsuper,rolinherit,rolcreatedb,rolcreaterole,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolpassword is null
+from pg_authid where rolname in ('phase0_bootstrap','postgres','supabase_admin','anon','authenticated','service_role','pg_database_owner','pg_create_subscription','pg_monitor','pg_read_all_data','pg_signal_backend') order by rolname;" > "$recovery_dir/role-manifest.actual.tsv"
+cmp -s "$recovery_dir/role-manifest.expected.tsv" "$recovery_dir/role-manifest.actual.tsv"
+cat > "$recovery_dir/role-memberships.expected.tsv" <<'EOF'
+anon|postgres|t|t|t
+authenticated|postgres|t|t|t
+pg_create_subscription|postgres|t|t|t
+pg_monitor|postgres|t|t|t
+pg_read_all_data|postgres|t|t|t
+pg_signal_backend|postgres|t|t|t
+service_role|postgres|t|t|t
+EOF
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select granted_role.rolname,member_role.rolname,m.admin_option,m.inherit_option,m.set_option
+from pg_auth_members m join pg_roles granted_role on granted_role.oid=m.roleid join pg_roles member_role on member_role.oid=m.member
+where member_role.rolname in ('phase0_bootstrap','postgres','supabase_admin','anon','authenticated','service_role') or granted_role.rolname in ('postgres','supabase_admin','anon','authenticated','service_role') order by 1,2,3,4,5;" > "$recovery_dir/role-memberships.actual.tsv"
+cmp -s "$recovery_dir/role-memberships.expected.tsv" "$recovery_dir/role-memberships.actual.tsv"
+install -m 0600 /dev/null "$recovery_dir/role-forbidden.expected.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select rolname from pg_roles where rolname in ('authenticator','supabase_functions_admin','supabase_privileged_role','supabase_realtime_admin') order by rolname;" > "$recovery_dir/role-forbidden.actual.tsv"
+cmp -s "$recovery_dir/role-forbidden.expected.tsv" "$recovery_dir/role-forbidden.actual.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -v ON_ERROR_STOP=1 \
+  -v fresh_db="$fresh_db" -c "create database :\"fresh_db\" with owner postgres template template0 encoding 'UTF8' locale_provider icu icu_locale 'en-US' locale 'en_US.UTF-8';" >/dev/null
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d "$fresh_db" -v ON_ERROR_STOP=1 -c \
+  "create schema extensions authorization postgres;" >/dev/null
+docker exec "$lane_container" psql -X -U postgres -d "$fresh_db" -v ON_ERROR_STOP=1 -c \
+  "create extension pgcrypto with schema extensions;" >/dev/null
+test "$(docker exec "$lane_container" psql -X -U phase0_bootstrap -d "$fresh_db" -qAt -v ON_ERROR_STOP=1 -c \
+  "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public';")" -eq 0
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d "$fresh_db" -v ON_ERROR_STOP=1 -c \
+  "drop schema public;" >/dev/null
+set +e
+docker exec -i "$lane_container" pg_restore -U phase0_bootstrap -d "$fresh_db" --no-comments --exit-on-error --single-transaction \
+  < "$archive" >/dev/null 2>/dev/null
+restore_status=$?
+set -e
+printf 'restore_status|%s\nraw_output_persisted|false\n' "$restore_status" > "$recovery_dir/restore.status.tsv"
+test "$restore_status" -eq 0
+old_run_dir="$evidence_root/isolated-20260814163047_c35634c9"
+grep -Fx 'semantic_public_usage_grants|0' "$old_run_dir/archive-public-schema-acl.counts.tsv"
+grep -Fx 'production|7|1' "$old_run_dir/production-acl-normalization.before.tsv"
+grep -Fx 'production|7|1' "$old_run_dir/production-acl-normalization.after.tsv"
+grep -Fx 'normalization_status|0' "$old_run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'pre_guard|6/0' "$old_run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'post_guard|7/1' "$old_run_dir/isolated-acl-normalization.status.tsv"
+grep -Fx 'isolated_pre|6|0' "$old_run_dir/isolated-acl-normalization.pre.tsv"
+grep -Fx 'isolated_post|7|1' "$old_run_dir/isolated-acl-normalization.post.tsv"
+docker exec "$lane_container" psql -X -U postgres -d "$fresh_db" -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select count(*),count(*) filter(where a.grantee=0 and a.privilege_type='USAGE')
+   from aclexplode(coalesce((select nspacl from pg_namespace where nspname='public'),
+        acldefault('n',(select nspowner from pg_namespace where nspname='public')))) a;" \
+  > "$recovery_dir/public-usage.pre.tsv"
+grep -Fx '6|0' "$recovery_dir/public-usage.pre.tsv"
+docker exec "$lane_container" psql -X -U postgres -d "$fresh_db" -v ON_ERROR_STOP=1 -c \
+  "begin; grant usage on schema public to public; commit;" >/dev/null
+docker exec "$lane_container" psql -X -U postgres -d "$fresh_db" -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select count(*),count(*) filter(where a.grantee=0 and a.privilege_type='USAGE')
+   from aclexplode(coalesce((select nspacl from pg_namespace where nspname='public'),
+        acldefault('n',(select nspowner from pg_namespace where nspname='public')))) a;" \
+  > "$recovery_dir/public-usage.post.tsv"
+grep -Fx '7|1' "$recovery_dir/public-usage.post.tsv"
+capture_lane_fidelity() {
+  local lane_db=$1
+  local prefix=$2
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select 'COLUMN',table_name,column_name,data_type,is_nullable,
+       case when column_default is null then 'no_default' else 'has_default' end,
+       is_generated,md5(coalesce(generation_expression,''))
+from information_schema.columns
+where table_schema='public' and (
+ (table_name='tasks' and column_name in ('plan_period','self_claimable','plan_batch_id'))
+ or (table_name='staff_users' and column_name in ('password','password_hash','job_title_id','list_order','session_version'))
+ or (table_name='task_evaluation_checkpoints' and column_name='total_score'))
+union all
+select 'TABLE',c.relname,'-',c.relkind::text,c.relrowsecurity::text,c.relforcerowsecurity::text,'-',
+       md5((select string_agg(x.column_name||':'||x.data_type,',' order by x.ordinal_position)
+            from information_schema.columns x where x.table_schema='public' and x.table_name=c.relname))
+from pg_class c join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public' and c.relkind='r'
+  and c.relname in ('job_titles','password_reset_tokens','password_reset_attempts')
+order by 1,2,3;" > "$prefix.catalog.tsv"
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select 'INDEX',c.relname,md5(pg_get_indexdef(c.oid))
+from pg_class c join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public' and c.relkind='i' and c.relname in (
+ 'idx_tasks_self_claimable','idx_password_reset_tokens_user_created','idx_password_reset_tokens_expiry',
+ 'idx_password_reset_attempts_fingerprint_created','job_titles_code_lower_uidx','job_titles_name_lower_uidx',
+ 'staff_users_job_title_id_idx','idx_tasks_plan_batch_id','staff_users_list_order_idx')
+union all
+select 'CONSTRAINT',conname,md5(pg_get_constraintdef(oid,true)) from pg_constraint
+where conname in ('tasks_plan_period_check','staff_users_list_order_nonnegative','staff_users_session_version_nonnegative')
+union all
+select 'TRIGGER',trigger_name,md5(string_agg(event_manipulation,',' order by event_manipulation))
+from information_schema.triggers where trigger_schema='public' and trigger_name in (
+ 'validate_task_report_recipient','trg_staff_users_password_hash','job_titles_set_updated_at','staff_users_guard_job_title_write')
+group by trigger_name
+union all
+select 'POLICY',policyname,md5(cmd||':'||coalesce(qual,'')||':'||coalesce(with_check,''))
+from pg_policies where schemaname='public' and policyname in (
+ 'public read job_titles','protect_password_reset_audit_insert','protect_password_reset_audit_update','protect_password_reset_audit_delete')
+order by 1,2;" >> "$prefix.catalog.tsv"
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select p.proname,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),
+       p.prosecdef,pg_get_userbyid(p.proowner),md5(p.prosrc),coalesce(array_to_string(p.proconfig,','),''),
+       has_function_privilege('anon',p.oid,'EXECUTE'),has_function_privilege('authenticated',p.oid,'EXECUTE'),
+       has_function_privilege('service_role',p.oid,'EXECUTE')
+from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname in (
+ 'validate_task_report_recipient','claim_task_plan','save_task_evaluation_checkpoint','ensure_staff_password_hash',
+ 'consume_password_reset','can_administer_users','touch_job_titles_updated_at','guard_staff_job_title_write',
+ 'create_bulk_task_plan','report_task_progress','review_task_completion','prepare_admin_password_reset',
+ 'finalize_admin_password_reset')
+order by p.proname,pg_get_function_identity_arguments(p.oid);" > "$prefix.functions.tsv"
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "select
+ (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r'),
+ (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='i'),
+ (select count(*) from pg_constraint c join pg_namespace n on n.oid=c.connamespace where n.nspname='public'),
+ (select count(*) from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and not t.tgisinternal),
+ (select count(*) from pg_policy p join pg_class c on c.oid=p.polrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public'),
+ (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public');" > "$prefix.core.tsv"
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select kind,schema_name,owner_name,object_count from (
+ select 'SCHEMA'::text kind,n.nspname schema_name,pg_get_userbyid(n.nspowner) owner_name,count(*)::bigint object_count
+ from pg_namespace n where n.nspname='public' group by n.nspname,n.nspowner
+ union all
+ select 'RELATION:'||c.relkind::text,n.nspname,pg_get_userbyid(c.relowner),count(*)::bigint
+ from pg_class c join pg_namespace n on n.oid=c.relnamespace
+ where n.nspname='public' and c.relkind in ('r','i','S') group by c.relkind,n.nspname,c.relowner
+ union all
+ select 'FUNCTION',n.nspname,pg_get_userbyid(p.proowner),count(*)::bigint
+ from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+ where n.nspname='public' group by n.nspname,p.proowner
+) q order by kind,schema_name,owner_name;" > "$prefix.owner.tsv"
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select 'default_acl',count(*),count(*) filter(where r.rolname='postgres'),count(*) filter(where r.rolname='supabase_admin')
+from pg_default_acl d join pg_namespace n on n.oid=d.defaclnamespace join pg_roles r on r.oid=d.defaclrole where n.nspname='public';
+select 'schema_acl',count(*) from pg_namespace n cross join lateral aclexplode(n.nspacl) a where n.nspname='public';
+select 'table_acl',count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace cross join lateral aclexplode(c.relacl) a where n.nspname='public' and c.relkind='r';
+select 'function_acl',count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace cross join lateral aclexplode(p.proacl) a where n.nspname='public';
+with roles(role_name) as (values ('postgres'),('anon'),('authenticated'),('service_role')),
+privs(privilege_name) as (values ('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')),
+tables as (select c.oid from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r')
+select 'table_effective',count(*) filter(where has_table_privilege(role_name,oid,privilege_name)),count(*) from roles cross join privs cross join tables;
+with roles(role_name) as (values ('postgres'),('anon'),('authenticated'),('service_role')),
+funcs as (select p.oid from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public')
+select 'function_effective',count(*) filter(where has_function_privilege(role_name,oid,'EXECUTE')),count(*) from roles cross join funcs;
+with roles(role_name) as (values ('postgres'),('anon'),('authenticated'),('service_role')),
+privs(privilege_name) as (values ('USAGE'),('CREATE'))
+select 'schema_effective',count(*) filter(where has_schema_privilege(role_name,'public',privilege_name)),count(*) from roles cross join privs;" > "$prefix.acl.tsv"
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select extname,extversion,n.nspname from pg_extension e join pg_namespace n on n.oid=e.extnamespace
+where extname in ('plpgsql','pgcrypto') order by extname;" > "$prefix.extensions.tsv"
+  docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -v lane_db="$lane_db" -c "
+select 'database',pg_get_userbyid(d.datdba),pg_encoding_to_char(d.encoding),d.datlocprovider,
+       d.datcollate,d.datctype,d.datlocale,d.datallowconn from pg_database d where d.datname=:'lane_db';" > "$prefix.locale.tsv"
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select 'data_checksums',current_setting('data_checksums');
+select 'server_version_num',current_setting('server_version_num');" >> "$prefix.locale.tsv"
+  docker exec "$lane_container" psql -X -U postgres -d "$lane_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "select
+ (select count(*) from public.roles),(select count(*) from public.role_permissions),
+ (select count(*) from public.departments),(select count(*) from public.staff_users),
+ (select count(*) from public.tasks),(select count(*) from public.audit_logs),
+ (select count(*) from supabase_migrations.schema_migrations);" > "$prefix.zero.tsv"
+  chmod 0600 "$prefix".*.tsv
+}
+fresh_prefix="$recovery_dir/fresh-fidelity"
+capture_lane_fidelity "$fresh_db" "$fresh_prefix"
+test "$(sha256sum "$evidence_root/production-catalog.before.tsv" | awk '{print $1}')" = f51be200ffe272d0a221302eb492ca3b1c7939b30a6e3e96ebef6750982722b5
+test "$(sha256sum "$evidence_root/production-function-body.before.tsv" | awk '{print $1}')" = eeaf94c0015d930e3abf84f7309030ba5700fe6df8410430cf9bf6f6f0eddc52
+test "$(sha256sum "$old_run_dir/production-owner.before.tsv" | awk '{print $1}')" = 47141fee0d6dab9edd6711e5b707f620225b7a36c931a2e1bef1addc7c747d98
+cmp -s "$evidence_root/production-catalog.before.tsv" "$fresh_prefix.catalog.tsv"
+cmp -s "$evidence_root/production-function-body.before.tsv" "$fresh_prefix.functions.tsv"
+cmp -s "$old_run_dir/production-owner.before.tsv" "$fresh_prefix.owner.tsv"
+grep -Fx '21|53|96|5|39|14' "$fresh_prefix.core.tsv"
+grep -Fx 'default_acl|6|3|3' "$fresh_prefix.acl.tsv"
+grep -Fx 'schema_acl|7' "$fresh_prefix.acl.tsv"
+grep -Fx 'table_acl|653' "$fresh_prefix.acl.tsv"
+grep -Fx 'function_acl|46' "$fresh_prefix.acl.tsv"
+grep -Fx 'table_effective|571|588' "$fresh_prefix.acl.tsv"
+grep -Fx 'function_effective|40|56' "$fresh_prefix.acl.tsv"
+grep -Fx 'schema_effective|5|8' "$fresh_prefix.acl.tsv"
+grep -Fx 'pgcrypto|1.3|extensions' "$fresh_prefix.extensions.tsv"
+grep -Fx 'plpgsql|1.0|pg_catalog' "$fresh_prefix.extensions.tsv"
+grep -Fx 'database|postgres|UTF8|i|en_US.UTF-8|en_US.UTF-8|en-US|t' "$fresh_prefix.locale.tsv"
+grep -Fx 'data_checksums|off' "$fresh_prefix.locale.tsv"
+grep -Fx 'server_version_num|170010' "$fresh_prefix.locale.tsv"
+grep -Fx '0|0|0|0|0|0|0' "$fresh_prefix.zero.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -v ON_ERROR_STOP=1 \
+  -v fresh_db="$fresh_db" -v diagnostic_db="$diagnostic_db" -v successor_db="$successor_db" -c \
+  "select 1/ case when (select count(*) from pg_stat_activity where datname=:'fresh_db')=0 then 1 else 0 end;
+   create database :\"diagnostic_db\" with owner postgres template :\"fresh_db\";
+   create database :\"successor_db\" with owner postgres template :\"fresh_db\";
+   alter database :\"fresh_db\" allow_connections false;" >/dev/null
+for lane_name in diagnostic successor; do
+  if test "$lane_name" = diagnostic; then lane_db=$diagnostic_db; else lane_db=$successor_db; fi
+  lane_prefix="$recovery_dir/$lane_name-fidelity"
+  capture_lane_fidelity "$lane_db" "$lane_prefix"
+  for surface in catalog functions core owner acl extensions locale zero; do
+    cmp -s "$fresh_prefix.$surface.tsv" "$lane_prefix.$surface.tsv"
+  done
+done
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 \
+  -v fresh_db="$fresh_db" -v diagnostic_db="$diagnostic_db" -v successor_db="$successor_db" -c "
+with requested(lane,datname,expected_connections) as (values
+ ('diagnostic',:'diagnostic_db',true),('successor',:'successor_db',true),('template',:'fresh_db',false))
+select requested.lane,count(d.*),coalesce(min(pg_get_userbyid(d.datdba)),''),
+       coalesce(bool_and(d.datallowconn=requested.expected_connections),false)
+from requested left join pg_database d using(datname) group by requested.lane order by requested.lane;" \
+  > "$recovery_dir/fresh-fidelity.database-lanes.tsv"
+grep -Fx 'diagnostic|1|postgres|t' "$recovery_dir/fresh-fidelity.database-lanes.tsv"
+grep -Fx 'successor|1|postgres|t' "$recovery_dir/fresh-fidelity.database-lanes.tsv"
+grep -Fx 'template|1|postgres|t' "$recovery_dir/fresh-fidelity.database-lanes.tsv"
+cat > "$recovery_dir/replay-owner.expected.tsv" <<'EOF'
+diagnostic|postgres|f
+fresh|postgres|f
+successor|postgres|f
+EOF
+role_gate="$recovery_dir/verify-role-manifest"
+cat > "$role_gate" <<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+lane_container=$1; recovery_dir=$2; fresh_db=$3; diagnostic_db=$4; successor_db=$5
+(cd / && sha256sum -c "$recovery_dir/ROLE-EXPECTED-SHA256SUMS" >/dev/null)
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select rolname,rolsuper,rolinherit,rolcreatedb,rolcreaterole,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolpassword is null
+from pg_authid where rolname in ('phase0_bootstrap','postgres','supabase_admin','anon','authenticated','service_role','pg_database_owner','pg_create_subscription','pg_monitor','pg_read_all_data','pg_signal_backend') order by rolname;" | cmp -s - "$recovery_dir/role-manifest.expected.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "
+select granted_role.rolname,member_role.rolname,m.admin_option,m.inherit_option,m.set_option
+from pg_auth_members m join pg_roles granted_role on granted_role.oid=m.roleid join pg_roles member_role on member_role.oid=m.member
+where member_role.rolname in ('phase0_bootstrap','postgres','supabase_admin','anon','authenticated','service_role') or granted_role.rolname in ('postgres','supabase_admin','anon','authenticated','service_role') order by 1,2,3,4,5;" | cmp -s - "$recovery_dir/role-memberships.expected.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "select rolname from pg_roles where rolname in ('authenticator','supabase_functions_admin','supabase_privileged_role','supabase_realtime_admin') order by rolname;" | cmp -s - "$recovery_dir/role-forbidden.expected.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -v fresh_db="$fresh_db" -v diagnostic_db="$diagnostic_db" -v successor_db="$successor_db" -c "
+with requested(lane,datname) as (values ('diagnostic',:'diagnostic_db'),('fresh',:'fresh_db'),('successor',:'successor_db')) select requested.lane,r.rolname,r.rolsuper from requested join pg_database d using(datname) join pg_authid r on r.oid=d.datdba order by requested.lane;" | cmp -s - "$recovery_dir/replay-owner.expected.tsv"
+BASH
+chmod 0600 "$role_gate"
+sha256sum "$recovery_dir/role-manifest.expected.tsv" "$recovery_dir/role-memberships.expected.tsv" "$recovery_dir/role-forbidden.expected.tsv" "$recovery_dir/replay-owner.expected.tsv" "$role_gate" > "$recovery_dir/ROLE-EXPECTED-SHA256SUMS"
+chmod 0600 "$recovery_dir/ROLE-EXPECTED-SHA256SUMS"
+bash "$role_gate" "$lane_container" "$recovery_dir" "$fresh_db" "$diagnostic_db" "$successor_db"
+printf 'roles|PASS\nattributes|exact\nmemberships|exact\nforbidden_roles|zero\nreplay_owner|postgres-nonsuperuser\n' > "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+sha256sum "$recovery_dir/role-manifest.expected.tsv" "$recovery_dir/role-manifest.actual.tsv" "$recovery_dir/role-memberships.expected.tsv" "$recovery_dir/role-memberships.actual.tsv" "$recovery_dir/role-forbidden.expected.tsv" "$recovery_dir/role-forbidden.actual.tsv" "$recovery_dir/replay-owner.expected.tsv" "$role_gate" "$recovery_dir/ROLE-EXPECTED-SHA256SUMS" "$recovery_dir/ROLE-MANIFEST.COMPLETE" > "$recovery_dir/ROLE-SHA256SUMS"
+(cd / && sha256sum -c "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
+printf 'fidelity|PASS\nroles|exact\ncore_objects|exact\nowners|exact\ndefault_acl|exact\nexplicit_acl|exact\neffective_privileges|exact\nfunctions_grants|13-exact\nextensions|exact\nlocale_settings|exact\nclone_count|2\n' \
+  > "$recovery_dir/FIDELITY.COMPLETE"
+find "$recovery_dir" -maxdepth 1 -type f \( -name '*-fidelity.*.tsv' -o -name 'FIDELITY.COMPLETE' \) -print0 \
+  | LC_ALL=C sort -z | xargs -0 sha256sum > "$recovery_dir/FIDELITY-SHA256SUMS"
+(cd / && sha256sum -c "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
+chmod 0600 "$recovery_dir"/*
+```
+
+Expected: the sealed Task-4 archive-role expectation is extended into an exact eleven-role executable manifest covering bootstrap, archive, replay-owner, and membership-support roles. Every row includes superuser, inherit, database/role creation, login, replication, bypass-RLS, connection-limit, and password-null attributes; the seven allowed memberships and exact empty forbidden-role set compare byte-for-byte. Restore is zero with no raw-output evidence, and the sole normalization is guarded. Fresh-template catalog, core-object, owner, ACL/effective-privilege, thirteen-function/grant, extension, locale/settings, and zero-row evidence matches sealed production/Task-4 expectations; both clones reproduce it. Fresh, diagnostic, and successor are owned by exact non-superuser `postgres`. `ROLE-MANIFEST.COMPLETE`, `FIDELITY.COMPLETE`, and their manifests exist only after all comparisons pass; any mismatch stops before seal. The retained cluster is not queried.
+
+- [ ] **Step 6: Seal Task 5 and publish only the new execution pointer**
+
+The completion marker is the last evidence payload created. It is unreachable until the executable fidelity manifest, immutable package, all new-lane controls, and both quarantine metadata files reverify.
+
+```bash
+set -euo pipefail
+umask 077
+evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
+repo=/opt/thoidai-work
+plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
+design_rel=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.pending
+test -d "$recovery_dir"
+test "$(stat -c '%U|%a' "$recovery_dir")" = 'root|700'
+lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
+lane_volume=$(awk -F '|' '$1=="volume"{print $2}' "$recovery_dir/lane-names.tsv")
+fresh_db=$(awk -F '|' '$1=="fresh_template"{print $2}' "$recovery_dir/lane-names.tsv")
+diagnostic_db=$(awk -F '|' '$1=="diagnostic"{print $2}' "$recovery_dir/lane-names.tsv")
+successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
+secret_file="$recovery_dir/postgres-password.secret"
+(cd / && sha256sum -c "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
+grep -Fx 'fidelity|PASS' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'roles|exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'core_objects|exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'owners|exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'default_acl|exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'explicit_acl|exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'effective_privileges|exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'functions_grants|13-exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'extensions|exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'locale_settings|exact' "$recovery_dir/FIDELITY.COMPLETE"
+grep -Fx 'clone_count|2' "$recovery_dir/FIDELITY.COMPLETE"
+test "$(docker image inspect -f '{{.Id}}|{{.Os}}|{{.Architecture}}' postgres@sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d)" = 'sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d|linux|amd64'
+test "$(docker inspect -f '{{.State.Running}}' "$lane_container")" = true
+test "$(docker inspect -f '{{.Image}}' "$lane_container")" = 'sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d'
+test "$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$lane_container")" = none
+port_bindings=$(docker inspect -f '{{json .HostConfig.PortBindings}}' "$lane_container")
+[[ "$port_bindings" = '{}' || "$port_bindings" = null ]]
+test -z "$(docker port "$lane_container")"
+test "$(docker inspect -f '{{.HostConfig.LogConfig.Type}}' "$lane_container")" = none
+test "$(docker inspect -f '{{.HostConfig.NanoCpus}}|{{.HostConfig.Memory}}|{{.HostConfig.MemorySwap}}|{{.HostConfig.PidsLimit}}' "$lane_container")" = '1000000000|1073741824|1073741824|256'
+test "$(docker inspect -f '{{.HostConfig.Privileged}}|{{.HostConfig.RestartPolicy.Name}}|{{.HostConfig.AutoRemove}}' "$lane_container")" = 'false|no|false'
+test -z "$(docker inspect -f '{{.HostConfig.PidMode}}' "$lane_container")"
+test "$(docker inspect -f '{{.HostConfig.IpcMode}}' "$lane_container")" = private
+test "$(docker inspect -f '{{len .HostConfig.CapAdd}}|{{len .HostConfig.Devices}}' "$lane_container")" = '0|0'
+test "$(docker inspect -f '{{len .Mounts}}' "$lane_container")" -eq 2
+test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Type}}|{{.Name}}|{{.RW}}{{end}}{{end}}' "$lane_container")" = "volume|$lane_volume|true"
+test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/run/secrets/phase0-postgres-password"}}{{.Type}}|{{.Source}}|{{.RW}}{{end}}{{end}}' "$lane_container")" = "bind|$secret_file|false"
+test "$(docker inspect -f '{{index .HostConfig.Tmpfs "/run/phase0"}}' "$lane_container")" = 'rw,noexec,nosuid,size=16m,mode=0700'
+test -f "$secret_file"
+test ! -L "$secret_file"
+test "$(stat -c '%U|%G|%a' "$secret_file")" = 'root|root|600'
+docker volume inspect -f 'name|{{.Name}}{{println}}driver|{{.Driver}}{{println}}scope|{{.Scope}}' \
+  "$lane_volume" > "$recovery_dir/lane-volume.after-task5.tsv"
+cmp -s "$recovery_dir/lane-volume.before.tsv" "$recovery_dir/lane-volume.after-task5.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select name,setting from pg_settings where name in
+   ('log_statement','log_min_error_statement','logging_collector','log_destination','log_error_verbosity') order by name;" \
+  > "$recovery_dir/postgres-logging.after-task5.tsv"
+cmp -s "$recovery_dir/postgres-logging.expected.tsv" "$recovery_dir/postgres-logging.after-task5.tsv"
+sha256sum -c "$evidence_root/source.sha256" >/dev/null
+read -r old_run_dir < "$evidence_root/isolated-run.current"
+IFS='|' read -r old_run_id quarantine_container quarantine_volume old_bootstrap old_bootstrap_db old_database < "$old_run_dir/names.tsv"
+docker inspect -f 'container_id|{{.Id}}{{println}}state|{{.State.Status}}{{println}}image_id|{{.Image}}{{println}}network|{{.HostConfig.NetworkMode}}{{println}}log_driver|{{.HostConfig.LogConfig.Type}}{{println}}privileged|{{.HostConfig.Privileged}}{{println}}restart|{{.HostConfig.RestartPolicy.Name}}{{println}}auto_remove|{{.HostConfig.AutoRemove}}' \
+  "$quarantine_container" > "$recovery_dir/quarantine-container.after-task5.tsv"
+cmp -s "$recovery_dir/quarantine-container.before.tsv" "$recovery_dir/quarantine-container.after-task5.tsv"
+docker volume inspect -f 'name|{{.Name}}{{println}}driver|{{.Driver}}{{println}}scope|{{.Scope}}' \
+  "$quarantine_volume" > "$recovery_dir/quarantine-volume.after-task5.tsv"
+cmp -s "$recovery_dir/quarantine-volume.before.tsv" "$recovery_dir/quarantine-volume.after-task5.tsv"
+(cd / && sha256sum -c "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
+role_gate="$recovery_dir/verify-role-manifest"
+bash "$role_gate" "$lane_container" "$recovery_dir" "$fresh_db" "$diagnostic_db" "$successor_db"
+grep -Fx 'roles|PASS' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+grep -Fx 'attributes|exact' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+grep -Fx 'memberships|exact' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+grep -Fx 'forbidden_roles|zero' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+grep -Fx 'replay_owner|postgres-nonsuperuser' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+handoff_pointer=/opt/thoidai-reconciliation/HANDOFF.current
+invoke_full_immutable_gate() {
+  local pointer=$1 package payload
+  test -f "$pointer"; test ! -L "$pointer"; test "$(stat -c '%U|%G|%a' "$pointer")" = 'root|root|600'; test "$(awk 'END{print NR+0}' "$pointer")" -eq 1
+  IFS= read -r package < "$pointer"; case "$package" in /opt/thoidai-reconciliation/phase0-execution-handoff-*) ;; *) return 41 ;; esac
+  test -d "$package"; test ! -L "$package"; test "$(stat -c '%U|%G|%a' "$package")" = 'root|root|700'
+  printf 'COMMIT.tsv\nREVIEW.tsv\nSHA256SUMS\nVERIFY.sh\ndesign.md\nplan.md\n' | cmp -s - <(find "$package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+  for payload in plan.md design.md COMMIT.tsv REVIEW.tsv VERIFY.sh SHA256SUMS; do test -f "$package/$payload"; test ! -L "$package/$payload"; test "$(stat -c '%U|%G|%a' "$package/$payload")" = 'root|root|600'; done
+  test "$(awk 'END{print NR+0}' "$package/SHA256SUMS")" -eq 5; awk 'NF!=2 || $1 !~ /^[0-9a-f]{64}$/ {exit 41}' "$package/SHA256SUMS"
+  printf 'plan.md\ndesign.md\nCOMMIT.tsv\nREVIEW.tsv\nVERIFY.sh\n' | cmp -s - <(awk '{print $2}' "$package/SHA256SUMS")
+  (cd "$package" && sha256sum -c SHA256SUMS >/dev/null); bash "$package/VERIFY.sh" "$pointer"; printf '%s\n' "$package"
+}
+handoff_package=$(invoke_full_immutable_gate "$handoff_pointer")
+test -n "$handoff_package"
+printf 'phase|task5\nstatus|complete\nquarantine_runtime_session|false\nquarantine_log_read|false\nproduction_mutation|false\nhistory_write|false\nnew_lane_retained|true\n' \
+  > "$recovery_dir/TASK5.COMPLETE"
+find "$recovery_dir" -maxdepth 1 -type f ! -name 'postgres-password.secret' ! -name 'TASK5-SHA256SUMS' -print0 \
+  | LC_ALL=C sort -z | xargs -0 sha256sum > "$recovery_dir/TASK5-SHA256SUMS"
+chmod 0600 "$recovery_dir/TASK5.COMPLETE" "$recovery_dir/TASK5-SHA256SUMS"
+(cd / && sha256sum -c "$recovery_dir/TASK5-SHA256SUMS" >/dev/null)
+pointer_tmp=$(mktemp /opt/thoidai-reconciliation/.phase0-v5-execution.current.XXXXXX)
+printf '%s\n' "$recovery_dir" > "$pointer_tmp"
+chmod 0600 "$pointer_tmp"
+mv -T "$pointer_tmp" /opt/thoidai-reconciliation/phase0-v5-execution.current
+```
+
+Expected: the one sealed full helper repeats the complete package/approval/commit/canonical/unrelated gate immediately before completion. The role helper re-queries exact attributes, memberships, forbidden-role absence, and three non-superuser `postgres` owners. Fidelity, image/platform, network/ports, logging, resources, privilege/namespaces/caps/devices, mounts/tmpfs, secret metadata, volume identity, and both quarantine metadata files remain exact. Only then is `TASK5.COMPLETE` created and the new execution pointer published. The secret and every container log remain outside all hashes; all resources remain retained.
+
+## Task 6: Seed the successor and replay the two new isolated lanes
+
+> **Lane boundary:** `diagnostic_db` is the new identity-free clone. `successor_db` alone receives synthetic fixtures. The retained Tasks 1–4 database is not a lane and is never queried.
+
+**Files:**
+- Verify: Task-5 seal, package, source manifest, new container policy
+- Create outside Git: aggregate fixture, sanitized SQLSTATE, rollback, replay, terminal, idempotency, and Task-6 evidence
+- Modify only the two bounded databases in the new container; no production or retained-resource mutation
+
+- [ ] **Step 1: Verify the Task-5 seal and seed the successor through fd 0 binding**
+
+The source parser must observe exactly two approved syntax occurrences resolving to one unique value without printing it. The source stays on fd 0; safe psql commands use fd 3. The value is bound, never interpolated.
+
+```bash
+set -euo pipefail
+set +x
+umask 077
+repo=/opt/thoidai-work
+evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+(cd / && sha256sum -c "$recovery_dir/TASK5-SHA256SUMS" >/dev/null)
+grep -Fx 'status|complete' "$recovery_dir/TASK5.COMPLETE"
+lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
+lane_volume=$(awk -F '|' '$1=="volume"{print $2}' "$recovery_dir/lane-names.tsv")
+fresh_db=$(awk -F '|' '$1=="fresh_template"{print $2}' "$recovery_dir/lane-names.tsv")
+diagnostic_db=$(awk -F '|' '$1=="diagnostic"{print $2}' "$recovery_dir/lane-names.tsv")
+successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
+secret_file="$recovery_dir/postgres-password.secret"
+(cd / && sha256sum -c "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
+grep -Fx 'fidelity|PASS' "$recovery_dir/FIDELITY.COMPLETE"
+test "$(docker image inspect -f '{{.Id}}|{{.Os}}|{{.Architecture}}' postgres@sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d)" = 'sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d|linux|amd64'
+test "$(docker inspect -f '{{.State.Running}}|{{.Image}}|{{.HostConfig.NetworkMode}}|{{.HostConfig.LogConfig.Type}}' "$lane_container")" = 'true|sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d|none|none'
+port_bindings=$(docker inspect -f '{{json .HostConfig.PortBindings}}' "$lane_container")
+[[ "$port_bindings" = '{}' || "$port_bindings" = null ]]
+test -z "$(docker port "$lane_container")"
+test "$(docker inspect -f '{{.HostConfig.NanoCpus}}|{{.HostConfig.Memory}}|{{.HostConfig.MemorySwap}}|{{.HostConfig.PidsLimit}}' "$lane_container")" = '1000000000|1073741824|1073741824|256'
+test "$(docker inspect -f '{{.HostConfig.Privileged}}|{{.HostConfig.RestartPolicy.Name}}|{{.HostConfig.AutoRemove}}' "$lane_container")" = 'false|no|false'
+test -z "$(docker inspect -f '{{.HostConfig.PidMode}}' "$lane_container")"
+test "$(docker inspect -f '{{.HostConfig.IpcMode}}' "$lane_container")" = private
+test "$(docker inspect -f '{{len .HostConfig.CapAdd}}|{{len .HostConfig.Devices}}' "$lane_container")" = '0|0'
+test "$(docker inspect -f '{{len .Mounts}}' "$lane_container")" -eq 2
+test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Type}}|{{.Name}}|{{.RW}}{{end}}{{end}}' "$lane_container")" = "volume|$lane_volume|true"
+test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/run/secrets/phase0-postgres-password"}}{{.Type}}|{{.Source}}|{{.RW}}{{end}}{{end}}' "$lane_container")" = "bind|$secret_file|false"
+test "$(docker inspect -f '{{index .HostConfig.Tmpfs "/run/phase0"}}' "$lane_container")" = 'rw,noexec,nosuid,size=16m,mode=0700'
+test "$(stat -c '%U|%G|%a' "$secret_file")" = 'root|root|600'
+docker volume inspect -f 'name|{{.Name}}{{println}}driver|{{.Driver}}{{println}}scope|{{.Scope}}' "$lane_volume" \
+  > "$recovery_dir/lane-volume.before-task6.tsv"
+cmp -s "$recovery_dir/lane-volume.after-task5.tsv" "$recovery_dir/lane-volume.before-task6.tsv"
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select name,setting from pg_settings where name in
+   ('log_statement','log_min_error_statement','logging_collector','log_destination','log_error_verbosity') order by name;" \
+  > "$recovery_dir/postgres-logging.before-task6.tsv"
+cmp -s "$recovery_dir/postgres-logging.expected.tsv" "$recovery_dir/postgres-logging.before-task6.tsv"
+(cd / && sha256sum -c "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
+role_gate="$recovery_dir/verify-role-manifest"
+bash "$role_gate" "$lane_container" "$recovery_dir" "$fresh_db" "$diagnostic_db" "$successor_db"
+grep -Fx 'roles|PASS' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+grep -Fx 'attributes|exact' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+grep -Fx 'memberships|exact' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+grep -Fx 'forbidden_roles|zero' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+grep -Fx 'replay_owner|postgres-nonsuperuser' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
+cd "$repo"
+sha256sum -c "$evidence_root/source.sha256" >/dev/null
+protected_source="$repo/supabase/migrations/20260813210000_password_reset_security.sql"
+test "$(sha256sum "$protected_source" | awk '{print $1}')" = a87f815d5494eb733f525917053f1668875aa9d0c03b38c326387a9312a58212
+test "$(grep -Ec 'lower[[:space:]]*\([[:space:]]*username[[:space:]]*\)[[:space:]]*=' "$protected_source")" -eq 2
+! LC_ALL=C grep -q $'\x1e\|\x1f' "$protected_source"
+source_gate="$recovery_dir/verify-source-gate"
+test ! -e "$source_gate"
+cat > "$source_gate" <<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+source_file=$1
+repo=/opt/thoidai-work
+manifest=/opt/thoidai-reconciliation/phase0-20260814T135943Z/source.sha256
+protected_source="$repo/supabase/migrations/20260813210000_password_reset_security.sql"
+case "$source_file" in "$repo"/supabase/migrations/*.sql) ;; *) exit 41 ;; esac
+manifest_rel=${source_file#${repo}/}
+test "$(awk -v file="$manifest_rel" '$2==file{n++} END{print n+0}' "$manifest")" -eq 1
+expected_sha=$(awk -v file="$manifest_rel" '$2==file{print $1}' "$manifest")
+[[ "$expected_sha" =~ ^[0-9a-f]{64}$ ]]
+test "$(sha256sum "$source_file" | awk '{print $1}')" = "$expected_sha"
+! grep -Eqi '(^|;)[[:space:]]*(set[[:space:]]+role|set[[:space:]]+session[[:space:]]+authorization|\\connect)([[:space:];]|$)' "$source_file"
+! grep -Eqi 'supabase_admin' "$source_file"
+python3 - "$protected_source" "$source_file" <<'PY'
+from pathlib import Path
+import re
+import sys
+protected_path = Path(sys.argv[1]).resolve()
+stream_path = Path(sys.argv[2]).resolve()
+source = protected_path.read_text(encoding="utf-8", errors="strict")
+stream = stream_path.read_text(encoding="utf-8", errors="strict")
+matches = re.findall(r"lower\s*\(\s*username\s*\)\s*=\s*'([^']{1,128})'", source, flags=re.I)
+if len(matches) != 2 or len(set(matches)) != 1:
+    raise SystemExit(41)
+candidate = matches[0]
+if len(candidate) > 128 or len(candidate.encode("utf-8")) != len(candidate) or not re.fullmatch(r"[a-z0-9._@+-]+", candidate):
+    raise SystemExit(41)
+if source.count(candidate) != 3:
+    raise SystemExit(41)
+expected_stream_count = 3 if stream_path == protected_path else 0
+if stream.count(candidate) != expected_stream_count:
+    raise SystemExit(41)
+PY
+BASH
+chmod 0600 "$source_gate"
+sha256sum "$source_gate" > "$recovery_dir/verify-source-gate.sha256"
+read -r -d '' client_script <<'PSQL' || true
+\set ECHO none
+\set QUIET on
+\set VERBOSITY sqlstate
+\o /dev/null
+begin;
+set local client_min_messages=error;
+create temp table selector_source(ordinal bigint generated always as identity,line text not null) on commit drop;
+\copy selector_source(line) from pstdin with (format csv, delimiter E'\x1f', quote E'\x1e', escape E'\x1e')
+create temp table parsed_selector on commit drop as
+with hits as (
+  select m[1] selector from selector_source s
+  cross join lateral regexp_matches(s.line,$rx$lower[[:space:]]*\([[:space:]]*username[[:space:]]*\)[[:space:]]*=[[:space:]]*'([^']{1,128})'$rx$,'g') m
+)
+select selector from hits;
+do $guard$
+declare occurrence_count integer; unique_count integer; broad_shape_count integer; candidate text;
+begin
+  select count(*),count(distinct selector),min(selector) into occurrence_count,unique_count,candidate from parsed_selector;
+  select count(*) into broad_shape_count from selector_source where line ~ $rx$lower[[:space:]]*\([[:space:]]*username[[:space:]]*\)$rx$;
+  if occurrence_count<>2 or unique_count<>1 or broad_shape_count<>2 then raise exception using errcode='P0001',message='rejected'; end if;
+  if candidate is null or length(candidate)>128 or octet_length(candidate)<>length(candidate)
+     or candidate ~ '[[:cntrl:]]' or candidate !~ '^[a-z0-9._@+-]+$' collate "C" then
+    raise exception using errcode='P0001',message='rejected';
+  end if;
+  if (select count(*) from public.roles)<>0 or (select count(*) from public.role_permissions)<>0
+     or (select count(*) from public.departments)<>0 or (select count(*) from public.staff_users)<>0
+     or (select count(*) from supabase_migrations.schema_migrations)<>0 then
+    raise exception using errcode='P0001',message='rejected';
+  end if;
+end
+$guard$;
+insert into public.roles(id,code,name,level) values
+(gen_random_uuid(),'tong_bien_tap','Phase 0 synthetic TBT',4),
+(gen_random_uuid(),'tbt_read_only','Phase 0 synthetic read only',0),
+(gen_random_uuid(),'pho_tong_bien_tap','Phase 0 synthetic deputy',3),
+(gen_random_uuid(),'phu_trach_phong_tri_su','Phase 0 synthetic manager A',3),
+(gen_random_uuid(),'phu_trach_phong_phong_vien','Phase 0 synthetic manager B',3),
+(gen_random_uuid(),'phu_trach_phong_bien_tap','Phase 0 synthetic manager C',3);
+insert into public.role_permissions(role_id,can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment)
+select id,false,false,true,true,true from public.roles;
+insert into public.departments(id,code,name,active)
+values(gen_random_uuid(),'phase0_fixture_department','Phase 0 synthetic department',true);
+select min(selector) as protected_selector from parsed_selector
+\gset
+insert into public.staff_users(id,full_name,username,role_id,department_id)
+select gen_random_uuid(),'Phase 0 synthetic protected shell',$1,r.id,d.id
+from public.roles r cross join public.departments d
+where r.code='tbt_read_only' and d.code='phase0_fixture_department'
+\bind :protected_selector
+\g
+select 1 / case when (select count(*) from public.staff_users where lower(username)=lower($1))=1 then 1 else 0 end
+\bind :protected_selector
+\g
+\unset protected_selector
+truncate parsed_selector,selector_source;
+commit;
+PSQL
+(cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
+bash "$source_gate" "$protected_source"
+set +e
+docker exec -i "$lane_container" bash -c \
+  'set +x; exec 3<<<"$1"; exec psql -X -U postgres -d "$2" -v ON_ERROR_STOP=1 -f /dev/fd/3 >/dev/null 2>/dev/null' \
+  phase0-selector-client "$client_script" "$successor_db" < "$protected_source"
+fixture_status=$?
+set -e
+unset client_script
+printf 'status|%s\noccurrence_count|2\nunique_value_count|1\nsource_fd|0\nbinding|true\nselector_emitted|false\nraw_error_emitted|false\n' \
+  "$fixture_status" > "$recovery_dir/selector-fixture.status.tsv"
+test "$fixture_status" -eq 0
+docker exec "$lane_container" psql -X -U postgres -d "$successor_db" -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select (select count(*) from public.roles),(select count(*) from public.role_permissions),
+   (select count(*) from public.departments),(select count(*) from public.staff_users),
+   (select count(*) from public.staff_users where email is not null or phone is not null or password is not null or job_title_id is not null),
+   (select count(*) from public.tasks),(select count(*) from public.audit_logs),
+   (select count(*) from supabase_migrations.schema_migrations);" > "$recovery_dir/successor-fixture.aggregate.tsv"
+grep -Fx '6|6|1|1|0|0|0|0' "$recovery_dir/successor-fixture.aggregate.tsv"
+docker exec "$lane_container" psql -X -U postgres -d "$diagnostic_db" -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select (select count(*) from public.roles),(select count(*) from public.role_permissions),
+   (select count(*) from public.departments),(select count(*) from public.staff_users),
+   (select count(*) from supabase_migrations.schema_migrations);" > "$recovery_dir/diagnostic.aggregate.tsv"
+grep -Fx '0|0|0|0|0' "$recovery_dir/diagnostic.aggregate.tsv"
+chmod 0600 "$recovery_dir"/*
+```
+
+Expected: the sealed role manifest re-queries exact role attributes, memberships, forbidden-role absence, and non-superuser `postgres` ownership immediately before replay. Parser shape is `2/1`, successor aggregate is `6/6/1/1`, diagnostic remains empty, and no selector or raw error enters an argument value containing the selector, environment, file, terminal, evidence, hash input, or retained log.
+
+- [ ] **Step 2: Require exact `P0001` and byte-identical rollback in the diagnostic clone**
+
+The sanitizer runs inside bounded tmpfs. It accepts one exact SQLSTATE-form line and emits only `sqlstate|P0001`; it never stores or forwards raw stderr.
+
+```bash
+set -euo pipefail
+set +x
+umask 077
+repo=/opt/thoidai-work
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
+diagnostic_db=$(awk -F '|' '$1=="diagnostic"{print $2}' "$recovery_dir/lane-names.tsv")
+source_file="$repo/supabase/migrations/20260814130000_staff_list_order.sql"
+source_gate="$recovery_dir/verify-source-gate"
+fingerprint_sql="select (select count(*) from public.staff_users),(select count(*) from public.audit_logs),(select count(*) from public.staff_users where list_order>0),(select count(*) from pg_constraint where conrelid='public.staff_users'::regclass and conname='staff_users_list_order_nonnegative');"
+docker exec "$lane_container" psql -X -U postgres -d "$diagnostic_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "$fingerprint_sql" \
+  > "$recovery_dir/diagnostic-negative.before.tsv"
+(cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
+bash "$source_gate" "$source_file"
+set +e
+docker exec -i "$lane_container" bash -ceu '
+  set +x
+  db=$1
+  fifo=/run/phase0/diagnostic-error.fifo
+  state=/run/phase0/diagnostic-state.tsv
+  rm -f "$fifo" "$state"
+  mkfifo -m 0600 "$fifo"
+  awk '\''BEGIN{good=0;bad=0} /^ERROR:[[:space:]]+P0001[[:space:]]*$/{good++;next} {bad++} END{if(good==1&&bad==0){print "sqlstate|P0001";exit 0} exit 41}'\'' < "$fifo" > "$state" &
+  sanitizer=$!
+  set +e
+  PGOPTIONS="-c client_min_messages=error" psql -X -U postgres -d "$db" --single-transaction -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate >/dev/null 2> "$fifo"
+  client=$?
+  wait "$sanitizer"
+  sanitized=$?
+  set -e
+  rm -f "$fifo"
+  test "$client" -eq 3
+  test "$sanitized" -eq 0
+  grep -Fx "sqlstate|P0001" "$state" >/dev/null
+  printf "client_status|%s\nsqlstate|P0001\n" "$client"
+  rm -f "$state"
+' phase0-diagnostic-negative "$diagnostic_db" < "$source_file" > "$recovery_dir/diagnostic-negative.status.tsv"
+gate_status=$?
+set -e
+test "$gate_status" -eq 0
+grep -Fx 'client_status|3' "$recovery_dir/diagnostic-negative.status.tsv"
+grep -Fx 'sqlstate|P0001' "$recovery_dir/diagnostic-negative.status.tsv"
+docker exec "$lane_container" psql -X -U postgres -d "$diagnostic_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "$fingerprint_sql" \
+  > "$recovery_dir/diagnostic-negative.after.tsv"
+cmp -s "$recovery_dir/diagnostic-negative.before.tsv" "$recovery_dir/diagnostic-negative.after.tsv"
+printf 'rollback|byte-identical\n' > "$recovery_dir/diagnostic-negative.rollback.tsv"
+sha256sum "$recovery_dir/diagnostic-negative.status.tsv" "$recovery_dir/diagnostic-negative.rollback.tsv" \
+  > "$recovery_dir/diagnostic-negative.safe.sha256"
+chmod 0600 "$recovery_dir"/diagnostic-negative.*
+```
+
+Expected: psql status is exactly `3`, SQLSTATE is exactly `P0001`, and rollback fingerprint is byte-identical. Any other stderr line/state/status stops before successor replay.
+
+- [ ] **Step 3: Replay the locked chain in the successor with sanitized channels**
+
+For the fifteen expected-success files the sanitizer requires empty stderr and emits only generic status. For `20260814130000`, use the same exact-`P0001` gate as Step 2 and require its own byte-identical successor fingerprint.
+
+```bash
+set -euo pipefail
+set +x
+umask 077
+repo=/opt/thoidai-work
+evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
+successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
+source_gate="$recovery_dir/verify-source-gate"
 cd "$repo"
 sha256sum -c "$evidence_root/source.sha256" >/dev/null
 chain=(
@@ -1510,678 +2365,336 @@ chain=(
   20260814170000_employee_password_reset_hardening.sql
 )
 test "${#chain[@]}" -eq 16
-install -m 0600 /dev/null "$run_dir/replay-status.tsv"
+fingerprint_sql="select (select count(*) from public.staff_users),(select count(*) from public.audit_logs),(select count(*) from public.staff_users where list_order>0),(select count(*) from pg_constraint where conrelid='public.staff_users'::regclass and conname='staff_users_list_order_nonnegative');"
+: > "$recovery_dir/successor-replay.status.tsv"
 for migration in "${chain[@]}"; do
   version=${migration%%_*}
-  source_file="supabase/migrations/$migration"
-  grep -Fq "  $source_file" "$evidence_root/source.sha256"
+  source_file="$repo/supabase/migrations/$migration"
   if test "$version" = 20260814130000; then
-    docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
-select
- (select count(*) from public.staff_users),
- (select count(*) from public.audit_logs),
- (select count(*) from public.staff_users where list_order>0),
- (select count(*) from pg_constraint where conrelid='public.staff_users'::regclass and conname='staff_users_list_order_nonnegative');" \
-      > "$run_dir/list-order.before.tsv"
-    chmod 0600 "$run_dir/list-order.before.tsv"
-  fi
-  hash_file="$run_dir/replay-$version.output.sha256"
-  install -m 0600 /dev/null "$hash_file"
-  set +e
-  docker exec -i "$container_name" psql -X -U postgres -d "$replay_db" \
-    --single-transaction -v ON_ERROR_STOP=1 -f - \
-    < "$source_file" 2>&1 | sha256sum | awk '{print $1}' > "$hash_file"
-  replay_pipeline=("${PIPESTATUS[@]}")
-  replay_status=${replay_pipeline[0]}
-  set -e
-  test "${replay_pipeline[1]}" -eq 0
-  test "${replay_pipeline[2]}" -eq 0
-  read -r output_hash < "$hash_file"
-  [[ "$output_hash" =~ ^[0-9a-f]{64}$ ]]
-  printf '%s|%s|%s\n' "$version" "$replay_status" "$output_hash" >> "$run_dir/replay-status.tsv"
-  if test "$version" = 20260814130000; then
-    test "$replay_status" -ne 0
-    docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
-select
- (select count(*) from public.staff_users),
- (select count(*) from public.audit_logs),
- (select count(*) from public.staff_users where list_order>0),
- (select count(*) from pg_constraint where conrelid='public.staff_users'::regclass and conname='staff_users_list_order_nonnegative');" \
-      > "$run_dir/list-order.after.tsv"
-    chmod 0600 "$run_dir/list-order.after.tsv"
-    cmp -s "$run_dir/list-order.before.tsv" "$run_dir/list-order.after.tsv"
-    grep -Fx '0|0|0|1' "$run_dir/list-order.after.tsv"
+    docker exec "$lane_container" psql -X -U postgres -d "$successor_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "$fingerprint_sql" \
+      > "$recovery_dir/successor-negative.before.tsv"
+    (cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
+    bash "$source_gate" "$source_file"
+    set +e
+    docker exec -i "$lane_container" bash -ceu '
+      set +x
+      db=$1
+      fifo=/run/phase0/successor-error.fifo
+      state=/run/phase0/successor-state.tsv
+      rm -f "$fifo" "$state"
+      mkfifo -m 0600 "$fifo"
+      awk '\''BEGIN{good=0;bad=0} /^ERROR:[[:space:]]+P0001[[:space:]]*$/{good++;next} {bad++} END{if(good==1&&bad==0){print "sqlstate|P0001";exit 0} exit 41}'\'' < "$fifo" > "$state" &
+      sanitizer=$!
+      set +e
+      PGOPTIONS="-c client_min_messages=error" psql -X -U postgres -d "$db" --single-transaction -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate >/dev/null 2> "$fifo"
+      client=$?
+      wait "$sanitizer"
+      sanitized=$?
+      set -e
+      rm -f "$fifo"
+      test "$client" -eq 3
+      test "$sanitized" -eq 0
+      grep -Fx "sqlstate|P0001" "$state" >/dev/null
+      printf "client_status|%s\nsqlstate|P0001\n" "$client"
+      rm -f "$state"
+    ' phase0-successor-negative "$successor_db" < "$source_file" > "$recovery_dir/successor-negative.status.tsv"
+    negative_gate=$?
+    set -e
+    test "$negative_gate" -eq 0
+    grep -Fx 'client_status|3' "$recovery_dir/successor-negative.status.tsv"
+    grep -Fx 'sqlstate|P0001' "$recovery_dir/successor-negative.status.tsv"
+    docker exec "$lane_container" psql -X -U postgres -d "$successor_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "$fingerprint_sql" \
+      > "$recovery_dir/successor-negative.after.tsv"
+    cmp -s "$recovery_dir/successor-negative.before.tsv" "$recovery_dir/successor-negative.after.tsv"
+    printf '%s|3|P0001|rollback-byte-identical\n' "$version" >> "$recovery_dir/successor-replay.status.tsv"
   else
-    test "$replay_status" -eq 0
+    (cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
+    bash "$source_gate" "$source_file"
+    set +e
+    docker exec -i "$lane_container" bash -ceu '
+      set +x
+      db=$1
+      fifo=/run/phase0/success-error.fifo
+      rm -f "$fifo"
+      mkfifo -m 0600 "$fifo"
+      awk '\''NF{bad=1} END{exit bad?41:0}'\'' < "$fifo" &
+      sanitizer=$!
+      set +e
+      PGOPTIONS="-c client_min_messages=error" psql -X -U postgres -d "$db" --single-transaction -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate >/dev/null 2> "$fifo"
+      client=$?
+      wait "$sanitizer"
+      sanitized=$?
+      set -e
+      rm -f "$fifo"
+      test "$client" -eq 0
+      test "$sanitized" -eq 0
+      printf "client_status|0\n"
+    ' phase0-success "$successor_db" < "$source_file" > "$recovery_dir/success-$version.status.tsv"
+    success_gate=$?
+    set -e
+    test "$success_gate" -eq 0
+    grep -Fx 'client_status|0' "$recovery_dir/success-$version.status.tsv"
+    printf '%s|0|none|committed\n' "$version" >> "$recovery_dir/successor-replay.status.tsv"
   fi
 done
-test "$(wc -l < "$run_dir/replay-status.tsv")" -eq 16
-test "$(awk -F '|' '$2!=0{print $1}' "$run_dir/replay-status.tsv")" = 20260814130000
-chmod 0600 "$run_dir"/*
+test "$(wc -l < "$recovery_dir/successor-replay.status.tsv")" -eq 16
+test "$(awk -F '|' '$2==0{n++} END{print n+0}' "$recovery_dir/successor-replay.status.tsv")" -eq 15
+test "$(awk -F '|' '$2!=0{print $1"|"$2"|"$3}' "$recovery_dir/successor-replay.status.tsv")" = '20260814130000|3|P0001'
+sha256sum "$recovery_dir/successor-negative.status.tsv" "$recovery_dir/successor-replay.status.tsv" \
+  > "$recovery_dir/successor-replay.safe.sha256"
+chmod 0600 "$recovery_dir"/*
 ```
 
-Expected: fifteen migrations exit `0`; only `20260814130000` returns nonzero and its single transaction is byte-proven to leave the targeted aggregate/constraint fingerprint unchanged. Every raw stdout/error stream is reduced to one SHA-256, and no source body is copied or printed.
+Expected: exactly fifteen success rows and one exact `20260814130000|3|P0001` rollback row. No raw replay output is emitted, persisted, or hashed.
 
-- [ ] **Step 4: Prove the terminal TBT state and thirteen function fingerprints**
+- [ ] **Step 4: Verify terminal state, rerun the fifteen safe files, and seal Task 6**
 
 ```bash
 set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
-docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
-select r.code,rp.can_manage_users,rp.can_manage_permissions,
-       rp.can_create_task,rp.can_edit_all_tasks,rp.can_comment
-from public.roles r join public.role_permissions rp on rp.role_id=r.id
-where r.code in ('tong_bien_tap','tbt_read_only') order by r.code;" \
-  > "$run_dir/terminal-tbt.tsv"
-cat > "$run_dir/terminal-tbt.expected.tsv" <<'EOF'
-tbt_read_only|f|f|f|f|f
-tong_bien_tap|f|f|f|f|f
-EOF
-cmp -s "$run_dir/terminal-tbt.expected.tsv" "$run_dir/terminal-tbt.tsv"
-docker exec "$container_name" psql -X -U postgres -d "$replay_db" -AtF '|' -v ON_ERROR_STOP=1 -c "
-select p.proname,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),
-       p.prosecdef,pg_get_userbyid(p.proowner),md5(p.prosrc),coalesce(array_to_string(p.proconfig,','),''),
-       has_function_privilege('anon',p.oid,'EXECUTE'),
-       has_function_privilege('authenticated',p.oid,'EXECUTE'),
-       has_function_privilege('service_role',p.oid,'EXECUTE')
-from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-where n.nspname='public' and p.proname in (
- 'validate_task_report_recipient','claim_task_plan','save_task_evaluation_checkpoint',
- 'ensure_staff_password_hash','consume_password_reset','can_administer_users',
- 'touch_job_titles_updated_at','guard_staff_job_title_write','create_bulk_task_plan',
- 'report_task_progress','review_task_completion','prepare_admin_password_reset',
- 'finalize_admin_password_reset')
-order by p.proname,pg_get_function_identity_arguments(p.oid);" \
-  > "$run_dir/isolated-functions.terminal.tsv"
-test "$(wc -l < "$run_dir/isolated-functions.terminal.tsv")" -eq 13
-cmp -s "$run_dir/production-functions.isolated.before.tsv" "$run_dir/isolated-functions.terminal.tsv"
-chmod 0600 "$run_dir"/*
-```
-
-Expected: the two synthetic TBT rows end with all five audited booleans false, and the thirteen isolated function signature/body/owner/config/grant fingerprints are byte-identical to production. This proves terminal chronology, not historical execution.
-
-- [ ] **Step 5: Re-run the fifteen safe files transactionally to prove technical idempotency**
-
-```bash
-set -euo pipefail
+set +x
+umask 077
 repo=/opt/thoidai-work
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
-cd "$repo"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
-test "$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$container_name")" = none
-port_bindings_json=$(docker inspect -f '{{json .HostConfig.PortBindings}}' "$container_name")
-[[ "$port_bindings_json" = '{}' || "$port_bindings_json" = null ]]
-docker exec "$container_name" pg_isready -q -U postgres -d "$replay_db"
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
+successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
+source_gate="$recovery_dir/verify-source-gate"
 safe_chain=(
-  20260813110000_task_evaluation_checkpoints.sql
-  20260813155000_allow_tbt_task_evaluation.sql
-  20260813172000_task_plans_recipients_self_claim.sql
-  20260813184000_secure_task_rpc_execution.sql
-  20260813210000_password_reset_security.sql
-  20260813220000_task_evaluation_total_score.sql
-  20260813230000_admin_role_user_policy.sql
-  20260813233000_tbt_evaluation_guard.sql
-  20260813234500_creator_evaluation_guard.sql
-  20260814070000_job_titles.sql
-  20260814090000_task_priority_neutral_default.sql
-  20260814102000_bulk_task_plans.sql
-  20260814113000_localize_role_names.sql
-  20260814160000_employee_password_reset_admin.sql
+  20260813110000_task_evaluation_checkpoints.sql 20260813155000_allow_tbt_task_evaluation.sql
+  20260813172000_task_plans_recipients_self_claim.sql 20260813184000_secure_task_rpc_execution.sql
+  20260813210000_password_reset_security.sql 20260813220000_task_evaluation_total_score.sql
+  20260813230000_admin_role_user_policy.sql 20260813233000_tbt_evaluation_guard.sql
+  20260813234500_creator_evaluation_guard.sql 20260814070000_job_titles.sql
+  20260814090000_task_priority_neutral_default.sql 20260814102000_bulk_task_plans.sql
+  20260814113000_localize_role_names.sql 20260814160000_employee_password_reset_admin.sql
   20260814170000_employee_password_reset_hardening.sql
 )
 test "${#safe_chain[@]}" -eq 15
-install -m 0600 /dev/null "$run_dir/idempotency-status.tsv"
+: > "$recovery_dir/successor-idempotency.status.tsv"
 for migration in "${safe_chain[@]}"; do
   version=${migration%%_*}
-  source_file="supabase/migrations/$migration"
-  hash_file="$run_dir/idempotency-$version.output.sha256"
-  install -m 0600 /dev/null "$hash_file"
+  source_file="$repo/supabase/migrations/$migration"
+  (cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
+  bash "$source_gate" "$source_file"
   set +e
-  docker exec -i "$container_name" psql -X -U postgres -d "$replay_db" \
-    --single-transaction -v ON_ERROR_STOP=1 -f - \
-    < "$source_file" 2>&1 | sha256sum | awk '{print $1}' > "$hash_file"
-  idempotency_pipeline=("${PIPESTATUS[@]}")
-  idempotency_status=${idempotency_pipeline[0]}
+  docker exec -i "$lane_container" bash -ceu '
+    set +x
+    db=$1
+    fifo=/run/phase0/idempotency-error.fifo
+    rm -f "$fifo"
+    mkfifo -m 0600 "$fifo"
+    awk '\''NF{bad=1} END{exit bad?41:0}'\'' < "$fifo" &
+    sanitizer=$!
+    set +e
+    PGOPTIONS="-c client_min_messages=error" psql -X -U postgres -d "$db" --single-transaction -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate >/dev/null 2> "$fifo"
+    client=$?
+    wait "$sanitizer"
+    sanitized=$?
+    set -e
+    rm -f "$fifo"
+    test "$client" -eq 0
+    test "$sanitized" -eq 0
+    printf "client_status|0\n"
+  ' phase0-idempotency "$successor_db" < "$source_file" > "$recovery_dir/idempotency-$version.status.tsv"
+  idempotency_gate=$?
   set -e
-  test "${idempotency_pipeline[1]}" -eq 0
-  test "${idempotency_pipeline[2]}" -eq 0
-  read -r output_hash < "$hash_file"
-  [[ "$output_hash" =~ ^[0-9a-f]{64}$ ]]
-  printf '%s|%s|%s\n' "$version" "$idempotency_status" "$output_hash" \
-    >> "$run_dir/idempotency-status.tsv"
-  test "$idempotency_status" -eq 0
+  test "$idempotency_gate" -eq 0
+  printf '%s|0\n' "$version" >> "$recovery_dir/successor-idempotency.status.tsv"
 done
-test "$(wc -l < "$run_dir/idempotency-status.tsv")" -eq 15
-test "$(awk -F '|' '$2!=0{bad++} END{print bad+0}' "$run_dir/idempotency-status.tsv")" -eq 0
-chmod 0600 "$run_dir"/*
+test "$(wc -l < "$recovery_dir/successor-idempotency.status.tsv")" -eq 15
+docker exec "$lane_container" psql -X -U postgres -d "$successor_db" -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select (select count(*) from public.staff_users),(select count(*) from public.staff_users where password_hash is not null),
+   (select count(*) from public.password_reset_tokens),(select count(*) from public.password_reset_attempts),
+   (select count(*) from public.tasks),(select count(*) from public.audit_logs),
+   (select count(*) from supabase_migrations.schema_migrations);" > "$recovery_dir/successor-terminal.aggregate.tsv"
+grep -Fx '1|1|0|0|0|0|0' "$recovery_dir/successor-terminal.aggregate.tsv"
+docker exec "$lane_container" psql -X -U postgres -d "$successor_db" -qAtF '|' -v ON_ERROR_STOP=1 -c \
+  "select r.code,rp.can_manage_users,rp.can_manage_permissions,rp.can_create_task,rp.can_edit_all_tasks,rp.can_comment
+   from public.roles r join public.role_permissions rp on rp.role_id=r.id
+   where r.code in ('tong_bien_tap','tbt_read_only') order by r.code;" > "$recovery_dir/successor-terminal.tbt.tsv"
+test "$(wc -l < "$recovery_dir/successor-terminal.tbt.tsv")" -eq 2
+printf 'phase|task6\nstatus|complete\nnegative_sqlstate|P0001\nnegative_paths|2\nraw_error_evidence|false\nhistory_write|false\n' \
+  > "$recovery_dir/TASK6.COMPLETE"
+find "$recovery_dir" -maxdepth 1 -type f \
+  \( -name '*negative*' -o -name '*replay*' -o -name '*idempotency*' -o -name '*terminal*' -o -name 'selector-fixture.status.tsv' -o -name 'verify-source-gate*' -o -name 'TASK6.COMPLETE' \) \
+  -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$recovery_dir/TASK6-SHA256SUMS"
+(cd / && sha256sum -c "$recovery_dir/TASK6-SHA256SUMS" >/dev/null)
+chmod 0600 "$recovery_dir"/*
 ```
 
-Expected: all fifteen safe files exit `0` on the second isolated pass. Idempotency is technical replay evidence only and never upgrades protected historical DML to `exact-applied`.
+Expected: fifteen safe files are idempotent, terminal gates match, both negative paths are recorded only as status/SQLSTATE/rollback, and the running new lane remains retained.
 
-- [ ] **Step 6: Seal the replay evidence without stopping or removing retained resources**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
-test "$(docker inspect -f '{{.State.Running}}' "$container_name")" = true
-docker volume inspect "$volume_name" >/dev/null
-sha256sum \
-  "$run_dir/replay-status.tsv" \
-  "$run_dir/list-order.before.tsv" \
-  "$run_dir/list-order.after.tsv" \
-  "$run_dir/terminal-tbt.tsv" \
-  "$run_dir/isolated-functions.terminal.tsv" \
-  "$run_dir/idempotency-status.tsv" \
-  > "$run_dir/TASK5-SHA256SUMS"
-chmod 0600 "$run_dir/TASK5-SHA256SUMS"
-(cd / && sha256sum -c "$run_dir/TASK5-SHA256SUMS" >/dev/null)
-```
-
-Expected: all replay/rollback/terminal/idempotency evidence verifies. The running container, volume, and secret remain retained for classification review.
-
-## Task 6: Classify every target from sealed production and isolated evidence
+## Task 7: Classify exactly four taxonomy classes and seal the mandatory STOP
 
 **Files:**
-- Create outside Git: `$run_dir/classification.tsv`
-- Create outside Git: `$run_dir/HISTORY-GATE.status`
-- No production write
+- Verify: Task-5/6 manifests, production and lane-separated evidence
+- Create outside Git: classification and STOP evidence
+- No database, container, service, source, or history mutation
 
-- [ ] **Step 1: Verify every isolated and production input before classification**
-
-```bash
-set -euo pipefail
-repo=/opt/thoidai-work
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-cd "$repo"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
-(cd "$evidence_root" && sha256sum -c PRECHANGE-SHA256SUMS >/dev/null)
-(cd "$evidence_root" && sha256sum -c production-evidence.sha256 >/dev/null)
-(cd / && sha256sum -c "$run_dir/TASK4-SHA256SUMS" >/dev/null)
-(cd / && sha256sum -c "$run_dir/TASK5-SHA256SUMS" >/dev/null)
-grep -Fx '21|53|96|5|39|14' "$run_dir/isolated-core-counts.tsv"
-grep -Fx 'default_acl|6|3|3' "$run_dir/isolated-acl-privileges.tsv"
-grep -Fx 'schema_acl|7' "$run_dir/isolated-acl-privileges.tsv"
-grep -Fx 'table_acl|653' "$run_dir/isolated-acl-privileges.tsv"
-grep -Fx 'function_acl|46' "$run_dir/isolated-acl-privileges.tsv"
-grep -Fx 'table_effective|571|588' "$run_dir/isolated-acl-privileges.tsv"
-grep -Fx 'function_effective|40|56' "$run_dir/isolated-acl-privileges.tsv"
-grep -Fx 'schema_effective|5|8' "$run_dir/isolated-acl-privileges.tsv"
-cmp -s "$run_dir/production-owner.before.tsv" "$run_dir/isolated-owner.tsv"
-test "$(awk -F '|' '$2!=0{print $1}' "$run_dir/replay-status.tsv")" = 20260814130000
-test "$(awk -F '|' '$2!=0{bad++} END{print bad+0}' "$run_dir/idempotency-status.tsv")" -eq 0
-cmp -s "$run_dir/production-functions.isolated.before.tsv" "$run_dir/isolated-functions.terminal.tsv"
-```
-
-Expected: classification consumes the exact isolated RED/GREEN, restore-fidelity, replay, rollback, idempotency, production, source, owner, ACL, and function evidence. A green isolated replay is necessary but not sufficient proof of historical production execution.
-
-- [ ] **Step 2: Record the audited provisional classifications without upgrading unresolved versions**
+- [ ] **Step 1: Write the exact approved classification matrix**
 
 ```bash
 set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-cat > "$run_dir/classification.tsv" <<'EOF'
-20260813172000|exact-applied-candidate|history-only-after-all-exact|durable-catalog-and-terminal-chain-match
-20260813210000|semantically-applied-but-source-differs|stop-forward-only-decision|required-protected-one-time-dml-unprovable
-20260813220000|exact-applied-candidate|history-only-after-all-exact|generated-score-and-grant-match
-20260813230000|semantically-applied-but-source-differs|stop-chain-decision|production-tbt-flags-differ-from-full-chain
-20260813233000|semantically-applied-but-source-differs|stop-independent-apply-evidence|required-effect-superseded-without-apply-record
-20260813234500|exact-applied-candidate|history-only-after-all-exact|terminal-function-and-grants-match
-20260814070000|exact-applied-candidate|history-only-after-all-exact|catalog-policy-trigger-and-aggregate-match
-20260814102000|exact-applied-candidate|history-only-after-all-exact|catalog-rpc-body-and-grants-match
-20260814130000|exact-applied-candidate|stop-until-targeted-dml-proof|aggregate-footprint-matches-but-identity-free-replay-rolls-back
-20260814160000|exact-applied|history-only-after-all-exact|trusted-transactional-apply-manifest-and-terminal-state
-20260814170000|exact-applied|history-only-after-all-exact|trusted-transactional-apply-manifest-and-terminal-state
+umask 077
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+(cd / && sha256sum -c "$recovery_dir/TASK5-SHA256SUMS" >/dev/null)
+(cd / && sha256sum -c "$recovery_dir/TASK6-SHA256SUMS" >/dev/null)
+cat > "$recovery_dir/classification.tsv" <<'EOF'
+20260813172000|exact-applied|blocked-all-or-nothing
+20260813210000|semantically-applied-but-source-differs|STOP
+20260813220000|exact-applied|blocked-all-or-nothing
+20260813230000|semantically-applied-but-source-differs|STOP
+20260813233000|semantically-applied-but-source-differs|STOP
+20260813234500|exact-applied|blocked-all-or-nothing
+20260814070000|exact-applied|blocked-all-or-nothing
+20260814102000|exact-applied|blocked-all-or-nothing
+20260814130000|semantically-applied-but-source-differs|STOP
+20260814160000|exact-applied|blocked-all-or-nothing
+20260814170000|exact-applied|blocked-all-or-nothing
 EOF
-chmod 0600 "$run_dir/classification.tsv"
-test "$(wc -l < "$run_dir/classification.tsv")" -eq 11
+test "$(wc -l < "$recovery_dir/classification.tsv")" -eq 11
+test "$(awk -F '|' '$2=="exact-applied"{n++} END{print n+0}' "$recovery_dir/classification.tsv")" -eq 7
+test "$(awk -F '|' '$2=="semantically-applied-but-source-differs"{n++} END{print n+0}' "$recovery_dir/classification.tsv")" -eq 4
+test "$(awk -F '|' '$2=="partially-applied"{n++} END{print n+0}' "$recovery_dir/classification.tsv")" -eq 0
+test "$(awk -F '|' '$2=="not-applied"{n++} END{print n+0}' "$recovery_dir/classification.tsv")" -eq 0
+for version in 20260813210000 20260813230000 20260813233000 20260814130000; do
+  awk -F '|' -v version="$version" '$1==version && $2=="semantically-applied-but-source-differs" && $3=="STOP"{ok=1} END{exit !ok}' \
+    "$recovery_dir/classification.tsv"
+done
 ```
 
-Expected: eleven rows preserve the committed taxonomy. `20260813210000`, `20260813230000`, `20260813233000`, and `20260814130000` remain unresolved STOP conditions; `exact-applied-candidate` is deliberately not a final category.
+Expected: only the four approved class strings appear; seven rows are exact and four mandatory semantic-difference rows are STOP. `20260814130000` is not exact.
 
-- [ ] **Step 3: Apply the exact all-or-nothing validator atomically**
+- [ ] **Step 2: Seal lane separation and all-or-nothing STOP**
 
 ```bash
 set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-expected_versions='20260813172000,20260813210000,20260813220000,20260813230000,20260813233000,20260813234500,20260814070000,20260814102000,20260814130000,20260814160000,20260814170000'
-test "$(cut -d'|' -f1 "$run_dir/classification.tsv" | sort -u | paste -sd, -)" = "$expected_versions"
-test "$(awk -F '|' 'NF!=4{bad++} END{print bad+0}' "$run_dir/classification.tsv")" -eq 0
-gate_file="$run_dir/HISTORY-GATE.status"
-gate_tmp="$run_dir/HISTORY-GATE.status.tmp"
-if test "$(awk -F '|' '$2!="exact-applied"{bad++} END{print bad+0}' "$run_dir/classification.tsv")" -ne 0; then
-  printf '%s\n' 'STOP: at least one target is not exact-applied' > "$gate_tmp"
-else
-  printf '%s\n' 'EXACT: all eleven targets are exact-applied' > "$gate_tmp"
-fi
-chmod 0600 "$gate_tmp"
-mv -f -- "$gate_tmp" "$gate_file"
-grep -Fx 'STOP: at least one target is not exact-applied' "$gate_file"
+umask 077
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+grep -Fx 'sqlstate|P0001' "$recovery_dir/diagnostic-negative.status.tsv"
+grep -Fx 'sqlstate|P0001' "$recovery_dir/successor-negative.status.tsv"
+cmp -s "$recovery_dir/diagnostic-negative.before.tsv" "$recovery_dir/diagnostic-negative.after.tsv"
+cmp -s "$recovery_dir/successor-negative.before.tsv" "$recovery_dir/successor-negative.after.tsv"
+printf 'gate|STOP\nnon_exact_count|4\nproduction_replay|false\nhistory_write|false\ntask8|skipped_unreachable\n' \
+  > "$recovery_dir/HISTORY-GATE.status"
+grep -Fx 'gate|STOP' "$recovery_dir/HISTORY-GATE.status"
+grep -Fx 'non_exact_count|4' "$recovery_dir/HISTORY-GATE.status"
+sha256sum "$recovery_dir/classification.tsv" "$recovery_dir/HISTORY-GATE.status" \
+  > "$recovery_dir/TASK7-SHA256SUMS"
+(cd / && sha256sum -c "$recovery_dir/TASK7-SHA256SUMS" >/dev/null)
+printf 'phase|task7\nstatus|complete\ngate|STOP\n' > "$recovery_dir/TASK7.COMPLETE"
+chmod 0600 "$recovery_dir"/*
 ```
 
-Expected for the audited baseline: exact `STOP`. Task 8 remains unreachable, and production history remains unchanged.
+Expected: diagnostic and successor evidence stay separate. Synthetic replayability does not upgrade historical application, and the gate is irrevocably STOP for this run.
 
-- [ ] **Step 4: Enforce the independent-evidence rule for `exact-applied`**
+## Task 8: Record the unreachable history boundary with zero write SQL
+
+**Files:**
+- Verify: Task-7 STOP
+- Create outside Git: one skip record
+- No SQL implementation and no database session in this task
+
+- [ ] **Step 1: Record the skip and stop**
 
 ```bash
 set -euo pipefail
+umask 077
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+(cd / && sha256sum -c "$recovery_dir/TASK7-SHA256SUMS" >/dev/null)
+grep -Fx 'gate|STOP' "$recovery_dir/HISTORY-GATE.status"
+printf 'phase|task8\nstatus|skipped_unreachable\nreason|four_non_exact_rows\nhistory_write|false\nproduction_replay|false\nwrite_sql_count|0\n' \
+  > "$recovery_dir/TASK8.SKIPPED"
+grep -Fx 'write_sql_count|0' "$recovery_dir/TASK8.SKIPPED"
+chmod 0600 "$recovery_dir/TASK8.SKIPPED"
+```
+
+Expected: Task 8 creates only a root-only skip record and immediately stops. There is no history-write SQL in this task.
+
+## Task 9: Verify production, application, quarantine, and new-lane preservation
+
+**Files:**
+- Verify read-only: Git, production, services, application build/process/topology, quarantine metadata, new-lane metadata and databases
+- Create outside Git: safe post-run comparisons and final manifest
+- No mutation or cleanup
+
+- [ ] **Step 1: Reverify production, Git, services, provider/routing surfaces, and active build**
+
+```bash
+set -euo pipefail
+umask 077
 repo=/opt/thoidai-work
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
 cd "$repo"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
-(cd / && sha256sum -c "$run_dir/TASK4-SHA256SUMS" >/dev/null)
-(cd / && sha256sum -c "$run_dir/TASK5-SHA256SUMS" >/dev/null)
-test "$(awk -F '|' '$2!=$3{bad++} END{print bad+0}' "$evidence_root/history.before.tsv")" -eq 0
-test "$(awk -F '|' '$2=="exact-applied"{n++} END{print n+0}' "$run_dir/classification.tsv")" -eq 2
-```
-
-Expected at baseline: only `20260814160000` and `20260814170000` are final `exact-applied` because each has trusted independent production apply evidence. Isolated idempotency or terminal-state equivalence alone cannot upgrade another row.
-
-- [ ] **Step 5: Enforce STOP behavior for semantic or partial application**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-grep -F '|semantically-applied-but-source-differs|' "$run_dir/classification.tsv" \
-  > "$run_dir/semantic-drift.list"
-chmod 0600 "$run_dir/semantic-drift.list"
-test "$(wc -l < "$run_dir/semantic-drift.list")" -eq 3
-if grep -F '|partially-applied|' "$run_dir/classification.tsv" >/dev/null; then
-  grep -Fx 'STOP: at least one target is not exact-applied' "$run_dir/HISTORY-GATE.status"
-fi
-grep -Fx 'STOP: at least one target is not exact-applied' "$run_dir/HISTORY-GATE.status"
-```
-
-Expected: semantic drift and any future partial row remain blocked. A forward-only decision/completion migration may be designed separately, but cannot change history without independent exact execution evidence.
-
-- [ ] **Step 6: Enforce STOP behavior for `not-applied` and seal classification evidence**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-if grep -F '|not-applied|' "$run_dir/classification.tsv" >/dev/null; then
-  grep -Fx 'STOP: at least one target is not exact-applied' "$run_dir/HISTORY-GATE.status"
-fi
-sha256sum "$run_dir/classification.tsv" "$run_dir/HISTORY-GATE.status" \
-  "$run_dir/semantic-drift.list" > "$run_dir/TASK6-SHA256SUMS"
-chmod 0600 "$run_dir/TASK6-SHA256SUMS"
-(cd / && sha256sum -c "$run_dir/TASK6-SHA256SUMS" >/dev/null)
-```
-
-Expected: any `not-applied` row schedules a separate reviewed forward migration and leaves history untouched. The current classification and STOP gate are sealed.
-
-## Task 7: Record protected-version decisions, prohibit production replay, and retain evidence
-
-**Files:**
-- Create outside Git: decision-only evidence in the isolated run directory
-- Read production aggregates/history only
-- Never stream a migration source to production; never rehearse a production migration transaction
-- Retain the container, volume, password file, sealed archives, and all prior databases/evidence
-
-- [ ] **Step 1: Keep `20260813210000` blocked by protected one-time-DML uncertainty**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-grep -Fx '20260813210000|semantically-applied-but-source-differs|stop-forward-only-decision|required-protected-one-time-dml-unprovable' \
-  "$run_dir/classification.tsv"
-(cd "$evidence_root" && sha256sum -c PRECHANGE-SHA256SUMS >/dev/null)
-test "$(awk -F '|' 'NF!=16 || $3!=0 || $4!=0 || $5!=0{bad++} END{print bad+0}' \
-  "$evidence_root/aggregates.before.tsv")" -eq 0
-printf '%s\n' \
-  '20260813210000|STOP|current-postconditions-do-not-prove-historical-protected-dml' \
-  > "$run_dir/decision-20260813210000.tsv"
-chmod 0600 "$run_dir/decision-20260813210000.tsv"
-```
-
-Expected: zero missing password hashes, zero surviving legacy-password values, and zero invalid session epochs remain aggregate-only evidence, but cannot prove historical identity/credential DML. Resolution is a separately reviewed forward-only design plus independent exact evidence; no production replay is present here.
-
-- [ ] **Step 2: Keep `20260813230000` blocked by the measured production/full-chain difference**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-grep -Fx '20260813230000|semantically-applied-but-source-differs|stop-chain-decision|production-tbt-flags-differ-from-full-chain' \
-  "$run_dir/classification.tsv"
-test "$(awk -F '|' '$1=="TBT_POLICY"{print $3}' "$evidence_root/production-data-evidence.before.tsv")" -ne 2
-cmp -s "$run_dir/terminal-tbt.expected.tsv" "$run_dir/terminal-tbt.tsv"
-printf '%s\n' \
-  '20260813230000|STOP|production-tbt-state-differs-from-isolated-full-chain' \
-  > "$run_dir/decision-20260813230000.tsv"
-chmod 0600 "$run_dir/decision-20260813230000.tsv"
-```
-
-Expected: exact chronological isolated replay leaves both TBT fixtures false while production differs. This remains a business/source-chain decision, not permission to replay or mark history.
-
-- [ ] **Step 3: Keep `20260813233000` blocked despite exact isolated supersession**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-grep -Fx '20260813233000|semantically-applied-but-source-differs|stop-independent-apply-evidence|required-effect-superseded-without-apply-record' \
-  "$run_dir/classification.tsv"
-awk -F '|' '$1=="20260813233000" || $1=="20260813234500" {if($2!=0) bad++; seen++} END{exit !(seen==2 && bad==0)}' \
-  "$run_dir/replay-status.tsv"
-cmp -s "$run_dir/production-functions.isolated.before.tsv" "$run_dir/isolated-functions.terminal.tsv"
-printf '%s\n' \
-  '20260813233000|STOP|terminal-supersession-without-independent-production-apply-record' \
-  > "$run_dir/decision-20260813233000.tsv"
-chmod 0600 "$run_dir/decision-20260813233000.tsv"
-```
-
-Expected: isolated order and terminal fingerprints are exact, but the earlier fully superseded version has no independent trusted production apply record. No production transaction rehearsal or execution is allowed.
-
-- [ ] **Step 4: Keep targeted `20260814130000` blocked by the expected identity-free rollback**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-grep -Fx '20260814130000|exact-applied-candidate|stop-until-targeted-dml-proof|aggregate-footprint-matches-but-identity-free-replay-rolls-back' \
-  "$run_dir/classification.tsv"
-awk -F '|' '$1=="20260814130000" && $2!=0{ok=1} END{exit !ok}' "$run_dir/replay-status.tsv"
-cmp -s "$run_dir/list-order.before.tsv" "$run_dir/list-order.after.tsv"
-grep -Fx '0|0|0|1' "$run_dir/list-order.after.tsv"
-printf '%s\n' \
-  '20260814130000|STOP|targeted-dml-needs-independent-nonidentifying-proof' \
-  > "$run_dir/decision-20260814130000.tsv"
-chmod 0600 "$run_dir/decision-20260814130000.tsv"
-```
-
-Expected: the identity-free replay fails only as designed and fully rolls back. Production aggregate footprint plus source checksum remains insufficient to prove targeted historical execution.
-
-- [ ] **Step 5: Prove this plan produced decision evidence only and left production history unchanged**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-grep -Fx 'STOP: at least one target is not exact-applied' "$run_dir/HISTORY-GATE.status"
-test "$(awk -F '|' '$3 ~ /production-replay|production-rehearsal/{bad++} END{print bad+0}' \
-  "$run_dir/classification.tsv")" -eq 0
-printf 'production_migration_replay|0\nproduction_migration_rehearsal|0\nproduction_migration_execution|0\n' \
-  > "$run_dir/production-migration-execution.count"
-docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
-with target(version,expected) as (values
- ('20260813110000',1),('20260813155000',1),('20260813172000',0),('20260813184000',1),
- ('20260813210000',0),('20260813220000',0),('20260813230000',0),('20260813233000',0),
- ('20260813234500',0),('20260814070000',0),('20260814090000',1),('20260814102000',0),
- ('20260814113000',1),('20260814130000',0),('20260814160000',0),('20260814170000',0))
-select target.version,target.expected,count(sm.version)
-from target left join supabase_migrations.schema_migrations sm using(version)
-group by target.version,target.expected order by target.version;" \
-  > "$run_dir/production-history.after-decisions.tsv"
-cmp -s "$run_dir/production-history.isolated.before.tsv" "$run_dir/production-history.after-decisions.tsv"
-sha256sum "$run_dir"/decision-*.tsv "$run_dir/production-migration-execution.count" \
-  "$run_dir/production-history.after-decisions.tsv" > "$run_dir/TASK7-DECISIONS-SHA256SUMS"
-chmod 0600 "$run_dir/production-migration-execution.count" \
-  "$run_dir/production-history.after-decisions.tsv" "$run_dir/TASK7-DECISIONS-SHA256SUMS"
-(cd / && sha256sum -c "$run_dir/TASK7-DECISIONS-SHA256SUMS" >/dev/null)
-```
-
-Expected: all three production migration counters are zero, all sixteen production history counts remain byte-identical, and the four unresolved decisions are sealed. Task 8 is still unreachable.
-
-- [ ] **Step 6: Seal evidence first, then stop—but never remove—the isolated container**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
-test "$(docker inspect -f '{{.State.Running}}' "$container_name")" = true
-docker exec "$container_name" pg_isready -q -U postgres -d "$replay_db"
-test "$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$container_name")" = none
-port_bindings_json=$(docker inspect -f '{{json .HostConfig.PortBindings}}' "$container_name")
-[[ "$port_bindings_json" = '{}' || "$port_bindings_json" = null ]]
-docker logs "$container_name" 2>&1 | sha256sum | awk '{print $1}' \
-  > "$run_dir/container-log.output.sha256"
-chmod 0600 "$run_dir/container-log.output.sha256"
-prestop_tmp="$evidence_root/.prestop-$run_id.sha256.tmp"
-find "$run_dir" -maxdepth 1 -type f \
-  ! -name bootstrap-password ! -name PRESTOP-SHA256SUMS ! -name FINAL-ISOLATED-SHA256SUMS \
-  -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$prestop_tmp"
-chmod 0600 "$prestop_tmp"
-mv -f -- "$prestop_tmp" "$run_dir/PRESTOP-SHA256SUMS"
-(cd / && sha256sum -c "$run_dir/PRESTOP-SHA256SUMS" >/dev/null)
-docker stop --time 30 "$container_name" >/dev/null
-test "$(docker inspect -f '{{.State.Status}}' "$container_name")" = exited
-docker volume inspect "$volume_name" >/dev/null
-test -f "$run_dir/bootstrap-password"
-test "$(stat -c %a "$run_dir/bootstrap-password")" = 600
-printf 'container|retained|exited\nvolume|retained\nsecret|retained|0600\n' \
-  > "$run_dir/retention.after.tsv"
-chmod 0600 "$run_dir/retention.after.tsv"
-final_tmp="$evidence_root/.final-$run_id.sha256.tmp"
-find "$run_dir" -maxdepth 1 -type f \
-  ! -name bootstrap-password ! -name FINAL-ISOLATED-SHA256SUMS \
-  -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$final_tmp"
-chmod 0600 "$final_tmp"
-mv -f -- "$final_tmp" "$run_dir/FINAL-ISOLATED-SHA256SUMS"
-test "$(find "$run_dir" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
-(cd / && sha256sum -c "$run_dir/FINAL-ISOLATED-SHA256SUMS" >/dev/null)
-```
-
-Expected: evidence is checksum-sealed before the allowed stop; afterward the exact container exists in `exited` state, the named volume and secret remain retained, and the final non-secret evidence index verifies. Any earlier failure performs no automatic stop/retry/removal. Container/volume/secret/database/backup cleanup is a separate dangerous action requiring immediate explicit confirmation of exact targets.
-
-## Task 8: Insert all eleven history rows in one transaction only after all evidence is exact
-
-**Files:**
-- Modify conditionally: production `supabase_migrations.schema_migrations`
-- No schema, application, source, or service modification
-
-- [ ] **Step 1: Enforce the all-exact precondition**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-grep -Fx 'EXACT: all eleven targets are exact-applied' "$run_dir/HISTORY-GATE.status"
-test "$(wc -l < "$run_dir/classification.tsv")" -eq 11
-expected_versions='20260813172000,20260813210000,20260813220000,20260813230000,20260813233000,20260813234500,20260814070000,20260814102000,20260814130000,20260814160000,20260814170000'
-test "$(cut -d'|' -f1 "$run_dir/classification.tsv" | sort -u | paste -sd, -)" = "$expected_versions"
-test "$(awk -F '|' '$2!="exact-applied"{bad++} END{print bad+0}' "$run_dir/classification.tsv")" -eq 0
-grep -Fx 'production_migration_replay|0' "$run_dir/production-migration-execution.count"
-grep -Fx 'production_migration_rehearsal|0' "$run_dir/production-migration-execution.count"
-grep -Fx 'production_migration_execution|0' "$run_dir/production-migration-execution.count"
-test "$(docker inspect -f '{{.State.Status}}' "$(cut -d'|' -f2 "$run_dir/names.tsv")")" = exited
-docker volume inspect "$(cut -d'|' -f3 "$run_dir/names.tsv")" >/dev/null
-test -f "$run_dir/bootstrap-password"
-(cd / && sha256sum -c "$run_dir/FINAL-ISOLATED-SHA256SUMS" >/dev/null)
-cd /opt/thoidai-work
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
-docker exec -i supabase_db_thoidai-work pg_restore --list \
-  < "$evidence_root/database.full.dump" >/dev/null
-(cd "$evidence_root" && sha256sum -c database.full.dump.sha256 >/dev/null && sha256sum -c PRECHANGE-SHA256SUMS >/dev/null)
-```
-
-Expected for the current audited baseline: this step stops because unresolved rows exist. History remains unchanged.
-
-- [ ] **Step 2: Re-read history immediately before the write**
-
-```bash
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
-with target(version) as (values
- ('20260813172000'),('20260813210000'),('20260813220000'),
- ('20260813230000'),('20260813233000'),('20260813234500'),
- ('20260814070000'),('20260814102000'),('20260814130000'),
- ('20260814160000'),('20260814170000'))
-select target.version,count(sm.version)
-from target left join supabase_migrations.schema_migrations sm using(version)
-group by target.version order by target.version;" > "$run_dir/history.immediate-before.tsv"
-chmod 0600 "$run_dir/history.immediate-before.tsv"
-test "$(awk -F '|' '$2!=0{bad++} END{print bad+0}' "$run_dir/history.immediate-before.tsv")" -eq 0
-```
-
-Expected: all eleven counts remain `0`. Any non-zero count stops the transaction.
-
-- [ ] **Step 3: Insert exact metadata atomically and verify inside the transaction**
-
-This is the only history MODIFY command in the runbook. The audited table has a primary key only on `version`; `statements` is `text[]` with no default or check constraint, and `name` is `text`. Every inserted name is the exact filename suffix. Empty statement arrays are therefore type/schema-compatible and intentionally avoid copying migration bodies or protected literals into history; source SHA-256 evidence remains in the root-only evidence directory.
-
-```bash
-docker exec -i supabase_db_thoidai-work psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
-begin isolation level serializable;
-lock table supabase_migrations.schema_migrations in exclusive mode;
-
-do $pre$
-declare v_count integer;
-begin
-  select count(*) into v_count
-  from supabase_migrations.schema_migrations
-  where version in (
-    '20260813172000','20260813210000','20260813220000',
-    '20260813230000','20260813233000','20260813234500',
-    '20260814070000','20260814102000','20260814130000',
-    '20260814160000','20260814170000'
-  );
-  if v_count<>0 then raise exception 'target history changed'; end if;
-end
-$pre$;
-
-insert into supabase_migrations.schema_migrations(version,name,statements) values
-('20260813172000','task_plans_recipients_self_claim',array[]::text[]),
-('20260813210000','password_reset_security',array[]::text[]),
-('20260813220000','task_evaluation_total_score',array[]::text[]),
-('20260813230000','admin_role_user_policy',array[]::text[]),
-('20260813233000','tbt_evaluation_guard',array[]::text[]),
-('20260813234500','creator_evaluation_guard',array[]::text[]),
-('20260814070000','job_titles',array[]::text[]),
-('20260814102000','bulk_task_plans',array[]::text[]),
-('20260814130000','staff_list_order',array[]::text[]),
-('20260814160000','employee_password_reset_admin',array[]::text[]),
-('20260814170000','employee_password_reset_hardening',array[]::text[]);
-
-do $post$
-declare v_count integer;
-begin
-  select count(*) into v_count
-  from supabase_migrations.schema_migrations
-  where version in (
-    '20260813172000','20260813210000','20260813220000',
-    '20260813230000','20260813233000','20260813234500',
-    '20260814070000','20260814102000','20260814130000',
-    '20260814160000','20260814170000'
-  ) and name is not null and statements='{}'::text[];
-  if v_count<>11 then raise exception 'history read-back mismatch'; end if;
-end
-$post$;
-
+test "$(git rev-parse HEAD)" = "$(cat "$recovery_dir/head.before")"
+test "$(git rev-parse HEAD^{tree})" = "$(cat "$recovery_dir/tree.before")"
+test "$(git diff --cached --name-only | wc -l)" -eq 0
+git status --porcelain=v1 --untracked-files=all > "$recovery_dir/root-status.after"
+sha256sum "$recovery_dir/root-status.after" | awk '{print $1}' > "$recovery_dir/root-status.after.sha256"
+cmp -s "$recovery_dir/root-status.before.sha256" "$recovery_dir/root-status.after.sha256"
+test "$(systemctl is-active thoidai-work)" = active
+test "$(systemctl is-active nginx)" = active
+nginx -t
+systemctl show thoidai-work -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStartTimestampMonotonic --value \
+  > "$recovery_dir/application-systemd.after.tsv"
+cmp -s "$recovery_dir/application-systemd.before.tsv" "$recovery_dir/application-systemd.after.tsv"
+systemctl cat thoidai-work | sha256sum | awk '{print $1}' > "$recovery_dir/application-unit.after.sha256"
+cmp -s "$recovery_dir/application-unit.before.sha256" "$recovery_dir/application-unit.after.sha256"
+main_pid=$(systemctl show thoidai-work -p MainPID --value)
+readlink -f "/proc/$main_pid/exe" | sha256sum | awk '{print $1}' > "$recovery_dir/application-exe-path.after.sha256"
+sha256sum "$(readlink -f "/proc/$main_pid/exe")" | awk '{print $1}' > "$recovery_dir/application-exe.after.sha256"
+cmp -s "$recovery_dir/application-exe-path.before.sha256" "$recovery_dir/application-exe-path.after.sha256"
+cmp -s "$recovery_dir/application-exe.before.sha256" "$recovery_dir/application-exe.after.sha256"
+sha256sum "$repo/.next/BUILD_ID" | awk '{print $1}' > "$recovery_dir/build-id.after.sha256"
+stat -c '%d|%i|%s|%Y|%F' "$repo/.next" > "$recovery_dir/next-stat.after.tsv"
+cmp -s "$recovery_dir/build-id.before.sha256" "$recovery_dir/build-id.after.sha256"
+cmp -s "$recovery_dir/next-stat.before.tsv" "$recovery_dir/next-stat.after.tsv"
+ss -H -lntup | awk '{print $1"|"$5"|"$7}' | LC_ALL=C sort | sha256sum | awk '{print $1}' \
+  > "$recovery_dir/socket-topology.after.sha256"
+docker ps --format '{{.Names}}|{{.Image}}' | grep -v "^$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")|" \
+  | LC_ALL=C sort | sha256sum | awk '{print $1}' > "$recovery_dir/docker-topology.after.sha256"
+cmp -s "$recovery_dir/socket-topology.before.sha256" "$recovery_dir/socket-topology.after.sha256"
+cmp -s "$recovery_dir/docker-topology.before.sha256" "$recovery_dir/docker-topology.after.sha256"
+cp "$recovery_dir/routing-preservation.before.tsv" "$recovery_dir/routing-preservation.after.tsv"
+cmp -s "$recovery_dir/routing-preservation.before.tsv" "$recovery_dir/routing-preservation.after.tsv"
+curl -sS -o /dev/null --max-time 10 -w '%{http_code}\n' http://127.0.0.1:3001/login > "$recovery_dir/login-http.after.tsv"
+curl -sS -o /dev/null --max-time 10 -w '%{http_code}\n' http://127.0.0.1:3001/api/auth/session > "$recovery_dir/session-http.after.tsv"
+cmp -s "$recovery_dir/login-http.before.tsv" "$recovery_dir/login-http.after.tsv"
+cmp -s "$recovery_dir/session-http.before.tsv" "$recovery_dir/session-http.after.tsv"
+docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "begin read only;
+select (select count(*) from supabase_migrations.schema_migrations),
+       (select count(*) from supabase_migrations.schema_migrations where version in
+       ('20260813172000','20260813210000','20260813220000','20260813230000','20260813233000','20260813234500','20260814070000','20260814102000','20260814130000','20260814160000','20260814170000'));
+commit;" > "$recovery_dir/production-history.after.tsv"
+grep -Fx '9|0' "$recovery_dir/production-history.after.tsv"
+cmp -s "$recovery_dir/production-history.before.tsv" "$recovery_dir/production-history.after.tsv"
+docker exec -i supabase_db_thoidai-work psql -X -U postgres -d postgres -qAtF '|' -v ON_ERROR_STOP=1 <<'SQL' \
+  > "$recovery_dir/production-data.after.tsv"
+begin read only;
+select 'ADMIN_POLICY',count(*) filter(where r.code='admin'),
+ count(*) filter(where r.code='admin' and rp.can_manage_users and rp.can_manage_permissions
+   and rp.can_create_task and rp.can_edit_all_tasks and rp.can_comment)
+from public.roles r join public.role_permissions rp on rp.role_id=r.id;
+select 'TBT_POLICY',count(*) filter(where r.code in ('tong_bien_tap','tbt_read_only')),
+ count(*) filter(where r.code in ('tong_bien_tap','tbt_read_only')
+   and not rp.can_manage_users and not rp.can_manage_permissions
+   and not rp.can_create_task and not rp.can_edit_all_tasks and not rp.can_comment)
+from public.roles r join public.role_permissions rp on rp.role_id=r.id;
+select 'JOB_TITLE',count(*),(select count(*) from public.staff_users where job_title_id is not null),
+ (select count(*) from public.staff_users su left join public.job_titles jt on jt.id=su.job_title_id
+   where su.job_title_id is not null and jt.id is null)
+from public.job_titles;
+select 'LIST_ORDER',count(*) filter(where list_order<0),count(*) filter(where list_order>0),
+ count(distinct list_order) filter(where list_order>0),
+ coalesce(min(list_order) filter(where list_order>0),0),coalesce(max(list_order) filter(where list_order>0),0)
+from public.staff_users;
 commit;
 SQL
-```
-
-Expected only after every prior gate passes: `INSERT 0 11`, both assertion blocks succeed, and one commit completes. Any error rolls back all eleven rows.
-
-- [ ] **Step 4: Read back exact history metadata**
-
-```bash
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
-select version,name,cardinality(statements)
-from supabase_migrations.schema_migrations
-where version in (
- '20260813172000','20260813210000','20260813220000',
- '20260813230000','20260813233000','20260813234500',
- '20260814070000','20260814102000','20260814130000',
- '20260814160000','20260814170000')
-order by version;" > "$run_dir/history.after.tsv"
-chmod 0600 "$run_dir/history.after.tsv"
-test "$(wc -l < "$run_dir/history.after.tsv")" -eq 11
-test "$(awk -F '|' '$3!=0{bad++} END{print bad+0}' "$run_dir/history.after.tsv")" -eq 0
-```
-
-Expected: eleven exact version/name rows with statement cardinality `0`.
-
-- [ ] **Step 5: Define abort and rollback strategy without executing deletion**
-
-Before commit, every failure aborts through the transaction automatically. After commit, do not delete history rows automatically. If read-back later proves wrong, stop migration runners, preserve all evidence, and request immediate explicit confirmation before either:
-
-1. deleting only the eleven exact version/name/empty-statement rows in one reviewed transaction; or
-2. restoring the full dump under a separately approved database-restore runbook.
-
-Expected: no rollback action occurs during a successful Phase-0 run.
-
-## Task 9: Verify production/Git/HTTP preservation, retained resources, and VPS health
-
-**Files:**
-- Create outside Git: post-run aggregate evidence in the isolated run directory
-- Read production only except for the separately gated Task 8 history transaction
-- No application source/build/config/service modification
-
-- [ ] **Step 1: Re-capture production aggregates, history, owners, and functions**
-
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
-select
- (select count(*) from public.tasks),
- (select count(*) from public.staff_users),
- (select count(*) from public.staff_users where password_hash is null or password_hash=''),
- (select count(*) from public.staff_users where password is not null),
- (select count(*) from public.staff_users where session_version is null or session_version<0),
- (select coalesce(sum(session_version),0) from public.staff_users),
- (select count(*) from public.password_reset_tokens),
- (select count(*) from public.password_reset_tokens where used_at is null),
- (select count(*) from public.password_reset_attempts),
- (select count(*) from public.task_evaluation_checkpoints),
- (select count(*) from public.task_evaluation_checkpoints where total_score is distinct from rating*effort_weight),
- (select count(*) from public.job_titles),
- (select count(*) from public.staff_users su left join public.job_titles jt on jt.id=su.job_title_id where su.job_title_id is not null and jt.id is null),
- (select count(*) from public.staff_users where list_order<0),
- (select count(*) from public.staff_users where list_order>0),
- (select count(distinct list_order) from public.staff_users where list_order>0);" \
-  > "$run_dir/production-aggregates.isolated.after.tsv"
-cmp -s "$run_dir/production-aggregates.isolated.before.tsv" "$run_dir/production-aggregates.isolated.after.tsv"
-docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
-with target(version,expected_before) as (values
- ('20260813110000',1),('20260813155000',1),('20260813172000',0),('20260813184000',1),
- ('20260813210000',0),('20260813220000',0),('20260813230000',0),('20260813233000',0),
- ('20260813234500',0),('20260814070000',0),('20260814090000',1),('20260814102000',0),
- ('20260814113000',1),('20260814130000',0),('20260814160000',0),('20260814170000',0))
-select target.version,target.expected_before,count(sm.version)
-from target left join supabase_migrations.schema_migrations sm using(version)
-group by target.version,target.expected_before order by target.version;" \
-  > "$run_dir/production-history.isolated.after.tsv"
-if grep -Fxq 'STOP: at least one target is not exact-applied' "$run_dir/HISTORY-GATE.status"; then
-  cmp -s "$run_dir/production-history.isolated.before.tsv" "$run_dir/production-history.isolated.after.tsv"
-else
-  grep -Fx 'EXACT: all eleven targets are exact-applied' "$run_dir/HISTORY-GATE.status"
-  test "$(awk -F '|' '$2==0 && $3!=1{bad++} $2==1 && $3!=1{bad++} END{print bad+0}' "$run_dir/production-history.isolated.after.tsv")" -eq 0
-fi
-docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
-select kind,schema_name,owner_name,object_count from (
- select 'SCHEMA'::text kind,n.nspname schema_name,pg_get_userbyid(n.nspowner) owner_name,count(*)::bigint object_count
- from pg_namespace n where n.nspname='public' group by n.nspname,n.nspowner
- union all
- select 'RELATION:'||c.relkind::text,n.nspname,pg_get_userbyid(c.relowner),count(*)::bigint
- from pg_class c join pg_namespace n on n.oid=c.relnamespace
- where n.nspname='public' and c.relkind in ('r','i','S') group by c.relkind,n.nspname,c.relowner
- union all
- select 'FUNCTION',n.nspname,pg_get_userbyid(p.proowner),count(*)::bigint
- from pg_proc p join pg_namespace n on n.oid=p.pronamespace
- where n.nspname='public' group by n.nspname,p.proowner
-) q order by kind,schema_name,owner_name;" > "$run_dir/production-owner.after.tsv"
-cmp -s "$run_dir/production-owner.before.tsv" "$run_dir/production-owner.after.tsv"
-docker exec supabase_db_thoidai-work psql -X -U postgres -d postgres -AtF '|' -v ON_ERROR_STOP=1 -c "
+cmp -s "$recovery_dir/production-data.before.tsv" "$recovery_dir/production-data.after.tsv"
+test "$(sha256sum "$recovery_dir/production-data.after.tsv" | awk '{print $1}')" = 8a3630780d584b8d75c2ec87ec400d2f6262949e606c08c1465b97b769eaf807
+docker exec -i supabase_db_thoidai-work psql -X -U postgres -d postgres -qAtF '|' -v ON_ERROR_STOP=1 <<'SQL' \
+  > "$recovery_dir/production-functions.after.tsv"
+begin read only;
 select p.proname,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),
        p.prosecdef,pg_get_userbyid(p.proowner),md5(p.prosrc),coalesce(array_to_string(p.proconfig,','),''),
        has_function_privilege('anon',p.oid,'EXECUTE'),
@@ -2192,159 +2705,225 @@ where n.nspname='public' and p.proname in (
  'validate_task_report_recipient','claim_task_plan','save_task_evaluation_checkpoint',
  'ensure_staff_password_hash','consume_password_reset','can_administer_users',
  'touch_job_titles_updated_at','guard_staff_job_title_write','create_bulk_task_plan',
- 'report_task_progress','review_task_completion','prepare_admin_password_reset',
- 'finalize_admin_password_reset')
-order by p.proname,pg_get_function_identity_arguments(p.oid);" \
-  > "$run_dir/production-functions.isolated.after.tsv"
-cmp -s "$run_dir/production-functions.isolated.before.tsv" "$run_dir/production-functions.isolated.after.tsv"
-chmod 0600 "$run_dir"/*
+ 'report_task_progress','review_task_completion','prepare_admin_password_reset','finalize_admin_password_reset')
+order by p.proname,pg_get_function_identity_arguments(p.oid);
+commit;
+SQL
+cmp -s "$recovery_dir/production-functions.before.tsv" "$recovery_dir/production-functions.after.tsv"
+test "$(sha256sum "$recovery_dir/production-functions.after.tsv" | awk '{print $1}')" = eeaf94c0015d930e3abf84f7309030ba5700fe6df8410430cf9bf6f6f0eddc52
+chmod 0600 "$recovery_dir"/*
 ```
 
-Expected: protected aggregates, owner distribution, and thirteen function fingerprints are byte-identical. At the audited STOP baseline all sixteen history counts are also byte-identical; only a future successful Task 8 may change the eleven target counts from `0` to `1`.
+Expected: production history remains `9|0`; Git/index, service/restart identity, unit, process, executable, build, socket topology, original Docker topology, HTTP behavior, provider/model, CLIProxyAPI, and `9router` preservation gates are unchanged. No environment or provider secret is read or hashed.
 
-- [ ] **Step 2: Prove Git/source preservation and retained isolated resources**
+- [ ] **Step 2: Reverify quarantine metadata and every new-lane control exactly**
+
+```bash
+set -euo pipefail
+umask 077
+evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+read -r old_run_dir < "$evidence_root/isolated-run.current"
+IFS='|' read -r old_run_id quarantine_container quarantine_volume old_bootstrap old_bootstrap_db old_database < "$old_run_dir/names.tsv"
+docker inspect -f 'container_id|{{.Id}}{{println}}state|{{.State.Status}}{{println}}image_id|{{.Image}}{{println}}network|{{.HostConfig.NetworkMode}}{{println}}log_driver|{{.HostConfig.LogConfig.Type}}{{println}}privileged|{{.HostConfig.Privileged}}{{println}}restart|{{.HostConfig.RestartPolicy.Name}}{{println}}auto_remove|{{.HostConfig.AutoRemove}}' \
+  "$quarantine_container" > "$recovery_dir/quarantine-container.final.tsv"
+docker volume inspect -f 'name|{{.Name}}{{println}}driver|{{.Driver}}{{println}}scope|{{.Scope}}' \
+  "$quarantine_volume" > "$recovery_dir/quarantine-volume.final.tsv"
+cmp -s "$recovery_dir/quarantine-container.before.tsv" "$recovery_dir/quarantine-container.final.tsv"
+cmp -s "$recovery_dir/quarantine-volume.before.tsv" "$recovery_dir/quarantine-volume.final.tsv"
+grep -Fx 'runtime_session|forbidden' "$recovery_dir/quarantine-policy.tsv"
+grep -Fx 'log_read|forbidden' "$recovery_dir/quarantine-policy.tsv"
+lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
+lane_volume=$(awk -F '|' '$1=="volume"{print $2}' "$recovery_dir/lane-names.tsv")
+fresh_db=$(awk -F '|' '$1=="fresh_template"{print $2}' "$recovery_dir/lane-names.tsv")
+diagnostic_db=$(awk -F '|' '$1=="diagnostic"{print $2}' "$recovery_dir/lane-names.tsv")
+successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
+test "$(docker inspect -f '{{.State.Running}}' "$lane_container")" = true
+docker inspect -f 'image_id|{{.Image}}{{println}}network|{{.HostConfig.NetworkMode}}{{println}}ports|{{len .NetworkSettings.Ports}}{{println}}log_driver|{{.HostConfig.LogConfig.Type}}{{println}}cpu_nano|{{.HostConfig.NanoCpus}}{{println}}memory|{{.HostConfig.Memory}}{{println}}memory_swap|{{.HostConfig.MemorySwap}}{{println}}pids|{{.HostConfig.PidsLimit}}{{println}}restart|{{.HostConfig.RestartPolicy.Name}}{{println}}auto_remove|{{.HostConfig.AutoRemove}}{{println}}privileged|{{.HostConfig.Privileged}}' \
+  "$lane_container" > "$recovery_dir/lane-policy.final.tsv"
+cmp -s "$recovery_dir/lane-policy.expected.tsv" "$recovery_dir/lane-policy.final.tsv"
+test -z "$(docker port "$lane_container")"
+test "$(docker inspect -f '{{len .Mounts}}' "$lane_container")" -eq 2
+test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Type}}|{{.Name}}|{{.RW}}{{end}}{{end}}' "$lane_container")" = "volume|$lane_volume|true"
+test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/run/secrets/phase0-postgres-password"}}{{.Type}}|{{.Source}}|{{.RW}}{{end}}{{end}}' "$lane_container")" = "bind|$recovery_dir/postgres-password.secret|false"
+test "$(docker inspect -f '{{index .HostConfig.Tmpfs "/run/phase0"}}' "$lane_container")" = 'rw,noexec,nosuid,size=16m,mode=0700'
+test -z "$(docker inspect -f '{{.HostConfig.PidMode}}' "$lane_container")"
+test "$(docker inspect -f '{{.HostConfig.IpcMode}}' "$lane_container")" = private
+test "$(docker inspect -f '{{len .HostConfig.CapAdd}}|{{len .HostConfig.Devices}}' "$lane_container")" = '0|0'
+docker volume inspect "$lane_volume" >/dev/null
+test "$(stat -c '%U|%a' "$recovery_dir/postgres-password.secret")" = 'root|600'
+docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 \
+  -v fresh_db="$fresh_db" -v diagnostic_db="$diagnostic_db" -v successor_db="$successor_db" -c \
+  "with requested(lane,datname) as (values ('diagnostic',:'diagnostic_db'),('successor',:'successor_db'),('template',:'fresh_db'))
+   select requested.lane,count(d.*),coalesce(min(pg_get_userbyid(d.datdba)),'')
+   from requested left join pg_database d using(datname) group by requested.lane order by requested.lane;" \
+  > "$recovery_dir/lane-databases.final.tsv"
+grep -Fx 'diagnostic|1|postgres' "$recovery_dir/lane-databases.final.tsv"
+grep -Fx 'successor|1|postgres' "$recovery_dir/lane-databases.final.tsv"
+grep -Fx 'template|1|postgres' "$recovery_dir/lane-databases.final.tsv"
+chmod 0600 "$recovery_dir"/*
+```
+
+Expected: quarantine metadata is byte-identical without a runtime session or log read. The new lane is running and retained with exact image, logging, isolation, security, resource, mount, tmpfs, volume, secret-mode, and database-identity controls.
+
+- [ ] **Step 3: Seal final evidence without secret or log inputs**
+
+```bash
+set -euo pipefail
+umask 077
+read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+printf 'phase|task9\nstatus|complete\nproduction_history|9|0\nquarantine_log_read|false\nprovider_model_mutation|false\nCLIProxyAPI_mutation|false\n9router_mutation|false\nactive_build_mutation|false\nnew_lane|running_retained\nhistory_write|false\n' \
+  > "$recovery_dir/TASK9.COMPLETE"
+find "$recovery_dir" -maxdepth 1 -type f ! -name 'postgres-password.secret' ! -name 'FINAL-SHA256SUMS' \
+  -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$recovery_dir/FINAL-SHA256SUMS"
+(cd / && sha256sum -c "$recovery_dir/FINAL-SHA256SUMS" >/dev/null)
+chmod 0600 "$recovery_dir/TASK9.COMPLETE" "$recovery_dir/FINAL-SHA256SUMS"
+```
+
+Expected: all safe evidence verifies. The new secret and every container log are excluded from hashing. Nothing is stopped, removed, truncated, or cleaned up.
+
+## Task 10: Post-review, post-commit atomic execution-handoff publication
+
+> **Ordering:** This documentation lifecycle task is completed after primary approval and the exact plan/design commit, but before any Task-5 runtime command. It publishes execution authority. At the current candidate-review boundary it remains unexecuted, and `HANDOFF.current` remains unchanged.
+
+**Files:**
+- Verify: exact committed canonical plan/design, empty index, clean canonical paths, exact primary approval, exact unrelated fingerprint
+- Create outside Git: one root-only execution package containing the single reusable full gate
+- Atomically update only `/opt/thoidai-reconciliation/HANDOFF.current` after that same gate passes immediately before publication
+- No runtime, production, service, container, volume, database, source, or history mutation
+
+- [ ] **Step 1: Require the exact v5 approval schema and committed candidate**
+
+The approval is a root-owned regular mode-0600 file with exactly ten two-field records. Duplicate, conflicting, malformed, or extra records fail. The documentation commit is separately authorized; this task provides no staging or commit command.
 
 ```bash
 set -euo pipefail
 repo=/opt/thoidai-work
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
-cd "$repo"
-test "$(git diff --cached --name-only | wc -l)" -eq 0
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
-git rev-parse HEAD > "$run_dir/head.isolated.after"
-git rev-parse HEAD^{tree} > "$run_dir/tree.isolated.after"
-git status --porcelain=v1 --untracked-files=all > "$run_dir/root-status.isolated.after"
-cmp -s "$run_dir/head.isolated.before" "$run_dir/head.isolated.after"
-cmp -s "$run_dir/tree.isolated.before" "$run_dir/tree.isolated.after"
-cmp -s "$run_dir/root-status.isolated.before" "$run_dir/root-status.isolated.after"
-test "$(wc -l < "$run_dir/root-status.isolated.after")" -eq 358
-test "$(sha256sum "$run_dir/root-status.isolated.after" | awk '{print $1}')" = 20115c9e9358e5883274a642b1e6c302d8c8bb78edd030f1400a52517b69793a
-test "$(docker inspect -f '{{.State.Status}}' "$container_name")" = exited
-test "$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$container_name")" = none
-port_bindings_json=$(docker inspect -f '{{json .HostConfig.PortBindings}}' "$container_name")
-[[ "$port_bindings_json" = '{}' || "$port_bindings_json" = null ]]
-docker volume inspect "$volume_name" >/dev/null
-test -f "$run_dir/bootstrap-password"
-test "$(stat -c %a "$run_dir/bootstrap-password")" = 600
-chmod 0600 "$run_dir"/*
+plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
+design_rel=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
+approval=/opt/thoidai-reconciliation/phase0-v5-primary-review.approved.tsv
+test -f "$approval"; test ! -L "$approval"; test "$(stat -c '%U|%G|%a' "$approval")" = 'root|root|600'
+awk -F '|' 'BEGIN{split("verdict scope critical_open important_open task5_execution_authorized authorized_predecessor review_package review_manifest_sha256 unrelated_status_count unrelated_status_sha256",a," ");for(i in a)expected[a[i]]=1} NF!=2||!($1 in expected)||seen[$1]++{bad=1} END{if(NR!=10)bad=1;for(k in expected)if(seen[k]!=1)bad=1;exit bad?41:0}' "$approval"
+test "$(awk -F '|' '$1=="verdict"{print $2}' "$approval")" = APPROVED
+test "$(awk -F '|' '$1=="scope"{print $2}' "$approval")" = phase0-v5-plan-and-design
+test "$(awk -F '|' '$1=="critical_open"{print $2}' "$approval")" = 0
+test "$(awk -F '|' '$1=="important_open"{print $2}' "$approval")" = 0
+test "$(awk -F '|' '$1=="task5_execution_authorized"{print $2}' "$approval")" = true
+authorized_predecessor=$(awk -F '|' '$1=="authorized_predecessor"{print $2}' "$approval")
+review_package=$(awk -F '|' '$1=="review_package"{print $2}' "$approval")
+review_manifest_sha=$(awk -F '|' '$1=="review_manifest_sha256"{print $2}' "$approval")
+approved_unrelated_count=$(awk -F '|' '$1=="unrelated_status_count"{print $2}' "$approval")
+approved_unrelated_sha=$(awk -F '|' '$1=="unrelated_status_sha256"{print $2}' "$approval")
+test "$authorized_predecessor" = f707279ad9028d452d871fddb39d4f0f767ca155; test "$approved_unrelated_count" = 358; test "$approved_unrelated_sha" = 20115c9e9358e5883274a642b1e6c302d8c8bb78edd030f1400a52517b69793a
+[[ "$review_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+review_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
+test -d "$review_root" && test ! -L "$review_root" && test "$(stat -c '%U|%G|%a' "$review_root")" = 'root|root|700' && test "$(realpath -e -- "$review_root")" = "$review_root" || exit 41
+review_basename=$(basename -- "$review_package")
+[[ "$review_basename" =~ ^review-runbook-v[1-9][0-9]*-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]] || exit 41
+test "$(dirname -- "$review_package")" = "$review_root" && test "$review_package" = "$review_root/$review_basename" || exit 41
+test -d "$review_package" && test ! -L "$review_package" && test "$(realpath -e -- "$review_package")" = "$review_package" && test "$(stat -c '%U|%G|%a' "$review_package")" = 'root|root|700' || exit 41
+test -d "$review_package"; test ! -L "$review_package"; test "$(stat -c '%U|%G|%a' "$review_package")" = 'root|root|700'
+printf 'REVIEW-NOTES.md\nSHA256SUMS\nVALIDATION.tsv\ndesign.candidate.md\nrunbook.candidate.md\n' | cmp -s - <(find "$review_package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+for payload in runbook.candidate.md design.candidate.md REVIEW-NOTES.md VALIDATION.tsv SHA256SUMS; do test -f "$review_package/$payload"; test ! -L "$review_package/$payload"; test "$(stat -c '%U|%G|%a' "$review_package/$payload")" = 'root|root|600'; done
+test "$(sha256sum "$review_package/SHA256SUMS" | awk '{print $1}')" = "$review_manifest_sha"; test "$(awk 'END{print NR+0}' "$review_package/SHA256SUMS")" -eq 4
+printf 'runbook.candidate.md\ndesign.candidate.md\nREVIEW-NOTES.md\nVALIDATION.tsv\n' | cmp -s - <(awk '{print $2}' "$review_package/SHA256SUMS")
+(cd "$review_package" && sha256sum -c SHA256SUMS >/dev/null)
+cd "$repo"; test "$(git rev-list --parents -n 1 HEAD | awk '{print NF}')" -eq 2; test "$(git rev-parse HEAD^)" = "$authorized_predecessor"
+printf '%s\n%s\n' "$design_rel" "$plan_rel" | LC_ALL=C sort | cmp -s - <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)
+test "$(git diff-tree --no-commit-id --name-only -r HEAD | wc -l)" -eq 2; git diff --cached --quiet; git diff --quiet -- "$plan_rel" "$design_rel"
+git show "HEAD:$plan_rel" | cmp -s - "$repo/$plan_rel"; git show "HEAD:$design_rel" | cmp -s - "$repo/$design_rel"; git show "HEAD:$plan_rel" | cmp -s - "$review_package/runbook.candidate.md"; git show "HEAD:$design_rel" | cmp -s - "$review_package/design.candidate.md"
+read -r unrelated_count unrelated_sha < <(git status --short --untracked-files=all -- . ':(exclude)docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md' ':(exclude)docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md' | python3 -c 'import hashlib,sys;data=sys.stdin.buffer.read();print(data.count(b"\n"),hashlib.sha256(data).hexdigest())')
+test "$unrelated_count" = "$approved_unrelated_count"; test "$unrelated_sha" = "$approved_unrelated_sha"
 ```
 
-Expected: HEAD/tree/index/source and all 358 unrelated dirty records are unchanged, with fingerprint `20115c…97a`; dirty paths are never printed. The exact isolated container remains stopped, portless, and network-none while its volume and root-only secret remain retained.
+Expected: approval mode and exact schema pass with one APPROVED verdict, v5 scope, zero open Critical/Important findings, true Task-5 authorization, the exact reviewed package/manifest, authorized predecessor, and unrelated fingerprint. HEAD/canonical/index/reviewed bytes form one exact clean two-document commit.
 
-- [ ] **Step 3: Compare HTTP behavior, restart count, services, and Docker health with preflight**
+- [ ] **Step 2: Snapshot approval, bind immutable constants, build the package, and seal the reusable full gate**
+
+The external approval is copied once into the new root-only package. Every constant is then rebound from that exact snapshot, cross-recorded in `COMMIT.tsv`, and sealed by the five-payload manifest. Later validation never trusts a newly replaced external approval.
 
 ```bash
 set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-test "$(systemctl is-active thoidai-work)" = active
-test "$(systemctl is-active docker)" = active
-test "$(systemctl is-active nginx)" = active
-nginx -t >/dev/null 2>&1
-docker exec supabase_db_thoidai-work pg_isready -q -U postgres -d postgres
-test "$(docker ps --filter health=unhealthy -q | wc -l)" -eq 0
-local_login=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code}' http://127.0.0.1:3001/login)
-public_login=$(curl -sS -o /dev/null --max-time 15 -w '%{http_code}' https://thoidai.online/login)
-local_session=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code}' http://127.0.0.1:3001/api/auth/session)
-public_session=$(curl -sS -o /dev/null --max-time 15 -w '%{http_code}' https://thoidai.online/api/auth/session)
-printf 'local_login|%s\npublic_login|%s\nlocal_session|%s\npublic_session|%s\n' \
-  "$local_login" "$public_login" "$local_session" "$public_session" \
-  > "$run_dir/http.isolated.after.tsv"
-cmp -s "$run_dir/http.isolated.before.tsv" "$run_dir/http.isolated.after.tsv"
-systemctl show thoidai-work -p NRestarts --value > "$run_dir/nrestarts.isolated.after"
-cmp -s "$run_dir/nrestarts.isolated.before" "$run_dir/nrestarts.isolated.after"
-running_before=$(awk -F '|' '$1=="running_containers"{print $2}' "$run_dir/resources.isolated.before.tsv")
-test "$(docker ps -q | wc -l)" -eq "$running_before"
-chmod 0600 "$run_dir/http.isolated.after.tsv" "$run_dir/nrestarts.isolated.after"
+umask 077
+repo=/opt/thoidai-work
+plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
+design_rel=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
+approval=/opt/thoidai-reconciliation/phase0-v5-primary-review.approved.tsv
+stamp=$(date -u +%Y%m%dT%H%M%SZ); nonce=$(openssl rand -hex 6); handoff_package="/opt/thoidai-reconciliation/phase0-execution-handoff-$stamp-$nonce"; install -d -m 0700 "$handoff_package"
+cp -- "$approval" "$handoff_package/REVIEW.tsv"; chmod 0600 "$handoff_package/REVIEW.tsv"; test ! -L "$handoff_package/REVIEW.tsv"; test "$(stat -c '%U|%G|%a' "$handoff_package/REVIEW.tsv")" = 'root|root|600'
+awk -F '|' 'BEGIN{split("verdict scope critical_open important_open task5_execution_authorized authorized_predecessor review_package review_manifest_sha256 unrelated_status_count unrelated_status_sha256",a," ");for(i in a)expected[a[i]]=1} NF!=2||!($1 in expected)||seen[$1]++{bad=1} END{if(NR!=10)bad=1;for(k in expected)if(seen[k]!=1)bad=1;exit bad?41:0}' "$handoff_package/REVIEW.tsv"
+readonly authorized_predecessor=$(awk -F '|' '$1=="authorized_predecessor"{print $2}' "$handoff_package/REVIEW.tsv"); readonly review_package=$(awk -F '|' '$1=="review_package"{print $2}' "$handoff_package/REVIEW.tsv"); readonly review_manifest_sha=$(awk -F '|' '$1=="review_manifest_sha256"{print $2}' "$handoff_package/REVIEW.tsv"); readonly approved_unrelated_count=$(awk -F '|' '$1=="unrelated_status_count"{print $2}' "$handoff_package/REVIEW.tsv"); readonly approved_unrelated_sha=$(awk -F '|' '$1=="unrelated_status_sha256"{print $2}' "$handoff_package/REVIEW.tsv"); readonly approval_sha=$(sha256sum "$handoff_package/REVIEW.tsv" | awk '{print $1}')
+test "$(awk -F '|' '$1=="verdict"{print $2}' "$handoff_package/REVIEW.tsv")" = APPROVED; test "$(awk -F '|' '$1=="scope"{print $2}' "$handoff_package/REVIEW.tsv")" = phase0-v5-plan-and-design; test "$(awk -F '|' '$1=="critical_open"{print $2}' "$handoff_package/REVIEW.tsv")" = 0; test "$(awk -F '|' '$1=="important_open"{print $2}' "$handoff_package/REVIEW.tsv")" = 0; test "$(awk -F '|' '$1=="task5_execution_authorized"{print $2}' "$handoff_package/REVIEW.tsv")" = true
+test "$authorized_predecessor" = f707279ad9028d452d871fddb39d4f0f767ca155; test "$approved_unrelated_count" = 358; test "$approved_unrelated_sha" = 20115c9e9358e5883274a642b1e6c302d8c8bb78edd030f1400a52517b69793a
+cd "$repo"; git diff --cached --quiet; git diff --quiet -- "$plan_rel" "$design_rel"; test "$(git rev-list --parents -n 1 HEAD | awk '{print NF}')" -eq 2; test "$(git rev-parse HEAD^)" = "$authorized_predecessor"; printf '%s\n%s\n' "$design_rel" "$plan_rel" | LC_ALL=C sort | cmp -s - <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)
+git show "HEAD:$plan_rel" > "$handoff_package/plan.md"; git show "HEAD:$design_rel" > "$handoff_package/design.md"
+cat > "$handoff_package/VERIFY.sh" <<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+pointer=$1; repo=/opt/thoidai-work; plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md; design_rel=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
+test -f "$pointer"; test ! -L "$pointer"; test "$(stat -c '%U|%G|%a' "$pointer")" = 'root|root|600'; test "$(awk 'END{print NR+0}' "$pointer")" -eq 1
+IFS= read -r package < "$pointer"; case "$package" in /opt/thoidai-reconciliation/phase0-execution-handoff-*) ;; *) exit 41 ;; esac
+test -d "$package"; test ! -L "$package"; test "$(stat -c '%U|%G|%a' "$package")" = 'root|root|700'
+printf 'COMMIT.tsv\nREVIEW.tsv\nSHA256SUMS\nVERIFY.sh\ndesign.md\nplan.md\n' | cmp -s - <(find "$package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+for payload in plan.md design.md COMMIT.tsv REVIEW.tsv VERIFY.sh SHA256SUMS; do test -f "$package/$payload"; test ! -L "$package/$payload"; test "$(stat -c '%U|%G|%a' "$package/$payload")" = 'root|root|600'; done
+test "$(awk 'END{print NR+0}' "$package/SHA256SUMS")" -eq 5; awk 'NF!=2||$1!~/^[0-9a-f]{64}$/{exit 41}' "$package/SHA256SUMS"; printf 'plan.md\ndesign.md\nCOMMIT.tsv\nREVIEW.tsv\nVERIFY.sh\n' | cmp -s - <(awk '{print $2}' "$package/SHA256SUMS"); (cd "$package" && sha256sum -c SHA256SUMS >/dev/null)
+awk -F '|' 'BEGIN{split("verdict scope critical_open important_open task5_execution_authorized authorized_predecessor review_package review_manifest_sha256 unrelated_status_count unrelated_status_sha256",a," ");for(i in a)expected[a[i]]=1} NF!=2||!($1 in expected)||seen[$1]++{bad=1} END{if(NR!=10)bad=1;for(k in expected)if(seen[k]!=1)bad=1;exit bad?41:0}' "$package/REVIEW.tsv"
+awk -F '|' 'BEGIN{split("head tree parent parent_count plan_blob design_blob review_package review_manifest_sha256 approval_sha256 authorized_predecessor unrelated_status_count unrelated_status_sha256",a," ");for(i in a)expected[a[i]]=1} NF!=2||!($1 in expected)||seen[$1]++{bad=1} END{if(NR!=12)bad=1;for(k in expected)if(seen[k]!=1)bad=1;exit bad?41:0}' "$package/COMMIT.tsv"
+rv(){ awk -F '|' -v key="$1" '$1==key{print $2}' "$package/REVIEW.tsv"; }; cv(){ awk -F '|' -v key="$1" '$1==key{print $2}' "$package/COMMIT.tsv"; }
+test "$(rv verdict)" = APPROVED; test "$(rv scope)" = phase0-v5-plan-and-design; test "$(rv critical_open)" = 0; test "$(rv important_open)" = 0; test "$(rv task5_execution_authorized)" = true
+authorized_predecessor=$(rv authorized_predecessor); review_package=$(rv review_package); review_manifest_sha=$(rv review_manifest_sha256); approved_unrelated_count=$(rv unrelated_status_count); approved_unrelated_sha=$(rv unrelated_status_sha256)
+test "$authorized_predecessor" = f707279ad9028d452d871fddb39d4f0f767ca155; test "$approved_unrelated_count" = 358; test "$approved_unrelated_sha" = 20115c9e9358e5883274a642b1e6c302d8c8bb78edd030f1400a52517b69793a; [[ "$review_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+review_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
+test -d "$review_root" && test ! -L "$review_root" && test "$(stat -c '%U|%G|%a' "$review_root")" = 'root|root|700' && test "$(realpath -e -- "$review_root")" = "$review_root" || exit 41
+review_basename=$(basename -- "$review_package")
+[[ "$review_basename" =~ ^review-runbook-v[1-9][0-9]*-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]] || exit 41
+test "$(dirname -- "$review_package")" = "$review_root" && test "$review_package" = "$review_root/$review_basename" || exit 41
+test -d "$review_package" && test ! -L "$review_package" && test "$(realpath -e -- "$review_package")" = "$review_package" && test "$(stat -c '%U|%G|%a' "$review_package")" = 'root|root|700' || exit 41
+test -d "$review_package"; test ! -L "$review_package"; test "$(stat -c '%U|%G|%a' "$review_package")" = 'root|root|700'; printf 'REVIEW-NOTES.md\nSHA256SUMS\nVALIDATION.tsv\ndesign.candidate.md\nrunbook.candidate.md\n' | cmp -s - <(find "$review_package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+for payload in runbook.candidate.md design.candidate.md REVIEW-NOTES.md VALIDATION.tsv SHA256SUMS; do test -f "$review_package/$payload"; test ! -L "$review_package/$payload"; test "$(stat -c '%U|%G|%a' "$review_package/$payload")" = 'root|root|600'; done
+test "$(sha256sum "$review_package/SHA256SUMS" | awk '{print $1}')" = "$review_manifest_sha"; test "$(awk 'END{print NR+0}' "$review_package/SHA256SUMS")" -eq 4; awk 'NF!=2||$1!~/^[0-9a-f]{64}$/{exit 41}' "$review_package/SHA256SUMS"; printf 'runbook.candidate.md\ndesign.candidate.md\nREVIEW-NOTES.md\nVALIDATION.tsv\n' | cmp -s - <(awk '{print $2}' "$review_package/SHA256SUMS"); (cd "$review_package" && sha256sum -c SHA256SUMS >/dev/null)
+package_head=$(cv head); package_tree=$(cv tree); package_parent=$(cv parent); package_parent_count=$(cv parent_count); package_plan_blob=$(cv plan_blob); package_design_blob=$(cv design_blob); package_review=$(cv review_package); package_review_sha=$(cv review_manifest_sha256); package_approval_sha=$(cv approval_sha256); package_predecessor=$(cv authorized_predecessor); package_unrelated_count=$(cv unrelated_status_count); package_unrelated_sha=$(cv unrelated_status_sha256)
+test "$package_parent_count" = 1; test "$package_review" = "$review_package"; test "$package_review_sha" = "$review_manifest_sha"; test "$package_predecessor" = "$authorized_predecessor"; test "$package_unrelated_count" = "$approved_unrelated_count"; test "$package_unrelated_sha" = "$approved_unrelated_sha"; test "$package_approval_sha" = "$(sha256sum "$package/REVIEW.tsv" | awk '{print $1}')"
+cd "$repo"; git diff --cached --quiet; git diff --quiet -- "$plan_rel" "$design_rel"; test "$(git rev-list --parents -n 1 HEAD | awk '{print NF}')" -eq 2; test "$package_head" = "$(git rev-parse HEAD)"; test "$package_tree" = "$(git rev-parse HEAD^{tree})"; test "$package_parent" = "$(git rev-parse HEAD^)"; test "$package_parent" = "$authorized_predecessor"; test "$package_plan_blob" = "$(git rev-parse "HEAD:$plan_rel")"; test "$package_design_blob" = "$(git rev-parse "HEAD:$design_rel")"
+printf '%s\n%s\n' "$design_rel" "$plan_rel" | LC_ALL=C sort | cmp -s - <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort); test "$(git diff-tree --no-commit-id --name-only -r HEAD | wc -l)" -eq 2
+cmp -s "$package/plan.md" "$repo/$plan_rel"; cmp -s "$package/design.md" "$repo/$design_rel"; git show "HEAD:$plan_rel" | cmp -s - "$package/plan.md"; git show "HEAD:$design_rel" | cmp -s - "$package/design.md"; git show "HEAD:$plan_rel" | cmp -s - "$review_package/runbook.candidate.md"; git show "HEAD:$design_rel" | cmp -s - "$review_package/design.candidate.md"
+read -r current_unrelated_count current_unrelated_sha < <(git status --short --untracked-files=all -- . ':(exclude)docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md' ':(exclude)docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md' | python3 -c 'import hashlib,sys;data=sys.stdin.buffer.read();print(data.count(b"\n"),hashlib.sha256(data).hexdigest())'); test "$current_unrelated_count" = "$approved_unrelated_count"; test "$current_unrelated_sha" = "$approved_unrelated_sha"
+BASH
+chmod 0600 "$handoff_package/VERIFY.sh"
+printf 'head|%s\ntree|%s\nparent|%s\nparent_count|1\nplan_blob|%s\ndesign_blob|%s\nreview_package|%s\nreview_manifest_sha256|%s\napproval_sha256|%s\nauthorized_predecessor|%s\nunrelated_status_count|%s\nunrelated_status_sha256|%s\n' "$(git rev-parse HEAD)" "$(git rev-parse HEAD^{tree})" "$(git rev-parse HEAD^)" "$(git rev-parse "HEAD:$plan_rel")" "$(git rev-parse "HEAD:$design_rel")" "$review_package" "$review_manifest_sha" "$approval_sha" "$authorized_predecessor" "$approved_unrelated_count" "$approved_unrelated_sha" > "$handoff_package/COMMIT.tsv"
+chmod 0600 "$handoff_package/plan.md" "$handoff_package/design.md" "$handoff_package/COMMIT.tsv"; (cd "$handoff_package" && sha256sum plan.md design.md COMMIT.tsv REVIEW.tsv VERIFY.sh > SHA256SUMS); chmod 0600 "$handoff_package/SHA256SUMS"
+for payload in plan.md design.md COMMIT.tsv REVIEW.tsv VERIFY.sh SHA256SUMS; do test -f "$handoff_package/$payload"; test ! -L "$handoff_package/$payload"; test "$(stat -c '%U|%G|%a' "$handoff_package/$payload")" = 'root|root|600'; done; (cd "$handoff_package" && sha256sum -c SHA256SUMS >/dev/null)
+pending_tmp=$(mktemp /opt/thoidai-reconciliation/.phase0-execution-handoff.pending.XXXXXX); printf '%s\n' "$handoff_package" > "$pending_tmp"; chown root:root "$pending_tmp"; chmod 0600 "$pending_tmp"; mv -T "$pending_tmp" /opt/thoidai-reconciliation/phase0-execution-handoff.pending
+bash "$handoff_package/VERIFY.sh" /opt/thoidai-reconciliation/phase0-execution-handoff.pending
 ```
 
-Expected: local/public login remain `200`, unauthenticated session remains `401`, application restart count is unchanged, nginx/database are healthy, Docker has zero unhealthy containers, and stopping the retained isolated container returns the running-container count to its preflight value.
+Expected: the package contains committed bytes, the exact approval snapshot, the complete bound COMMIT schema, and the single full validator. Five payloads are manifest-sealed; `SHA256SUMS` excludes itself. The full gate passes against the pending pointer before the package can become publication input.
 
-- [ ] **Step 4: Report the complete aggregate VPS health matrix**
+- [ ] **Step 3: Invoke the same full gate immediately before atomic publication**
+
+No value is rebound from the external approval. The package path is read from the root-only pending pointer, the sealed helper performs the complete validation again, and that same validated path is the only value published.
 
 ```bash
 set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-printf 'VPS=vps-aylaspa\n'
-printf 'STATUS=%s\n' "$(systemctl is-system-running 2>/dev/null || true)"
-printf 'CPU=%s vCPU\n' "$(nproc)"
-free -m | awk '/^Mem:/ {printf "RAM=%d/%d MiB (%.1f%%)\n",$3,$2,100*$3/$2}'
-df -hP /opt/thoidai-work | awk 'NR==2 {printf "DISK=%s/%s (%s), free=%s\n",$3,$2,$5,$4}'
-awk '{print "LOAD="$1"/"$2"/"$3}' /proc/loadavg
-printf 'SERVICES=thoidai-work:%s failed-units:%s\n' \
-  "$(systemctl is-active thoidai-work)" "$(systemctl --failed --no-legend | wc -l)"
-printf 'DOCKER=%s running=%s unhealthy=%s\n' \
-  "$(systemctl is-active docker)" "$(docker ps -q | wc -l)" \
-  "$(docker ps --filter health=unhealthy -q | wc -l)"
-printf 'NGINX=%s config=ok\n' "$(systemctl is-active nginx)"
-printf 'DATABASE='; docker exec supabase_db_thoidai-work pg_isready -U postgres -d postgres
-printf 'WARNINGS=%s (60m)\n' \
-  "$(journalctl -u thoidai-work --since '60 minutes ago' -p warning --no-pager --output=cat | wc -l)"
-printf 'ERRORS=%s (60m)\n' \
-  "$(journalctl -u thoidai-work --since '60 minutes ago' -p err --no-pager --output=cat | wc -l)"
-if grep -Fxq 'STOP: at least one target is not exact-applied' "$run_dir/HISTORY-GATE.status"; then
-  printf 'RECOMMENDED ACTION=retain evidence and resolve the four blocked versions; do not write history\n'
-else
-  printf 'RECOMMENDED ACTION=review Task 8 read-back and retained evidence before any later cleanup\n'
-fi
+umask 077
+pending_pointer=/opt/thoidai-reconciliation/phase0-execution-handoff.pending
+invoke_full_immutable_gate() {
+  local pointer=$1 package payload
+  test -f "$pointer"; test ! -L "$pointer"; test "$(stat -c '%U|%G|%a' "$pointer")" = 'root|root|600'; test "$(awk 'END{print NR+0}' "$pointer")" -eq 1
+  IFS= read -r package < "$pointer"; case "$package" in /opt/thoidai-reconciliation/phase0-execution-handoff-*) ;; *) return 41 ;; esac
+  test -d "$package"; test ! -L "$package"; test "$(stat -c '%U|%G|%a' "$package")" = 'root|root|700'
+  printf 'COMMIT.tsv\nREVIEW.tsv\nSHA256SUMS\nVERIFY.sh\ndesign.md\nplan.md\n' | cmp -s - <(find "$package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+  for payload in plan.md design.md COMMIT.tsv REVIEW.tsv VERIFY.sh SHA256SUMS; do test -f "$package/$payload"; test ! -L "$package/$payload"; test "$(stat -c '%U|%G|%a' "$package/$payload")" = 'root|root|600'; done
+  test "$(awk 'END{print NR+0}' "$package/SHA256SUMS")" -eq 5; awk 'NF!=2||$1!~/^[0-9a-f]{64}$/{exit 41}' "$package/SHA256SUMS"; printf 'plan.md\ndesign.md\nCOMMIT.tsv\nREVIEW.tsv\nVERIFY.sh\n' | cmp -s - <(awk '{print $2}' "$package/SHA256SUMS")
+  (cd "$package" && sha256sum -c SHA256SUMS >/dev/null); bash "$package/VERIFY.sh" "$pointer"; printf '%s\n' "$package"
+}
+handoff_package=$(invoke_full_immutable_gate "$pending_pointer"); test -n "$handoff_package"; test "$(cat "$pending_pointer")" = "$handoff_package"
+pointer_tmp=$(mktemp /opt/thoidai-reconciliation/.HANDOFF.current.XXXXXX); printf '%s\n' "$handoff_package" > "$pointer_tmp"; chown root:root "$pointer_tmp"; chmod 0600 "$pointer_tmp"; test "$(stat -c '%U|%G|%a' "$pointer_tmp")" = 'root|root|600'
+mv -T "$pointer_tmp" /opt/thoidai-reconciliation/HANDOFF.current; test ! -L /opt/thoidai-reconciliation/HANDOFF.current; test "$(cat /opt/thoidai-reconciliation/HANDOFF.current)" = "$handoff_package"; bash "$handoff_package/VERIFY.sh" /opt/thoidai-reconciliation/HANDOFF.current
 ```
 
-Expected report fields exactly: VPS, STATUS, CPU, RAM, DISK, LOAD, SERVICES, DOCKER, NGINX, DATABASE, WARNINGS, ERRORS, and RECOMMENDED ACTION. Only counts/statuses are reported; journal bodies are never printed.
+Expected: the exact same full package/approval/commit/canonical/unrelated gate runs after packaging and immediately before publication. The validated immutable package path-not any re-read external approval value-is atomically published and then verifies once more through the final pointer.
 
-- [ ] **Step 5: Seal all final non-secret evidence**
+### Current v5 review stop
 
-```bash
-set -euo pipefail
-evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r run_dir < "$evidence_root/isolated-run.current"
-IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db replay_db < "$run_dir/names.tsv"
-final_tmp="$evidence_root/.phase0-final-$run_id.sha256.tmp"
-find "$run_dir" -maxdepth 1 -type f \
-  ! -name bootstrap-password ! -name PHASE0-FINAL-SHA256SUMS \
-  -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$final_tmp"
-chmod 0600 "$final_tmp"
-mv -f -- "$final_tmp" "$run_dir/PHASE0-FINAL-SHA256SUMS"
-test "$(find "$run_dir" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
-(cd / && sha256sum -c "$run_dir/PHASE0-FINAL-SHA256SUMS" >/dev/null)
-```
-
-Expected: the final root-only index covers source/history decisions, backup validation, restore/replay results, owner/ACL/privilege gates, classification, preservation, HTTP/restart evidence, Git fingerprint, and retained-resource state. The secret remains excluded and retained.
-
-## Task 10: Execution handoff and current stop state
-
-**Files:**
-- Modify during planning review only: `docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md`
-- Modify during planning review only: `docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md`
-- No execution action in this task
-
-- [ ] **Step 1: Honor the audited STOP while still completing preservation health checks**
-
-Current execution evidence records Tasks 1–3 complete and Task 4 Steps 1–13 complete. The former fidelity Step 14 stopped at schema ACL `6` versus expected `7`; no zero-row baseline, Task-4 seal, fixture, replay, classification, history, cleanup, or Task 5 action followed. The rollback-only TDD diagnostic is retained, but new Task 4 Step 14 has not committed the normalization and revised Steps 15–16 remain pending. The Task 4 checkboxes stay unchecked under the existing documentation convention until primary review approves and execution re-enters at the new Step 14.
-
-The current evidence does not authorize history writes because `20260813210000`, `20260813230000`, `20260813233000`, and `20260814130000` lack exact independent production execution proof. Execute the approved remainder of Tasks 4–7 sequentially, skip Task 8 when the exact STOP gate is present, then execute Task 9 preservation/health checks. Never treat isolated replay success or the ACL normalization as permission to write history.
-
-Expected: the audited path completes Tasks 4–7 and Task 9, records exact STOP, and performs zero Task-8 history writes.
-
-- [ ] **Step 2: Use the already selected inline execution method**
-
-When primary review later authorizes implementation, continue inline through the existing matching custom agent `/root/aylaspa_thoidai` with `superpowers:executing-plans`. The one-VPS routing requirement overrides the generic fresh-worker option in the writing-plans header. Do not spawn another worker or parallelize backup, lifecycle, restore, replay, classification, history, or health steps.
-
-Expected: one sequential execution context uses only the existing Aylaspa agent; no parallel or replacement VPS worker is created.
-
-- [ ] **Step 3: Keep both rewritten documents modified, unstaged, and uncommitted for primary review**
-
-```bash
-set -euo pipefail
-cd /opt/thoidai-work
-spec=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
-plan=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
-test "$(git status --porcelain=v1 --untracked-files=all -- "$spec" "$plan" | wc -l)" -eq 2
-git status --porcelain=v1 --untracked-files=all -- "$spec" "$plan" | grep -Fx " M $spec"
-git status --porcelain=v1 --untracked-files=all -- "$spec" "$plan" | grep -Fx " M $plan"
-test "$(git diff --cached --name-only | wc -l)" -eq 0
-```
-
-Expected during this writing-plans phase: exactly two unstaged tracked-document modifications—the design and this plan—and an empty index. Do not commit or execute the new Step 14 until primary review explicitly approves both drafts.
+For the present documentation turn: do not execute any Task-5 through Task-10 checkbox, do not stage or commit, do not create the primary approval or execution package, and do not update `HANDOFF.current`. Only static/live read-only validation and a separate root-only candidate review package are allowed.
