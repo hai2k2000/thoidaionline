@@ -10,6 +10,104 @@
 
 ---
 
+## Normative v8 recovery-correction addendum
+
+This addendum supersedes the v5 forward-execution instructions for Task 5 re-entry and Task 10 publication. It does not alter the sealed Tasks 1?4 record or authorize execution in this documentation turn.
+
+- The reviewed v7 commit is `464d17a652cdd622b5c20891e8f7fe24b55e6dd6`, with predecessor `f707279ad9028d452d871fddb39d4f0f767ca155`.
+- The sealed v5 execution package remains `/opt/thoidai-reconciliation/phase0-execution-handoff-20260815T041006Z-2be71271104d`; its `SHA256SUMS` hash is `30d3fc6fd40f736441fe3ec3f089ff5bf5c4e3b3525613094ab245e70011b04a`. The existing `HANDOFF.current` bytes have SHA-256 `a7e4ef17ee3eaa00bacc6693772940b5308390fcbd9ef4c2275ec9b788c01005`.
+- The v5 approval remains immutable at `/opt/thoidai-reconciliation/phase0-v5-primary-review.approved.tsv`, SHA-256 `f89cd838975607400b34aea15c3db8e079ed950837da1774e7b7078acc7025aa`. A v8 review/approval is additive and may not replace this file or weaken its exact package binding.
+- The only recoverable Task-5 lane is `/opt/thoidai-reconciliation/phase0-v5-execution-20260815T041430Z-7fa3f327f5c8`, selected by the regular root-owned mode-0600 pointer `/opt/thoidai-reconciliation/phase0-v5-execution.pending`, whose bytes have SHA-256 `d6c20209be2254dc9cb2788c6ad495ecb372516dd905b2c8e4cd7a76b5779af9`.
+- Its retained identities are container `thoidai_phase0_v3_cd3186598cd4` with ID `c8d8916b639cb40ae19d7dfeeb0cf43bf52edea51ca4dc4be1e4e34dcd1ffc4c`, volume `thoidai_phase0_v3_data_cd3186598cd4`, and databases `phase0_fresh_cd3186598cd4`, `phase0_diag_cd3186598cd4`, and `phase0_successor_cd3186598cd4`.
+- The preserved failure-state fingerprint is `130455a0a92ca76d0372410d4ad60d67d7e8866985f64b5be2cf11a175617faa`. It covers exact pending/approval metadata and old-handoff bytes, the exact byte hashes and metadata of the 27 named non-secret recovery files, secret metadata without reading or hashing secret bytes, absent seals/current pointer, selected container metadata, and selected volume metadata.
+- Blocks 1?3 completed. Block 4 started the exact retained container, then `pg_isready` passed while the immediately following `psql` logging query failed. `postgres-logging.actual.tsv` is therefore an intentional zero-byte failure artifact. Restore, fidelity sealing, database creation, and Task-5 completion never began.
+
+While the pending pointer exists, creating or replacing an execution directory, secret, volume, container, name allocation, or pending pointer is forbidden. Re-entry must authenticate a reviewed v8 handoff, bind the exact retained lane and failure fingerprint, establish three consecutive composite readiness observations, and continue only at that first unfinished boundary. Any unexpected path, symlink, owner/mode, byte, container/volume identity, seal, database, role, object, or partial later boundary stops without restart, stop, removal, log access, cleanup, or fallback.
+
+## Normative v9 executable-correction addendum (superseded by v10; historical)
+
+This v9 addendum supersedes the v8 Task-5 re-entry and Task-10 republication procedures while preserving every v8 historical fact and invariant. It adds five mandatory controls: complete executable Task-10 blocks; per-command GNU `timeout --foreground` bounds nested inside the overall readiness deadline; exact member/schema sealing plus kernel `renameat2` no-replace/exchange publication; deterministic exact-destination mount serialization that rejects missing, duplicate, or extra mounts while preserving the immutable failure fingerprint; and a live, sanitized, credential-mount-bound catalog/role boundary in `RECOVERY-VERIFY.sh`. No v9 checkbox was authorized in that documentation turn, and no v9 approval or execution pending pointer exists.
+
+The superseded v9 design required a new non-merge two-document child of `464d17a652cdd622b5c20891e8f7fe24b55e6dd6`, never an amend; it reserved `/opt/thoidai-reconciliation/phase0-v9-reentry-review.approved.tsv` and the `phase0-v9-execution-handoff-<UTC>-<12hex>` grammar. Neither v9 authority artifact exists. The old v5 approval, old handoff package, live Task-5 pending pointer, retained recovery path, failure fingerprint `130455a0a92ca76d0372410d4ad60d67d7e8866985f64b5be2cf11a175617faa`, and runtime identities remain immutable.
+
+## Normative v10 byte-clean, lock-scoped, rollback-safe addendum (superseded by v11; historical)
+
+This v10 addendum supersedes the active v9 Task-5 handoff-authentication and Task-10 republication procedure while preserving every sealed v5-v9 historical fact, authority byte, failure fingerprint, runtime identity, and `readiness-v9` boundary. The sealed v9 review package is immutable even though its `VERIFY.sh` contains two literal carriage-return bytes; it is historical evidence and is never edited in place or reused as a v10 payload.
+
+Every v10 review/execution text payload, helper, manifest, pointer, and history record must be a regular non-symlink file with zero CR bytes, zero NUL bytes, and one final LF. Publication must include negative tests that reject CR, NUL, and missing-final-LF inputs. The complete helper gate first runs through a private `.phase0-v10-candidate-pointer.<random>` and that exact inode/content hash is removed before the sticky top-level `phase0-v10-execution-handoff.pending` pointer is created with `RENAME_NOREPLACE`.
+
+One complete Task-10 shell block holds a fixed root-only exclusive `flock` from the first byte/authority precheck through package sealing, private prepublication verification, pending publication/reverification, prepared-history fsync, `HANDOFF.current` exchange, both postpublication helpers, final manifests/fsync, and final postverification. History is prepared before the authoritative exchange and rollback is armed before `RENAME_EXCHANGE`; the exchanged A pointer remains available through every post-exchange gate. A normal failure restores A. If a non-cooperating writer has already changed the authoritative pointer from C to B, cleanup preserves B and never reinstates or leaves C authoritative. Candidate/pending cleanup may unlink only the exact recorded device/inode and byte hash; any identity or content mismatch is retained and fails closed.
+
+The bounded recovery boundary performs separate `test -f` and `test -r` probes against the exact credential bind path, retains the exact bind-source/mode checks, and never reads credential bytes or changes authentication. The future corrective commit remains a new non-merge two-document direct child of `464d17a652cdd622b5c20891e8f7fe24b55e6dd6`, never an amend. The additive approval is `/opt/thoidai-reconciliation/phase0-v10-reentry-review.approved.tsv`; reviewed packages use `review-runbook-v10-<UTC>-<12hex>`, execution packages use `phase0-v10-execution-handoff-<UTC>-<12hex>`, and the immutable failure-state SHA-256 remains `130455a0a92ca76d0372410d4ad60d67d7e8866985f64b5be2cf11a175617faa`. No v10 checkbox was authorized in that documentation turn; its review package remains non-authoritative and no v10 approval or publication pointer exists.
+
+## Normative v11 immutable-old-authority and crash-resumable publication addendum (superseded by v12; historical)
+
+v11 supersedes the active v10 handoff architecture while preserving the entire v5-v10 historical record, all v9 recovery gates, byte-hygiene rules, exact Task-5 pending lane, failure fingerprint, and runtime identities. `/opt/thoidai-reconciliation/HANDOFF.current` is now immutable evidence: Task 10 and re-entry never write, chmod, rename, exchange, replace, or remove that pathname. Its bytes must remain SHA-256 `a7e4ef17ee3eaa00bacc6693772940b5308390fcbd9ef4c2275ec9b788c01005` and continue to name the old sealed package.
+
+Corrected authority uses only two previously absent fixed paths: `/opt/thoidai-reconciliation/phase0-v11-execution-handoff.pending` and `/opt/thoidai-reconciliation/HANDOFF.recovery-v11.current`. Each is published exactly once with kernel `RENAME_NOREPLACE`, followed immediately by an fsync of `/opt/thoidai-reconciliation`. Foreign or malformed preexistence fails closed without changing or deleting it. There is no pathname cleanup, unlink, exchange, rollback, overwrite, or move-old-pointer branch; unique package/candidate artifacts are retained as evidence.
+
+Before package sealing, both candidate pointer files already contain the final package path. `PUBLICATION.tsv`, `HISTORY.tsv`, and `COMMIT.tsv` cross-bind their absolute paths, device/inode identities, full byte hashes, the two fixed targets, the immutable old pointer, and the read-only lock inode. The crash-resumable authoritative states are only: neither new target exists; the exact pending target exists while current is absent; or both exact pending/current targets exist. Rerun validates package, additive approval, corrective commit, failure state, device/inode, bytes, and candidate state before acting. Pending-only resumes verification and no-replace current publication. Exact current is verification-only and idempotent. Current-without-pending, foreign identity, conflicting bytes, missing candidate, or any other state stops.
+
+Task-5 Step 1R must prove the original Task-5 pending pointer and failure fingerprint through the reviewed recovery verifier before it reads `HANDOFF.recovery-v11.current`; it never treats `HANDOFF.current` as corrected authority. The future corrective commit remains a new non-merge exact-two-document direct child of `464d17a652cdd622b5c20891e8f7fe24b55e6dd6`, never an amend. v11 uses additive approval `/opt/thoidai-reconciliation/phase0-v11-reentry-review.approved.tsv`, review grammar `review-runbook-v11-<UTC>-<12hex>`, and execution grammar `phase0-v11-execution-handoff-<UTC>-<12hex>`. No v11 checkbox is authorized in this documentation turn.
+
+## Normative v12 anonymous-inode publication and passive-consumer addendum (superseded by v13; historical)
+
+v12 supersedes the active v11 publication and consumer architecture while preserving every v5-v11 historical artifact, the exact Task-5 pending lane, the failure fingerprint, the old `HANDOFF.current`, the v5 approval, runtime identities, and the unrelated Git fingerprint. The v11 candidate package and its fixed paths remain non-authoritative historical review material and are never created or reused by v12.
+
+Corrected authority uses only `/opt/thoidai-reconciliation/phase0-v12-execution-handoff.pending` and `/opt/thoidai-reconciliation/HANDOFF.recovery-v12.current`. There is no pathname-addressed candidate. Initial publication writes and fsyncs the final one-line pointer into an anonymous inode created by `O_TMPFILE` on the reconciliation filesystem, validates that open inode, then uses `linkat(AT_EMPTY_PATH)` to create pending with no-replace semantics. Pending-only publication opens and pins the already authenticated pending inode and links that same inode to current. Exact current therefore requires both fixed paths to be hard links to one regular root-owned mode-0600 inode with the approved bytes.
+
+An `EEXIST` from initial pending publication never falls through to package C. It performs no current mutation; the parent discards C as authority, fsyncs the base directory, reopens and passively authenticates the winning pending pointer, and binds the package named by that pinned inode before considering current. Thus a valid late-arriving package B can produce only B-pending/B-current, never B-pending/C-current. Every pending-only entry, including recovery from a crash after the pending link but before its first directory fsync, performs `fsync_dir /opt/thoidai-reconciliation` before current publication.
+
+No helper selected from an execution pointer may run merely because that package verifies against its own manifest. Step 1R, the Task-5 final gate, and Task 10 first validate the additive v12 approval and its manifest-sealed trusted review package; then they passively compare the execution package's `REVIEW-V12.tsv`, `FAILURE-STATE.tsv`, `VERIFY.sh`, `RECOVERY-VERIFY.sh`, `PUBLISH.py`, plan, and design against external approval/trusted review bytes. Only the trusted review-package copies may execute after every comparison succeeds. v12 uses additive approval `/opt/thoidai-reconciliation/phase0-v12-reentry-review.approved.tsv`, review grammar `review-runbook-v12-<UTC>-<12hex>`, and execution grammar `phase0-v12-execution-handoff-<UTC>-<12hex>`. No v12 checkbox is authorized in this documentation turn.
+
+## Normative v13 externally anchored trust, lock binding, and executable-simulation addendum (superseded by v14; historical)
+
+v13 supersedes the active v12 consumer and verification procedure while retaining v12's anonymous-inode `O_TMPFILE` plus `linkat(AT_EMPTY_PATH)` no-replace publication primitive. Every v5-v12 artifact remains immutable historical evidence. The old `HANDOFF.current`, v5 approval, Task-5 pending pointer, retained runtime lane, failure fingerprint, Git predecessor, and unrelated-state fingerprint are unchanged.
+
+The trust root is supplied to each consumer as two independent operator inputs: the exact absolute v13 review-package path and the exact SHA-256 of that package's `SHA256SUMS`. Neither value may first be read or derived from the additive approval. Before approval or execution-package interpretation, the consumer validates the anchored review path, metadata, manifest hash, exact manifest member names and order, safe basenames, hash syntax, member metadata, and member digests. The exact 22-key approval adds `lock_path` and `lock_device_inode`. `TRUST-POLICY.tsv`, approval, `COMMIT.tsv`, `HISTORY.tsv`, and the actual device/inode of immutable `HANDOFF.current` must all bind the same lock.
+
+`TRUST-GATE.py` is the sole consumer entry point. It treats every execution package as passive data: it rejects traversal, duplicate, extra, malformed, CR/NUL-bearing, or unterminated manifest/payload input before any execution-package helper can run; compares approval, failure state, plan, design, publisher, both validators, trust gate, and policy byte-for-byte with externally trusted sources; validates the exact 22/26/13/8 approval/commit/history/publication schemas and all pointer/package/lock bindings; and only then executes trusted review-package copies of `VERIFY.sh` and `RECOVERY-VERIFY.sh`. Step 1R, Task 10, and the Task-5 final gate use that order. At the final gate, live trusted recovery verification is the last command before creation of `TASK5.COMPLETE`.
+
+v13 reserves additive approval `/opt/thoidai-reconciliation/phase0-v13-reentry-review.approved.tsv`, review grammar `review-runbook-v13-<UTC>-<12hex>`, execution grammar `phase0-v13-execution-handoff-<UTC>-<12hex>`, and fixed authority paths `/opt/thoidai-reconciliation/phase0-v13-execution-handoff.pending` plus `/opt/thoidai-reconciliation/HANDOFF.recovery-v13.current`. Simulation-only fault and barrier hooks in `PUBLISH.py` are inert unless guarded by an exact root-owned mode-0600 `.ALLOW_V13_SIMULATION` inside a `.phase0-v13-simulation-*` tree. Real subprocess tests must exercise six crash exits, deterministic recovery, a late-writer race, traversal and text-byte rejection, and a malicious execution-helper side effect that never occurs. No v13 checkbox is authorized in this documentation turn.
+
+The first sealed v13 candidate is retained as non-authoritative historical review material. Its gate emitted success status after live recovery returned, so recovery was not literally its final successful gate command.
+
+## Normative v14 literal-final-recovery and externally anchored trust addendum (superseded by v15; historical)
+
+v14 preserves every v13 passive-trust, manifest, lock-binding, and anonymous-inode publication control, but supersedes all active v13 names and consumers. The operator supplies the exact v14 review-package path and its exact `SHA256SUMS` SHA-256 independently before approval interpretation. The 22/26/13/8/19 approval, commit, history, publication, and policy schemas bind v14 fixed paths and the actual immutable lock inode.
+
+`TRUST-GATE.py` emits and flushes passive status before invoking any trusted helper. For `--action both`, trusted `VERIFY.sh` runs first and the successful live trusted `RECOVERY-VERIFY.sh` invocation is returned directly as the final gate call: there is no later output, command, trap, cleanup, mutation, or implicit shell branch before the caller creates `TASK5.COMPLETE`. Execution-package helpers remain passive bytes and never execute.
+
+v14 reserves approval `/opt/thoidai-reconciliation/phase0-v14-reentry-review.approved.tsv`, review grammar `review-runbook-v14-<UTC>-<12hex>`, execution grammar `phase0-v14-execution-handoff-<UTC>-<12hex>`, and fixed authority paths `/opt/thoidai-reconciliation/phase0-v14-execution-handoff.pending` plus `/opt/thoidai-reconciliation/HANDOFF.recovery-v14.current`. Simulation guards and subprocess fault/race namespaces are v14-only. No v14 checkbox is authorized in this documentation turn.
+
+## Normative v15 staged recovery and single-owner completion addendum (superseded by v16; historical)
+
+v15 supersedes every active v14 consumer, pathname, helper namespace, and completion procedure while preserving the sealed v14 review package as immutable historical evidence. The only active additive approval is `/opt/thoidai-reconciliation/phase0-v15-reentry-review.approved.tsv`; active review and execution grammars are `review-runbook-v15-<UTC>-<12hex>` and `phase0-v15-execution-handoff-<UTC>-<12hex>`; active fixed authority paths are `phase0-v15-execution-handoff.pending` and `HANDOFF.recovery-v15.current`. The exact approval/commit/history/publication/policy schemas are `22/26/13/8/19`, and `HISTORY.tsv` binds `commit_head`, `commit_tree`, and `commit_parent` to authenticated `COMMIT.tsv`.
+
+All external manifests are parsed as passive text before `sha256sum -c`: exact root ownership/mode, exact member set/order, safe basename grammar, lowercase 64-hex digest syntax, zero CR/NUL, final LF, regular non-symlink members, and member metadata are mandatory. Execution-package helpers never run. Late authority B may enter only by a fresh `TRUST-GATE.py` invocation; no caller checksum branch may select or execute it.
+
+`RECOVERY-VERIFY.sh` has explicit `pre-resume` and `pre-completion` stages. The first binds the immutable failure-state SHA/member set, old package, v5 approval, Task-5 pending pointer, retained runtime boundary, credential metadata, and exact unadvanced catalog; `readiness-v15`, restore, fidelity, completion, and Task-5 current are absent. The second rebinds original immutable rows, exact `readiness-v15` including timeout/consecutive-counter reset policy, exact RESTORE/ACL/ROLE/FIDELITY manifests, live role/membership/forbidden-role/three-owner equality, and absent completion/current state.
+
+Every Task-5 completion input is durable before the pre-completion gate: pointer bytes/SHA, pinned anonymous inode, `TASK5-CURRENT.tsv`, exact `TASK5-PUBLISH-ARGS.tsv`, and sorted `TASK5-PRECOMPLETE-SHA256SUMS`. After trusted pre-completion recovery, the literal next command is `PUBLISH.py completion`; that publisher alone creates/fsyncs `TASK5.COMPLETE`, final manifest, and no-replace `phase0-v5-execution.current`. Exact rerun resumes crash points 111-114; current-only, foreign marker/current/pin/binding/args, and equal bytes on a distinct inode fail closed.
+
+Task 10 precomputes publisher arguments from authenticated constants in each package/pending/current branch. Its successful recovery gate and corresponding `PUBLISH.py initial`, `current`, or `verify` command are adjacent with no assertion, cleanup, or package-selected helper between them. Task 9 compares Git only with the authenticated post-commit COMMIT/HISTORY head-tree-parent tuple, never `head.before` or `tree.before`. The real guarded SIMULATE matrix must finish `adversarial_simulation|CLEAN` before v15 installation.
+
+## Normative v16 centralized manifest trust, resumable preparation, and freshly authenticated preservation addendum (superseded by v17; historical)
+
+v16 was the sole active authority for its review turn. Approval/review/execution/pointer/simulation names were v16-only and approval/commit/history/publication/policy schemas were exactly `22/26/13/8/19`; all v12-v15 authority wording remained immutable history. `SAFE_MANIFEST.py` centralized active external, review, execution, old-package, and verify-source checksum parsing before digest operations.
+
+Task-5 completion preparation became an exact crash-resumable prefix: pinned pointer, binding, publisher arguments, then precompletion manifest. Each object used `O_TMPFILE`, write-all, file fsync, `linkat(AT_EMPTY_PATH)` no-replace, and directory fsync; fault exits 121-132 covered every prepare boundary, and crash 113 recovery repaired base-directory durability before success.
+
+Task 9 freshly authenticated the v16 current pointer before reading COMMIT/HISTORY, remeasured the redacted provider/model and routing state, and the guarded real simulation exercised VERIFY, staged recovery, adjacency, and malicious-helper rejection.
+
+## Normative v17 final manifest-writer and inode-race closure addendum
+
+v17 is the sole active authority. Approval/review/execution/pointer/simulation names are v17-only and approval/commit/history/publication/policy schemas remain exactly `22/26/13/8/19`. The six executable manifest-writer paths now call one identical `write_manifest` implementation: members are unique sorted safe basenames, rows use exactly one ASCII space, member bytes are read only through the externally anchored `SAFE_MANIFEST.py`, and the migration-source manifest binds an explicit root-owned mode-0755 source directory with mode-0644 SQL members.
+
+All five standalone consumers use byte-identical `review_exec`, `safe_manifest_check`, and `write_manifest` blocks in the same order. The bootstrap binds directory and member file descriptors with `O_NOFOLLOW`, stable `fstat`, and name-to-inode rechecks; it maps manifest names to digests before executing only sealed review helpers and converts open/stat races into exit 41. Task 9 retains fresh current gating before COMMIT/HISTORY/TASK5 interpretation.
+
+The guarded real simulation must reject bootstrap, central-manifest, and publisher symlink/member-swap/directory-or-pointer-inode-rebind attacks; the malicious bootstrap target remains absent. It also retains pointer exits 91-96, completion exits 111-114, prepare exits 121-132, late-writer B preservation, real staged recovery, traversal/text negatives, and literal gate-to-publisher adjacency, ending only with `adversarial_simulation|CLEAN`.
+
 ## Scope boundary
 
 This runbook targets only these eleven versions and exact source files:
@@ -130,27 +228,29 @@ Expected: ancestry and empty-index checks exit `0`; only root-readable aggregate
 
 ```bash
 read -r evidence_root < /opt/thoidai-reconciliation/phase0.latest
-cat > "$evidence_root/source.sha256" <<'EOF'
-8dc597934a90f01e43b0ff68723daf50b0e361e8f8e362f3bd4ed986384c24f7  supabase/migrations/20260813110000_task_evaluation_checkpoints.sql
-e64047bbde866727e42dc20d58bd64d9e4950a02c5d2e99d003137fc4ec7c5c0  supabase/migrations/20260813155000_allow_tbt_task_evaluation.sql
-dfc8eee060abf1c9b1f7322521152ce123f304a2095493f6d70e26fe17785a3f  supabase/migrations/20260813172000_task_plans_recipients_self_claim.sql
-6a412f010049c120d06167e6f1622e0923a73401f50dc234f4f1ae20b4353879  supabase/migrations/20260813184000_secure_task_rpc_execution.sql
-a87f815d5494eb733f525917053f1668875aa9d0c03b38c326387a9312a58212  supabase/migrations/20260813210000_password_reset_security.sql
-0c605442e6b40f3114f931791b1620cd4f8c486b9a0557171b0fe83f04f36105  supabase/migrations/20260813220000_task_evaluation_total_score.sql
-465b99f9333c52c55fd4ea0821fb0e1e151ff2e8f855610dbf1061124ff397e6  supabase/migrations/20260813230000_admin_role_user_policy.sql
-064a215f15aa9855ec2568796adf9ceefb992d842d0b809ad341690219688978  supabase/migrations/20260813233000_tbt_evaluation_guard.sql
-186b20cae2f1b940bb5ebabe3ef622daac852d15952b0f3903d735a1946f8d8b  supabase/migrations/20260813234500_creator_evaluation_guard.sql
-191ce77f3d978bee56425589b0735c807b088327134eca122518e75890f77e3a  supabase/migrations/20260814070000_job_titles.sql
-f2d9e4e5ba2a627d70fcf45751e9a05bd8077e4eecc8fe5dab094c8624e293a7  supabase/migrations/20260814090000_task_priority_neutral_default.sql
-b3ae48c9ede223f92823827a813fa6409a90c797d5b37eea45683b3f4b1a5931  supabase/migrations/20260814102000_bulk_task_plans.sql
-b0c90ccf46a75dca2d6ace9d3d56cd730500853996d44942ceb5e347a6be03c6  supabase/migrations/20260814113000_localize_role_names.sql
-69a8105146379aa57bd9449b909a6898caa87955a637a0385990c2b352b42213  supabase/migrations/20260814130000_staff_list_order.sql
-21198e8092da7a557fc9351aaa5fd8cf02fa7217acabc543561f824eb9a28dbb  supabase/migrations/20260814160000_employee_password_reset_admin.sql
-5583bfa2cf1af13f88e11fce3a58d6afd2c87172f8ce1d837c9c4d649837c533  supabase/migrations/20260814170000_employee_password_reset_hardening.sql
-EOF
-chmod 0600 "$evidence_root/source.sha256"
-cd /opt/thoidai-work
-sha256sum -c "$evidence_root/source.sha256"
+repo=/opt/thoidai-work
+source_root=$repo/supabase/migrations
+source_members=(
+  20260813110000_task_evaluation_checkpoints.sql
+  20260813155000_allow_tbt_task_evaluation.sql
+  20260813172000_task_plans_recipients_self_claim.sql
+  20260813184000_secure_task_rpc_execution.sql
+  20260813210000_password_reset_security.sql
+  20260813220000_task_evaluation_total_score.sql
+  20260813230000_admin_role_user_policy.sql
+  20260813233000_tbt_evaluation_guard.sql
+  20260813234500_creator_evaluation_guard.sql
+  20260814070000_job_titles.sql
+  20260814090000_task_priority_neutral_default.sql
+  20260814102000_bulk_task_plans.sql
+  20260814113000_localize_role_names.sql
+  20260814130000_staff_list_order.sql
+  20260814160000_employee_password_reset_admin.sql
+  20260814170000_employee_password_reset_hardening.sql
+)
+write_manifest "$evidence_root/source.sha256" \
+  --member-root "$source_root" --member-root-mode 755 --member-mode 644 \
+  "${source_members[@]}"
 ```
 
 Expected: sixteen `OK` lines. Any missing or mismatched file is a stop; do not choose a nearby migration or edit a source file.
@@ -261,7 +361,7 @@ set -euo pipefail
 umask 077
 cd /opt/thoidai-work
 read -r evidence_root < /opt/thoidai-reconciliation/phase0.latest
-sha256sum -c "$evidence_root/source.sha256"
+safe_manifest_check "$evidence_root/source.sha256"
 git rev-parse HEAD > "$evidence_root/source-head.txt"
 git rev-parse HEAD^{tree} > "$evidence_root/source-tree.txt"
 sha256sum "$evidence_root/source.sha256" "$evidence_root/source-head.txt" \
@@ -308,17 +408,9 @@ Expected: one aggregate-only row. No identity, email, password material, token, 
 
 ```bash
 read -r evidence_root < /opt/thoidai-reconciliation/phase0.latest
-sha256sum \
-  "$evidence_root/head.before" \
-  "$evidence_root/tree.before" \
-  "$evidence_root/root-status.before" \
-  "$evidence_root/source.sha256" \
-  "$evidence_root/history.before.tsv" \
-  "$evidence_root/nrestarts.before" \
-  "$evidence_root/aggregates.before.tsv" \
-  > "$evidence_root/PRECHANGE-SHA256SUMS"
-chmod 0600 "$evidence_root/PRECHANGE-SHA256SUMS"
-(cd "$evidence_root" && sha256sum -c PRECHANGE-SHA256SUMS)
+write_manifest "$evidence_root/PRECHANGE-SHA256SUMS" \
+  aggregates.before.tsv head.before history.before.tsv nrestarts.before \
+  root-status.before source.sha256 tree.before
 ```
 
 Expected: all listed evidence verifies.
@@ -460,13 +552,13 @@ grep -Fx 'migration_exit=0' /opt/thoidai-backups/employee-password-reset/2026081
 grep -Fx 'single_transaction=true' /opt/thoidai-backups/employee-password-reset/20260814T083831Z-production-migration/migration/migration-apply-status.txt
 grep -Fx 'migration_history_modified=false' /opt/thoidai-backups/employee-password-reset/20260814T083831Z-production-migration/migration/migration-apply-status.txt
 grep -Fx 'migration_sha256=21198e8092da7a557fc9351aaa5fd8cf02fa7217acabc543561f824eb9a28dbb' /opt/thoidai-backups/employee-password-reset/20260814T083831Z-production-migration/MANIFEST.txt
-(cd /opt/thoidai-backups/employee-password-reset/20260814T083831Z-production-migration && sha256sum -c SHA256SUMS >/dev/null)
+(cd /opt/thoidai-backups/employee-password-reset/20260814T083831Z-production-migration && safe_manifest_check SHA256SUMS >/dev/null)
 
 test -f /opt/thoidai-backups/employee-password-reset/20260814T093629Z-hardening-deploy/migration/apply-status.txt
 grep -Fx 'migration_exit=0' /opt/thoidai-backups/employee-password-reset/20260814T093629Z-hardening-deploy/migration/apply-status.txt
 grep -Fx 'single_transaction=true' /opt/thoidai-backups/employee-password-reset/20260814T093629Z-hardening-deploy/migration/apply-status.txt
 grep -Fx 'migration_sha256=5583bfa2cf1af13f88e11fce3a58d6afd2c87172f8ce1d837c9c4d649837c533' /opt/thoidai-backups/employee-password-reset/20260814T093629Z-hardening-deploy/MANIFEST.txt
-(cd /opt/thoidai-backups/employee-password-reset/20260814T093629Z-hardening-deploy && sha256sum -c SHA256SUMS >/dev/null && sha256sum -c POSTDEPLOY-SHA256SUMS >/dev/null)
+(cd /opt/thoidai-backups/employee-password-reset/20260814T093629Z-hardening-deploy && safe_manifest_check SHA256SUMS >/dev/null && safe_manifest_check POSTDEPLOY-SHA256SUMS >/dev/null)
 ```
 
 Expected: both exact source hashes, transactional exits, and backup checksum sets verify without reading dump or sensitive evidence contents.
@@ -475,9 +567,9 @@ Expected: both exact source hashes, transactional exits, and backup checksum set
 
 ```bash
 read -r evidence_root < /opt/thoidai-reconciliation/phase0.latest
-sha256sum "$evidence_root"/production-*.before.tsv > "$evidence_root/production-evidence.sha256"
-chmod 0600 "$evidence_root/production-evidence.sha256"
-(cd "$evidence_root" && sha256sum -c production-evidence.sha256)
+write_manifest "$evidence_root/production-evidence.sha256" \
+  production-catalog.before.tsv production-data-evidence.before.tsv \
+  production-function-body.before.tsv
 ```
 
 Expected: all production metadata files verify.
@@ -510,9 +602,9 @@ test "$(sha256sum "$evidence_root/database.full.dump" | awk '{print $1}')" = 808
 test "$(sha256sum "$evidence_root/public-history-schema.dump" | awk '{print $1}')" = 674fa9610e9de26afe3716efe4554db9706247c0930dda3e90fd90ec26bb117b
 test "$(sha256sum "$evidence_root/source.sha256" | awk '{print $1}')" = ca2ce5704909e0fd09712aecb9da5e04df56b30ddca1e8ab028d2a381f277612
 test "$(wc -l < "$evidence_root/source.sha256")" -eq 16
-(cd "$evidence_root" && sha256sum -c PRECHANGE-SHA256SUMS >/dev/null)
-(cd "$evidence_root" && sha256sum -c production-evidence.sha256 >/dev/null)
-(cd "$repo" && sha256sum -c "$evidence_root/source.sha256" >/dev/null)
+(cd "$evidence_root" && safe_manifest_check PRECHANGE-SHA256SUMS >/dev/null)
+(cd "$evidence_root" && safe_manifest_check production-evidence.sha256 >/dev/null)
+(cd "$repo" && safe_manifest_check "$evidence_root/source.sha256" >/dev/null)
 docker exec -i supabase_db_thoidai-work pg_restore --list \
   < "$evidence_root/database.full.dump" >/dev/null
 docker exec -i supabase_db_thoidai-work pg_restore --list \
@@ -526,8 +618,8 @@ Expected: every command exits `0`; the approved successor-design commit is an an
 ```bash
 set -euo pipefail
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-(cd "$evidence_root" && sha256sum -c ACLTEST-SHA256SUMS >/dev/null)
-(cd "$evidence_root" && sha256sum -c TOCTEST-SHA256SUMS >/dev/null)
+(cd "$evidence_root" && safe_manifest_check ACLTEST-SHA256SUMS >/dev/null)
+(cd "$evidence_root" && safe_manifest_check TOCTEST-SHA256SUMS >/dev/null)
 grep -Fx 'supabase_admin_socket_connection|false' "$evidence_root/ownertest-socket-check.tsv"
 grep -Fx 'restore_status|1' "$evidence_root/acltest-red-reference.tsv"
 grep -Fx 'failed_default_acl_items|3' "$evidence_root/acltest-red-reference.tsv"
@@ -701,10 +793,10 @@ where n.nspname='public' and p.proname in (
 order by p.proname,pg_get_function_identity_arguments(p.oid);" \
   > "$run_dir/production-functions.isolated.before.tsv"
 cmp -s "$evidence_root/production-function-body.before.tsv" "$run_dir/production-functions.isolated.before.tsv"
-sha256sum "$run_dir"/production-*.isolated.before.tsv "$run_dir/production-owner.before.tsv" \
-  > "$run_dir/production-isolated-before.sha256"
+write_manifest "$run_dir/production-isolated-before.sha256" \
+  production-aggregates.isolated.before.tsv production-functions.isolated.before.tsv \
+  production-history.isolated.before.tsv production-owner.before.tsv
 chmod 0600 "$run_dir"/*
-(cd "$run_dir" && sha256sum -c production-isolated-before.sha256 >/dev/null)
 ```
 
 Expected: aggregate, history, function, and owner files are byte-identical to sealed production evidence. The owner distribution is five lines: public schema `pg_database_owner`, 21 tables/53 indexes/one sequence owned by `postgres`, and 14 public functions owned by `postgres`. No row identity or function body is emitted.
@@ -736,7 +828,7 @@ grep -Fx 'pinned_repo_digest_match_count|1' "$run_dir/image-metadata.tsv"
 grep -Fx 'os|linux' "$run_dir/image-metadata.tsv"
 grep -Fx 'architecture|amd64' "$run_dir/image-metadata.tsv"
 grep -Fx 'inspect_size_bytes|161234888' "$run_dir/image-metadata.tsv"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
+safe_manifest_check "$evidence_root/source.sha256" >/dev/null
 mapfile -t source_paths < <(awk '{print $2}' "$evidence_root/source.sha256")
 test "${#source_paths[@]}" -eq 16
 count_matches() {
@@ -1372,14 +1464,10 @@ IFS='|' read -r run_id container_name volume_name bootstrap_role bootstrap_db re
 test "$(docker inspect -f '{{.State.Running}}' "$container_name")" = true
 docker volume inspect "$volume_name" >/dev/null
 test "$(stat -c %a "$run_dir/bootstrap-password")" = 600
-manifest_tmp="$evidence_root/.task4-$run_id.sha256.tmp"
-find "$run_dir" -maxdepth 1 -type f \
-  ! -name bootstrap-password ! -name TASK4-SHA256SUMS \
-  -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$manifest_tmp"
-chmod 0600 "$manifest_tmp"
-mv -f -- "$manifest_tmp" "$run_dir/TASK4-SHA256SUMS"
+mapfile -t task4_members < <(find "$run_dir" -maxdepth 1 -type f \
+  ! -name bootstrap-password ! -name TASK4-SHA256SUMS -printf '%f\n' | LC_ALL=C sort)
+write_manifest "$run_dir/TASK4-SHA256SUMS" "${task4_members[@]}"
 test "$(find "$run_dir" -maxdepth 1 -type f ! -perm 0600 | wc -l)" -eq 0
-(cd / && sha256sum -c "$run_dir/TASK4-SHA256SUMS" >/dev/null)
 ```
 
 Expected: all non-secret Task-4 evidence—including archive normalization counts, retained TDD proof, transaction output/status, persistent `7/1` post-state, and production-preservation files—verifies automatically; every evidence file is `0600`; and the secret/container/volume are retained. The secret itself is deliberately excluded from checksum manifests.
@@ -1393,11 +1481,425 @@ Expected: all non-secret Task-4 evidence—including archive normalization count
 - Create outside Git only after the immutable gate: one root-only v5 execution directory, new secret, new volume, new container, three new databases, safe evidence
 - Modify no repository, production, service, nginx, application, provider/model, CLIProxyAPI, `9router`, retained resource, or history state
 
-- [ ] **Step 1: Invoke the sealed full immutable gate before creating anything**
+> **v17 recovery boundary:** the new no-log lane remains retained at the exact v5 pending path. The creation blocks below are historical evidence, not re-entry instructions. Run Steps 1R-3R, then continue at Step 5 only. Task 10 must first publish reviewed v17 authority; this documentation turn does not do so.
+
+- [ ] **Step 1R: Authenticate externally anchored v17 authority, then execute only trusted review helpers**
+
+The operator must supply both anchor values out of band. They are never populated from the approval file.
+
+```bash
+set -euo pipefail
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+base=/opt/thoidai-reconciliation
+review_root=$base/phase0-20260814T135943Z
+approval=$base/phase0-v17-reentry-review.approved.tsv
+current=$base/HANDOFF.recovery-v17.current
+review_package=$V17_REVIEW_PACKAGE
+review_manifest_sha=$V17_REVIEW_MANIFEST_SHA256
+review_exec() {
+  python3 - "$review_package" "$review_manifest_sha" "$@" <<'PY'
+import hashlib,os,re,stat,sys,types
+MEMBERS=(
+ "runbook.candidate.md","design.candidate.md","REVIEW-NOTES.md","VALIDATION.tsv",
+ "FAILURE-STATE.tsv","RECOVERY-VERIFY.sh","VERIFY.sh","PUBLISH.py",
+ "TRUST-GATE.py","TRUST-POLICY.tsv","SIMULATE.py","SAFE_MANIFEST.py","SOURCE-SHA256SUMS")
+review,anchor,target,*target_args=sys.argv[1:]
+sig=lambda s:(s.st_dev,s.st_ino,s.st_mode,s.st_nlink,s.st_uid,s.st_gid,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+if not re.fullmatch(r"[0-9a-f]{64}",anchor): raise SystemExit(41)
+if not os.path.isabs(review) or os.path.normpath(review)!=review or os.path.realpath(review)!=review: raise SystemExit(41)
+if target not in ("SAFE_MANIFEST.py","TRUST-GATE.py","PUBLISH.py"): raise SystemExit(41)
+try: dfd=os.open(review,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+except OSError: raise SystemExit(41)
+try:
+ dst=os.fstat(dfd)
+ if not stat.S_ISDIR(dst.st_mode) or dst.st_uid!=0 or dst.st_gid!=0 or stat.S_IMODE(dst.st_mode)!=0o700: raise SystemExit(41)
+ def stable(name):
+  if name not in (*MEMBERS,"SHA256SUMS"): raise SystemExit(41)
+  try: fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=dfd)
+  except OSError: raise SystemExit(41)
+  try:
+   before=os.fstat(fd);parts=[]
+   if not stat.S_ISREG(before.st_mode) or before.st_uid!=0 or before.st_gid!=0 or stat.S_IMODE(before.st_mode)!=0o600: raise SystemExit(41)
+   while True:
+    chunk=os.read(fd,1<<20)
+    if not chunk: break
+    parts.append(chunk)
+   after=os.fstat(fd)
+  finally: os.close(fd)
+  data=b"".join(parts)
+  try: named=os.stat(name,dir_fd=dfd,follow_symlinks=False)
+  except OSError: raise SystemExit(41)
+  if sig(before)!=sig(after) or sig(named)!=sig(before): raise SystemExit(41)
+  if b"\r" in data or b"\0" in data or not data or not data.endswith(b"\n"): raise SystemExit(41)
+  return data
+ manifest=stable("SHA256SUMS")
+ if hashlib.sha256(manifest).hexdigest()!=anchor: raise SystemExit(41)
+ try: lines=manifest.decode("ascii").splitlines()
+ except UnicodeDecodeError: raise SystemExit(41)
+ rows=[]
+ for raw in lines:
+  match=re.fullmatch(r"([0-9a-f]{64}) ([A-Za-z0-9][A-Za-z0-9._-]*)",raw)
+  if not match: raise SystemExit(41)
+  rows.append((match.group(1),match.group(2)))
+ if tuple(name for _,name in rows)!=MEMBERS: raise SystemExit(41)
+ if sorted(os.listdir(dfd))!=sorted((*MEMBERS,"SHA256SUMS")): raise SystemExit(41)
+ digests={name:digest for digest,name in rows}
+ safe_source=stable("SAFE_MANIFEST.py");target_source=stable(target)
+ if hashlib.sha256(safe_source).hexdigest()!=digests["SAFE_MANIFEST.py"]: raise SystemExit(41)
+ if hashlib.sha256(target_source).hexdigest()!=digests[target]: raise SystemExit(41)
+ if sig(os.fstat(dfd))!=sig(dst): raise SystemExit(41)
+ try: named_dir=os.stat(review,follow_symlinks=False)
+ except OSError: raise SystemExit(41)
+ if not stat.S_ISDIR(named_dir.st_mode) or (named_dir.st_dev,named_dir.st_ino)!=(dst.st_dev,dst.st_ino): raise SystemExit(41)
+finally:
+ os.close(dfd)
+safe=types.ModuleType("SAFE_MANIFEST");safe.__file__=review+"/SAFE_MANIFEST.py";safe.__package__=None
+exec(compile(safe_source,safe.__file__,"exec"),safe.__dict__)
+sys.modules["SAFE_MANIFEST"]=safe
+sys.argv=[review+"/"+target,*target_args]
+scope={"__name__":"__main__","__file__":review+"/"+target,"__package__":None}
+exec(compile(target_source,scope["__file__"],"exec"),scope)
+PY
+}
+safe_manifest_check() {
+  local manifest=$1
+  case "$manifest" in /*) ;; *) manifest=$PWD/$manifest ;; esac
+  review_exec SAFE_MANIFEST.py declared --directory "$(dirname -- "$manifest")" \
+    --manifest "$(basename -- "$manifest")" --directory-mode 700 --allow-empty-members
+}
+write_manifest() {
+  local output=$1 directory member_root member_root_mode member_mode name digest tmp
+  shift
+  directory=$(dirname -- "$output")
+  member_root=$directory
+  member_root_mode=700
+  member_mode=600
+  if [ "${1:-}" = --member-root ]; then
+    test "$#" -ge 7
+    member_root=$2
+    test "$3" = --member-root-mode
+    member_root_mode=$4
+    test "$5" = --member-mode
+    member_mode=$6
+    shift 6
+  fi
+  mapfile -t manifest_names < <(printf '%s\n' "$@" | LC_ALL=C sort -u)
+  test "${#manifest_names[@]}" -eq "$#"
+  tmp=$(mktemp "$directory/.manifest.XXXXXX")
+  : > "$tmp"
+  for name in "${manifest_names[@]}"; do
+    [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+    digest=$(review_exec SAFE_MANIFEST.py file --path "$member_root/$name" \
+      --mode "$member_mode" --allow-empty --print-digest)
+    printf '%s %s\n' "$digest" "$name" >> "$tmp"
+  done
+  chmod 0600 "$tmp"
+  mv -f -- "$tmp" "$output"
+  if [ "$member_root" = "$directory" ]; then
+    safe_manifest_check "$output"
+  else
+    review_exec SAFE_MANIFEST.py manifest --directory "$directory" \
+      --manifest "$(basename -- "$output")" --directory-mode 700 --allow-extra \
+      --member-root "$member_root" --member-root-mode "$member_root_mode" \
+      --member-mode "$member_mode" "${manifest_names[@]}"
+  fi
+}
+review_name=$(basename -- "$review_package")
+[[ "$review_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+test "$(dirname -- "$review_package")" = "$review_root"
+[[ "$review_name" =~ ^review-runbook-v17-r2-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+test "$review_package" = "$review_root/$review_name"
+test -f "$review_package/SAFE_MANIFEST.py" && test ! -L "$review_package/SAFE_MANIFEST.py"
+test "$(stat -c '%U|%G|%a' "$review_package/SAFE_MANIFEST.py")" = 'root|root|600'
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" --anchor "$review_manifest_sha" --separator one \
+  runbook.candidate.md design.candidate.md REVIEW-NOTES.md VALIDATION.tsv FAILURE-STATE.tsv \
+  RECOVERY-VERIFY.sh VERIFY.sh PUBLISH.py TRUST-GATE.py TRUST-POLICY.tsv SIMULATE.py SAFE_MANIFEST.py SOURCE-SHA256SUMS
+# Only after the external review anchor verifies may approval/current be interpreted.
+test -f "$approval" && test ! -L "$approval"
+test "$(stat -c '%U|%G|%a' "$approval")" = 'root|root|600'
+test -f "$current" && test ! -L "$current"
+test "$(stat -c '%U|%G|%a' "$current")" = 'root|root|600'
+IFS= read -r execution_package < "$current"
+review_exec TRUST-GATE.py \
+  --trusted-review "$review_package" \
+  --trusted-manifest "$review_manifest_sha" \
+  --approval "$approval" \
+  --execution "$execution_package" \
+  --phase current \
+  --pointer "$current" \
+  --action both \
+  --recovery-stage pre-resume
+measure_routing_preservation() {
+  local output=$1 name path resolved version version_rc doctor_json doctor_rc provider_rows unit_row unit_name unit_enabled unit_active
+  {
+    printf 'provider_model_mutation_authorized|false\nprovider_model_mutation_count|0\nCLIProxyAPI_mutation_authorized|false\nCLIProxyAPI_mutation_count|0\n9router_mutation_authorized|false\n9router_mutation_count|0\nproc_environment_read|false\nprovider_secret_read_or_hash|false\n'
+    if path=$(command -v codex 2>/dev/null); then
+      resolved=$(readlink -f -- "$path")
+      printf 'command|codex|present|%s\n' "$resolved"
+      stat -Lc 'command_stat|codex|%U|%G|%a|%s|%Y|%F' -- "$resolved"
+      set +e
+      version=$("$resolved" --version 2>/dev/null); version_rc=$?
+      doctor_json=$("$resolved" doctor --json 2>/dev/null); doctor_rc=$?
+      set -e
+      [[ "$version" != *$'\n'* && "$version" != *$'\r'* && "$version" != *'|'* ]]
+      printf 'command_version|codex|%s|%s\ndoctor_exit|%s\n' "$version_rc" "$version" "$doctor_rc"
+      provider_rows=$(printf '%s' "$doctor_json" | python3 -c 'import json,re,sys
+try: x=json.load(sys.stdin)
+except Exception: x={}
+rows=[]; allowed={"provider","provider_name","model","model_name"}
+def walk(v,p=()):
+ if isinstance(v,dict):
+  for k in sorted(v):
+   n=v[k]
+   if k in allowed and isinstance(n,(str,int,float,bool)):
+    key=".".join(p+(k,)); value=str(n)
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+",key) or not re.fullmatch(r"[A-Za-z0-9._:/+@<>=-]+",value): raise SystemExit(41)
+    rows.append(f"provider_model|{key}|{value}")
+   elif isinstance(n,(dict,list)): walk(n,p+(k,))
+ elif isinstance(v,list):
+  for i,n in enumerate(v):
+   if isinstance(n,(dict,list)): walk(n,p+(str(i),))
+walk(x)
+print("\n".join(sorted(rows)) if rows else "provider_model|model|<default>")')
+      printf 'provider_model_fields|%s\n%s\n' "$(printf '%s\n' "$provider_rows" | wc -l)" "$provider_rows"
+    else
+      printf 'command|codex|absent|-\ndoctor_exit|not-run\nprovider_model_fields|0\n'
+    fi
+    for name in CLIProxyAPI cliproxyapi 9router; do
+      if path=$(command -v "$name" 2>/dev/null); then
+        resolved=$(readlink -f -- "$path")
+        printf 'command|%s|present|%s\n' "$name" "$resolved"
+        stat -Lc "command_stat|$name|%U|%G|%a|%s|%Y|%F" -- "$resolved"
+        set +e; version=$("$resolved" --version 2>/dev/null); version_rc=$?; set -e
+        [[ "$version" != *$'\n'* && "$version" != *$'\r'* && "$version" != *'|'* ]]
+        printf 'command_version|%s|%s|%s\n' "$name" "$version_rc" "$version"
+      else
+        printf 'command|%s|absent|-\n' "$name"
+      fi
+    done
+    mapfile -t routing_units < <(systemctl list-unit-files --type=service --no-legend --no-pager 2>/dev/null | awk 'tolower($1) ~ /(cliproxyapi|9router)/ {print $1"|"$2}' | LC_ALL=C sort -u)
+    printf 'routing_unit_count|%s\n' "${#routing_units[@]}"
+    for unit_row in "${routing_units[@]}"; do
+      IFS='|' read -r unit_name unit_enabled <<< "$unit_row"
+      [[ "$unit_name" =~ ^[A-Za-z0-9_.@:-]+\.service$ ]]
+      unit_active=$(systemctl is-active "$unit_name" 2>/dev/null || true)
+      printf 'routing_unit|%s|enabled=%s|active=%s\n' "$unit_name" "$unit_enabled" "$unit_active"
+    done
+  } > "$output"
+}
+IFS= read -r recovery_dir < "$execution_package/TASK5.pending"
+review_exec SAFE_MANIFEST.py file --path "$execution_package/TASK5.pending" --mode 600
+test "$recovery_dir" = /opt/thoidai-reconciliation/phase0-v5-execution-20260815T041430Z-7fa3f327f5c8
+routing_baseline=$recovery_dir/routing-preservation-v17.step1r.tsv
+routing_manifest=$recovery_dir/ROUTING-V17-BASELINE-SHA256SUMS
+routing_tmp=$(mktemp "$recovery_dir/.routing-v17-step1r.XXXXXX")
+measure_routing_preservation "$routing_tmp"
+chmod 0600 "$routing_tmp"
+if test -e "$routing_baseline" || test -L "$routing_baseline"; then
+  review_exec SAFE_MANIFEST.py file --path "$routing_baseline" --mode 600
+  cmp -s "$routing_tmp" "$routing_baseline"
+  unlink "$routing_tmp"
+else
+  ln -- "$routing_tmp" "$routing_baseline"
+  python3 - "$routing_baseline" "$recovery_dir" <<'PY'
+import os,sys
+for path in sys.argv[1:]:
+ fd=os.open(path,os.O_RDONLY|os.O_CLOEXEC|(os.O_DIRECTORY if path==sys.argv[2] else 0))
+ try: os.fsync(fd)
+ finally: os.close(fd)
+PY
+  unlink "$routing_tmp"
+fi
+routing_sha=$(review_exec SAFE_MANIFEST.py file --path "$routing_baseline" --mode 600 --print-digest)
+routing_manifest_tmp=$(mktemp "$recovery_dir/.routing-v17-manifest.XXXXXX")
+printf '%s routing-preservation-v17.step1r.tsv\n' "$routing_sha" > "$routing_manifest_tmp"
+chmod 0600 "$routing_manifest_tmp"
+if test -e "$routing_manifest" || test -L "$routing_manifest"; then
+  cmp -s "$routing_manifest_tmp" "$routing_manifest"
+  unlink "$routing_manifest_tmp"
+else
+  ln -- "$routing_manifest_tmp" "$routing_manifest"
+  unlink "$routing_manifest_tmp"
+fi
+safe_manifest_check "$routing_manifest"
+```
+
+Expected: external path plus manifest SHA authenticate the v17 review package before the approval is read. The execution package remains passive data through safe manifest parsing, every byte comparison, exact schema validation, actual-lock-inode cross-binding, and pointer binding. Only then do the trusted review-package verifier and live recovery verifier run.
+
+- [ ] **Step 2R: Establish three bounded composite readiness observations and publish one exact seal**
+
+```bash
+set -euo pipefail
+umask 077
+base=/opt/thoidai-reconciliation
+timeout_bin=/usr/bin/timeout
+test -x "$timeout_bin" && test "$(command -v timeout)" = "$timeout_bin"
+"$timeout_bin" --foreground 2s true
+pending_pointer="$base/phase0-v5-execution.pending"
+expected_recovery="$base/phase0-v5-execution-20260815T041430Z-7fa3f327f5c8"
+expected_container=thoidai_phase0_v3_cd3186598cd4
+expected_container_id=c8d8916b639cb40ae19d7dfeeb0cf43bf52edea51ca4dc4be1e4e34dcd1ffc4c
+expected_volume=thoidai_phase0_v3_data_cd3186598cd4
+expected_logging=$'log_destination|stderr\nlog_error_verbosity|terse\nlog_min_error_statement|panic\nlog_statement|none\nlogging_collector|off'
+deadline=$((SECONDS + 120))
+probe_output=
+probe_rc=0
+run_bounded() {
+  local remaining limit
+  remaining=$((deadline - SECONDS))
+  if test "$remaining" -le 0; then probe_output=; probe_rc=124; return 124; fi
+  limit=5
+  test "$remaining" -lt "$limit" && limit=$remaining
+  set +e
+  probe_output=$("$timeout_bin" --foreground "${limit}s" "$@" 2>/dev/null)
+  probe_rc=$?
+  set -e
+  return "$probe_rc"
+}
+require_bounded() {
+  if run_bounded "$@"; then return 0; fi
+  case "$probe_rc" in 124) exit 42 ;; *) exit 41 ;; esac
+}
+test "$(sha256sum "$pending_pointer" | awk '{print $1}')" = d6c20209be2254dc9cb2788c6ad495ecb372516dd905b2c8e4cd7a76b5779af9
+IFS= read -r recovery_dir < "$pending_pointer"
+test "$recovery_dir" = "$expected_recovery"
+test "$(realpath -e -- "$recovery_dir")" = "$expected_recovery"
+test -d "$recovery_dir" && test ! -L "$recovery_dir"
+test "$(stat -c '%U|%G|%a' "$recovery_dir")" = 'root|root|700'
+require_bounded docker inspect -f '{{.Id}}' "$expected_container"; test "$probe_output" = "$expected_container_id"
+require_bounded docker inspect -f '{{.Name}}' "$expected_container"; test "$probe_output" = "/$expected_container"
+require_bounded docker inspect -f '{{.Image}}|{{.Platform}}|{{.State.Status}}|{{.State.Running}}|{{.RestartCount}}' "$expected_container"
+test "$probe_output" = 'sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d|linux|running|true|0'
+require_bounded docker inspect -f '{{.HostConfig.NetworkMode}}|{{.HostConfig.LogConfig.Type}}|{{.HostConfig.Privileged}}|{{.HostConfig.RestartPolicy.Name}}|{{.HostConfig.AutoRemove}}|{{.HostConfig.NanoCpus}}|{{.HostConfig.Memory}}|{{.HostConfig.MemorySwap}}|{{.HostConfig.PidsLimit}}|{{len .NetworkSettings.Ports}}|{{len .Mounts}}' "$expected_container"
+test "$probe_output" = 'none|none|false|no|false|1000000000|1073741824|1073741824|256|0|2'
+require_bounded docker inspect -f '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Type}}|{{.Name}}|{{.RW}}{{end}}{{end}}' "$expected_container"
+test "$probe_output" = "volume|$expected_volume|true"
+require_bounded docker inspect -f '{{range .Mounts}}{{if eq .Destination "/run/secrets/phase0-postgres-password"}}{{.Type}}|{{.Source}}|{{.RW}}{{end}}{{end}}' "$expected_container"
+test "$probe_output" = "bind|$recovery_dir/postgres-password.secret|false"
+require_bounded docker volume inspect -f '{{.Name}}|{{.Driver}}|{{.Scope}}' "$expected_volume"
+test "$probe_output" = "$expected_volume|local|local"
+test "$(stat -c '%F|%U|%G|%a|%s' "$recovery_dir/postgres-password.secret")" = 'regular file|root|root|600|65'
+readiness_dir="$recovery_dir/readiness-v17"
+if test -e "$readiness_dir" || test -L "$readiness_dir"; then
+  test -d "$readiness_dir" && test ! -L "$readiness_dir"
+  test "$(stat -c '%U|%G|%a' "$readiness_dir")" = 'root|root|700'
+  printf 'COMPLETE\nSHA256SUMS\npostgres-logging.actual.tsv\npostgres-logging.expected.tsv\nstatus.tsv\n' | cmp -s - <(find "$readiness_dir" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+  for member in COMPLETE SHA256SUMS postgres-logging.actual.tsv postgres-logging.expected.tsv status.tsv; do
+    test -f "$readiness_dir/$member" && test ! -L "$readiness_dir/$member"
+    test "$(stat -c '%U|%G|%a' "$readiness_dir/$member")" = 'root|root|600'
+  done
+  printf 'complete\n' | cmp -s - "$readiness_dir/COMPLETE"
+  printf 'stable_observations|3\nprobe_delay_seconds|2\ncommand_timeout_seconds|5\noverall_timeout_seconds|120\ncounter_reset_on_timeout|true\ncounter_reset_on_any_nonzero|true\nlog_read|forbidden\nrestart_stop_remove|forbidden\n' | cmp -s - "$readiness_dir/status.tsv"
+  test "$(awk 'END{print NR+0}' "$readiness_dir/SHA256SUMS")" -eq 4
+  awk 'NF!=2 || $1 !~ /^[0-9a-f]{64}$/ {exit 41}' "$readiness_dir/SHA256SUMS"
+  printf 'postgres-logging.expected.tsv\npostgres-logging.actual.tsv\nstatus.tsv\nCOMPLETE\n' | cmp -s - <(awk '{print $2}' "$readiness_dir/SHA256SUMS")
+  (cd "$readiness_dir" && safe_manifest_check SHA256SUMS >/dev/null)
+  cmp -s "$readiness_dir/postgres-logging.expected.tsv" "$readiness_dir/postgres-logging.actual.tsv"
+else
+  consecutive=0
+  actual_logging=
+  while test "$SECONDS" -lt "$deadline"; do
+    observation_ok=true
+    if run_bounded docker inspect -f '{{.State.Running}}' "$expected_container"; then test "$probe_output" = true || observation_ok=false; else case "$probe_rc" in 124) observation_ok=false ;; *) observation_ok=false ;; esac; fi
+    if test "$observation_ok" = true; then if run_bounded docker exec "$expected_container" pg_isready -q -U phase0_bootstrap -d postgres; then :; else case "$probe_rc" in 124) observation_ok=false ;; *) observation_ok=false ;; esac; fi; fi
+    if test "$observation_ok" = true; then if run_bounded docker exec "$expected_container" psql -X -U phase0_bootstrap -d postgres -qAt -v ON_ERROR_STOP=1 -c 'select 1'; then test "$probe_output" = 1 || observation_ok=false; else case "$probe_rc" in 124) observation_ok=false ;; *) observation_ok=false ;; esac; fi; fi
+    if test "$observation_ok" = true; then
+      if run_bounded docker exec "$expected_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "select name,setting from pg_settings where name in ('log_statement','log_min_error_statement','logging_collector','log_destination','log_error_verbosity') order by name"; then
+        actual_logging=$probe_output; test "$actual_logging" = "$expected_logging" || observation_ok=false
+      else case "$probe_rc" in 124) observation_ok=false ;; *) observation_ok=false ;; esac; fi
+    fi
+    if test "$observation_ok" = true; then consecutive=$((consecutive + 1)); test "$consecutive" -eq 3 && break; else consecutive=0; fi
+    test "$SECONDS" -lt "$deadline" || break
+    sleep 2
+  done
+  test "$consecutive" -eq 3
+  tmp_readiness=$(mktemp -d "$base/.phase0-v17-readiness.XXXXXX")
+  chmod 0700 "$tmp_readiness"
+  printf '%s\n' "$expected_logging" > "$tmp_readiness/postgres-logging.expected.tsv"
+  printf '%s\n' "$actual_logging" > "$tmp_readiness/postgres-logging.actual.tsv"
+  printf 'stable_observations|3\nprobe_delay_seconds|2\ncommand_timeout_seconds|5\noverall_timeout_seconds|120\ncounter_reset_on_timeout|true\ncounter_reset_on_any_nonzero|true\nlog_read|forbidden\nrestart_stop_remove|forbidden\n' > "$tmp_readiness/status.tsv"
+  printf 'complete\n' > "$tmp_readiness/COMPLETE"
+  write_manifest "$tmp_readiness/SHA256SUMS" COMPLETE postgres-logging.actual.tsv postgres-logging.expected.tsv status.tsv
+  chmod 0600 "$tmp_readiness"/*
+  for member in COMPLETE SHA256SUMS postgres-logging.actual.tsv postgres-logging.expected.tsv status.tsv; do
+    test -f "$tmp_readiness/$member" && test ! -L "$tmp_readiness/$member"
+    test "$(stat -c '%U|%G|%a' "$tmp_readiness/$member")" = 'root|root|600'
+  done
+  (cd "$tmp_readiness" && safe_manifest_check SHA256SUMS >/dev/null)
+  python3 - "$tmp_readiness" <<'PY'
+import os,sys
+p=sys.argv[1]
+for name in ('COMPLETE','SHA256SUMS','postgres-logging.actual.tsv','postgres-logging.expected.tsv','status.tsv'):
+ fd=os.open(os.path.join(p,name),os.O_RDONLY)
+ try: os.fsync(fd)
+ finally: os.close(fd)
+fd=os.open(p,os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+  python3 - "$tmp_readiness" "$readiness_dir" <<'PY'
+import ctypes,errno,os,sys
+src,dst=map(os.fsencode,sys.argv[1:3]);libc=ctypes.CDLL(None,use_errno=True)
+fn=getattr(libc,'renameat2',None)
+if fn is None: raise SystemExit(74)
+fn.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+if fn(-100,src,-100,dst,1)!=0:
+ e=ctypes.get_errno()
+ if e==errno.EEXIST: raise SystemExit(73)
+ if e in (errno.ENOSYS,errno.EINVAL,errno.ENOTSUP): raise SystemExit(74)
+ raise OSError(e,os.strerror(e))
+fd=os.open(os.path.dirname(os.fsdecode(dst)),os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+fi
+```
+
+Expected: every Docker/SQL command has a maximum five-second `timeout --foreground` bound inside the 120-second overall deadline. Exit 124 and every other nonzero result reset the consecutive counter; metadata preflight failures stop. All five seal members are exact regular non-symlink root:root 0600 files with exact content/schema and a four-row manifest. Publication uses `renameat2(RENAME_NOREPLACE)` and hard-fails on EEXIST or unsupported kernels; no check-then-move race exists.
+
+- [ ] **Step 3R: Reject advanced catalog/role state through one bounded credential-mount probe**
+
+```bash
+set -euo pipefail
+timeout_bin=/usr/bin/timeout
+test -x "$timeout_bin" && test "$(command -v timeout)" = "$timeout_bin"
+recovery_dir=/opt/thoidai-reconciliation/phase0-v5-execution-20260815T041430Z-7fa3f327f5c8
+lane_container=thoidai_phase0_v3_cd3186598cd4
+for forbidden in restore.status.tsv FIDELITY.COMPLETE TASK5.COMPLETE; do test ! -e "$recovery_dir/$forbidden" && test ! -L "$recovery_dir/$forbidden"; done
+test ! -e /opt/thoidai-reconciliation/phase0-v5-execution.current
+test ! -L /opt/thoidai-reconciliation/phase0-v5-execution.current
+test -d "$recovery_dir/readiness-v17" && test ! -L "$recovery_dir/readiness-v17"
+(cd "$recovery_dir/readiness-v17" && safe_manifest_check SHA256SUMS >/dev/null)
+set +e
+"$timeout_bin" --foreground 5s docker exec "$lane_container" test -f /run/secrets/phase0-postgres-password >/dev/null 2>&1
+credential_file_rc=$?
+set -e
+case "$credential_file_rc" in 0) ;; 124) exit 42 ;; *) exit 41 ;; esac
+set +e
+"$timeout_bin" --foreground 5s docker exec "$lane_container" test -r /run/secrets/phase0-postgres-password >/dev/null 2>&1
+credential_readable_rc=$?
+set -e
+case "$credential_readable_rc" in 0) ;; 124) exit 42 ;; *) exit 41 ;; esac
+set +e
+boundary=$("$timeout_bin" --foreground 5s docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "
+ select 'role',rolname,rolsuper,rolinherit,rolcreatedb,rolcreaterole,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,(rolpassword is null) from pg_roles where rolname in ('phase0_bootstrap','postgres','supabase_admin','anon','authenticated','service_role') order by rolname;
+ select 'database',d.datname,r.rolname from pg_database d join pg_roles r on r.oid=d.datdba where d.datname in ('postgres','phase0_fresh_cd3186598cd4','phase0_diag_cd3186598cd4','phase0_successor_cd3186598cd4') order by d.datname;
+ select 'memberships',count(*) from pg_auth_members m join pg_roles a on a.oid=m.roleid join pg_roles b on b.oid=m.member where a.rolname='phase0_bootstrap' or b.rolname='phase0_bootstrap';" 2>/dev/null)
+boundary_rc=$?
+set -e
+case "$boundary_rc" in 0) ;; 124) exit 42 ;; *) exit 41 ;; esac
+expected_boundary=$'role|phase0_bootstrap|t|t|t|t|t|t|t|-1|f\ndatabase|postgres|phase0_bootstrap\nmemberships|0'
+test "$boundary" = "$expected_boundary"
+```
+
+Expected: the only selected role is the exact bootstrap superuser with its audited attributes and no membership; `postgres` database ownership is exact; all three expected databases and five archive roles are absent by exact selected-row equality. The mounted credential path is checked for existence/readability inside the container but its bytes are never read, expanded, printed, hashed, or passed as an argument. Exit 124 is a distinct timeout stop; every other nonzero exit is a hard failure.
+
+- [x] **Historical v5 Step 1: the original immutable gate passed; do not rerun it for v17 re-entry**
 
 This gate is entirely read-only. A failure stops before an evidence directory, secret, volume, container, or database is created. The small bootstrap below authenticates the package and its single reusable `VERIFY.sh`; that helper then performs the complete approval/package/commit/canonical/unrelated-state validation. The exact same invocation is repeated in Step 6.
 
-```bash
+```text
 set -euo pipefail
 repo=/opt/thoidai-work
 handoff_pointer=/opt/thoidai-reconciliation/HANDOFF.current
@@ -1425,7 +1927,7 @@ invoke_full_immutable_gate() {
   test "$(awk 'END{print NR+0}' "$package/SHA256SUMS")" -eq 5
   awk 'NF!=2 || $1 !~ /^[0-9a-f]{64}$/ {exit 41}' "$package/SHA256SUMS"
   printf 'plan.md\ndesign.md\nCOMMIT.tsv\nREVIEW.tsv\nVERIFY.sh\n' | cmp -s - <(awk '{print $2}' "$package/SHA256SUMS")
-  (cd "$package" && sha256sum -c SHA256SUMS >/dev/null)
+  (cd "$package" && safe_manifest_check SHA256SUMS >/dev/null)
   bash "$package/VERIFY.sh" "$pointer"
   printf '%s\n' "$package"
 }
@@ -1435,11 +1937,11 @@ test -n "$handoff_package"
 
 Expected: the one sealed full gate rejects any pointer, package, payload, schema, approval, Git object, canonical byte, or unrelated-worktree ambiguity. `REVIEW.tsv` must have exactly the ten approved keys and no duplicate/conflicting/extra record; `COMMIT.tsv` must have exactly its complete bound schema. HEAD is a non-merge direct child of the authorized predecessor with exactly the two documentation paths; the index and canonical paths are clean against HEAD; reviewed, packaged, canonical, and committed bytes are identical.
 
-- [ ] **Step 2: Record quarantine metadata and safe production/application baselines**
+- [x] **Historical v5 Step 2: baselines and the pending recovery directory exist; do not recreate or replace them**
 
 Only after Step 1 passes, create the execution directory. Quarantine inspection selects metadata fields and never inspects environment values, mounts containing secrets, database state, or log content.
 
-```bash
+```text
 set -euo pipefail
 umask 077
 repo=/opt/thoidai-work
@@ -1546,9 +2048,9 @@ chmod 0600 "$recovery_dir"/*
 
 Expected: quarantine policy is explicit; selected metadata, Git, production history `9|0`, service, build, process, HTTP, and topology baselines are sealed. No environment or provider-secret bytes are read or hashed.
 
-- [ ] **Step 3: Verify image/headroom, allocate unique names, and create a new secret**
+- [x] **Historical v5 Step 3: exact names and secret exist; do not reallocate or regenerate them**
 
-```bash
+```text
 set -euo pipefail
 umask 077
 read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.pending
@@ -1589,9 +2091,9 @@ chmod 0600 "$recovery_dir/lane-names.tsv" "$recovery_dir/lane-policy.expected.ts
 
 Expected: local pinned image and headroom pass; five noncolliding safe names and a new unread/unhashed secret are created. No image pull occurs.
 
-- [ ] **Step 4: Create and start the new isolated container with logging disabled**
+- [x] **Historical v5 Step 4: creation/start completed, then the single-probe sequence failed; do not rerun this block**
 
-```bash
+```text
 set -euo pipefail
 umask 077
 read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.pending
@@ -1682,6 +2184,9 @@ Expected: the container is running with exact image, network, port, log-driver, 
 ```bash
 set -euo pipefail
 umask 077
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+review_package=$V17_REVIEW_PACKAGE
 repo=/opt/thoidai-work
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
 read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.pending
@@ -1694,9 +2199,10 @@ successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.
 archive="$evidence_root/public-history-schema.dump"
 test "$(sha256sum "$archive" | awk '{print $1}')" = 674fa9610e9de26afe3716efe4554db9706247c0930dda3e90fd90ec26bb117b
 cd "$repo"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
+source_names=(20260813110000_task_evaluation_checkpoints.sql 20260813155000_allow_tbt_task_evaluation.sql 20260813172000_task_plans_recipients_self_claim.sql 20260813184000_secure_task_rpc_execution.sql 20260813210000_password_reset_security.sql 20260813220000_task_evaluation_total_score.sql 20260813230000_admin_role_user_policy.sql 20260813233000_tbt_evaluation_guard.sql 20260813234500_creator_evaluation_guard.sql 20260814070000_job_titles.sql 20260814090000_task_priority_neutral_default.sql 20260814102000_bulk_task_plans.sql 20260814113000_localize_role_names.sql 20260814130000_staff_list_order.sql 20260814160000_employee_password_reset_admin.sql 20260814170000_employee_password_reset_hardening.sql)
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" --manifest SOURCE-SHA256SUMS --separator one --member-root "$repo/supabase/migrations" --member-root-mode 755 --member-mode 644 --allow-extra "${source_names[@]}"
 old_run_dir="$evidence_root/isolated-20260814163047_c35634c9"
-(cd "$old_run_dir" && sha256sum -c TASK4-SHA256SUMS >/dev/null)
+(cd "$old_run_dir" && safe_manifest_check TASK4-SHA256SUMS >/dev/null)
 docker exec -i "$lane_container" psql -X -U phase0_bootstrap -d postgres -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 do $guard$
 begin
@@ -1944,7 +2450,7 @@ cat > "$role_gate" <<'BASH'
 #!/usr/bin/env bash
 set -euo pipefail
 lane_container=$1; recovery_dir=$2; fresh_db=$3; diagnostic_db=$4; successor_db=$5
-(cd / && sha256sum -c "$recovery_dir/ROLE-EXPECTED-SHA256SUMS" >/dev/null)
+(cd / && safe_manifest_check "$recovery_dir/ROLE-EXPECTED-SHA256SUMS" >/dev/null)
 docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' -v ON_ERROR_STOP=1 -c "
 select rolname,rolsuper,rolinherit,rolcreatedb,rolcreaterole,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolpassword is null
 from pg_authid where rolname in ('phase0_bootstrap','postgres','supabase_admin','anon','authenticated','service_role','pg_database_owner','pg_create_subscription','pg_monitor','pg_read_all_data','pg_signal_backend') order by rolname;" | cmp -s - "$recovery_dir/role-manifest.expected.tsv"
@@ -1957,17 +2463,18 @@ docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' 
 with requested(lane,datname) as (values ('diagnostic',:'diagnostic_db'),('fresh',:'fresh_db'),('successor',:'successor_db')) select requested.lane,r.rolname,r.rolsuper from requested join pg_database d using(datname) join pg_authid r on r.oid=d.datdba order by requested.lane;" | cmp -s - "$recovery_dir/replay-owner.expected.tsv"
 BASH
 chmod 0600 "$role_gate"
-sha256sum "$recovery_dir/role-manifest.expected.tsv" "$recovery_dir/role-memberships.expected.tsv" "$recovery_dir/role-forbidden.expected.tsv" "$recovery_dir/replay-owner.expected.tsv" "$role_gate" > "$recovery_dir/ROLE-EXPECTED-SHA256SUMS"
+write_manifest "$recovery_dir/ROLE-EXPECTED-SHA256SUMS" replay-owner.expected.tsv role-forbidden.expected.tsv role-manifest.expected.tsv role-memberships.expected.tsv verify-role-manifest
 chmod 0600 "$recovery_dir/ROLE-EXPECTED-SHA256SUMS"
 bash "$role_gate" "$lane_container" "$recovery_dir" "$fresh_db" "$diagnostic_db" "$successor_db"
 printf 'roles|PASS\nattributes|exact\nmemberships|exact\nforbidden_roles|zero\nreplay_owner|postgres-nonsuperuser\n' > "$recovery_dir/ROLE-MANIFEST.COMPLETE"
-sha256sum "$recovery_dir/role-manifest.expected.tsv" "$recovery_dir/role-manifest.actual.tsv" "$recovery_dir/role-memberships.expected.tsv" "$recovery_dir/role-memberships.actual.tsv" "$recovery_dir/role-forbidden.expected.tsv" "$recovery_dir/role-forbidden.actual.tsv" "$recovery_dir/replay-owner.expected.tsv" "$role_gate" "$recovery_dir/ROLE-EXPECTED-SHA256SUMS" "$recovery_dir/ROLE-MANIFEST.COMPLETE" > "$recovery_dir/ROLE-SHA256SUMS"
-(cd / && sha256sum -c "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
+write_manifest "$recovery_dir/ROLE-SHA256SUMS" ROLE-EXPECTED-SHA256SUMS ROLE-MANIFEST.COMPLETE replay-owner.expected.tsv role-forbidden.actual.tsv role-forbidden.expected.tsv role-manifest.actual.tsv role-manifest.expected.tsv role-memberships.actual.tsv role-memberships.expected.tsv verify-role-manifest
+(cd / && safe_manifest_check "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
 printf 'fidelity|PASS\nroles|exact\ncore_objects|exact\nowners|exact\ndefault_acl|exact\nexplicit_acl|exact\neffective_privileges|exact\nfunctions_grants|13-exact\nextensions|exact\nlocale_settings|exact\nclone_count|2\n' \
   > "$recovery_dir/FIDELITY.COMPLETE"
-find "$recovery_dir" -maxdepth 1 -type f \( -name '*-fidelity.*.tsv' -o -name 'FIDELITY.COMPLETE' \) -print0 \
-  | LC_ALL=C sort -z | xargs -0 sha256sum > "$recovery_dir/FIDELITY-SHA256SUMS"
-(cd / && sha256sum -c "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
+mapfile -t fidelity_members < <(find "$recovery_dir" -maxdepth 1 -type f \
+  \( -name '*-fidelity.*.tsv' -o -name 'FIDELITY.COMPLETE' \) -printf '%f\n' | LC_ALL=C sort)
+write_manifest "$recovery_dir/FIDELITY-SHA256SUMS" "${fidelity_members[@]}"
+(cd / && safe_manifest_check "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
 chmod 0600 "$recovery_dir"/*
 ```
 
@@ -1979,6 +2486,9 @@ The completion marker is the last evidence payload created. It is unreachable un
 
 ```bash
 set -euo pipefail
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+review_package=$V17_REVIEW_PACKAGE
 umask 077
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
 repo=/opt/thoidai-work
@@ -1993,7 +2503,7 @@ fresh_db=$(awk -F '|' '$1=="fresh_template"{print $2}' "$recovery_dir/lane-names
 diagnostic_db=$(awk -F '|' '$1=="diagnostic"{print $2}' "$recovery_dir/lane-names.tsv")
 successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
 secret_file="$recovery_dir/postgres-password.secret"
-(cd / && sha256sum -c "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
+(cd / && safe_manifest_check "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
 grep -Fx 'fidelity|PASS' "$recovery_dir/FIDELITY.COMPLETE"
 grep -Fx 'roles|exact' "$recovery_dir/FIDELITY.COMPLETE"
 grep -Fx 'core_objects|exact' "$recovery_dir/FIDELITY.COMPLETE"
@@ -2032,8 +2542,9 @@ docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' 
   "select name,setting from pg_settings where name in
    ('log_statement','log_min_error_statement','logging_collector','log_destination','log_error_verbosity') order by name;" \
   > "$recovery_dir/postgres-logging.after-task5.tsv"
-cmp -s "$recovery_dir/postgres-logging.expected.tsv" "$recovery_dir/postgres-logging.after-task5.tsv"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
+cmp -s "$recovery_dir/readiness-v17/postgres-logging.expected.tsv" "$recovery_dir/postgres-logging.after-task5.tsv"
+source_names=(20260813110000_task_evaluation_checkpoints.sql 20260813155000_allow_tbt_task_evaluation.sql 20260813172000_task_plans_recipients_self_claim.sql 20260813184000_secure_task_rpc_execution.sql 20260813210000_password_reset_security.sql 20260813220000_task_evaluation_total_score.sql 20260813230000_admin_role_user_policy.sql 20260813233000_tbt_evaluation_guard.sql 20260813234500_creator_evaluation_guard.sql 20260814070000_job_titles.sql 20260814090000_task_priority_neutral_default.sql 20260814102000_bulk_task_plans.sql 20260814113000_localize_role_names.sql 20260814130000_staff_list_order.sql 20260814160000_employee_password_reset_admin.sql 20260814170000_employee_password_reset_hardening.sql)
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" --manifest SOURCE-SHA256SUMS --separator one --member-root "$repo/supabase/migrations" --member-root-mode 755 --member-mode 644 --allow-extra "${source_names[@]}"
 read -r old_run_dir < "$evidence_root/isolated-run.current"
 IFS='|' read -r old_run_id quarantine_container quarantine_volume old_bootstrap old_bootstrap_db old_database < "$old_run_dir/names.tsv"
 docker inspect -f 'container_id|{{.Id}}{{println}}state|{{.State.Status}}{{println}}image_id|{{.Image}}{{println}}network|{{.HostConfig.NetworkMode}}{{println}}log_driver|{{.HostConfig.LogConfig.Type}}{{println}}privileged|{{.HostConfig.Privileged}}{{println}}restart|{{.HostConfig.RestartPolicy.Name}}{{println}}auto_remove|{{.HostConfig.AutoRemove}}' \
@@ -2042,7 +2553,7 @@ cmp -s "$recovery_dir/quarantine-container.before.tsv" "$recovery_dir/quarantine
 docker volume inspect -f 'name|{{.Name}}{{println}}driver|{{.Driver}}{{println}}scope|{{.Scope}}' \
   "$quarantine_volume" > "$recovery_dir/quarantine-volume.after-task5.tsv"
 cmp -s "$recovery_dir/quarantine-volume.before.tsv" "$recovery_dir/quarantine-volume.after-task5.tsv"
-(cd / && sha256sum -c "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
+(cd / && safe_manifest_check "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
 role_gate="$recovery_dir/verify-role-manifest"
 bash "$role_gate" "$lane_container" "$recovery_dir" "$fresh_db" "$diagnostic_db" "$successor_db"
 grep -Fx 'roles|PASS' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
@@ -2050,33 +2561,43 @@ grep -Fx 'attributes|exact' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
 grep -Fx 'memberships|exact' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
 grep -Fx 'forbidden_roles|zero' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
 grep -Fx 'replay_owner|postgres-nonsuperuser' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
-handoff_pointer=/opt/thoidai-reconciliation/HANDOFF.current
-invoke_full_immutable_gate() {
-  local pointer=$1 package payload
-  test -f "$pointer"; test ! -L "$pointer"; test "$(stat -c '%U|%G|%a' "$pointer")" = 'root|root|600'; test "$(awk 'END{print NR+0}' "$pointer")" -eq 1
-  IFS= read -r package < "$pointer"; case "$package" in /opt/thoidai-reconciliation/phase0-execution-handoff-*) ;; *) return 41 ;; esac
-  test -d "$package"; test ! -L "$package"; test "$(stat -c '%U|%G|%a' "$package")" = 'root|root|700'
-  printf 'COMMIT.tsv\nREVIEW.tsv\nSHA256SUMS\nVERIFY.sh\ndesign.md\nplan.md\n' | cmp -s - <(find "$package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
-  for payload in plan.md design.md COMMIT.tsv REVIEW.tsv VERIFY.sh SHA256SUMS; do test -f "$package/$payload"; test ! -L "$package/$payload"; test "$(stat -c '%U|%G|%a' "$package/$payload")" = 'root|root|600'; done
-  test "$(awk 'END{print NR+0}' "$package/SHA256SUMS")" -eq 5; awk 'NF!=2 || $1 !~ /^[0-9a-f]{64}$/ {exit 41}' "$package/SHA256SUMS"
-  printf 'plan.md\ndesign.md\nCOMMIT.tsv\nREVIEW.tsv\nVERIFY.sh\n' | cmp -s - <(awk '{print $2}' "$package/SHA256SUMS")
-  (cd "$package" && sha256sum -c SHA256SUMS >/dev/null); bash "$package/VERIFY.sh" "$pointer"; printf '%s\n' "$package"
-}
-handoff_package=$(invoke_full_immutable_gate "$handoff_pointer")
-test -n "$handoff_package"
-printf 'phase|task5\nstatus|complete\nquarantine_runtime_session|false\nquarantine_log_read|false\nproduction_mutation|false\nhistory_write|false\nnew_lane_retained|true\n' \
-  > "$recovery_dir/TASK5.COMPLETE"
-find "$recovery_dir" -maxdepth 1 -type f ! -name 'postgres-password.secret' ! -name 'TASK5-SHA256SUMS' -print0 \
-  | LC_ALL=C sort -z | xargs -0 sha256sum > "$recovery_dir/TASK5-SHA256SUMS"
-chmod 0600 "$recovery_dir/TASK5.COMPLETE" "$recovery_dir/TASK5-SHA256SUMS"
-(cd / && sha256sum -c "$recovery_dir/TASK5-SHA256SUMS" >/dev/null)
-pointer_tmp=$(mktemp /opt/thoidai-reconciliation/.phase0-v5-execution.current.XXXXXX)
-printf '%s\n' "$recovery_dir" > "$pointer_tmp"
-chmod 0600 "$pointer_tmp"
-mv -T "$pointer_tmp" /opt/thoidai-reconciliation/phase0-v5-execution.current
+base=/opt/thoidai-reconciliation
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+review_package=$V17_REVIEW_PACKAGE
+review_manifest_sha=$V17_REVIEW_MANIFEST_SHA256
+approval=$base/phase0-v17-reentry-review.approved.tsv
+current=$base/HANDOFF.recovery-v17.current
+task5_current=$base/phase0-v5-execution.current
+pin=$recovery_dir/TASK5-CURRENT.pointer
+pointer_sha=$(printf '%s\n' "$recovery_dir" | sha256sum | awk '{print $1}')
+install -m0600 "$old_run_dir/production-acl-normalization.before.tsv" "$recovery_dir/production-acl-normalization.before.tsv"
+install -m0600 "$old_run_dir/production-acl-normalization.after.tsv" "$recovery_dir/production-acl-normalization.after.tsv"
+install -m0600 "$old_run_dir/isolated-acl-normalization.status.tsv" "$recovery_dir/isolated-acl-normalization.status.tsv"
+install -m0600 "$old_run_dir/isolated-acl-normalization.pre.tsv" "$recovery_dir/isolated-acl-normalization.pre.tsv"
+install -m0600 "$old_run_dir/isolated-acl-normalization.post.tsv" "$recovery_dir/isolated-acl-normalization.post.tsv"
+write_manifest "$recovery_dir/RESTORE-SHA256SUMS" restore.status.tsv
+write_manifest "$recovery_dir/ACL-SHA256SUMS" isolated-acl-normalization.post.tsv isolated-acl-normalization.pre.tsv isolated-acl-normalization.status.tsv production-acl-normalization.after.tsv production-acl-normalization.before.tsv public-usage.post.tsv public-usage.pre.tsv
+write_manifest "$recovery_dir/ROLE-EXPECTED-SHA256SUMS" replay-owner.expected.tsv role-forbidden.expected.tsv role-manifest.expected.tsv role-memberships.expected.tsv verify-role-manifest
+write_manifest "$recovery_dir/ROLE-SHA256SUMS" ROLE-EXPECTED-SHA256SUMS ROLE-MANIFEST.COMPLETE replay-owner.expected.tsv role-forbidden.actual.tsv role-forbidden.expected.tsv role-manifest.actual.tsv role-manifest.expected.tsv role-memberships.actual.tsv role-memberships.expected.tsv verify-role-manifest
+mapfile -t fidelity_members < <(find "$recovery_dir" -maxdepth 1 -type f \( -name '*-fidelity.*.tsv' -o -name FIDELITY.COMPLETE \) -printf '%f\n' | LC_ALL=C sort)
+write_manifest "$recovery_dir/FIDELITY-SHA256SUMS" "${fidelity_members[@]}"
+review_exec PUBLISH.py completion-prepare "$recovery_dir" "$pin" "$task5_current" "$base" "$pointer_sha"
+test -f "$recovery_dir/TASK5-PUBLISH-ARGS.tsv" && test ! -L "$recovery_dir/TASK5-PUBLISH-ARGS.tsv"
+test "$(stat -c '%U|%G|%a' "$recovery_dir/TASK5-PUBLISH-ARGS.tsv")" = 'root|root|600'
+test -f "$recovery_dir/TASK5-PRECOMPLETE-SHA256SUMS" && test ! -L "$recovery_dir/TASK5-PRECOMPLETE-SHA256SUMS"
+test "$(stat -c '%U|%G|%a' "$recovery_dir/TASK5-PRECOMPLETE-SHA256SUMS")" = 'root|root|600'
+test -f "$current" && test ! -L "$current"
+IFS= read -r execution_package < "$current"
+review_exec TRUST-GATE.py \
+  --trusted-review "$review_package" --trusted-manifest "$review_manifest_sha" \
+  --approval "$approval" --execution "$execution_package" --phase current \
+  --pointer "$current" --action both --recovery-stage pre-completion
+review_exec PUBLISH.py completion "$recovery_dir" "$pin" "$task5_current" "$base" "$pointer_sha"
+review_exec PUBLISH.py completion-verify "$recovery_dir" "$pin" "$task5_current" "$base" "$pointer_sha"
 ```
 
-Expected: the one sealed full helper repeats the complete package/approval/commit/canonical/unrelated gate immediately before completion. The role helper re-queries exact attributes, memberships, forbidden-role absence, and three non-superuser `postgres` owners. Fidelity, image/platform, network/ports, logging, resources, privilege/namespaces/caps/devices, mounts/tmpfs, secret metadata, volume identity, and both quarantine metadata files remain exact. Only then is `TASK5.COMPLETE` created and the new execution pointer published. The secret and every container log remain outside all hashes; all resources remain retained.
+Expected: the externally anchored trust gate repeats the complete package/approval/commit/canonical/unrelated/actual-lock-inode gate and finishes with a fresh live trusted recovery verification immediately before completion. The role helper re-queries exact attributes, memberships, forbidden-role absence, and three non-superuser `postgres` owners. Fidelity, image/platform, network/ports, logging, resources, privilege/namespaces/caps/devices, mounts/tmpfs, secret metadata, volume identity, and both quarantine metadata files remain exact. Only then is `TASK5.COMPLETE` created and the new execution pointer published. The secret and every container log remain outside all hashes; all resources remain retained.
 
 ## Task 6: Seed the successor and replay the two new isolated lanes
 
@@ -2095,10 +2616,14 @@ The source parser must observe exactly two approved syntax occurrences resolving
 set -euo pipefail
 set +x
 umask 077
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+review_package=$V17_REVIEW_PACKAGE
 repo=/opt/thoidai-work
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
-(cd / && sha256sum -c "$recovery_dir/TASK5-SHA256SUMS" >/dev/null)
+read -r execution_package < /opt/thoidai-reconciliation/HANDOFF.recovery-v17.current
+read -r recovery_dir < "$execution_package/TASK5.pending"
+(cd / && safe_manifest_check "$recovery_dir/TASK5-SHA256SUMS" >/dev/null)
 grep -Fx 'status|complete' "$recovery_dir/TASK5.COMPLETE"
 lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
 lane_volume=$(awk -F '|' '$1=="volume"{print $2}' "$recovery_dir/lane-names.tsv")
@@ -2106,7 +2631,7 @@ fresh_db=$(awk -F '|' '$1=="fresh_template"{print $2}' "$recovery_dir/lane-names
 diagnostic_db=$(awk -F '|' '$1=="diagnostic"{print $2}' "$recovery_dir/lane-names.tsv")
 successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
 secret_file="$recovery_dir/postgres-password.secret"
-(cd / && sha256sum -c "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
+(cd / && safe_manifest_check "$recovery_dir/FIDELITY-SHA256SUMS" >/dev/null)
 grep -Fx 'fidelity|PASS' "$recovery_dir/FIDELITY.COMPLETE"
 test "$(docker image inspect -f '{{.Id}}|{{.Os}}|{{.Architecture}}' postgres@sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d)" = 'sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d|linux|amd64'
 test "$(docker inspect -f '{{.State.Running}}|{{.Image}}|{{.HostConfig.NetworkMode}}|{{.HostConfig.LogConfig.Type}}' "$lane_container")" = 'true|sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d|none|none'
@@ -2130,8 +2655,8 @@ docker exec "$lane_container" psql -X -U phase0_bootstrap -d postgres -qAtF '|' 
   "select name,setting from pg_settings where name in
    ('log_statement','log_min_error_statement','logging_collector','log_destination','log_error_verbosity') order by name;" \
   > "$recovery_dir/postgres-logging.before-task6.tsv"
-cmp -s "$recovery_dir/postgres-logging.expected.tsv" "$recovery_dir/postgres-logging.before-task6.tsv"
-(cd / && sha256sum -c "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
+cmp -s "$recovery_dir/readiness-v17/postgres-logging.expected.tsv" "$recovery_dir/postgres-logging.before-task6.tsv"
+(cd / && safe_manifest_check "$recovery_dir/ROLE-SHA256SUMS" >/dev/null)
 role_gate="$recovery_dir/verify-role-manifest"
 bash "$role_gate" "$lane_container" "$recovery_dir" "$fresh_db" "$diagnostic_db" "$successor_db"
 grep -Fx 'roles|PASS' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
@@ -2140,9 +2665,10 @@ grep -Fx 'memberships|exact' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
 grep -Fx 'forbidden_roles|zero' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
 grep -Fx 'replay_owner|postgres-nonsuperuser' "$recovery_dir/ROLE-MANIFEST.COMPLETE"
 cd "$repo"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
+source_names=(20260813110000_task_evaluation_checkpoints.sql 20260813155000_allow_tbt_task_evaluation.sql 20260813172000_task_plans_recipients_self_claim.sql 20260813184000_secure_task_rpc_execution.sql 20260813210000_password_reset_security.sql 20260813220000_task_evaluation_total_score.sql 20260813230000_admin_role_user_policy.sql 20260813233000_tbt_evaluation_guard.sql 20260813234500_creator_evaluation_guard.sql 20260814070000_job_titles.sql 20260814090000_task_priority_neutral_default.sql 20260814102000_bulk_task_plans.sql 20260814113000_localize_role_names.sql 20260814130000_staff_list_order.sql 20260814160000_employee_password_reset_admin.sql 20260814170000_employee_password_reset_hardening.sql)
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" --manifest SOURCE-SHA256SUMS --separator one --member-root "$repo/supabase/migrations" --member-root-mode 755 --member-mode 644 --allow-extra "${source_names[@]}"
 protected_source="$repo/supabase/migrations/20260813210000_password_reset_security.sql"
-test "$(sha256sum "$protected_source" | awk '{print $1}')" = a87f815d5494eb733f525917053f1668875aa9d0c03b38c326387a9312a58212
+review_exec SAFE_MANIFEST.py file --path "$protected_source" --expected-sha a87f815d5494eb733f525917053f1668875aa9d0c03b38c326387a9312a58212 --mode 644
 test "$(grep -Ec 'lower[[:space:]]*\([[:space:]]*username[[:space:]]*\)[[:space:]]*=' "$protected_source")" -eq 2
 ! LC_ALL=C grep -q $'\x1e\|\x1f' "$protected_source"
 source_gate="$recovery_dir/verify-source-gate"
@@ -2151,15 +2677,27 @@ cat > "$source_gate" <<'BASH'
 #!/usr/bin/env bash
 set -euo pipefail
 source_file=$1
+trusted_review=$2
+trusted_manifest_sha=$3
 repo=/opt/thoidai-work
-manifest=/opt/thoidai-reconciliation/phase0-20260814T135943Z/source.sha256
+review_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
 protected_source="$repo/supabase/migrations/20260813210000_password_reset_security.sql"
-case "$source_file" in "$repo"/supabase/migrations/*.sql) ;; *) exit 41 ;; esac
-manifest_rel=${source_file#${repo}/}
-test "$(awk -v file="$manifest_rel" '$2==file{n++} END{print n+0}' "$manifest")" -eq 1
-expected_sha=$(awk -v file="$manifest_rel" '$2==file{print $1}' "$manifest")
-[[ "$expected_sha" =~ ^[0-9a-f]{64}$ ]]
-test "$(sha256sum "$source_file" | awk '{print $1}')" = "$expected_sha"
+review_name=$(basename -- "$trusted_review")
+[[ "$trusted_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+test "$(dirname -- "$trusted_review")" = "$review_root"
+[[ "$review_name" =~ ^review-runbook-v17-r2-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+test "$trusted_review" = "$review_root/$review_name"
+test -f "$trusted_review/SAFE_MANIFEST.py" && test ! -L "$trusted_review/SAFE_MANIFEST.py"
+test "$(stat -c '%U|%G|%a' "$trusted_review/SAFE_MANIFEST.py")" = 'root|root|600'
+review_exec SAFE_MANIFEST.py manifest --directory "$trusted_review" --anchor "$trusted_manifest_sha" --separator one \
+  runbook.candidate.md design.candidate.md REVIEW-NOTES.md VALIDATION.tsv FAILURE-STATE.tsv \
+  RECOVERY-VERIFY.sh VERIFY.sh PUBLISH.py TRUST-GATE.py TRUST-POLICY.tsv SIMULATE.py SAFE_MANIFEST.py SOURCE-SHA256SUMS
+source_names=(20260813110000_task_evaluation_checkpoints.sql 20260813155000_allow_tbt_task_evaluation.sql 20260813172000_task_plans_recipients_self_claim.sql 20260813184000_secure_task_rpc_execution.sql 20260813210000_password_reset_security.sql 20260813220000_task_evaluation_total_score.sql 20260813230000_admin_role_user_policy.sql 20260813233000_tbt_evaluation_guard.sql 20260813234500_creator_evaluation_guard.sql 20260814070000_job_titles.sql 20260814090000_task_priority_neutral_default.sql 20260814102000_bulk_task_plans.sql 20260814113000_localize_role_names.sql 20260814130000_staff_list_order.sql 20260814160000_employee_password_reset_admin.sql 20260814170000_employee_password_reset_hardening.sql)
+review_exec SAFE_MANIFEST.py manifest --directory "$trusted_review" --manifest SOURCE-SHA256SUMS --separator one \
+  --member-root "$repo/supabase/migrations" --member-root-mode 755 --member-mode 644 --allow-extra "${source_names[@]}"
+source_name=$(basename -- "$source_file")
+test "$source_file" = "$repo/supabase/migrations/$source_name"
+case " ${source_names[*]} " in *" $source_name "*) ;; *) exit 41 ;; esac
 ! grep -Eqi '(^|;)[[:space:]]*(set[[:space:]]+role|set[[:space:]]+session[[:space:]]+authorization|\\connect)([[:space:];]|$)' "$source_file"
 ! grep -Eqi 'supabase_admin' "$source_file"
 python3 - "$protected_source" "$source_file" <<'PY'
@@ -2184,7 +2722,11 @@ if stream.count(candidate) != expected_stream_count:
 PY
 BASH
 chmod 0600 "$source_gate"
-sha256sum "$source_gate" > "$recovery_dir/verify-source-gate.sha256"
+gate_sha=$(review_exec SAFE_MANIFEST.py file --path "$source_gate" --mode 600 --print-digest)
+printf '%s verify-source-gate\n' "$gate_sha" > "$recovery_dir/VERIFY-SOURCE-GATE-SHA256SUMS"
+chmod 0600 "$recovery_dir/VERIFY-SOURCE-GATE-SHA256SUMS"
+review_exec SAFE_MANIFEST.py manifest --directory "$recovery_dir" --manifest VERIFY-SOURCE-GATE-SHA256SUMS \
+  --directory-mode 700 --allow-extra verify-source-gate
 read -r -d '' client_script <<'PSQL' || true
 \set ECHO none
 \set QUIET on
@@ -2243,8 +2785,8 @@ select 1 / case when (select count(*) from public.staff_users where lower(userna
 truncate parsed_selector,selector_source;
 commit;
 PSQL
-(cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
-bash "$source_gate" "$protected_source"
+review_exec SAFE_MANIFEST.py manifest --directory "$recovery_dir" --manifest VERIFY-SOURCE-GATE-SHA256SUMS --directory-mode 700 --allow-extra verify-source-gate
+bash "$source_gate" "$protected_source" "$review_package" "$V17_REVIEW_MANIFEST_SHA256"
 set +e
 docker exec -i "$lane_container" bash -c \
   'set +x; exec 3<<<"$1"; exec psql -X -U postgres -d "$2" -v ON_ERROR_STOP=1 -f /dev/fd/3 >/dev/null 2>/dev/null' \
@@ -2280,8 +2822,12 @@ The sanitizer runs inside bounded tmpfs. It accepts one exact SQLSTATE-form line
 set -euo pipefail
 set +x
 umask 077
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+review_package=$V17_REVIEW_PACKAGE
 repo=/opt/thoidai-work
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+read -r execution_package < /opt/thoidai-reconciliation/HANDOFF.recovery-v17.current
+read -r recovery_dir < "$execution_package/TASK5.pending"
 lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
 diagnostic_db=$(awk -F '|' '$1=="diagnostic"{print $2}' "$recovery_dir/lane-names.tsv")
 source_file="$repo/supabase/migrations/20260814130000_staff_list_order.sql"
@@ -2289,8 +2835,8 @@ source_gate="$recovery_dir/verify-source-gate"
 fingerprint_sql="select (select count(*) from public.staff_users),(select count(*) from public.audit_logs),(select count(*) from public.staff_users where list_order>0),(select count(*) from pg_constraint where conrelid='public.staff_users'::regclass and conname='staff_users_list_order_nonnegative');"
 docker exec "$lane_container" psql -X -U postgres -d "$diagnostic_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "$fingerprint_sql" \
   > "$recovery_dir/diagnostic-negative.before.tsv"
-(cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
-bash "$source_gate" "$source_file"
+review_exec SAFE_MANIFEST.py manifest --directory "$recovery_dir" --manifest VERIFY-SOURCE-GATE-SHA256SUMS --directory-mode 700 --allow-extra verify-source-gate
+bash "$source_gate" "$source_file" "$review_package" "$V17_REVIEW_MANIFEST_SHA256"
 set +e
 docker exec -i "$lane_container" bash -ceu '
   set +x
@@ -2338,14 +2884,19 @@ For the fifteen expected-success files the sanitizer requires empty stderr and e
 set -euo pipefail
 set +x
 umask 077
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+review_package=$V17_REVIEW_PACKAGE
 repo=/opt/thoidai-work
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+read -r execution_package < /opt/thoidai-reconciliation/HANDOFF.recovery-v17.current
+read -r recovery_dir < "$execution_package/TASK5.pending"
 lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
 successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
 source_gate="$recovery_dir/verify-source-gate"
 cd "$repo"
-sha256sum -c "$evidence_root/source.sha256" >/dev/null
+source_names=(20260813110000_task_evaluation_checkpoints.sql 20260813155000_allow_tbt_task_evaluation.sql 20260813172000_task_plans_recipients_self_claim.sql 20260813184000_secure_task_rpc_execution.sql 20260813210000_password_reset_security.sql 20260813220000_task_evaluation_total_score.sql 20260813230000_admin_role_user_policy.sql 20260813233000_tbt_evaluation_guard.sql 20260813234500_creator_evaluation_guard.sql 20260814070000_job_titles.sql 20260814090000_task_priority_neutral_default.sql 20260814102000_bulk_task_plans.sql 20260814113000_localize_role_names.sql 20260814130000_staff_list_order.sql 20260814160000_employee_password_reset_admin.sql 20260814170000_employee_password_reset_hardening.sql)
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" --manifest SOURCE-SHA256SUMS --separator one --member-root "$repo/supabase/migrations" --member-root-mode 755 --member-mode 644 --allow-extra "${source_names[@]}"
 chain=(
   20260813110000_task_evaluation_checkpoints.sql
   20260813155000_allow_tbt_task_evaluation.sql
@@ -2373,8 +2924,8 @@ for migration in "${chain[@]}"; do
   if test "$version" = 20260814130000; then
     docker exec "$lane_container" psql -X -U postgres -d "$successor_db" -qAtF '|' -v ON_ERROR_STOP=1 -c "$fingerprint_sql" \
       > "$recovery_dir/successor-negative.before.tsv"
-    (cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
-    bash "$source_gate" "$source_file"
+    review_exec SAFE_MANIFEST.py manifest --directory "$recovery_dir" --manifest VERIFY-SOURCE-GATE-SHA256SUMS --directory-mode 700 --allow-extra verify-source-gate
+    bash "$source_gate" "$source_file" "$review_package" "$V17_REVIEW_MANIFEST_SHA256"
     set +e
     docker exec -i "$lane_container" bash -ceu '
       set +x
@@ -2408,8 +2959,8 @@ for migration in "${chain[@]}"; do
     cmp -s "$recovery_dir/successor-negative.before.tsv" "$recovery_dir/successor-negative.after.tsv"
     printf '%s|3|P0001|rollback-byte-identical\n' "$version" >> "$recovery_dir/successor-replay.status.tsv"
   else
-    (cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
-    bash "$source_gate" "$source_file"
+    review_exec SAFE_MANIFEST.py manifest --directory "$recovery_dir" --manifest VERIFY-SOURCE-GATE-SHA256SUMS --directory-mode 700 --allow-extra verify-source-gate
+    bash "$source_gate" "$source_file" "$review_package" "$V17_REVIEW_MANIFEST_SHA256"
     set +e
     docker exec -i "$lane_container" bash -ceu '
       set +x
@@ -2453,9 +3004,13 @@ Expected: exactly fifteen success rows and one exact `20260814130000|3|P0001` ro
 set -euo pipefail
 set +x
 umask 077
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+review_package=$V17_REVIEW_PACKAGE
 repo=/opt/thoidai-work
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+read -r execution_package < /opt/thoidai-reconciliation/HANDOFF.recovery-v17.current
+read -r recovery_dir < "$execution_package/TASK5.pending"
 lane_container=$(awk -F '|' '$1=="container"{print $2}' "$recovery_dir/lane-names.tsv")
 successor_db=$(awk -F '|' '$1=="successor"{print $2}' "$recovery_dir/lane-names.tsv")
 source_gate="$recovery_dir/verify-source-gate"
@@ -2474,8 +3029,8 @@ test "${#safe_chain[@]}" -eq 15
 for migration in "${safe_chain[@]}"; do
   version=${migration%%_*}
   source_file="$repo/supabase/migrations/$migration"
-  (cd / && sha256sum -c "$recovery_dir/verify-source-gate.sha256" >/dev/null)
-  bash "$source_gate" "$source_file"
+  review_exec SAFE_MANIFEST.py manifest --directory "$recovery_dir" --manifest VERIFY-SOURCE-GATE-SHA256SUMS --directory-mode 700 --allow-extra verify-source-gate
+  bash "$source_gate" "$source_file" "$review_package" "$V17_REVIEW_MANIFEST_SHA256"
   set +e
   docker exec -i "$lane_container" bash -ceu '
     set +x
@@ -2515,10 +3070,11 @@ docker exec "$lane_container" psql -X -U postgres -d "$successor_db" -qAtF '|' -
 test "$(wc -l < "$recovery_dir/successor-terminal.tbt.tsv")" -eq 2
 printf 'phase|task6\nstatus|complete\nnegative_sqlstate|P0001\nnegative_paths|2\nraw_error_evidence|false\nhistory_write|false\n' \
   > "$recovery_dir/TASK6.COMPLETE"
-find "$recovery_dir" -maxdepth 1 -type f \
+mapfile -t task6_members < <(find "$recovery_dir" -maxdepth 1 -type f \
   \( -name '*negative*' -o -name '*replay*' -o -name '*idempotency*' -o -name '*terminal*' -o -name 'selector-fixture.status.tsv' -o -name 'verify-source-gate*' -o -name 'TASK6.COMPLETE' \) \
-  -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$recovery_dir/TASK6-SHA256SUMS"
-(cd / && sha256sum -c "$recovery_dir/TASK6-SHA256SUMS" >/dev/null)
+  -printf '%f\n' | LC_ALL=C sort)
+write_manifest "$recovery_dir/TASK6-SHA256SUMS" "${task6_members[@]}"
+(cd / && safe_manifest_check "$recovery_dir/TASK6-SHA256SUMS" >/dev/null)
 chmod 0600 "$recovery_dir"/*
 ```
 
@@ -2536,9 +3092,10 @@ Expected: fifteen safe files are idempotent, terminal gates match, both negative
 ```bash
 set -euo pipefail
 umask 077
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
-(cd / && sha256sum -c "$recovery_dir/TASK5-SHA256SUMS" >/dev/null)
-(cd / && sha256sum -c "$recovery_dir/TASK6-SHA256SUMS" >/dev/null)
+read -r execution_package < /opt/thoidai-reconciliation/HANDOFF.recovery-v17.current
+read -r recovery_dir < "$execution_package/TASK5.pending"
+(cd / && safe_manifest_check "$recovery_dir/TASK5-SHA256SUMS" >/dev/null)
+(cd / && safe_manifest_check "$recovery_dir/TASK6-SHA256SUMS" >/dev/null)
 cat > "$recovery_dir/classification.tsv" <<'EOF'
 20260813172000|exact-applied|blocked-all-or-nothing
 20260813210000|semantically-applied-but-source-differs|STOP
@@ -2570,7 +3127,8 @@ Expected: only the four approved class strings appear; seven rows are exact and 
 ```bash
 set -euo pipefail
 umask 077
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+read -r execution_package < /opt/thoidai-reconciliation/HANDOFF.recovery-v17.current
+read -r recovery_dir < "$execution_package/TASK5.pending"
 grep -Fx 'sqlstate|P0001' "$recovery_dir/diagnostic-negative.status.tsv"
 grep -Fx 'sqlstate|P0001' "$recovery_dir/successor-negative.status.tsv"
 cmp -s "$recovery_dir/diagnostic-negative.before.tsv" "$recovery_dir/diagnostic-negative.after.tsv"
@@ -2579,9 +3137,8 @@ printf 'gate|STOP\nnon_exact_count|4\nproduction_replay|false\nhistory_write|fal
   > "$recovery_dir/HISTORY-GATE.status"
 grep -Fx 'gate|STOP' "$recovery_dir/HISTORY-GATE.status"
 grep -Fx 'non_exact_count|4' "$recovery_dir/HISTORY-GATE.status"
-sha256sum "$recovery_dir/classification.tsv" "$recovery_dir/HISTORY-GATE.status" \
-  > "$recovery_dir/TASK7-SHA256SUMS"
-(cd / && sha256sum -c "$recovery_dir/TASK7-SHA256SUMS" >/dev/null)
+write_manifest "$recovery_dir/TASK7-SHA256SUMS" \
+  classification.tsv HISTORY-GATE.status
 printf 'phase|task7\nstatus|complete\ngate|STOP\n' > "$recovery_dir/TASK7.COMPLETE"
 chmod 0600 "$recovery_dir"/*
 ```
@@ -2600,8 +3157,9 @@ Expected: diagnostic and successor evidence stay separate. Synthetic replayabili
 ```bash
 set -euo pipefail
 umask 077
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
-(cd / && sha256sum -c "$recovery_dir/TASK7-SHA256SUMS" >/dev/null)
+read -r execution_package < /opt/thoidai-reconciliation/HANDOFF.recovery-v17.current
+read -r recovery_dir < "$execution_package/TASK5.pending"
+(cd / && safe_manifest_check "$recovery_dir/TASK7-SHA256SUMS" >/dev/null)
 grep -Fx 'gate|STOP' "$recovery_dir/HISTORY-GATE.status"
 printf 'phase|task8\nstatus|skipped_unreachable\nreason|four_non_exact_rows\nhistory_write|false\nproduction_replay|false\nwrite_sql_count|0\n' \
   > "$recovery_dir/TASK8.SKIPPED"
@@ -2623,11 +3181,224 @@ Expected: Task 8 creates only a root-only skip record and immediately stops. The
 ```bash
 set -euo pipefail
 umask 077
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
 repo=/opt/thoidai-work
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+base=/opt/thoidai-reconciliation
+review_root=$base/phase0-20260814T135943Z
+review_package=$V17_REVIEW_PACKAGE
+review_manifest_sha=$V17_REVIEW_MANIFEST_SHA256
+review_exec() {
+  python3 - "$review_package" "$review_manifest_sha" "$@" <<'PY'
+import hashlib,os,re,stat,sys,types
+MEMBERS=(
+ "runbook.candidate.md","design.candidate.md","REVIEW-NOTES.md","VALIDATION.tsv",
+ "FAILURE-STATE.tsv","RECOVERY-VERIFY.sh","VERIFY.sh","PUBLISH.py",
+ "TRUST-GATE.py","TRUST-POLICY.tsv","SIMULATE.py","SAFE_MANIFEST.py","SOURCE-SHA256SUMS")
+review,anchor,target,*target_args=sys.argv[1:]
+sig=lambda s:(s.st_dev,s.st_ino,s.st_mode,s.st_nlink,s.st_uid,s.st_gid,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+if not re.fullmatch(r"[0-9a-f]{64}",anchor): raise SystemExit(41)
+if not os.path.isabs(review) or os.path.normpath(review)!=review or os.path.realpath(review)!=review: raise SystemExit(41)
+if target not in ("SAFE_MANIFEST.py","TRUST-GATE.py","PUBLISH.py"): raise SystemExit(41)
+try: dfd=os.open(review,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+except OSError: raise SystemExit(41)
+try:
+ dst=os.fstat(dfd)
+ if not stat.S_ISDIR(dst.st_mode) or dst.st_uid!=0 or dst.st_gid!=0 or stat.S_IMODE(dst.st_mode)!=0o700: raise SystemExit(41)
+ def stable(name):
+  if name not in (*MEMBERS,"SHA256SUMS"): raise SystemExit(41)
+  try: fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=dfd)
+  except OSError: raise SystemExit(41)
+  try:
+   before=os.fstat(fd);parts=[]
+   if not stat.S_ISREG(before.st_mode) or before.st_uid!=0 or before.st_gid!=0 or stat.S_IMODE(before.st_mode)!=0o600: raise SystemExit(41)
+   while True:
+    chunk=os.read(fd,1<<20)
+    if not chunk: break
+    parts.append(chunk)
+   after=os.fstat(fd)
+  finally: os.close(fd)
+  data=b"".join(parts)
+  try: named=os.stat(name,dir_fd=dfd,follow_symlinks=False)
+  except OSError: raise SystemExit(41)
+  if sig(before)!=sig(after) or sig(named)!=sig(before): raise SystemExit(41)
+  if b"\r" in data or b"\0" in data or not data or not data.endswith(b"\n"): raise SystemExit(41)
+  return data
+ manifest=stable("SHA256SUMS")
+ if hashlib.sha256(manifest).hexdigest()!=anchor: raise SystemExit(41)
+ try: lines=manifest.decode("ascii").splitlines()
+ except UnicodeDecodeError: raise SystemExit(41)
+ rows=[]
+ for raw in lines:
+  match=re.fullmatch(r"([0-9a-f]{64}) ([A-Za-z0-9][A-Za-z0-9._-]*)",raw)
+  if not match: raise SystemExit(41)
+  rows.append((match.group(1),match.group(2)))
+ if tuple(name for _,name in rows)!=MEMBERS: raise SystemExit(41)
+ if sorted(os.listdir(dfd))!=sorted((*MEMBERS,"SHA256SUMS")): raise SystemExit(41)
+ digests={name:digest for digest,name in rows}
+ safe_source=stable("SAFE_MANIFEST.py");target_source=stable(target)
+ if hashlib.sha256(safe_source).hexdigest()!=digests["SAFE_MANIFEST.py"]: raise SystemExit(41)
+ if hashlib.sha256(target_source).hexdigest()!=digests[target]: raise SystemExit(41)
+ if sig(os.fstat(dfd))!=sig(dst): raise SystemExit(41)
+ try: named_dir=os.stat(review,follow_symlinks=False)
+ except OSError: raise SystemExit(41)
+ if not stat.S_ISDIR(named_dir.st_mode) or (named_dir.st_dev,named_dir.st_ino)!=(dst.st_dev,dst.st_ino): raise SystemExit(41)
+finally:
+ os.close(dfd)
+safe=types.ModuleType("SAFE_MANIFEST");safe.__file__=review+"/SAFE_MANIFEST.py";safe.__package__=None
+exec(compile(safe_source,safe.__file__,"exec"),safe.__dict__)
+sys.modules["SAFE_MANIFEST"]=safe
+sys.argv=[review+"/"+target,*target_args]
+scope={"__name__":"__main__","__file__":review+"/"+target,"__package__":None}
+exec(compile(target_source,scope["__file__"],"exec"),scope)
+PY
+}
+safe_manifest_check() {
+  local manifest=$1
+  case "$manifest" in /*) ;; *) manifest=$PWD/$manifest ;; esac
+  review_exec SAFE_MANIFEST.py declared --directory "$(dirname -- "$manifest")" \
+    --manifest "$(basename -- "$manifest")" --directory-mode 700 --allow-empty-members
+}
+write_manifest() {
+  local output=$1 directory member_root member_root_mode member_mode name digest tmp
+  shift
+  directory=$(dirname -- "$output")
+  member_root=$directory
+  member_root_mode=700
+  member_mode=600
+  if [ "${1:-}" = --member-root ]; then
+    test "$#" -ge 7
+    member_root=$2
+    test "$3" = --member-root-mode
+    member_root_mode=$4
+    test "$5" = --member-mode
+    member_mode=$6
+    shift 6
+  fi
+  mapfile -t manifest_names < <(printf '%s\n' "$@" | LC_ALL=C sort -u)
+  test "${#manifest_names[@]}" -eq "$#"
+  tmp=$(mktemp "$directory/.manifest.XXXXXX")
+  : > "$tmp"
+  for name in "${manifest_names[@]}"; do
+    [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+    digest=$(review_exec SAFE_MANIFEST.py file --path "$member_root/$name" \
+      --mode "$member_mode" --allow-empty --print-digest)
+    printf '%s %s\n' "$digest" "$name" >> "$tmp"
+  done
+  chmod 0600 "$tmp"
+  mv -f -- "$tmp" "$output"
+  if [ "$member_root" = "$directory" ]; then
+    safe_manifest_check "$output"
+  else
+    review_exec SAFE_MANIFEST.py manifest --directory "$directory" \
+      --manifest "$(basename -- "$output")" --directory-mode 700 --allow-extra \
+      --member-root "$member_root" --member-root-mode "$member_root_mode" \
+      --member-mode "$member_mode" "${manifest_names[@]}"
+  fi
+}
+approval=$base/phase0-v17-reentry-review.approved.tsv
+current=$base/HANDOFF.recovery-v17.current
+review_name=$(basename -- "$review_package")
+[[ "$review_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+test "$(dirname -- "$review_package")" = "$review_root"
+[[ "$review_name" =~ ^review-runbook-v17-r2-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+test "$review_package" = "$review_root/$review_name"
+test -f "$review_package/SAFE_MANIFEST.py" && test ! -L "$review_package/SAFE_MANIFEST.py"
+test "$(stat -c '%U|%G|%a' "$review_package/SAFE_MANIFEST.py")" = 'root|root|600'
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" \
+  --anchor "$review_manifest_sha" --separator one \
+  runbook.candidate.md design.candidate.md REVIEW-NOTES.md VALIDATION.tsv FAILURE-STATE.tsv \
+  RECOVERY-VERIFY.sh VERIFY.sh PUBLISH.py TRUST-GATE.py TRUST-POLICY.tsv SIMULATE.py SAFE_MANIFEST.py SOURCE-SHA256SUMS
+test -f "$approval" && test ! -L "$approval"
+test "$(stat -c '%U|%G|%a' "$approval")" = 'root|root|600'
+test -f "$current" && test ! -L "$current"
+test "$(stat -c '%U|%G|%a' "$current")" = 'root|root|600'
+IFS= read -r execution_package < "$current"
+review_exec TRUST-GATE.py \
+  --trusted-review "$review_package" --trusted-manifest "$review_manifest_sha" \
+  --approval "$approval" --execution "$execution_package" --phase current \
+  --pointer "$current" --action verify
+# COMMIT.tsv, HISTORY.tsv, and TASK5.pending remain unread until the fresh gate succeeds.
+measure_routing_preservation() {
+  local output=$1 name path resolved version version_rc doctor_json doctor_rc provider_rows
+  {
+    printf 'provider_model_mutation_authorized|false\nprovider_model_mutation_count|0\nCLIProxyAPI_mutation_authorized|false\nCLIProxyAPI_mutation_count|0\n9router_mutation_authorized|false\n9router_mutation_count|0\nproc_environment_read|false\nprovider_secret_read_or_hash|false\n'
+    if path=$(command -v codex 2>/dev/null); then
+      resolved=$(readlink -f -- "$path")
+      printf 'command|codex|present|%s\n' "$resolved"
+      stat -Lc 'command_stat|codex|%U|%G|%a|%s|%Y|%F' -- "$resolved"
+      set +e
+      version=$("$resolved" --version 2>/dev/null)
+      version_rc=$?
+      set -e
+      test -n "$version" && test "${#version}" -le 200
+      [[ "$version" != *$'\n'* && "$version" != *$'\r'* && "$version" != *'|'* ]]
+      printf 'command_version|codex|%s|%s\n' "$version_rc" "$version"
+      set +e
+      doctor_json=$("$resolved" doctor --json 2>/dev/null)
+      doctor_rc=$?
+      set -e
+      printf 'doctor_exit|%s\n' "$doctor_rc"
+      provider_rows=$(printf '%s' "$doctor_json" | python3 -c 'import json,re,sys
+try: x=json.load(sys.stdin)
+except Exception: x={}
+rows=[]; allowed={"provider","provider_name","model","model_name"}
+def walk(v,p=()):
+ if isinstance(v,dict):
+  for k in sorted(v):
+   n=v[k]
+   if k in allowed and isinstance(n,(str,int,float,bool)):
+    key=".".join(p+(k,)); value=str(n)
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+",key) or not re.fullmatch(r"[A-Za-z0-9._:/+@<>=-]+",value): raise SystemExit(41)
+    rows.append(f"provider_model|{key}|{value}")
+   elif isinstance(n,(dict,list)): walk(n,p+(k,))
+ elif isinstance(v,list):
+  for i,n in enumerate(v):
+   if isinstance(n,(dict,list)): walk(n,p+(str(i),))
+walk(x)
+print("\n".join(sorted(rows)) if rows else "provider_model|model|<default>")')
+      printf 'provider_model_fields|%s\n' "$(test -n "$provider_rows" && printf '%s\n' "$provider_rows" | wc -l || printf 0)"
+      test -z "$provider_rows" || printf '%s\n' "$provider_rows"
+    else
+      printf 'command|codex|absent|-\ndoctor_exit|not-run\nprovider_model_fields|0\n'
+    fi
+    for name in CLIProxyAPI 9router; do
+      if path=$(command -v "$name" 2>/dev/null); then
+        resolved=$(readlink -f -- "$path")
+        printf 'command|%s|present|%s\n' "$name" "$resolved"
+        stat -Lc "command_stat|$name|%U|%G|%a|%s|%Y|%F" -- "$resolved"
+        set +e
+        version=$("$resolved" --version 2>/dev/null)
+        version_rc=$?
+        set -e
+        test -n "$version" && test "${#version}" -le 200
+        [[ "$version" != *$'\n'* && "$version" != *$'\r'* && "$version" != *'|'* ]]
+        printf 'command_version|%s|%s|%s\n' "$name" "$version_rc" "$version"
+      else
+        printf 'command|%s|absent|-\n' "$name"
+      fi
+    done
+    mapfile -t routing_units < <(systemctl list-unit-files --type=service --no-legend --no-pager 2>/dev/null | \
+      awk 'tolower($1) ~ /(cliproxyapi|9router)/ {print $1"|"$2}' | LC_ALL=C sort -u)
+    printf 'routing_unit_count|%s\n' "${#routing_units[@]}"
+    for unit_row in "${routing_units[@]}"; do
+      IFS='|' read -r unit_name unit_enabled <<< "$unit_row"
+      [[ "$unit_name" =~ ^[A-Za-z0-9_.@:-]+\.service$ ]]
+      unit_active=$(systemctl is-active "$unit_name" 2>/dev/null || true)
+      printf 'routing_unit|%s|enabled=%s|active=%s\n' "$unit_name" "$unit_enabled" "$unit_active"
+    done
+  } > "$output"
+}
+read -r recovery_dir < "$execution_package/TASK5.pending"
+measure_routing_preservation "$recovery_dir/routing-preservation-v17.before.tsv"
+commit_tsv=$execution_package/COMMIT.tsv
+history_tsv=$execution_package/HISTORY.tsv
+kv(){ awk -F '|' -v k="$1" '$1==k{print $2}' "$2"; }
+test "$(kv head "$commit_tsv")|$(kv tree "$commit_tsv")|$(kv parent "$commit_tsv")" = "$(kv commit_head "$history_tsv")|$(kv commit_tree "$history_tsv")|$(kv commit_parent "$history_tsv")"
 cd "$repo"
-test "$(git rev-parse HEAD)" = "$(cat "$recovery_dir/head.before")"
-test "$(git rev-parse HEAD^{tree})" = "$(cat "$recovery_dir/tree.before")"
+test "$(git rev-parse HEAD)" = "$(kv head "$commit_tsv")"
+test "$(git rev-parse HEAD^{tree})" = "$(kv tree "$commit_tsv")"
+test "$(git rev-parse HEAD^)" = "$(kv parent "$commit_tsv")"
 test "$(git diff --cached --name-only | wc -l)" -eq 0
 git status --porcelain=v1 --untracked-files=all > "$recovery_dir/root-status.after"
 sha256sum "$recovery_dir/root-status.after" | awk '{print $1}' > "$recovery_dir/root-status.after.sha256"
@@ -2655,8 +3426,8 @@ docker ps --format '{{.Names}}|{{.Image}}' | grep -v "^$(awk -F '|' '$1=="contai
   | LC_ALL=C sort | sha256sum | awk '{print $1}' > "$recovery_dir/docker-topology.after.sha256"
 cmp -s "$recovery_dir/socket-topology.before.sha256" "$recovery_dir/socket-topology.after.sha256"
 cmp -s "$recovery_dir/docker-topology.before.sha256" "$recovery_dir/docker-topology.after.sha256"
-cp "$recovery_dir/routing-preservation.before.tsv" "$recovery_dir/routing-preservation.after.tsv"
-cmp -s "$recovery_dir/routing-preservation.before.tsv" "$recovery_dir/routing-preservation.after.tsv"
+measure_routing_preservation "$recovery_dir/routing-preservation-v17.after.tsv"
+cmp -s "$recovery_dir/routing-preservation-v17.before.tsv" "$recovery_dir/routing-preservation-v17.after.tsv"
 curl -sS -o /dev/null --max-time 10 -w '%{http_code}\n' http://127.0.0.1:3001/login > "$recovery_dir/login-http.after.tsv"
 curl -sS -o /dev/null --max-time 10 -w '%{http_code}\n' http://127.0.0.1:3001/api/auth/session > "$recovery_dir/session-http.after.tsv"
 cmp -s "$recovery_dir/login-http.before.tsv" "$recovery_dir/login-http.after.tsv"
@@ -2721,8 +3492,142 @@ Expected: production history remains `9|0`; Git/index, service/restart identity,
 ```bash
 set -euo pipefail
 umask 077
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+base=/opt/thoidai-reconciliation
+review_root=$base/phase0-20260814T135943Z
+review_package=$V17_REVIEW_PACKAGE
+review_manifest_sha=$V17_REVIEW_MANIFEST_SHA256
+review_exec() {
+  python3 - "$review_package" "$review_manifest_sha" "$@" <<'PY'
+import hashlib,os,re,stat,sys,types
+MEMBERS=(
+ "runbook.candidate.md","design.candidate.md","REVIEW-NOTES.md","VALIDATION.tsv",
+ "FAILURE-STATE.tsv","RECOVERY-VERIFY.sh","VERIFY.sh","PUBLISH.py",
+ "TRUST-GATE.py","TRUST-POLICY.tsv","SIMULATE.py","SAFE_MANIFEST.py","SOURCE-SHA256SUMS")
+review,anchor,target,*target_args=sys.argv[1:]
+sig=lambda s:(s.st_dev,s.st_ino,s.st_mode,s.st_nlink,s.st_uid,s.st_gid,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+if not re.fullmatch(r"[0-9a-f]{64}",anchor): raise SystemExit(41)
+if not os.path.isabs(review) or os.path.normpath(review)!=review or os.path.realpath(review)!=review: raise SystemExit(41)
+if target not in ("SAFE_MANIFEST.py","TRUST-GATE.py","PUBLISH.py"): raise SystemExit(41)
+try: dfd=os.open(review,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+except OSError: raise SystemExit(41)
+try:
+ dst=os.fstat(dfd)
+ if not stat.S_ISDIR(dst.st_mode) or dst.st_uid!=0 or dst.st_gid!=0 or stat.S_IMODE(dst.st_mode)!=0o700: raise SystemExit(41)
+ def stable(name):
+  if name not in (*MEMBERS,"SHA256SUMS"): raise SystemExit(41)
+  try: fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=dfd)
+  except OSError: raise SystemExit(41)
+  try:
+   before=os.fstat(fd);parts=[]
+   if not stat.S_ISREG(before.st_mode) or before.st_uid!=0 or before.st_gid!=0 or stat.S_IMODE(before.st_mode)!=0o600: raise SystemExit(41)
+   while True:
+    chunk=os.read(fd,1<<20)
+    if not chunk: break
+    parts.append(chunk)
+   after=os.fstat(fd)
+  finally: os.close(fd)
+  data=b"".join(parts)
+  try: named=os.stat(name,dir_fd=dfd,follow_symlinks=False)
+  except OSError: raise SystemExit(41)
+  if sig(before)!=sig(after) or sig(named)!=sig(before): raise SystemExit(41)
+  if b"\r" in data or b"\0" in data or not data or not data.endswith(b"\n"): raise SystemExit(41)
+  return data
+ manifest=stable("SHA256SUMS")
+ if hashlib.sha256(manifest).hexdigest()!=anchor: raise SystemExit(41)
+ try: lines=manifest.decode("ascii").splitlines()
+ except UnicodeDecodeError: raise SystemExit(41)
+ rows=[]
+ for raw in lines:
+  match=re.fullmatch(r"([0-9a-f]{64}) ([A-Za-z0-9][A-Za-z0-9._-]*)",raw)
+  if not match: raise SystemExit(41)
+  rows.append((match.group(1),match.group(2)))
+ if tuple(name for _,name in rows)!=MEMBERS: raise SystemExit(41)
+ if sorted(os.listdir(dfd))!=sorted((*MEMBERS,"SHA256SUMS")): raise SystemExit(41)
+ digests={name:digest for digest,name in rows}
+ safe_source=stable("SAFE_MANIFEST.py");target_source=stable(target)
+ if hashlib.sha256(safe_source).hexdigest()!=digests["SAFE_MANIFEST.py"]: raise SystemExit(41)
+ if hashlib.sha256(target_source).hexdigest()!=digests[target]: raise SystemExit(41)
+ if sig(os.fstat(dfd))!=sig(dst): raise SystemExit(41)
+ try: named_dir=os.stat(review,follow_symlinks=False)
+ except OSError: raise SystemExit(41)
+ if not stat.S_ISDIR(named_dir.st_mode) or (named_dir.st_dev,named_dir.st_ino)!=(dst.st_dev,dst.st_ino): raise SystemExit(41)
+finally:
+ os.close(dfd)
+safe=types.ModuleType("SAFE_MANIFEST");safe.__file__=review+"/SAFE_MANIFEST.py";safe.__package__=None
+exec(compile(safe_source,safe.__file__,"exec"),safe.__dict__)
+sys.modules["SAFE_MANIFEST"]=safe
+sys.argv=[review+"/"+target,*target_args]
+scope={"__name__":"__main__","__file__":review+"/"+target,"__package__":None}
+exec(compile(target_source,scope["__file__"],"exec"),scope)
+PY
+}
+safe_manifest_check() {
+  local manifest=$1
+  case "$manifest" in /*) ;; *) manifest=$PWD/$manifest ;; esac
+  review_exec SAFE_MANIFEST.py declared --directory "$(dirname -- "$manifest")" \
+    --manifest "$(basename -- "$manifest")" --directory-mode 700 --allow-empty-members
+}
+write_manifest() {
+  local output=$1 directory member_root member_root_mode member_mode name digest tmp
+  shift
+  directory=$(dirname -- "$output")
+  member_root=$directory
+  member_root_mode=700
+  member_mode=600
+  if [ "${1:-}" = --member-root ]; then
+    test "$#" -ge 7
+    member_root=$2
+    test "$3" = --member-root-mode
+    member_root_mode=$4
+    test "$5" = --member-mode
+    member_mode=$6
+    shift 6
+  fi
+  mapfile -t manifest_names < <(printf '%s\n' "$@" | LC_ALL=C sort -u)
+  test "${#manifest_names[@]}" -eq "$#"
+  tmp=$(mktemp "$directory/.manifest.XXXXXX")
+  : > "$tmp"
+  for name in "${manifest_names[@]}"; do
+    [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+    digest=$(review_exec SAFE_MANIFEST.py file --path "$member_root/$name" \
+      --mode "$member_mode" --allow-empty --print-digest)
+    printf '%s %s\n' "$digest" "$name" >> "$tmp"
+  done
+  chmod 0600 "$tmp"
+  mv -f -- "$tmp" "$output"
+  if [ "$member_root" = "$directory" ]; then
+    safe_manifest_check "$output"
+  else
+    review_exec SAFE_MANIFEST.py manifest --directory "$directory" \
+      --manifest "$(basename -- "$output")" --directory-mode 700 --allow-extra \
+      --member-root "$member_root" --member-root-mode "$member_root_mode" \
+      --member-mode "$member_mode" "${manifest_names[@]}"
+  fi
+}
+review_root=$base/phase0-20260814T135943Z
+review_name=$(basename -- "$review_package")
+[[ "$review_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+test "$(dirname -- "$review_package")" = "$review_root"
+[[ "$review_name" =~ ^review-runbook-v17-r2-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+test "$review_package" = "$review_root/$review_name"
+approval=$base/phase0-v17-reentry-review.approved.tsv
+current=$base/HANDOFF.recovery-v17.current
+test -f "$review_package/SAFE_MANIFEST.py" && test ! -L "$review_package/SAFE_MANIFEST.py"
+test "$(stat -c '%U|%G|%a' "$review_package/SAFE_MANIFEST.py")" = 'root|root|600'
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" \
+  --anchor "$review_manifest_sha" --separator one \
+  runbook.candidate.md design.candidate.md REVIEW-NOTES.md VALIDATION.tsv FAILURE-STATE.tsv \
+  RECOVERY-VERIFY.sh VERIFY.sh PUBLISH.py TRUST-GATE.py TRUST-POLICY.tsv SIMULATE.py SAFE_MANIFEST.py SOURCE-SHA256SUMS
+test -f "$approval" && test ! -L "$approval" && test -f "$current" && test ! -L "$current"
+IFS= read -r execution_package < "$current"
+review_exec TRUST-GATE.py \
+  --trusted-review "$review_package" --trusted-manifest "$review_manifest_sha" \
+  --approval "$approval" --execution "$execution_package" --phase current \
+  --pointer "$current" --action verify
 evidence_root=/opt/thoidai-reconciliation/phase0-20260814T135943Z
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+read -r recovery_dir < "$execution_package/TASK5.pending"
 read -r old_run_dir < "$evidence_root/isolated-run.current"
 IFS='|' read -r old_run_id quarantine_container quarantine_volume old_bootstrap old_bootstrap_db old_database < "$old_run_dir/names.tsv"
 docker inspect -f 'container_id|{{.Id}}{{println}}state|{{.State.Status}}{{println}}image_id|{{.Image}}{{println}}network|{{.HostConfig.NetworkMode}}{{println}}log_driver|{{.HostConfig.LogConfig.Type}}{{println}}privileged|{{.HostConfig.Privileged}}{{println}}restart|{{.HostConfig.RestartPolicy.Name}}{{println}}auto_remove|{{.HostConfig.AutoRemove}}' \
@@ -2771,18 +3676,1341 @@ Expected: quarantine metadata is byte-identical without a runtime session or log
 ```bash
 set -euo pipefail
 umask 077
-read -r recovery_dir < /opt/thoidai-reconciliation/phase0-v5-execution.current
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+base=/opt/thoidai-reconciliation
+review_root=$base/phase0-20260814T135943Z
+review_package=$V17_REVIEW_PACKAGE
+review_manifest_sha=$V17_REVIEW_MANIFEST_SHA256
+review_exec() {
+  python3 - "$review_package" "$review_manifest_sha" "$@" <<'PY'
+import hashlib,os,re,stat,sys,types
+MEMBERS=(
+ "runbook.candidate.md","design.candidate.md","REVIEW-NOTES.md","VALIDATION.tsv",
+ "FAILURE-STATE.tsv","RECOVERY-VERIFY.sh","VERIFY.sh","PUBLISH.py",
+ "TRUST-GATE.py","TRUST-POLICY.tsv","SIMULATE.py","SAFE_MANIFEST.py","SOURCE-SHA256SUMS")
+review,anchor,target,*target_args=sys.argv[1:]
+sig=lambda s:(s.st_dev,s.st_ino,s.st_mode,s.st_nlink,s.st_uid,s.st_gid,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+if not re.fullmatch(r"[0-9a-f]{64}",anchor): raise SystemExit(41)
+if not os.path.isabs(review) or os.path.normpath(review)!=review or os.path.realpath(review)!=review: raise SystemExit(41)
+if target not in ("SAFE_MANIFEST.py","TRUST-GATE.py","PUBLISH.py"): raise SystemExit(41)
+try: dfd=os.open(review,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+except OSError: raise SystemExit(41)
+try:
+ dst=os.fstat(dfd)
+ if not stat.S_ISDIR(dst.st_mode) or dst.st_uid!=0 or dst.st_gid!=0 or stat.S_IMODE(dst.st_mode)!=0o700: raise SystemExit(41)
+ def stable(name):
+  if name not in (*MEMBERS,"SHA256SUMS"): raise SystemExit(41)
+  try: fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=dfd)
+  except OSError: raise SystemExit(41)
+  try:
+   before=os.fstat(fd);parts=[]
+   if not stat.S_ISREG(before.st_mode) or before.st_uid!=0 or before.st_gid!=0 or stat.S_IMODE(before.st_mode)!=0o600: raise SystemExit(41)
+   while True:
+    chunk=os.read(fd,1<<20)
+    if not chunk: break
+    parts.append(chunk)
+   after=os.fstat(fd)
+  finally: os.close(fd)
+  data=b"".join(parts)
+  try: named=os.stat(name,dir_fd=dfd,follow_symlinks=False)
+  except OSError: raise SystemExit(41)
+  if sig(before)!=sig(after) or sig(named)!=sig(before): raise SystemExit(41)
+  if b"\r" in data or b"\0" in data or not data or not data.endswith(b"\n"): raise SystemExit(41)
+  return data
+ manifest=stable("SHA256SUMS")
+ if hashlib.sha256(manifest).hexdigest()!=anchor: raise SystemExit(41)
+ try: lines=manifest.decode("ascii").splitlines()
+ except UnicodeDecodeError: raise SystemExit(41)
+ rows=[]
+ for raw in lines:
+  match=re.fullmatch(r"([0-9a-f]{64}) ([A-Za-z0-9][A-Za-z0-9._-]*)",raw)
+  if not match: raise SystemExit(41)
+  rows.append((match.group(1),match.group(2)))
+ if tuple(name for _,name in rows)!=MEMBERS: raise SystemExit(41)
+ if sorted(os.listdir(dfd))!=sorted((*MEMBERS,"SHA256SUMS")): raise SystemExit(41)
+ digests={name:digest for digest,name in rows}
+ safe_source=stable("SAFE_MANIFEST.py");target_source=stable(target)
+ if hashlib.sha256(safe_source).hexdigest()!=digests["SAFE_MANIFEST.py"]: raise SystemExit(41)
+ if hashlib.sha256(target_source).hexdigest()!=digests[target]: raise SystemExit(41)
+ if sig(os.fstat(dfd))!=sig(dst): raise SystemExit(41)
+ try: named_dir=os.stat(review,follow_symlinks=False)
+ except OSError: raise SystemExit(41)
+ if not stat.S_ISDIR(named_dir.st_mode) or (named_dir.st_dev,named_dir.st_ino)!=(dst.st_dev,dst.st_ino): raise SystemExit(41)
+finally:
+ os.close(dfd)
+safe=types.ModuleType("SAFE_MANIFEST");safe.__file__=review+"/SAFE_MANIFEST.py";safe.__package__=None
+exec(compile(safe_source,safe.__file__,"exec"),safe.__dict__)
+sys.modules["SAFE_MANIFEST"]=safe
+sys.argv=[review+"/"+target,*target_args]
+scope={"__name__":"__main__","__file__":review+"/"+target,"__package__":None}
+exec(compile(target_source,scope["__file__"],"exec"),scope)
+PY
+}
+safe_manifest_check() {
+  local manifest=$1
+  case "$manifest" in /*) ;; *) manifest=$PWD/$manifest ;; esac
+  review_exec SAFE_MANIFEST.py declared --directory "$(dirname -- "$manifest")" \
+    --manifest "$(basename -- "$manifest")" --directory-mode 700 --allow-empty-members
+}
+write_manifest() {
+  local output=$1 directory member_root member_root_mode member_mode name digest tmp
+  shift
+  directory=$(dirname -- "$output")
+  member_root=$directory
+  member_root_mode=700
+  member_mode=600
+  if [ "${1:-}" = --member-root ]; then
+    test "$#" -ge 7
+    member_root=$2
+    test "$3" = --member-root-mode
+    member_root_mode=$4
+    test "$5" = --member-mode
+    member_mode=$6
+    shift 6
+  fi
+  mapfile -t manifest_names < <(printf '%s\n' "$@" | LC_ALL=C sort -u)
+  test "${#manifest_names[@]}" -eq "$#"
+  tmp=$(mktemp "$directory/.manifest.XXXXXX")
+  : > "$tmp"
+  for name in "${manifest_names[@]}"; do
+    [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+    digest=$(review_exec SAFE_MANIFEST.py file --path "$member_root/$name" \
+      --mode "$member_mode" --allow-empty --print-digest)
+    printf '%s %s\n' "$digest" "$name" >> "$tmp"
+  done
+  chmod 0600 "$tmp"
+  mv -f -- "$tmp" "$output"
+  if [ "$member_root" = "$directory" ]; then
+    safe_manifest_check "$output"
+  else
+    review_exec SAFE_MANIFEST.py manifest --directory "$directory" \
+      --manifest "$(basename -- "$output")" --directory-mode 700 --allow-extra \
+      --member-root "$member_root" --member-root-mode "$member_root_mode" \
+      --member-mode "$member_mode" "${manifest_names[@]}"
+  fi
+}
+approval=$base/phase0-v17-reentry-review.approved.tsv
+current=$base/HANDOFF.recovery-v17.current
+test -f "$review_package/SAFE_MANIFEST.py" && test ! -L "$review_package/SAFE_MANIFEST.py"
+review_name=$(basename -- "$review_package")
+[[ "$review_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+test "$(dirname -- "$review_package")" = "$review_root"
+[[ "$review_name" =~ ^review-runbook-v17-r2-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+test "$review_package" = "$review_root/$review_name"
+test "$(stat -c '%U|%G|%a' "$review_package/SAFE_MANIFEST.py")" = 'root|root|600'
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" \
+  --anchor "$review_manifest_sha" --separator one \
+  runbook.candidate.md design.candidate.md REVIEW-NOTES.md VALIDATION.tsv FAILURE-STATE.tsv \
+  RECOVERY-VERIFY.sh VERIFY.sh PUBLISH.py TRUST-GATE.py TRUST-POLICY.tsv SIMULATE.py SAFE_MANIFEST.py SOURCE-SHA256SUMS
+test -f "$approval" && test ! -L "$approval" && test -f "$current" && test ! -L "$current"
+IFS= read -r execution_package < "$current"
+review_exec TRUST-GATE.py \
+  --trusted-review "$review_package" --trusted-manifest "$review_manifest_sha" \
+  --approval "$approval" --execution "$execution_package" --phase current \
+  --pointer "$current" --action verify
+read -r recovery_dir < "$execution_package/TASK5.pending"
 printf 'phase|task9\nstatus|complete\nproduction_history|9|0\nquarantine_log_read|false\nprovider_model_mutation|false\nCLIProxyAPI_mutation|false\n9router_mutation|false\nactive_build_mutation|false\nnew_lane|running_retained\nhistory_write|false\n' \
   > "$recovery_dir/TASK9.COMPLETE"
-find "$recovery_dir" -maxdepth 1 -type f ! -name 'postgres-password.secret' ! -name 'FINAL-SHA256SUMS' \
-  -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$recovery_dir/FINAL-SHA256SUMS"
-(cd / && sha256sum -c "$recovery_dir/FINAL-SHA256SUMS" >/dev/null)
+mapfile -t final_members < <(find "$recovery_dir" -maxdepth 1 -type f \
+  ! -name 'postgres-password.secret' ! -name 'FINAL-SHA256SUMS' -printf '%f\n' | LC_ALL=C sort)
+write_manifest "$recovery_dir/FINAL-SHA256SUMS" "${final_members[@]}"
+(cd / && safe_manifest_check "$recovery_dir/FINAL-SHA256SUMS" >/dev/null)
 chmod 0600 "$recovery_dir/TASK9.COMPLETE" "$recovery_dir/FINAL-SHA256SUMS"
 ```
 
 Expected: all safe evidence verifies. The new secret and every container log are excluded from hashing. Nothing is stopped, removed, truncated, or cleaned up.
 
-## Task 10: Post-review, post-commit atomic execution-handoff publication
+## Task 10: Executable v17 externally anchored, anonymous-inode, no-replace publication
+
+Task 10 remains unreachable in this documentation turn. The future transaction below never modifies `HANDOFF.current`, never executes a helper selected from an execution package, and never resumes Task 5 or mutates its runtime. The operator supplies the exact trusted review path and manifest SHA independently; only `TRUST-GATE.py`, validators, and publisher from that anchored review package may execute.
+
+- [ ] **Run the externally anchored v17 state machine under the immutable-old-authority lock**
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+: "${V17_REVIEW_PACKAGE:?exact externally supplied v17 review-package path required}"
+: "${V17_REVIEW_MANIFEST_SHA256:?exact externally supplied SHA256SUMS digest required}"
+repo=/opt/thoidai-work
+base=/opt/thoidai-reconciliation
+review_root=$base/phase0-20260814T135943Z
+review_package=$V17_REVIEW_PACKAGE
+review_manifest_sha=$V17_REVIEW_MANIFEST_SHA256
+review_exec() {
+  python3 - "$review_package" "$review_manifest_sha" "$@" <<'PY'
+import hashlib,os,re,stat,sys,types
+MEMBERS=(
+ "runbook.candidate.md","design.candidate.md","REVIEW-NOTES.md","VALIDATION.tsv",
+ "FAILURE-STATE.tsv","RECOVERY-VERIFY.sh","VERIFY.sh","PUBLISH.py",
+ "TRUST-GATE.py","TRUST-POLICY.tsv","SIMULATE.py","SAFE_MANIFEST.py","SOURCE-SHA256SUMS")
+review,anchor,target,*target_args=sys.argv[1:]
+sig=lambda s:(s.st_dev,s.st_ino,s.st_mode,s.st_nlink,s.st_uid,s.st_gid,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+if not re.fullmatch(r"[0-9a-f]{64}",anchor): raise SystemExit(41)
+if not os.path.isabs(review) or os.path.normpath(review)!=review or os.path.realpath(review)!=review: raise SystemExit(41)
+if target not in ("SAFE_MANIFEST.py","TRUST-GATE.py","PUBLISH.py"): raise SystemExit(41)
+try: dfd=os.open(review,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+except OSError: raise SystemExit(41)
+try:
+ dst=os.fstat(dfd)
+ if not stat.S_ISDIR(dst.st_mode) or dst.st_uid!=0 or dst.st_gid!=0 or stat.S_IMODE(dst.st_mode)!=0o700: raise SystemExit(41)
+ def stable(name):
+  if name not in (*MEMBERS,"SHA256SUMS"): raise SystemExit(41)
+  try: fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=dfd)
+  except OSError: raise SystemExit(41)
+  try:
+   before=os.fstat(fd);parts=[]
+   if not stat.S_ISREG(before.st_mode) or before.st_uid!=0 or before.st_gid!=0 or stat.S_IMODE(before.st_mode)!=0o600: raise SystemExit(41)
+   while True:
+    chunk=os.read(fd,1<<20)
+    if not chunk: break
+    parts.append(chunk)
+   after=os.fstat(fd)
+  finally: os.close(fd)
+  data=b"".join(parts)
+  try: named=os.stat(name,dir_fd=dfd,follow_symlinks=False)
+  except OSError: raise SystemExit(41)
+  if sig(before)!=sig(after) or sig(named)!=sig(before): raise SystemExit(41)
+  if b"\r" in data or b"\0" in data or not data or not data.endswith(b"\n"): raise SystemExit(41)
+  return data
+ manifest=stable("SHA256SUMS")
+ if hashlib.sha256(manifest).hexdigest()!=anchor: raise SystemExit(41)
+ try: lines=manifest.decode("ascii").splitlines()
+ except UnicodeDecodeError: raise SystemExit(41)
+ rows=[]
+ for raw in lines:
+  match=re.fullmatch(r"([0-9a-f]{64}) ([A-Za-z0-9][A-Za-z0-9._-]*)",raw)
+  if not match: raise SystemExit(41)
+  rows.append((match.group(1),match.group(2)))
+ if tuple(name for _,name in rows)!=MEMBERS: raise SystemExit(41)
+ if sorted(os.listdir(dfd))!=sorted((*MEMBERS,"SHA256SUMS")): raise SystemExit(41)
+ digests={name:digest for digest,name in rows}
+ safe_source=stable("SAFE_MANIFEST.py");target_source=stable(target)
+ if hashlib.sha256(safe_source).hexdigest()!=digests["SAFE_MANIFEST.py"]: raise SystemExit(41)
+ if hashlib.sha256(target_source).hexdigest()!=digests[target]: raise SystemExit(41)
+ if sig(os.fstat(dfd))!=sig(dst): raise SystemExit(41)
+ try: named_dir=os.stat(review,follow_symlinks=False)
+ except OSError: raise SystemExit(41)
+ if not stat.S_ISDIR(named_dir.st_mode) or (named_dir.st_dev,named_dir.st_ino)!=(dst.st_dev,dst.st_ino): raise SystemExit(41)
+finally:
+ os.close(dfd)
+safe=types.ModuleType("SAFE_MANIFEST");safe.__file__=review+"/SAFE_MANIFEST.py";safe.__package__=None
+exec(compile(safe_source,safe.__file__,"exec"),safe.__dict__)
+sys.modules["SAFE_MANIFEST"]=safe
+sys.argv=[review+"/"+target,*target_args]
+scope={"__name__":"__main__","__file__":review+"/"+target,"__package__":None}
+exec(compile(target_source,scope["__file__"],"exec"),scope)
+PY
+}
+safe_manifest_check() {
+  local manifest=$1
+  case "$manifest" in /*) ;; *) manifest=$PWD/$manifest ;; esac
+  review_exec SAFE_MANIFEST.py declared --directory "$(dirname -- "$manifest")" \
+    --manifest "$(basename -- "$manifest")" --directory-mode 700 --allow-empty-members
+}
+write_manifest() {
+  local output=$1 directory member_root member_root_mode member_mode name digest tmp
+  shift
+  directory=$(dirname -- "$output")
+  member_root=$directory
+  member_root_mode=700
+  member_mode=600
+  if [ "${1:-}" = --member-root ]; then
+    test "$#" -ge 7
+    member_root=$2
+    test "$3" = --member-root-mode
+    member_root_mode=$4
+    test "$5" = --member-mode
+    member_mode=$6
+    shift 6
+  fi
+  mapfile -t manifest_names < <(printf '%s\n' "$@" | LC_ALL=C sort -u)
+  test "${#manifest_names[@]}" -eq "$#"
+  tmp=$(mktemp "$directory/.manifest.XXXXXX")
+  : > "$tmp"
+  for name in "${manifest_names[@]}"; do
+    [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+    digest=$(review_exec SAFE_MANIFEST.py file --path "$member_root/$name" \
+      --mode "$member_mode" --allow-empty --print-digest)
+    printf '%s %s\n' "$digest" "$name" >> "$tmp"
+  done
+  chmod 0600 "$tmp"
+  mv -f -- "$tmp" "$output"
+  if [ "$member_root" = "$directory" ]; then
+    safe_manifest_check "$output"
+  else
+    review_exec SAFE_MANIFEST.py manifest --directory "$directory" \
+      --manifest "$(basename -- "$output")" --directory-mode 700 --allow-extra \
+      --member-root "$member_root" --member-root-mode "$member_root_mode" \
+      --member-mode "$member_mode" "${manifest_names[@]}"
+  fi
+}
+approval=$base/phase0-v17-reentry-review.approved.tsv
+v5_approval=$base/phase0-v5-primary-review.approved.tsv
+old_current=$base/HANDOFF.current
+old_package=$base/phase0-execution-handoff-20260815T041006Z-2be71271104d
+task5_pending=$base/phase0-v5-execution.pending
+recovery=$base/phase0-v5-execution-20260815T041430Z-7fa3f327f5c8
+pending=$base/phase0-v17-execution-handoff.pending
+current=$base/HANDOFF.recovery-v17.current
+plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
+design_rel=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
+old_sha=a7e4ef17ee3eaa00bacc6693772940b5308390fcbd9ef4c2275ec9b788c01005
+package=
+lock_inode=
+test -z "${PHASE0_V17_FAULT+x}${PHASE0_V17_BARRIER+x}"
+
+fsync_path(){ python3 - "$1" <<'PY'
+import os,sys
+fd=os.open(sys.argv[1],os.O_RDONLY|os.O_CLOEXEC)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+}
+fsync_dir(){ python3 - "$1" <<'PY'
+import os,sys
+fd=os.open(sys.argv[1],os.O_RDONLY|os.O_DIRECTORY|os.O_CLOEXEC)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+}
+kv(){ awk -F '|' -v k="$1" '$1==k{print $2}' "$2"; }
+assert_text(){
+  local f cr nul last
+  for f in "$@"; do
+    test -f "$f" && test ! -L "$f" || return 41
+    cr=$(LC_ALL=C tr -cd '\r' < "$f" | wc -c)
+    nul=$(LC_ALL=C tr -cd '\000' < "$f" | wc -c)
+    test "$cr" -eq 0 && test "$nul" -eq 0 || return 41
+    last=$(tail -c 1 -- "$f" | od -An -t x1 | tr -d ' \n')
+    test "$last" = 0a || return 41
+  done
+}
+exact_schema(){
+  local file=$1 count=$2 keys=$3
+  awk -F '|' -v keys="$keys" -v count="$count" \
+    'BEGIN{split(keys,a," ");for(i in a)e[a[i]]=1}
+     NF!=2||!($1 in e)||seen[$1]++{bad=1}
+     END{if(NR!=count)bad=1;for(k in e)if(seen[k]!=1)bad=1;exit bad?41:0}' "$file"
+}
+review_keys='verdict scope critical_open important_open task5_reentry_authorized authorized_predecessor review_package review_manifest_sha256 old_handoff_package old_handoff_pointer_sha256 old_handoff_manifest_sha256 v5_approval_sha256 task5_pending_path task5_pending_sha256 recovery_path failure_state_sha256 new_pending_path new_current_path unrelated_status_count unrelated_status_sha256 lock_path lock_device_inode'
+rv(){ kv "$1" "$approval"; }
+
+# Validate the externally supplied review anchor before reading approval or any member.
+review_name=$(basename -- "$review_package")
+[[ "$review_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+test "$(dirname -- "$review_package")" = "$review_root"
+[[ "$review_name" =~ ^review-runbook-v17-r2-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+test "$review_package" = "$review_root/$review_name"
+test -f "$review_package/SAFE_MANIFEST.py" && test ! -L "$review_package/SAFE_MANIFEST.py"
+test "$(stat -c '%U|%G|%a' "$review_package/SAFE_MANIFEST.py")" = 'root|root|600'
+review_exec SAFE_MANIFEST.py manifest --directory "$review_package" --anchor "$review_manifest_sha" --separator one \
+  runbook.candidate.md design.candidate.md REVIEW-NOTES.md VALIDATION.tsv FAILURE-STATE.tsv \
+  RECOVERY-VERIFY.sh VERIFY.sh PUBLISH.py TRUST-GATE.py TRUST-POLICY.tsv SIMULATE.py SAFE_MANIFEST.py SOURCE-SHA256SUMS
+safe_digest(){ review_exec SAFE_MANIFEST.py file --path "$1" --mode "${2:-600}" --print-digest; }
+
+for f in "$approval" "$v5_approval" "$old_current" "$task5_pending"; do
+  test -f "$f" && test ! -L "$f"
+  test "$(stat -c '%U|%G|%a' "$f")" = 'root|root|600'
+done
+assert_text "$approval" "$v5_approval" "$old_current" "$task5_pending"
+exact_schema "$approval" 22 "$review_keys"
+test "$(rv verdict)|$(rv scope)|$(rv critical_open)|$(rv important_open)|$(rv task5_reentry_authorized)" = 'APPROVED|phase0-v17-task5-reentry-correction|0|0|true'
+test "$(rv review_package)|$(rv review_manifest_sha256)" = "$review_package|$review_manifest_sha"
+test "$(rv authorized_predecessor)" = 464d17a652cdd622b5c20891e8f7fe24b55e6dd6
+test "$(rv new_pending_path)|$(rv new_current_path)" = "$pending|$current"
+test "$(rv lock_path)" = "$old_current"
+test "$(safe_digest "$old_current")" = "$old_sha"
+test "$(tr -d '\n' < "$old_current")" = "$old_package"
+test "$(safe_digest "$v5_approval")" = "$(rv v5_approval_sha256)"
+test "$(safe_digest "$task5_pending")" = "$(rv task5_pending_sha256)"
+
+cd "$repo"
+git diff --cached --quiet
+git diff --quiet -- "$plan_rel" "$design_rel"
+test "$(git rev-list --parents -n 1 HEAD | awk '{print NF}')" -eq 2
+test "$(git rev-parse HEAD^)" = "$(rv authorized_predecessor)"
+printf '%s\n%s\n' "$design_rel" "$plan_rel" | LC_ALL=C sort | \
+  cmp -s - <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)
+git show "HEAD:$plan_rel" | cmp -s - "$review_package/runbook.candidate.md"
+git show "HEAD:$design_rel" | cmp -s - "$review_package/design.candidate.md"
+
+exec 9<"$old_current"
+/usr/bin/flock -x 9
+lock_inode=$(stat -Lc '%d:%i' /proc/self/fd/9)
+test "$lock_inode" = "$(stat -c '%d:%i' "$old_current")"
+test "$lock_inode" = "$(rv lock_device_inode)"
+test "$(kv lock_path "$review_package/TRUST-POLICY.tsv")|$(kv lock_device_inode "$review_package/TRUST-POLICY.tsv")" = "$old_current|$lock_inode"
+
+build_package(){
+  local stamp nonce staging pointer_sha publication_sha
+  cd "$repo"
+  stamp=$(date -u +%Y%m%dT%H%M%SZ)
+  nonce=$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')
+  package=$base/phase0-v17-execution-handoff-$stamp-$nonce
+  staging=$base/.phase0-v17-execution-handoff-stage-$stamp-$nonce
+  test ! -e "$package" && test ! -L "$package"
+  test ! -e "$staging" && test ! -L "$staging"
+  mkdir -m0700 "$staging"
+  git show "HEAD:$plan_rel" > "$staging/plan.md"
+  git show "HEAD:$design_rel" > "$staging/design.md"
+  cp -- "$v5_approval" "$staging/REVIEW-V5.tsv"
+  cp -- "$approval" "$staging/REVIEW-V17.tsv"
+  cp -- "$old_current" "$staging/OLD-HANDOFF.current"
+  cp -- "$task5_pending" "$staging/TASK5.pending"
+  cp -- "$review_package/FAILURE-STATE.tsv" "$staging/FAILURE-STATE.tsv"
+  cp -- "$review_package/VERIFY.sh" "$staging/VERIFY.sh"
+  cp -- "$review_package/RECOVERY-VERIFY.sh" "$staging/RECOVERY-VERIFY.sh"
+  cp -- "$review_package/PUBLISH.py" "$staging/PUBLISH.py"
+  cp -- "$review_package/TRUST-GATE.py" "$staging/TRUST-GATE.py"
+  cp -- "$review_package/TRUST-POLICY.tsv" "$staging/TRUST-POLICY.tsv"
+  cp -- "$review_package/SAFE_MANIFEST.py" "$staging/SAFE_MANIFEST.py"
+  cp -- "$review_package/SOURCE-SHA256SUMS" "$staging/SOURCE-SHA256SUMS"
+  pointer_sha=$(printf '%s\n' "$package" | sha256sum | awk '{print $1}')
+  printf 'publisher_version|phase0-v17-otmpfile-linkat\nsource_strategy|O_TMPFILE+linkat-AT_EMPTY_PATH\npending_path|%s\ncurrent_path|%s\npointer_sha256|%s\nsame_inode_required|true\nno_replace|true\nbase_fsync_required|after-each-link-and-before-pending-resume\n' \
+    "$pending" "$current" "$pointer_sha" > "$staging/PUBLICATION.tsv"
+  printf 'immutable_old_handoff_path|%s\nimmutable_old_handoff_package|%s\nimmutable_old_handoff_pointer_sha256|%s\ntask5_pending_path|%s\ntask5_pending_sha256|%s\nfailure_state_sha256|%s\nnew_pending_path|%s\nnew_current_path|%s\ncommit_head|%s\ncommit_tree|%s\ncommit_parent|%s\nlock_path|%s\nlock_device_inode|%s\n' \
+    "$old_current" "$old_package" "$old_sha" "$task5_pending" "$(rv task5_pending_sha256)" \
+    "$(rv failure_state_sha256)" "$pending" "$current" "$(git rev-parse HEAD)" \
+    "$(git rev-parse HEAD^{tree})" "$(git rev-parse HEAD^)" "$old_current" "$lock_inode" > "$staging/HISTORY.tsv"
+  publication_sha=$(safe_digest "$staging/PUBLICATION.tsv")
+  printf 'head|%s\ntree|%s\nparent|%s\nparent_count|1\nplan_blob|%s\ndesign_blob|%s\nreview_package|%s\nreview_manifest_sha256|%s\nv17_approval_sha256|%s\nv5_approval_sha256|%s\nold_handoff_package|%s\nold_handoff_pointer_sha256|%s\nold_handoff_manifest_sha256|%s\ntask5_pending_path|%s\ntask5_pending_sha256|%s\nrecovery_path|%s\nfailure_state_sha256|%s\nnew_pending_path|%s\nnew_current_path|%s\nunrelated_status_count|%s\nunrelated_status_sha256|%s\nold_handoff_copy_sha256|%s\ntask5_pending_copy_sha256|%s\npublication_sha256|%s\npublisher_sha256|%s\nlock_device_inode|%s\n' \
+    "$(git rev-parse HEAD)" "$(git rev-parse HEAD^{tree})" "$(git rev-parse HEAD^)" \
+    "$(git rev-parse HEAD:$plan_rel)" "$(git rev-parse HEAD:$design_rel)" \
+    "$review_package" "$review_manifest_sha" "$(safe_digest "$approval")" \
+    "$(rv v5_approval_sha256)" "$(rv old_handoff_package)" "$(rv old_handoff_pointer_sha256)" \
+    "$(rv old_handoff_manifest_sha256)" "$(rv task5_pending_path)" "$(rv task5_pending_sha256)" \
+    "$(rv recovery_path)" "$(rv failure_state_sha256)" "$pending" "$current" \
+    "$(rv unrelated_status_count)" "$(rv unrelated_status_sha256)" \
+    "$(safe_digest "$staging/OLD-HANDOFF.current")" \
+    "$(safe_digest "$staging/TASK5.pending")" "$publication_sha" \
+    "$(safe_digest "$review_package/PUBLISH.py")" "$lock_inode" > "$staging/COMMIT.tsv"
+  chmod 0600 "$staging"/*
+  execution_members=(plan.md design.md COMMIT.tsv REVIEW-V5.tsv REVIEW-V17.tsv FAILURE-STATE.tsv HISTORY.tsv PUBLICATION.tsv OLD-HANDOFF.current TASK5.pending VERIFY.sh RECOVERY-VERIFY.sh PUBLISH.py TRUST-GATE.py TRUST-POLICY.tsv SAFE_MANIFEST.py SOURCE-SHA256SUMS)
+  : > "$staging/SHA256SUMS"
+  chmod 0600 "$staging/SHA256SUMS"
+  for member in "${execution_members[@]}"; do
+    printf '%s %s\n' "$(safe_digest "$staging/$member")" "$member" >> "$staging/SHA256SUMS"
+  done
+  assert_text "$staging"/*
+  review_exec SAFE_MANIFEST.py manifest --directory "$staging" --separator one "${execution_members[@]}"
+  for f in "$staging"/*; do fsync_path "$f"; done
+  fsync_dir "$staging"
+  python3 - "$staging" "$package" <<'PY'
+import ctypes,errno,os,sys
+src,dst=sys.argv[1:3]
+libc=ctypes.CDLL(None,use_errno=True)
+renameat2=libc.renameat2
+renameat2.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+renameat2.restype=ctypes.c_int
+if renameat2(-100,os.fsencode(src),-100,os.fsencode(dst),1)!=0:
+    error=ctypes.get_errno()
+    if error==errno.EEXIST: raise SystemExit(73)
+    raise OSError(error,os.strerror(error))
+PY
+  fsync_dir "$base"
+}
+
+load_pointer_package(){
+  local pointer=$1 name
+  test -f "$pointer" && test ! -L "$pointer"
+  test "$(stat -c '%U|%G|%a' "$pointer")" = 'root|root|600'
+  assert_text "$pointer"
+  test "$(awk 'END{print NR+0}' "$pointer")" -eq 1
+  IFS= read -r package < "$pointer"
+  name=$(basename -- "$package")
+  test "$(dirname -- "$package")" = "$base"
+  [[ "$name" =~ ^phase0-v17-execution-handoff-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+  test "$package" = "$base/$name"
+  test -d "$package" && test ! -L "$package"
+  test "$(realpath -e -- "$package")" = "$package"
+  test "$(stat -c '%U|%G|%a' "$package")" = 'root|root|700'
+}
+
+trusted_gate(){
+  local subject=$1 phase=$2 action=$3 stage=$4
+  case "$phase" in
+    package)
+      review_exec TRUST-GATE.py \
+        --trusted-review "$review_package" --trusted-manifest "$review_manifest_sha" \
+        --approval "$approval" --execution "$package" --phase package --action "$action" --recovery-stage "$stage"
+      ;;
+    pending|current)
+      review_exec TRUST-GATE.py \
+        --trusted-review "$review_package" --trusted-manifest "$review_manifest_sha" \
+        --approval "$approval" --execution "$package" --phase "$phase" \
+        --pointer "$subject" --action "$action" --recovery-stage "$stage"
+      ;;
+    *) return 41 ;;
+  esac
+}
+
+pending_present=false
+current_present=false
+if test -e "$pending" || test -L "$pending"; then pending_present=true; fi
+if test -e "$current" || test -L "$current"; then current_present=true; fi
+test "$pending_present|$current_present" != 'false|true'
+
+if test "$pending_present|$current_present" = 'false|false'; then
+  build_package
+  pointer_sha=$(printf '%s\n' "$package" | sha256sum | awk '{print $1}')
+  trusted_gate "$package" package both pre-resume
+  review_exec PUBLISH.py initial "$package" "$pending" "$current" "$base" "$pointer_sha"
+fi
+
+pending_present=false
+current_present=false
+if test -e "$pending" || test -L "$pending"; then pending_present=true; fi
+if test -e "$current" || test -L "$current"; then current_present=true; fi
+test "$pending_present|$current_present" != 'false|true'
+
+if test "$pending_present|$current_present" = 'true|false'; then
+  fsync_dir "$base"
+  load_pointer_package "$pending"
+  pointer_sha=$(printf '%s\n' "$package" | sha256sum | awk '{print $1}')
+  trusted_gate "$pending" pending both pre-resume
+  review_exec PUBLISH.py current "$package" "$pending" "$current" "$base" "$pointer_sha"
+fi
+
+load_pointer_package "$current"
+pointer_sha=$(printf '%s\n' "$package" | sha256sum | awk '{print $1}')
+trusted_gate "$current" current both pre-resume
+review_exec PUBLISH.py verify "$package" "$pending" "$current" "$base" "$pointer_sha"
+test "$(safe_digest "$old_current")" = "$old_sha"
+test "$(stat -c '%d:%i' "$old_current")" = "$lock_inode"
+printf 'v17_publication|verified\nsource_strategy|O_TMPFILE+linkat-AT_EMPTY_PATH\nexternal_review_anchor|required\npassive_before_execute|required\nlate_pending_rebind|required\npending_resume_base_fsync|required\nsame_inode|true\nold_handoff_immutable|true\n'
+```
+
+Expected: the externally anchored review package is authenticated before approval interpretation. The 22-key approval, 26-key commit, 13-key history, 8-key publication, 19-key trust policy, and actual lock inode agree. Execution packages remain passive; only trusted review copies execute. Initial and resumed publication retain the authenticated anonymous-inode same-inode no-replace state machine, while real subprocess fault/race simulations prove deterministic recovery and B-pending/B-current behavior.
+
+## Superseded v13 Task 10 (historical reference only; do not execute)
+
+The first sealed v13 candidate is retained at `/opt/thoidai-reconciliation/phase0-20260814T135943Z/review-runbook-v13-20260816T112722Z-9aedd8c2e29a`, manifest SHA-256 `6b2e44c2efa8a22edb6971b6b91a5973c61da0716257c9f527faf36382b08578`. It is non-authoritative: although all passive gates and adversarial simulations passed, `TRUST-GATE.py` emitted one status line after live recovery returned. v14 moves and flushes all status before trusted helpers and returns the live recovery invocation directly. No v13 approval or fixed pointer may be created.
+
+## Superseded v12 Task 10 (historical reference only; do not execute)
+
+The complete v12 transaction is retained byte-for-byte in sealed review package `/opt/thoidai-reconciliation/phase0-20260814T135943Z/review-runbook-v12-20260816T103022Z-46caafaf1b9d`. It is non-authoritative because its consumers can derive trust too early, it does not externally cross-bind the actual lock inode through every authority record, and its simulations do not execute all adversarial crash/race paths as real subprocesses. No v12 approval or fixed pointer may be created.
+
+## Superseded v11 Task 10 (historical reference only; do not execute)
+
+The complete v11 pathname-candidate transaction is retained byte-for-byte in sealed review package `/opt/thoidai-reconciliation/phase0-20260814T135943Z/review-runbook-v11-20260816T095034Z-330da4d51a11`. It is not executable because candidate-path replacement, late-pending rebinding, pending-only durability, and passive-consumer trust defects are corrected only by v12. No v11 approval or fixed pointer may be created.
+
+## Superseded v10 Task 10 (historical reference only; do not execute)
+
+The v10 exchange/rollback block below is retained only as historical evidence of the superseded architecture. It must not execute, create v10 authority, or be mixed with v12.
+
+- [ ] **Run the one-lock byte-clean package, publication, rollback, and postverification transaction**
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+repo=/opt/thoidai-work
+base=/opt/thoidai-reconciliation
+review_root=$base/phase0-20260814T135943Z
+approval=$base/phase0-v10-reentry-review.approved.tsv
+v5_approval=$base/phase0-v5-primary-review.approved.tsv
+current=$base/HANDOFF.current
+old_package=$base/phase0-execution-handoff-20260815T041006Z-2be71271104d
+task5_pending=$base/phase0-v5-execution.pending
+recovery=$base/phase0-v5-execution-20260815T041430Z-7fa3f327f5c8
+pending=$base/phase0-v10-execution-handoff.pending
+lock_path=$base/phase0-v10-handoff.lock
+plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
+design_rel=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
+timeout_bin=/usr/bin/timeout
+finalized=false
+rollback_armed=false
+pending_cleanup_armed=false
+candidate_cleanup_armed=false
+history=
+package=
+candidate_pointer=
+candidate_inode=
+candidate_sha=
+pending_tmp=
+pending_inode=
+pending_sha=
+new_tmp=
+exchanged=
+rollback_source=
+new_pointer_sha=
+stage=bootstrap
+
+fsync_path(){
+ python3 - "$1" <<'PY'
+import os,sys
+fd=os.open(sys.argv[1],os.O_RDONLY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+}
+fsync_dir(){
+ python3 - "$1" <<'PY'
+import os,sys
+fd=os.open(sys.argv[1],os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+}
+rename_noreplace(){
+ python3 - "$1" "$2" <<'PY'
+import ctypes,errno,os,sys
+src,dst=map(os.fsencode,sys.argv[1:3])
+libc=ctypes.CDLL(None,use_errno=True);fn=getattr(libc,'renameat2',None)
+if fn is None: raise SystemExit(74)
+fn.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+if fn(-100,src,-100,dst,1)!=0:
+ e=ctypes.get_errno()
+ if e==errno.EEXIST: raise SystemExit(73)
+ if e in (errno.ENOSYS,errno.EINVAL,errno.ENOTSUP): raise SystemExit(74)
+ raise OSError(e,os.strerror(e))
+PY
+}
+rename_exchange(){
+ python3 - "$1" "$2" <<'PY'
+import ctypes,errno,os,sys
+a,b=map(os.fsencode,sys.argv[1:3])
+libc=ctypes.CDLL(None,use_errno=True);fn=getattr(libc,'renameat2',None)
+if fn is None: raise SystemExit(74)
+fn.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+if fn(-100,a,-100,b,2)!=0:
+ e=ctypes.get_errno()
+ if e in (errno.ENOSYS,errno.EINVAL,errno.ENOTSUP): raise SystemExit(74)
+ raise OSError(e,os.strerror(e))
+PY
+}
+assert_text_bytes(){
+ local f cr nul last
+ for f in "$@";do
+  test -f "$f" && test ! -L "$f" || return 41
+  cr=$(LC_ALL=C tr -cd '\r'<"$f"|wc -c) || return 41
+  nul=$(LC_ALL=C tr -cd '\000'<"$f"|wc -c) || return 41
+  test "$cr" -eq 0 && test "$nul" -eq 0 || return 41
+  last=$(tail -c 1 -- "$f"|od -An -t x1|tr -d ' \n') || return 41
+  test "$last" = 0a || return 41
+ done
+}
+record_event(){
+ local event=$1 detail=$2
+ if test -n "$history" && test -d "$history";then
+  printf 'event|%s|%s\n' "$event" "$detail" >> "$history/ROLLBACK.tsv" || return 41
+  chmod 0600 "$history/ROLLBACK.tsv" || return 41
+  fsync_path "$history/ROLLBACK.tsv" || return 41
+  fsync_dir "$history" || return 41
+ fi
+}
+exact_unlink(){
+ local path=$1 expected_inode=$2 expected_sha=$3
+ test -f "$path" && test ! -L "$path" || return 41
+ test "$(stat -c '%d:%i' "$path")" = "$expected_inode" || return 41
+ test "$(sha256sum "$path"|awk '{print $1}')" = "$expected_sha" || return 41
+ unlink "$path" || return 41
+ fsync_dir "$(dirname -- "$path")" || return 41
+}
+locate_rollback_source(){
+ if test -n "$rollback_source"&&test -f "$rollback_source"&&test ! -L "$rollback_source";then
+  printf '%s\n' "$rollback_source"
+ elif test -n "$new_tmp"&&test -f "$new_tmp"&&test ! -L "$new_tmp";then
+  printf '%s\n' "$new_tmp"
+ elif test -n "$exchanged"&&test -f "$exchanged"&&test ! -L "$exchanged";then
+  printf '%s\n' "$exchanged"
+ else
+  return 41
+ fi
+}
+rollback_current(){
+ local src target_inode target_sha current_sha retained
+ test "$rollback_armed" = true || return 0
+ if ! test -f "$current" || test -L "$current";then record_event rollback_failed current_not_regular || true;return 41;fi
+ current_sha=$(sha256sum "$current"|awk '{print $1}') || { record_event rollback_failed current_hash_error || true;return 41;}
+ if test "$current_sha" != "$new_pointer_sha";then
+  record_event rollback_not_needed current_no_longer_new || true
+  rollback_armed=false
+  return 0
+ fi
+ src=$(locate_rollback_source) || { record_event rollback_failed source_missing || true;return 41;}
+ test "$(stat -c '%U|%G|%a' "$src")" = 'root|root|600' || { record_event rollback_failed source_metadata || true;return 41;}
+ test "$(awk 'END{print NR+0}' "$src")" -eq 1 || { record_event rollback_failed source_lines || true;return 41;}
+ target_inode=$(stat -c '%d:%i' "$src") || { record_event rollback_failed source_inode || true;return 41;}
+ target_sha=$(sha256sum "$src"|awk '{print $1}') || { record_event rollback_failed source_hash || true;return 41;}
+ test "$target_sha" = a7e4ef17ee3eaa00bacc6693772940b5308390fcbd9ef4c2275ec9b788c01005 || { record_event rollback_failed source_content || true;return 41;}
+ test -f "$history/PREVIOUS-HANDOFF.current" && test ! -L "$history/PREVIOUS-HANDOFF.current" || { record_event rollback_failed prepared_copy_missing || true;return 41;}
+ cmp -s "$src" "$history/PREVIOUS-HANDOFF.current" || { record_event rollback_failed source_copy_mismatch || true;return 41;}
+ record_event rollback_target "$target_sha" || true
+ rename_exchange "$current" "$src" || { record_event rollback_failed exchange_error || true;return 41;}
+ test "$(stat -c '%d:%i' "$current")" = "$target_inode" || { record_event rollback_failed restored_inode || true;return 41;}
+ test "$(sha256sum "$current"|awk '{print $1}')" = "$target_sha" || { record_event rollback_failed restored_hash || true;return 41;}
+ retained=$history/ROLLED-BACK-NEW.current
+ if test "$src" != "$retained";then rename_noreplace "$src" "$retained" || { record_event rollback_failed retain_new || true;return 41;};fi
+ test -f "$retained" && test ! -L "$retained" || return 41
+ chmod 0600 "$retained" || return 41
+ cp -- "$current" "$history/ROLLBACK-RESTORED.current" || return 41
+ chmod 0600 "$history/ROLLBACK-RESTORED.current" || return 41
+ printf 'restored_current_sha256|%s\nfailed_new_pointer_sha256|%s\nfailure_stage|%s\n' "$target_sha" "$new_pointer_sha" "$stage" > "$history/ROLLBACK-RESULT.tsv" || return 41
+ chmod 0600 "$history/ROLLBACK-RESULT.tsv" || return 41
+ assert_text_bytes "$history/ROLLBACK-RESTORED.current" "$history/ROLLED-BACK-NEW.current" "$history/ROLLBACK-RESULT.tsv" || return 41
+ fsync_path "$current" || return 41
+ fsync_path "$history/ROLLBACK-RESTORED.current" || return 41
+ fsync_path "$history/ROLLED-BACK-NEW.current" || return 41
+ fsync_path "$history/ROLLBACK-RESULT.tsv" || return 41
+ fsync_dir "$history" || return 41
+ fsync_dir "$base" || return 41
+ record_event rollback_complete "$target_sha" || return 41
+ rollback_armed=false
+}
+cleanup_candidate(){
+ if test "$candidate_cleanup_armed" = true;then
+  if exact_unlink "$candidate_pointer" "$candidate_inode" "$candidate_sha";then record_event candidate_cleanup removed;else record_event candidate_cleanup identity_mismatch;return 41;fi
+  candidate_cleanup_armed=false
+ fi
+}
+cleanup_pending(){
+ local path=
+ if test "$pending_cleanup_armed" = true;then
+  if test -f "$pending" && ! test -L "$pending" && test "$(stat -c '%d:%i' "$pending")" = "$pending_inode" && test "$(sha256sum "$pending"|awk '{print $1}')" = "$pending_sha";then
+   path=$pending
+  elif test -n "$pending_tmp" && test -f "$pending_tmp" && ! test -L "$pending_tmp" && test "$(stat -c '%d:%i' "$pending_tmp")" = "$pending_inode" && test "$(sha256sum "$pending_tmp"|awk '{print $1}')" = "$pending_sha";then
+   path=$pending_tmp
+  else
+   record_event pending_cleanup identity_mismatch || true
+   return 41
+  fi
+  unlink "$path" || return 41
+  fsync_dir "$base" || return 41
+  record_event pending_cleanup removed_exact || return 41
+  pending_cleanup_armed=false
+ fi
+}
+on_exit(){
+ local rc=$? rollback_rc=0 pending_rc=0 candidate_rc=0
+ trap - EXIT INT TERM HUP
+ set +e
+ if test "$finalized" != true;then
+  test "$rc" -ne 0||rc=41
+  record_event failure_stage "$stage"
+  rollback_current||rollback_rc=$?
+  cleanup_pending||pending_rc=$?
+  cleanup_candidate||candidate_rc=$?
+  record_event exit_status "$rc:$rollback_rc:$pending_rc:$candidate_rc"
+ fi
+ exit "$rc"
+}
+trap on_exit EXIT
+trap 'exit 130' INT TERM HUP
+
+test "$(id -u)" -eq 0
+test -x "$timeout_bin"&&test "$(command -v timeout)" = "$timeout_bin"
+test "$(command -v flock)" = /usr/bin/flock
+"$timeout_bin" --foreground 2s true
+python3 - "$lock_path" <<'PY'
+import errno,os,sys
+p=sys.argv[1]
+try:
+ fd=os.open(p,os.O_CREAT|os.O_EXCL|os.O_RDWR|os.O_NOFOLLOW,0o600)
+ os.fchmod(fd,0o600);os.fsync(fd);os.close(fd)
+except FileExistsError:
+ pass
+PY
+test -f "$lock_path"&&test ! -L "$lock_path"
+test "$(stat -c '%U|%G|%a' "$lock_path")" = 'root|root|600'
+exec 9<>"$lock_path"
+/usr/bin/flock -x 9
+test "$(stat -Lc '%d:%i' /proc/self/fd/9)" = "$(stat -Lc '%d:%i' "$lock_path")"
+lock_inode=$(stat -c '%d:%i' "$lock_path")
+stage=lock_acquired
+
+byte_tmp=$(mktemp "$base/.phase0-v10-byte-negative.XXXXXX")
+byte_inode=$(stat -c '%d:%i' "$byte_tmp")
+for byte_case in cr nul no_lf;do
+ case "$byte_case" in cr) printf 'bad\r\n' > "$byte_tmp";;nul) printf 'bad\000\n' > "$byte_tmp";;no_lf) printf 'bad' > "$byte_tmp";;esac
+ byte_sha=$(sha256sum "$byte_tmp"|awk '{print $1}')
+ set +e
+ assert_text_bytes "$byte_tmp"
+ byte_rc=$?
+ set -e
+ test "$byte_rc" -ne 0
+ test "$(stat -c '%d:%i' "$byte_tmp")" = "$byte_inode"
+done
+byte_sha=$(sha256sum "$byte_tmp"|awk '{print $1}')
+exact_unlink "$byte_tmp" "$byte_inode" "$byte_sha"
+stage=byte_negative_passed
+
+for f in "$approval" "$v5_approval" "$current" "$task5_pending";do
+ test -f "$f"&&test ! -L "$f"&&test "$(stat -c '%U|%G|%a' "$f")" = 'root|root|600'
+done
+assert_text_bytes "$approval" "$v5_approval" "$current" "$task5_pending"
+test "$(sha256sum "$v5_approval"|awk '{print $1}')" = f89cd838975607400b34aea15c3db8e079ed950837da1774e7b7078acc7025aa
+test "$(sha256sum "$current"|awk '{print $1}')" = a7e4ef17ee3eaa00bacc6693772940b5308390fcbd9ef4c2275ec9b788c01005
+test "$(tr -d '\n'<"$current")" = "$old_package"
+test "$(sha256sum "$old_package/SHA256SUMS"|awk '{print $1}')" = 30d3fc6fd40f736441fe3ec3f089ff5bf5c4e3b3525613094ab245e70011b04a
+(cd "$old_package"&&sha256sum -c SHA256SUMS>/dev/null)
+test "$(sha256sum "$task5_pending"|awk '{print $1}')" = d6c20209be2254dc9cb2788c6ad495ecb372516dd905b2c8e4cd7a76b5779af9
+test "$(tr -d '\n'<"$task5_pending")" = "$recovery"
+test -d "$recovery"&&test ! -L "$recovery"&&test "$(realpath -e -- "$recovery")" = "$recovery"&&test "$(stat -c '%U|%G|%a' "$recovery")" = 'root|root|700'
+
+review_keys='verdict scope critical_open important_open task5_reentry_authorized authorized_predecessor review_package review_manifest_sha256 old_handoff_package old_handoff_pointer_sha256 old_handoff_manifest_sha256 v5_approval_sha256 task5_pending_path task5_pending_sha256 recovery_path failure_state_sha256 unrelated_status_count unrelated_status_sha256'
+awk -F '|' -v keys="$review_keys" 'BEGIN{split(keys,a," ");for(i in a)e[a[i]]=1}NF!=2||!($1 in e)||seen[$1]++{bad=1}END{if(NR!=18)bad=1;for(k in e)if(seen[k]!=1)bad=1;exit bad?41:0}' "$approval"
+rv(){ awk -F '|' -v k="$1" '$1==k{print $2}' "$approval";}
+test "$(rv verdict)|$(rv scope)|$(rv critical_open)|$(rv important_open)|$(rv task5_reentry_authorized)" = 'APPROVED|phase0-v10-task5-reentry-correction|0|0|true'
+test "$(rv authorized_predecessor)" = 464d17a652cdd622b5c20891e8f7fe24b55e6dd6
+test "$(rv old_handoff_package)" = "$old_package"
+test "$(rv old_handoff_pointer_sha256)" = a7e4ef17ee3eaa00bacc6693772940b5308390fcbd9ef4c2275ec9b788c01005
+test "$(rv old_handoff_manifest_sha256)" = 30d3fc6fd40f736441fe3ec3f089ff5bf5c4e3b3525613094ab245e70011b04a
+test "$(rv v5_approval_sha256)" = f89cd838975607400b34aea15c3db8e079ed950837da1774e7b7078acc7025aa
+test "$(rv task5_pending_path)" = "$task5_pending"
+test "$(rv task5_pending_sha256)" = d6c20209be2254dc9cb2788c6ad495ecb372516dd905b2c8e4cd7a76b5779af9
+test "$(rv recovery_path)" = "$recovery"
+test "$(rv failure_state_sha256)" = 130455a0a92ca76d0372410d4ad60d67d7e8866985f64b5be2cf11a175617faa
+test "$(rv unrelated_status_count)|$(rv unrelated_status_sha256)" = '358|20115c9e9358e5883274a642b1e6c302d8c8bb78edd030f1400a52517b69793a'
+review_package=$(rv review_package)
+review_name=$(basename -- "$review_package")
+test "$(dirname -- "$review_package")" = "$review_root"
+[[ "$review_name" =~ ^review-runbook-v10-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+test "$review_package" = "$review_root/$review_name"
+test -d "$review_package"&&test ! -L "$review_package"&&test "$(realpath -e -- "$review_package")" = "$review_package"&&test "$(stat -c '%U|%G|%a' "$review_package")" = 'root|root|700'
+printf 'FAILURE-STATE.tsv\nRECOVERY-VERIFY.sh\nREVIEW-NOTES.md\nSHA256SUMS\nVALIDATION.tsv\nVERIFY.sh\ndesign.candidate.md\nrunbook.candidate.md\n'|cmp -s - <(find "$review_package" -mindepth 1 -maxdepth 1 -printf '%f\n'|LC_ALL=C sort)
+for f in FAILURE-STATE.tsv RECOVERY-VERIFY.sh REVIEW-NOTES.md SHA256SUMS VALIDATION.tsv VERIFY.sh design.candidate.md runbook.candidate.md;do test -f "$review_package/$f"&&test ! -L "$review_package/$f"&&test "$(stat -c '%U|%G|%a' "$review_package/$f")" = 'root|root|600';done
+assert_text_bytes "$review_package"/FAILURE-STATE.tsv "$review_package"/RECOVERY-VERIFY.sh "$review_package"/REVIEW-NOTES.md "$review_package"/SHA256SUMS "$review_package"/VALIDATION.tsv "$review_package"/VERIFY.sh "$review_package"/design.candidate.md "$review_package"/runbook.candidate.md
+test "$(sha256sum "$review_package/SHA256SUMS"|awk '{print $1}')" = "$(rv review_manifest_sha256)"
+test "$(awk 'END{print NR+0}' "$review_package/SHA256SUMS")" -eq 7
+printf 'runbook.candidate.md\ndesign.candidate.md\nREVIEW-NOTES.md\nVALIDATION.tsv\nFAILURE-STATE.tsv\nRECOVERY-VERIFY.sh\nVERIFY.sh\n'|cmp -s - <(awk '{print $2}' "$review_package/SHA256SUMS")
+(cd "$review_package"&&sha256sum -c SHA256SUMS>/dev/null)
+test "$(sha256sum "$review_package/FAILURE-STATE.tsv"|awk '{print $1}')" = "$(rv failure_state_sha256)"
+stage=review_authenticated
+
+cd "$repo"
+git diff --cached --quiet
+test "$(git rev-list --parents -n 1 HEAD|awk '{print NF}')" -eq 2
+test "$(git rev-parse HEAD^)" = "$(rv authorized_predecessor)"
+printf '%s\n%s\n' "$design_rel" "$plan_rel"|LC_ALL=C sort|cmp -s - <(git diff-tree --no-commit-id --name-only -r HEAD|LC_ALL=C sort)
+test "$(git diff-tree --no-commit-id --name-only -r HEAD|wc -l)" -eq 2
+git diff --quiet -- "$plan_rel" "$design_rel"
+git show "HEAD:$plan_rel"|cmp -s - "$review_package/runbook.candidate.md"
+git show "HEAD:$design_rel"|cmp -s - "$review_package/design.candidate.md"
+read -r unrelated_count unrelated_sha < <(git status --short --untracked-files=all -- . ":(exclude)$plan_rel" ":(exclude)$design_rel"|python3 -c 'import hashlib,sys;d=sys.stdin.buffer.read();print(d.count(b"\n"),hashlib.sha256(d).hexdigest())')
+test "$unrelated_count|$unrelated_sha" = "$(rv unrelated_status_count)|$(rv unrelated_status_sha256)"
+stage=commit_authenticated
+
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+nonce=$(od -An -N6 -tx1 /dev/urandom|tr -d ' \n')
+package=$base/phase0-v10-execution-handoff-$stamp-$nonce
+mkdir -m 0700 "$package"
+test ! -L "$package"&&test "$(stat -c '%U|%G|%a' "$package")" = 'root|root|700'
+git show "HEAD:$plan_rel" > "$package/plan.md"
+git show "HEAD:$design_rel" > "$package/design.md"
+cp -- "$v5_approval" "$package/REVIEW-V5.tsv"
+cp -- "$approval" "$package/REVIEW-V10.tsv"
+cp -- "$current" "$package/PREVIOUS-HANDOFF.current"
+cp -- "$task5_pending" "$package/TASK5.pending"
+cp -- "$review_package/FAILURE-STATE.tsv" "$package/FAILURE-STATE.tsv"
+cp -- "$review_package/RECOVERY-VERIFY.sh" "$package/RECOVERY-VERIFY.sh"
+cp -- "$review_package/VERIFY.sh" "$package/VERIFY.sh"
+printf 'old_handoff_path|%s\nold_handoff_package|%s\nold_handoff_pointer_sha256|%s\ntask5_pending_path|%s\ntask5_pending_sha256|%s\nfailure_state_sha256|%s\n' "$current" "$(rv old_handoff_package)" "$(rv old_handoff_pointer_sha256)" "$(rv task5_pending_path)" "$(rv task5_pending_sha256)" "$(rv failure_state_sha256)" > "$package/HISTORY.tsv"
+printf 'head|%s\ntree|%s\nparent|%s\nparent_count|1\nplan_blob|%s\ndesign_blob|%s\nreview_package|%s\nreview_manifest_sha256|%s\nv10_approval_sha256|%s\nv5_approval_sha256|%s\nold_handoff_package|%s\nold_handoff_pointer_sha256|%s\nold_handoff_manifest_sha256|%s\ntask5_pending_path|%s\ntask5_pending_sha256|%s\nrecovery_path|%s\nfailure_state_sha256|%s\nunrelated_status_count|%s\nunrelated_status_sha256|%s\nprevious_handoff_copy_sha256|%s\ntask5_pending_copy_sha256|%s\n' "$(git rev-parse HEAD)" "$(git rev-parse HEAD^{tree})" "$(git rev-parse HEAD^)" "$(git rev-parse "HEAD:$plan_rel")" "$(git rev-parse "HEAD:$design_rel")" "$review_package" "$(rv review_manifest_sha256)" "$(sha256sum "$approval"|awk '{print $1}')" "$(rv v5_approval_sha256)" "$(rv old_handoff_package)" "$(rv old_handoff_pointer_sha256)" "$(rv old_handoff_manifest_sha256)" "$(rv task5_pending_path)" "$(rv task5_pending_sha256)" "$(rv recovery_path)" "$(rv failure_state_sha256)" "$(rv unrelated_status_count)" "$(rv unrelated_status_sha256)" "$(sha256sum "$package/PREVIOUS-HANDOFF.current"|awk '{print $1}')" "$(sha256sum "$package/TASK5.pending"|awk '{print $1}')" > "$package/COMMIT.tsv"
+chmod 0600 "$package"/*
+commit_keys='head tree parent parent_count plan_blob design_blob review_package review_manifest_sha256 v10_approval_sha256 v5_approval_sha256 old_handoff_package old_handoff_pointer_sha256 old_handoff_manifest_sha256 task5_pending_path task5_pending_sha256 recovery_path failure_state_sha256 unrelated_status_count unrelated_status_sha256 previous_handoff_copy_sha256 task5_pending_copy_sha256'
+history_keys='old_handoff_path old_handoff_package old_handoff_pointer_sha256 task5_pending_path task5_pending_sha256 failure_state_sha256'
+for spec in REVIEW-V10.tsv:18:"$review_keys" COMMIT.tsv:21:"$commit_keys" HISTORY.tsv:6:"$history_keys";do IFS=: read -r file count keys<<<"$spec";awk -F '|' -v keys="$keys" -v count="$count" 'BEGIN{split(keys,a," ");for(i in a)e[a[i]]=1}NF!=2||!($1 in e)||seen[$1]++{bad=1}END{if(NR!=count)bad=1;for(k in e)if(seen[k]!=1)bad=1;exit bad?41:0}' "$package/$file";done
+assert_text_bytes "$package"/plan.md "$package"/design.md "$package"/COMMIT.tsv "$package"/REVIEW-V5.tsv "$package"/REVIEW-V10.tsv "$package"/FAILURE-STATE.tsv "$package"/HISTORY.tsv "$package"/PREVIOUS-HANDOFF.current "$package"/TASK5.pending "$package"/VERIFY.sh "$package"/RECOVERY-VERIFY.sh
+(cd "$package"&&sha256sum plan.md design.md COMMIT.tsv REVIEW-V5.tsv REVIEW-V10.tsv FAILURE-STATE.tsv HISTORY.tsv PREVIOUS-HANDOFF.current TASK5.pending VERIFY.sh RECOVERY-VERIFY.sh > SHA256SUMS)
+chmod 0600 "$package/SHA256SUMS"
+printf 'COMMIT.tsv\nFAILURE-STATE.tsv\nHISTORY.tsv\nPREVIOUS-HANDOFF.current\nRECOVERY-VERIFY.sh\nREVIEW-V10.tsv\nREVIEW-V5.tsv\nSHA256SUMS\nTASK5.pending\nVERIFY.sh\ndesign.md\nplan.md\n'|cmp -s - <(find "$package" -mindepth 1 -maxdepth 1 -printf '%f\n'|LC_ALL=C sort)
+for f in "$package"/*;do test -f "$f"&&test ! -L "$f"&&test "$(stat -c '%U|%G|%a' "$f")" = 'root|root|600';done
+assert_text_bytes "$package"/*
+(cd "$package"&&sha256sum -c SHA256SUMS>/dev/null)
+for f in "$package"/*;do fsync_path "$f";done
+fsync_dir "$package"
+fsync_dir "$base"
+stage=package_sealed
+
+candidate_pointer=$(mktemp "$base/.phase0-v10-candidate-pointer.XXXXXX")
+printf '%s\n' "$package" > "$candidate_pointer"
+chmod 0600 "$candidate_pointer"
+fsync_path "$candidate_pointer"
+candidate_inode=$(stat -c '%d:%i' "$candidate_pointer")
+candidate_sha=$(sha256sum "$candidate_pointer"|awk '{print $1}')
+candidate_cleanup_armed=true
+bash "$package/VERIFY.sh" "$candidate_pointer" pre
+set +e
+"$timeout_bin" --foreground 30s bash "$package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+rc=$?
+set -e
+case "$rc" in 0);;124)exit 42;;*)exit 41;;esac
+assert_text_bytes "$package"/*
+cleanup_candidate
+stage=helper_prepublication_passed
+
+history=$base/phase0-v10-handoff-history-$stamp-$nonce
+mkdir -m 0700 "$history"
+test ! -L "$history"&&test "$(stat -c '%U|%G|%a' "$history")" = 'root|root|700'
+cp -- "$package/PREVIOUS-HANDOFF.current" "$history/PREVIOUS-HANDOFF.current"
+cp -- "$package/TASK5.pending" "$history/TASK5.pending"
+cp -- "$package/HISTORY.tsv" "$history/HISTORY.tsv"
+printf 'lock_path|%s\nlock_inode|%s\nlock_mode|root:root:600\nlock_held|true\n' "$lock_path" "$lock_inode" > "$history/LOCK.tsv"
+printf 'event|rollback_armed|false\nevent|authoritative_exchange|not_started\n' > "$history/ROLLBACK.tsv"
+chmod 0600 "$history"/*
+assert_text_bytes "$history"/PREVIOUS-HANDOFF.current "$history"/TASK5.pending "$history"/HISTORY.tsv "$history"/LOCK.tsv "$history"/ROLLBACK.tsv
+(cd "$history"&&sha256sum PREVIOUS-HANDOFF.current TASK5.pending HISTORY.tsv LOCK.tsv > PREPUBLISH-SHA256SUMS)
+chmod 0600 "$history/PREPUBLISH-SHA256SUMS"
+assert_text_bytes "$history/PREPUBLISH-SHA256SUMS"
+(cd "$history"&&sha256sum -c PREPUBLISH-SHA256SUMS>/dev/null)
+for f in "$history"/*;do fsync_path "$f";done
+fsync_dir "$history"
+fsync_dir "$base"
+stage=history_prepared
+
+pending_tmp=$(mktemp "$base/.phase0-v10-execution-handoff.pending.XXXXXX")
+printf '%s\n' "$package" > "$pending_tmp"
+chmod 0600 "$pending_tmp"
+fsync_path "$pending_tmp"
+pending_inode=$(stat -c '%d:%i' "$pending_tmp")
+pending_sha=$(sha256sum "$pending_tmp"|awk '{print $1}')
+pending_cleanup_armed=true
+rename_noreplace "$pending_tmp" "$pending"
+test -f "$pending"&&test ! -L "$pending"&&test "$(stat -c '%U|%G|%a|%d:%i' "$pending")" = "root|root|600|$pending_inode"
+test "$(sha256sum "$pending"|awk '{print $1}')" = "$pending_sha"
+fsync_dir "$base"
+stage=pending_published
+record_event pending_published "$pending_inode"
+
+bash "$package/VERIFY.sh" "$pending" pre
+set +e
+"$timeout_bin" --foreground 30s bash "$package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+rc=$?
+set -e
+case "$rc" in 0);;124)exit 42;;*)exit 41;;esac
+assert_text_bytes "$package"/* "$history"/*
+stage=pending_reverified
+record_event pending_reverified pass
+
+new_tmp=$(mktemp "$base/.HANDOFF.current.v10.XXXXXX")
+printf '%s\n' "$package" > "$new_tmp"
+chmod 0600 "$new_tmp"
+fsync_path "$new_tmp"
+new_pointer_sha=$(sha256sum "$new_tmp"|awk '{print $1}')
+rollback_source=$new_tmp
+exchanged=$history/HANDOFF.current.exchanged
+stage=exchange_preflight
+
+test -f "$current"&&test ! -L "$current"&&test "$(stat -c '%U|%G|%a' "$current")" = 'root|root|600'&&test "$(awk 'END{print NR+0}' "$current")" -eq 1
+test "$(sha256sum "$current"|awk '{print $1}')" = "$(rv old_handoff_pointer_sha256)"
+cmp -s "$current" "$package/PREVIOUS-HANDOFF.current"
+rollback_armed=true
+rename_exchange "$new_tmp" "$current"
+stage=exchanged
+record_event authoritative_exchange completed
+
+test "$(sha256sum "$current"|awk '{print $1}')" = "$new_pointer_sha"
+test "$(tr -d '\n'<"$current")" = "$package"
+test -f "$rollback_source"&&test ! -L "$rollback_source"&&test "$(stat -c '%U|%G|%a' "$rollback_source")" = 'root|root|600'
+cmp -s "$rollback_source" "$package/PREVIOUS-HANDOFF.current"
+stage=exchanged_old_verified
+record_event exchanged_old verified
+
+rename_noreplace "$rollback_source" "$exchanged"
+rollback_source=$exchanged
+chmod 0600 "$exchanged"
+fsync_path "$exchanged"
+fsync_dir "$history"
+stage=exchanged_old_historized
+record_event exchanged_old historized
+
+printf 'new_handoff_path|%s\nnew_package|%s\nexchanged_prior_sha256|%s\nexpected_old_match|true\ntask5_pending_sha256|%s\nlock_inode|%s\n' "$current" "$package" "$(sha256sum "$exchanged"|awk '{print $1}')" "$(sha256sum "$task5_pending"|awk '{print $1}')" "$lock_inode" > "$history/POSTPUBLISH.tsv"
+chmod 0600 "$history/POSTPUBLISH.tsv"
+assert_text_bytes "$history/POSTPUBLISH.tsv"
+fsync_path "$history/POSTPUBLISH.tsv"
+stage=postpublish_written
+record_event postpublish written
+
+test -f "$current"&&test ! -L "$current"&&test "$(stat -c '%U|%G|%a' "$current")" = 'root|root|600'
+test "$(sha256sum "$current"|awk '{print $1}')" = "$new_pointer_sha"
+test "$(tr -d '\n'<"$current")" = "$package"
+cmp -s "$task5_pending" "$package/TASK5.pending"
+stage=current_postchecked
+record_event current_postchecked pass
+
+bash "$package/VERIFY.sh" "$current" post
+stage=verify_post_passed
+record_event verify_post pass
+set +e
+"$timeout_bin" --foreground 30s bash "$package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+rc=$?
+set -e
+case "$rc" in 0);;124)exit 42;;*)exit 41;;esac
+stage=recovery_post_passed
+record_event recovery_post pass
+
+record_event rollback_disarm_ready all_post_gates_passed
+assert_text_bytes "$package"/* "$history"/*
+(cd "$history"&&sha256sum PREVIOUS-HANDOFF.current TASK5.pending HISTORY.tsv LOCK.tsv PREPUBLISH-SHA256SUMS HANDOFF.current.exchanged POSTPUBLISH.tsv ROLLBACK.tsv > SHA256SUMS)
+chmod 0600 "$history/SHA256SUMS"
+printf 'HANDOFF.current.exchanged\nHISTORY.tsv\nLOCK.tsv\nPOSTPUBLISH.tsv\nPREPUBLISH-SHA256SUMS\nPREVIOUS-HANDOFF.current\nROLLBACK.tsv\nSHA256SUMS\nTASK5.pending\n'|cmp -s - <(find "$history" -mindepth 1 -maxdepth 1 -printf '%f\n'|LC_ALL=C sort)
+for f in "$history"/*;do test -f "$f"&&test ! -L "$f"&&test "$(stat -c '%U|%G|%a' "$f")" = 'root|root|600';done
+assert_text_bytes "$history"/*
+(cd "$history"&&sha256sum -c PREPUBLISH-SHA256SUMS>/dev/null&&sha256sum -c SHA256SUMS>/dev/null)
+for f in "$history"/*;do fsync_path "$f";done
+fsync_dir "$history"
+fsync_path "$current"
+fsync_path "$pending"
+fsync_dir "$base"
+stage=history_finalized
+
+bash "$package/VERIFY.sh" "$current" post
+set +e
+"$timeout_bin" --foreground 30s bash "$package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+rc=$?
+set -e
+case "$rc" in 0);;124)exit 42;;*)exit 41;;esac
+(cd "$package"&&sha256sum -c SHA256SUMS>/dev/null)
+(cd "$history"&&sha256sum -c SHA256SUMS>/dev/null)
+assert_text_bytes "$package"/* "$history"/*
+test "$(sha256sum "$current"|awk '{print $1}')" = "$new_pointer_sha"
+test "$(sha256sum "$pending"|awk '{print $1}')" = "$pending_sha"
+stage=final_success
+rollback_armed=false
+pending_cleanup_armed=false
+finalized=true
+trap - EXIT INT TERM HUP
+printf 'handoff_publication|verified\nrollback_armed|false\nlock_held_through_final_gate|true\n'
+```
+
+Expected: one fixed root-only exclusive lock spans preverification through the final postverification and fsync gate. Every v10 text payload is CR/NUL-free and final-LF-terminated; the built-in negative cases prove malformed bytes are rejected. A private candidate pointer passes both helpers before the sticky no-replace pending pointer is published. Prepared history and an armed rollback source exist before the atomic exchange. Every normal post-exchange failure restores A and retains failed C as sanitized history; a non-cooperating A-to-B race leaves B authoritative and never leaves C authoritative. Cleanup removes only an exact recorded pending/candidate inode and content hash. Task-5 pending authority and runtime remain read-only.
+
+## Superseded v9 Task 10 (historical reference only; do not execute)
+
+The three v9 blocks below are preserved only as historical evidence of the superseded publication design. They are not execution instructions, may not create v9 authority, and may not be mixed with the active v12 block above.
+
+- [ ] **Step 1: Validate the exact 18-key approval, old authority, recovery boundary, review package, and corrected commit**
+
+```bash
+set -euo pipefail
+umask 077
+repo=/opt/thoidai-work
+base=/opt/thoidai-reconciliation
+review_root=$base/phase0-20260814T135943Z
+approval=$base/phase0-v9-reentry-review.approved.tsv
+v5_approval=$base/phase0-v5-primary-review.approved.tsv
+old_pointer=$base/HANDOFF.current
+old_package=$base/phase0-execution-handoff-20260815T041006Z-2be71271104d
+task5_pending=$base/phase0-v5-execution.pending
+recovery=$base/phase0-v5-execution-20260815T041430Z-7fa3f327f5c8
+plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
+design_rel=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
+timeout_bin=/usr/bin/timeout
+test "$(id -u)" -eq 0
+test -x "$timeout_bin" && test "$(command -v timeout)" = "$timeout_bin"
+"$timeout_bin" --foreground 2s true
+python3 - <<'PY'
+import ctypes
+if getattr(ctypes.CDLL(None,use_errno=True),'renameat2',None) is None: raise SystemExit(74)
+PY
+for f in "$approval" "$v5_approval" "$old_pointer" "$task5_pending"; do
+  test -f "$f" && test ! -L "$f"
+  test "$(stat -c '%U|%G|%a' "$f")" = 'root|root|600'
+done
+test "$(sha256sum "$v5_approval" | awk '{print $1}')" = f89cd838975607400b34aea15c3db8e079ed950837da1774e7b7078acc7025aa
+test "$(sha256sum "$old_pointer" | awk '{print $1}')" = a7e4ef17ee3eaa00bacc6693772940b5308390fcbd9ef4c2275ec9b788c01005
+test "$(tr -d '\n' < "$old_pointer")" = "$old_package"
+test "$(sha256sum "$old_package/SHA256SUMS" | awk '{print $1}')" = 30d3fc6fd40f736441fe3ec3f089ff5bf5c4e3b3525613094ab245e70011b04a
+(cd "$old_package" && sha256sum -c SHA256SUMS >/dev/null)
+test "$(sha256sum "$task5_pending" | awk '{print $1}')" = d6c20209be2254dc9cb2788c6ad495ecb372516dd905b2c8e4cd7a76b5779af9
+test "$(tr -d '\n' < "$task5_pending")" = "$recovery"
+test -d "$recovery" && test ! -L "$recovery"
+test "$(realpath -e -- "$recovery")" = "$recovery"
+test "$(stat -c '%U|%G|%a' "$recovery")" = 'root|root|700'
+review_keys='verdict scope critical_open important_open task5_reentry_authorized authorized_predecessor review_package review_manifest_sha256 old_handoff_package old_handoff_pointer_sha256 old_handoff_manifest_sha256 v5_approval_sha256 task5_pending_path task5_pending_sha256 recovery_path failure_state_sha256 unrelated_status_count unrelated_status_sha256'
+awk -F '|' -v keys="$review_keys" 'BEGIN{split(keys,a," ");for(i in a)e[a[i]]=1} NF!=2||!($1 in e)||seen[$1]++{bad=1} END{if(NR!=18)bad=1;for(k in e)if(seen[k]!=1)bad=1;exit bad?41:0}' "$approval"
+rv(){ awk -F '|' -v k="$1" '$1==k{print $2}' "$approval"; }
+test "$(rv verdict)|$(rv scope)|$(rv critical_open)|$(rv important_open)|$(rv task5_reentry_authorized)" = 'APPROVED|phase0-v9-task5-reentry-correction|0|0|true'
+test "$(rv authorized_predecessor)" = 464d17a652cdd622b5c20891e8f7fe24b55e6dd6
+test "$(rv old_handoff_package)" = "$old_package"
+test "$(rv old_handoff_pointer_sha256)" = a7e4ef17ee3eaa00bacc6693772940b5308390fcbd9ef4c2275ec9b788c01005
+test "$(rv old_handoff_manifest_sha256)" = 30d3fc6fd40f736441fe3ec3f089ff5bf5c4e3b3525613094ab245e70011b04a
+test "$(rv v5_approval_sha256)" = f89cd838975607400b34aea15c3db8e079ed950837da1774e7b7078acc7025aa
+test "$(rv task5_pending_path)" = "$task5_pending"
+test "$(rv task5_pending_sha256)" = d6c20209be2254dc9cb2788c6ad495ecb372516dd905b2c8e4cd7a76b5779af9
+test "$(rv recovery_path)" = "$recovery"
+test "$(rv failure_state_sha256)" = 130455a0a92ca76d0372410d4ad60d67d7e8866985f64b5be2cf11a175617faa
+test "$(rv unrelated_status_count)|$(rv unrelated_status_sha256)" = '358|20115c9e9358e5883274a642b1e6c302d8c8bb78edd030f1400a52517b69793a'
+review_package=$(rv review_package)
+review_manifest_sha=$(rv review_manifest_sha256)
+[[ "$review_manifest_sha" =~ ^[0-9a-f]{64}$ ]]
+review_basename=$(basename -- "$review_package")
+test "$(dirname -- "$review_package")" = "$review_root"
+[[ "$review_basename" =~ ^review-runbook-v9-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$ ]]
+test "$review_package" = "$review_root/$review_basename"
+test -d "$review_package" && test ! -L "$review_package"
+test "$(realpath -e -- "$review_package")" = "$review_package"
+test "$(stat -c '%U|%G|%a' "$review_package")" = 'root|root|700'
+printf 'FAILURE-STATE.tsv\nRECOVERY-VERIFY.sh\nREVIEW-NOTES.md\nSHA256SUMS\nVALIDATION.tsv\nVERIFY.sh\ndesign.candidate.md\nrunbook.candidate.md\n' | cmp -s - <(find "$review_package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+for f in FAILURE-STATE.tsv RECOVERY-VERIFY.sh REVIEW-NOTES.md SHA256SUMS VALIDATION.tsv VERIFY.sh design.candidate.md runbook.candidate.md; do
+  test -f "$review_package/$f" && test ! -L "$review_package/$f"
+  test "$(stat -c '%U|%G|%a' "$review_package/$f")" = 'root|root|600'
+done
+test "$(sha256sum "$review_package/SHA256SUMS" | awk '{print $1}')" = "$review_manifest_sha"
+test "$(awk 'END{print NR+0}' "$review_package/SHA256SUMS")" -eq 7
+awk 'NF!=2 || $1 !~ /^[0-9a-f]{64}$/ {exit 41}' "$review_package/SHA256SUMS"
+printf 'runbook.candidate.md\ndesign.candidate.md\nREVIEW-NOTES.md\nVALIDATION.tsv\nFAILURE-STATE.tsv\nRECOVERY-VERIFY.sh\nVERIFY.sh\n' | cmp -s - <(awk '{print $2}' "$review_package/SHA256SUMS")
+(cd "$review_package" && sha256sum -c SHA256SUMS >/dev/null)
+test "$(sha256sum "$review_package/FAILURE-STATE.tsv" | awk '{print $1}')" = "$(rv failure_state_sha256)"
+set +e
+"$timeout_bin" --foreground 30s bash "$review_package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+recovery_rc=$?
+set -e
+case "$recovery_rc" in 0) ;; 124) exit 42 ;; *) exit 41 ;; esac
+cd "$repo"
+git diff --cached --quiet
+test "$(git rev-list --parents -n 1 HEAD | awk '{print NF}')" -eq 2
+test "$(git rev-parse HEAD^)" = "$(rv authorized_predecessor)"
+printf '%s\n%s\n' "$design_rel" "$plan_rel" | LC_ALL=C sort | cmp -s - <(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)
+test "$(git diff-tree --no-commit-id --name-only -r HEAD | wc -l)" -eq 2
+git diff --quiet -- "$plan_rel" "$design_rel"
+git show "HEAD:$plan_rel" | cmp -s - "$review_package/runbook.candidate.md"
+git show "HEAD:$design_rel" | cmp -s - "$review_package/design.candidate.md"
+read -r unrelated_count unrelated_sha < <(git status --short --untracked-files=all -- . ":(exclude)$plan_rel" ":(exclude)$design_rel" | python3 -c 'import hashlib,sys;d=sys.stdin.buffer.read();print(d.count(b"\n"),hashlib.sha256(d).hexdigest())')
+test "$unrelated_count|$unrelated_sha" = "$(rv unrelated_status_count)|$(rv unrelated_status_sha256)"
+```
+
+Expected: the exact additive approval, old sealed authority, live pending/recovery boundary, reviewed failure state/verifier, corrected two-document child commit, canonical bytes, and unrelated state form one tuple. Any duplicate, conflict, extra key, replaced path, timeout, advanced lane, or byte mismatch stops before package creation.
+
+- [ ] **Step 2: Construct, fsync, seal, validate, and no-replace publish the corrected pending package**
+
+```bash
+set -euo pipefail
+umask 077
+repo=/opt/thoidai-work
+base=/opt/thoidai-reconciliation
+approval=$base/phase0-v9-reentry-review.approved.tsv
+v5_approval=$base/phase0-v5-primary-review.approved.tsv
+old_pointer=$base/HANDOFF.current
+task5_pending=$base/phase0-v5-execution.pending
+plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
+design_rel=docs/superpowers/specs/2026-08-14-phase0-isolated-postgres-replay-design.md
+timeout_bin=/usr/bin/timeout
+rv(){ awk -F '|' -v k="$1" '$1==k{print $2}' "$approval"; }
+review_package=$(rv review_package)
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+nonce=$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')
+package=$base/phase0-v9-execution-handoff-$stamp-$nonce
+mkdir -m 0700 "$package"
+test ! -L "$package" && test "$(stat -c '%U|%G|%a' "$package")" = 'root|root|700'
+cd "$repo"
+git show "HEAD:$plan_rel" > "$package/plan.md"
+git show "HEAD:$design_rel" > "$package/design.md"
+cp -- "$v5_approval" "$package/REVIEW-V5.tsv"
+cp -- "$approval" "$package/REVIEW-V9.tsv"
+cp -- "$old_pointer" "$package/PREVIOUS-HANDOFF.current"
+cp -- "$task5_pending" "$package/TASK5.pending"
+cp -- "$review_package/FAILURE-STATE.tsv" "$package/FAILURE-STATE.tsv"
+cp -- "$review_package/RECOVERY-VERIFY.sh" "$package/RECOVERY-VERIFY.sh"
+cp -- "$review_package/VERIFY.sh" "$package/VERIFY.sh"
+cat > "$package/HISTORY.tsv" <<EOF
+old_handoff_path|$old_pointer
+old_handoff_package|$(rv old_handoff_package)
+old_handoff_pointer_sha256|$(rv old_handoff_pointer_sha256)
+task5_pending_path|$(rv task5_pending_path)
+task5_pending_sha256|$(rv task5_pending_sha256)
+failure_state_sha256|$(rv failure_state_sha256)
+EOF
+cat > "$package/COMMIT.tsv" <<EOF
+head|$(git rev-parse HEAD)
+tree|$(git rev-parse HEAD^{tree})
+parent|$(git rev-parse HEAD^)
+parent_count|1
+plan_blob|$(git rev-parse "HEAD:$plan_rel")
+design_blob|$(git rev-parse "HEAD:$design_rel")
+review_package|$(rv review_package)
+review_manifest_sha256|$(rv review_manifest_sha256)
+v9_approval_sha256|$(sha256sum "$approval" | awk '{print $1}')
+v5_approval_sha256|$(rv v5_approval_sha256)
+old_handoff_package|$(rv old_handoff_package)
+old_handoff_pointer_sha256|$(rv old_handoff_pointer_sha256)
+old_handoff_manifest_sha256|$(rv old_handoff_manifest_sha256)
+task5_pending_path|$(rv task5_pending_path)
+task5_pending_sha256|$(rv task5_pending_sha256)
+recovery_path|$(rv recovery_path)
+failure_state_sha256|$(rv failure_state_sha256)
+unrelated_status_count|$(rv unrelated_status_count)
+unrelated_status_sha256|$(rv unrelated_status_sha256)
+previous_handoff_copy_sha256|$(sha256sum "$package/PREVIOUS-HANDOFF.current" | awk '{print $1}')
+task5_pending_copy_sha256|$(sha256sum "$package/TASK5.pending" | awk '{print $1}')
+EOF
+chmod 0600 "$package"/*
+review_keys='verdict scope critical_open important_open task5_reentry_authorized authorized_predecessor review_package review_manifest_sha256 old_handoff_package old_handoff_pointer_sha256 old_handoff_manifest_sha256 v5_approval_sha256 task5_pending_path task5_pending_sha256 recovery_path failure_state_sha256 unrelated_status_count unrelated_status_sha256'
+commit_keys='head tree parent parent_count plan_blob design_blob review_package review_manifest_sha256 v9_approval_sha256 v5_approval_sha256 old_handoff_package old_handoff_pointer_sha256 old_handoff_manifest_sha256 task5_pending_path task5_pending_sha256 recovery_path failure_state_sha256 unrelated_status_count unrelated_status_sha256 previous_handoff_copy_sha256 task5_pending_copy_sha256'
+history_keys='old_handoff_path old_handoff_package old_handoff_pointer_sha256 task5_pending_path task5_pending_sha256 failure_state_sha256'
+awk -F '|' -v keys="$review_keys" 'BEGIN{split(keys,a," ");for(i in a)e[a[i]]=1} NF!=2||!($1 in e)||seen[$1]++{bad=1} END{if(NR!=18)bad=1;for(k in e)if(seen[k]!=1)bad=1;exit bad?41:0}' "$package/REVIEW-V9.tsv"
+awk -F '|' -v keys="$commit_keys" 'BEGIN{split(keys,a," ");for(i in a)e[a[i]]=1} NF!=2||!($1 in e)||seen[$1]++{bad=1} END{if(NR!=21)bad=1;for(k in e)if(seen[k]!=1)bad=1;exit bad?41:0}' "$package/COMMIT.tsv"
+awk -F '|' -v keys="$history_keys" 'BEGIN{split(keys,a," ");for(i in a)e[a[i]]=1} NF!=2||!($1 in e)||seen[$1]++{bad=1} END{if(NR!=6)bad=1;for(k in e)if(seen[k]!=1)bad=1;exit bad?41:0}' "$package/HISTORY.tsv"
+(cd "$package" && sha256sum plan.md design.md COMMIT.tsv REVIEW-V5.tsv REVIEW-V9.tsv FAILURE-STATE.tsv HISTORY.tsv PREVIOUS-HANDOFF.current TASK5.pending VERIFY.sh RECOVERY-VERIFY.sh > SHA256SUMS)
+chmod 0600 "$package/SHA256SUMS"
+printf 'COMMIT.tsv\nFAILURE-STATE.tsv\nHISTORY.tsv\nPREVIOUS-HANDOFF.current\nRECOVERY-VERIFY.sh\nREVIEW-V5.tsv\nREVIEW-V9.tsv\nSHA256SUMS\nTASK5.pending\nVERIFY.sh\ndesign.md\nplan.md\n' | cmp -s - <(find "$package" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+for f in "$package"/*; do test -f "$f" && test ! -L "$f" && test "$(stat -c '%U|%G|%a' "$f")" = 'root|root|600'; done
+(cd "$package" && sha256sum -c SHA256SUMS >/dev/null)
+python3 - "$package" <<'PY'
+import os,sys
+p=sys.argv[1]
+for name in os.listdir(p):
+ fd=os.open(os.path.join(p,name),os.O_RDONLY)
+ try: os.fsync(fd)
+ finally: os.close(fd)
+fd=os.open(p,os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+pending=$base/phase0-v9-execution-handoff.pending
+pending_tmp=$(mktemp "$base/.phase0-v9-execution-handoff.pending.XXXXXX")
+printf '%s\n' "$package" > "$pending_tmp"
+chmod 0600 "$pending_tmp"
+python3 - "$pending_tmp" <<'PY'
+import os,sys
+fd=os.open(sys.argv[1],os.O_RDONLY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+python3 - "$pending_tmp" "$pending" <<'PY'
+import ctypes,errno,os,sys
+src,dst=map(os.fsencode,sys.argv[1:3]);libc=ctypes.CDLL(None,use_errno=True);fn=getattr(libc,'renameat2',None)
+if fn is None: raise SystemExit(74)
+fn.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+if fn(-100,src,-100,dst,1)!=0:
+ e=ctypes.get_errno()
+ if e==errno.EEXIST: raise SystemExit(73)
+ if e in (errno.ENOSYS,errno.EINVAL,errno.ENOTSUP): raise SystemExit(74)
+ raise OSError(e,os.strerror(e))
+fd=os.open(os.path.dirname(os.fsdecode(dst)),os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+bash "$package/VERIFY.sh" "$pending" pre
+set +e
+"$timeout_bin" --foreground 30s bash "$package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+rc=$?
+set -e
+case "$rc" in 0) ;; 124) exit 42 ;; *) exit 41 ;; esac
+```
+
+Expected: the reviewed complete `VERIFY.sh` and `RECOVERY-VERIFY.sh`, exact schemas, commit, old authority, pending lane, and history metadata are sealed in one fsynced package. The corrected pending pointer uses `RENAME_NOREPLACE`; EEXIST or unsupported kernels hard-fail without clobbering another publisher.
+
+- [ ] **Step 3: Seal recoverable history, atomically exchange `HANDOFF.current`, and postverify**
+
+```bash
+set -euo pipefail
+umask 077
+base=/opt/thoidai-reconciliation
+pending=$base/phase0-v9-execution-handoff.pending
+task5_pending=$base/phase0-v5-execution.pending
+current=$base/HANDOFF.current
+timeout_bin=/usr/bin/timeout
+test -f "$pending" && test ! -L "$pending"
+IFS= read -r package < "$pending"
+bash "$package/VERIFY.sh" "$pending" pre
+set +e
+"$timeout_bin" --foreground 30s bash "$package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+rc=$?
+set -e
+case "$rc" in 0) ;; 124) exit 42 ;; *) exit 41 ;; esac
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+nonce=$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')
+history=$base/phase0-v9-handoff-history-$stamp-$nonce
+mkdir -m 0700 "$history"
+cp -- "$package/PREVIOUS-HANDOFF.current" "$history/PREVIOUS-HANDOFF.current"
+cp -- "$package/TASK5.pending" "$history/TASK5.pending"
+cp -- "$package/HISTORY.tsv" "$history/HISTORY.tsv"
+chmod 0600 "$history"/*
+(cd "$history" && sha256sum PREVIOUS-HANDOFF.current TASK5.pending HISTORY.tsv > PREPUBLISH-SHA256SUMS)
+chmod 0600 "$history/PREPUBLISH-SHA256SUMS"
+(cd "$history" && sha256sum -c PREPUBLISH-SHA256SUMS >/dev/null)
+python3 - "$history" <<'PY'
+import os,sys
+p=sys.argv[1]
+for name in os.listdir(p):
+ fd=os.open(os.path.join(p,name),os.O_RDONLY)
+ try: os.fsync(fd)
+ finally: os.close(fd)
+fd=os.open(p,os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+bash "$package/VERIFY.sh" "$pending" pre
+set +e
+"$timeout_bin" --foreground 30s bash "$package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+rc=$?
+set -e
+case "$rc" in 0) ;; 124) exit 42 ;; *) exit 41 ;; esac
+new_tmp=$(mktemp "$base/.HANDOFF.current.v9.XXXXXX")
+printf '%s\n' "$package" > "$new_tmp"
+chmod 0600 "$new_tmp"
+python3 - "$new_tmp" <<'PY'
+import os,sys
+fd=os.open(sys.argv[1],os.O_RDONLY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+python3 - "$new_tmp" "$current" <<'PY'
+import ctypes,errno,os,sys
+a,b=map(os.fsencode,sys.argv[1:3]);libc=ctypes.CDLL(None,use_errno=True);fn=getattr(libc,'renameat2',None)
+if fn is None: raise SystemExit(74)
+fn.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+if fn(-100,a,-100,b,2)!=0:
+ e=ctypes.get_errno()
+ if e in (errno.ENOSYS,errno.EINVAL,errno.ENOTSUP): raise SystemExit(74)
+ raise OSError(e,os.strerror(e))
+fd=os.open(os.path.dirname(os.fsdecode(b)),os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+cmp -s "$new_tmp" "$package/PREVIOUS-HANDOFF.current"
+exchanged=$history/HANDOFF.current.exchanged
+python3 - "$new_tmp" "$exchanged" <<'PY'
+import ctypes,errno,os,sys
+src,dst=map(os.fsencode,sys.argv[1:3]);libc=ctypes.CDLL(None,use_errno=True);fn=getattr(libc,'renameat2',None)
+if fn is None: raise SystemExit(74)
+fn.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+if fn(-100,src,-100,dst,1)!=0:
+ e=ctypes.get_errno()
+ if e==errno.EEXIST: raise SystemExit(73)
+ if e in (errno.ENOSYS,errno.EINVAL,errno.ENOTSUP): raise SystemExit(74)
+ raise OSError(e,os.strerror(e))
+fd=os.open(os.path.dirname(os.fsdecode(dst)),os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+printf 'new_handoff_path|%s\nnew_package|%s\nold_handoff_sha256|%s\ntask5_pending_sha256|%s\n' "$current" "$package" "$(sha256sum "$exchanged" | awk '{print $1}')" "$(sha256sum "$task5_pending" | awk '{print $1}')" > "$history/POSTPUBLISH.tsv"
+chmod 0600 "$history/POSTPUBLISH.tsv"
+(cd "$history" && sha256sum PREVIOUS-HANDOFF.current TASK5.pending HISTORY.tsv PREPUBLISH-SHA256SUMS HANDOFF.current.exchanged POSTPUBLISH.tsv > SHA256SUMS)
+chmod 0600 "$history/SHA256SUMS"
+printf 'HANDOFF.current.exchanged\nHISTORY.tsv\nPOSTPUBLISH.tsv\nPREPUBLISH-SHA256SUMS\nPREVIOUS-HANDOFF.current\nSHA256SUMS\nTASK5.pending\n' | cmp -s - <(find "$history" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+for f in "$history"/*; do test -f "$f" && test ! -L "$f" && test "$(stat -c '%U|%G|%a' "$f")" = 'root|root|600'; done
+(cd "$history" && sha256sum -c PREPUBLISH-SHA256SUMS >/dev/null && sha256sum -c SHA256SUMS >/dev/null)
+python3 - "$history" <<'PY'
+import os,sys
+p=sys.argv[1]
+for name in os.listdir(p):
+ fd=os.open(os.path.join(p,name),os.O_RDONLY)
+ try: os.fsync(fd)
+ finally: os.close(fd)
+fd=os.open(p,os.O_RDONLY|os.O_DIRECTORY)
+try: os.fsync(fd)
+finally: os.close(fd)
+PY
+test -f "$current" && test ! -L "$current"
+test "$(stat -c '%U|%G|%a' "$current")" = 'root|root|600'
+test "$(tr -d '\n' < "$current")" = "$package"
+cmp -s "$task5_pending" "$package/TASK5.pending"
+bash "$package/VERIFY.sh" "$current" post
+set +e
+"$timeout_bin" --foreground 30s bash "$package/RECOVERY-VERIFY.sh" "$task5_pending" >/dev/null
+rc=$?
+set -e
+case "$rc" in 0) ;; 124) exit 42 ;; *) exit 41 ;; esac
+```
+
+Expected: the sealed package and standalone prepublication history make the old pointer recoverable before publication. `RENAME_EXCHANGE` atomically swaps `HANDOFF.current` with no missing-pointer window; `RENAME_NOREPLACE` moves the exchanged old pointer into history. The corrected pending pointer is never overwritten and the live Task-5 pending pointer is never moved or replaced. Final history, current pointer, package, recovery boundary, commit, review, and unrelated state all reverify.
+
+## Superseded v5 Task 10 (historical reference only; do not execute)
 
 > **Ordering:** This documentation lifecycle task is completed after primary approval and the exact plan/design commit, but before any Task-5 runtime command. It publishes execution authority. At the current candidate-review boundary it remains unexecuted, and `HANDOFF.current` remains unchanged.
 
@@ -2796,7 +5024,7 @@ Expected: all safe evidence verifies. The new secret and every container log are
 
 The approval is a root-owned regular mode-0600 file with exactly ten two-field records. Duplicate, conflicting, malformed, or extra records fail. The documentation commit is separately authorized; this task provides no staging or commit command.
 
-```bash
+```text
 set -euo pipefail
 repo=/opt/thoidai-work
 plan_rel=docs/superpowers/plans/2026-08-14-thoidai-work-phase-0-migration-history-reconciliation.md
@@ -2842,7 +5070,7 @@ Expected: approval mode and exact schema pass with one APPROVED verdict, v5 scop
 
 The external approval is copied once into the new root-only package. Every constant is then rebound from that exact snapshot, cross-recorded in `COMMIT.tsv`, and sealed by the five-payload manifest. Later validation never trusts a newly replaced external approval.
 
-```bash
+```text
 set -euo pipefail
 umask 077
 repo=/opt/thoidai-work
@@ -2903,7 +5131,7 @@ Expected: the package contains committed bytes, the exact approval snapshot, the
 
 No value is rebound from the external approval. The package path is read from the root-only pending pointer, the sealed helper performs the complete validation again, and that same validated path is the only value published.
 
-```bash
+```text
 set -euo pipefail
 umask 077
 pending_pointer=/opt/thoidai-reconciliation/phase0-execution-handoff.pending
@@ -2927,3 +5155,7 @@ Expected: the exact same full package/approval/commit/canonical/unrelated gate r
 ### Current v5 review stop
 
 For the present documentation turn: do not execute any Task-5 through Task-10 checkbox, do not stage or commit, do not create the primary approval or execution package, and do not update `HANDOFF.current`. Only static/live read-only validation and a separate root-only candidate review package are allowed.
+
+### Current v17 documentation-only stop
+
+For this v17 correction turn: do not execute Task 10, resume Task 5, run Task 6, stage, commit, amend, push, create or replace any approval, create either v17 fixed pointer, modify `HANDOFF.current`, replace the Task-5 pending pointer, or mutate any runtime. Only the two canonical document edits, static/read-only validation, the verified sealed v16 review package, the exact root-only v17 final-fix backup, guarded adversarial simulation, and one separate root-only v17 candidate review package are allowed.
