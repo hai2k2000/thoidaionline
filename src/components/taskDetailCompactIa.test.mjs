@@ -4,11 +4,10 @@ import test from "node:test";
 
 const source = readFileSync(new URL("./TaskDetailShell.tsx", import.meta.url), "utf8");
 
-test("compact IA exposes five accessible hash-addressable task views", () => {
+test("compact IA exposes four accessible hash-addressable task views", () => {
   for (const [id, label] of [
     ["overview", "Tổng quan"],
     ["progress", "Tiến độ"],
-    ["evaluation", "Đánh giá"],
     ["comments", "Bình luận"],
     ["history", "Lịch sử"],
   ]) {
@@ -23,11 +22,13 @@ test("compact IA exposes five accessible hash-addressable task views", () => {
   assert.match(source, /window\.location\.hash/);
   assert.match(source, /hashchange/);
   assert.match(source, /ArrowLeft|ArrowRight/);
+  assert.doesNotMatch(source, /id: ["']evaluation["'], label:/);
+  assert.match(source, /hash === "evaluation"/);
 });
 
 test("desktop gets a main/sidebar hierarchy and mobile tabs wrap without viewport overflow", () => {
   assert.match(source, /lg:grid-cols-\[minmax\(0,1fr\)_300px\]/);
-  assert.match(source, /grid-cols-2[^"]*sm:grid-cols-5/);
+  assert.match(source, /grid-cols-2[^"]*sm:grid-cols-4/);
   assert.doesNotMatch(source, /whitespace-nowrap[^"]*overflow-x-auto|overflow-x-scroll/);
   assert.match(source, /aria-label="Thông tin nhanh"/);
 });

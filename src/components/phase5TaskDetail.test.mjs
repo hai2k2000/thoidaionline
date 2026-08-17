@@ -14,7 +14,7 @@ test("Phase 5 task detail is server-scoped and retains canonical content in comp
   assert.doesNotMatch(page, /@\/lib\/supabase/);
   const sections = ["Thông tin chung", "Nội dung công việc", "Tiêu chí đánh giá", "Đánh giá công việc", "Báo cáo tiến triển & vướng mắc", "Trao đổi", "Đính kèm", "Lịch sử"];
   for (const section of sections) assert.ok(shell.includes(section), `${section} must remain reachable`);
-  const tabs = ["Tổng quan", "Tiến độ", "Đánh giá", "Bình luận", "Lịch sử"];
+  const tabs = ["Tổng quan", "Tiến độ", "Bình luận", "Lịch sử"];
   let offset = -1;
   for (const tab of tabs) {
     const next = shell.indexOf(`label: "${tab}"`);

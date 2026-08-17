@@ -12,12 +12,11 @@ type Capabilities = {
   report: boolean; review: boolean; update: boolean; comment: boolean;
   attachment: boolean; evaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean;
 };
-type TabId = "overview" | "progress" | "evaluation" | "comments" | "history";
+type TabId = "overview" | "progress" | "comments" | "history";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "overview", label: "Tổng quan" },
   { id: "progress", label: "Tiến độ" },
-  { id: "evaluation", label: "Đánh giá" },
   { id: "comments", label: "Bình luận" },
   { id: "history", label: "Lịch sử" },
 ];
@@ -52,10 +51,21 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const [comment, setComment] = useState("");
   const [evaluationText, setEvaluationText] = useState("");
   const [evaluationDeadline, setEvaluationDeadline] = useState(task.due_date ?? today());
+  const [contentExpanded, setContentExpanded] = useState(false);
 
   useEffect(() => {
     const syncHash = () => {
       const hash = window.location.hash.slice(1);
+      if (hash === "evaluation") {
+        setActiveTab("overview");
+        setTabsReady(true);
+        window.requestAnimationFrame(() => {
+          const evaluationWorkspace = document.getElementById("task-evaluation-workspace");
+          evaluationWorkspace?.focus({ preventScroll: true });
+          evaluationWorkspace?.scrollIntoView({ block: "start" });
+        });
+        return;
+      }
       if (TABS.some((tab) => tab.id === hash)) setActiveTab(hash as TabId);
       setTabsReady(true);
     };
@@ -138,29 +148,34 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
         </header>
         {message ? <p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p> : null}
 
-        <nav aria-label="Điều hướng chi tiết công việc" role="tablist" className="grid grid-cols-2 gap-1 rounded-xl border bg-white p-1 shadow-sm sm:grid-cols-5">
+        <nav aria-label="Điều hướng chi tiết công việc" role="tablist" className="grid grid-cols-2 gap-1 rounded-xl border bg-white p-1 shadow-sm sm:grid-cols-4">
           {TABS.map((tab, index) => <a key={tab.id} id={`task-tab-${tab.id}`} href={`#${tab.id}`} role="tab" aria-selected={activeTab === tab.id} aria-controls={`task-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} onClick={(event) => { event.preventDefault(); activateTab(tab.id); }} onKeyDown={(event) => handleTabKey(event, index)} className={`rounded-lg px-2 py-2 text-center text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500 ${activeTab === tab.id ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{tab.label}</a>)}
         </nav>
 
         <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="min-w-0 space-y-3">
             <section id="task-panel-overview" role="tabpanel" aria-labelledby="task-tab-overview" hidden={panelHidden("overview")} className="space-y-3">
-              <Section title="Nội dung công việc"><p className="whitespace-pre-wrap leading-7">{task.description || "—"}</p></Section>
-              <Section title="Tiêu chí đánh giá"><p className="whitespace-pre-wrap leading-7">{task.evaluation_criteria || "—"}</p></Section>
+              <div id="task-overview-content" className={contentExpanded ? "space-y-3" : "max-h-[42vh] space-y-3 overflow-y-auto overscroll-contain pr-1"}>
+                <Section title="Nội dung công việc"><p className="whitespace-pre-wrap leading-7">{task.description || "—"}</p></Section>
+                <Section title="Tiêu chí đánh giá"><p className="whitespace-pre-wrap leading-7">{task.evaluation_criteria || "—"}</p></Section>
+                <Section title="Minh chứng đính kèm"><Timeline empty="Chưa có minh chứng đính kèm.">{task.attachments.map((row) => <li key={row.id} className="break-words"><span>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB</span><button onClick={() => download(row.id)} className="mt-1 block text-orange-700 underline">Tải xuống</button></li>)}</Timeline></Section>
+              </div>
+              <button type="button" aria-expanded={contentExpanded} aria-controls="task-overview-content" onClick={() => setContentExpanded((expanded) => !expanded)} className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-orange-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                {contentExpanded ? "Thu gọn nội dung" : "Xem toàn bộ nội dung"}
+              </button>
+              <section id="task-evaluation-workspace" tabIndex={-1} aria-label="Đánh giá công việc" className="scroll-mt-4 focus:outline-none">
+                <Section title="Đánh giá công việc">
+                  {capabilities.evaluate ? <form onSubmit={submitEvaluation} className="mb-5 grid gap-3"><textarea aria-label="Nội dung đánh giá" value={evaluationText} onChange={(event) => setEvaluationText(event.target.value)} required maxLength={10000} placeholder="Nhập nhận xét định tính về kết quả công việc" className="min-h-28 rounded border p-2" /><label className="grid gap-1 text-sm font-semibold">Thời hạn đánh giá<input aria-label="Thời hạn đánh giá" type="date" value={evaluationDeadline} onChange={(event) => setEvaluationDeadline(event.target.value)} required className="rounded border p-2 font-normal" /></label><details className="rounded-lg border border-dashed bg-slate-50 p-3"><summary className="cursor-pointer text-sm font-semibold">Đánh giá bằng AI</summary><textarea id="task-ai-evaluation" aria-label="Đánh giá bằng AI" disabled value="Chưa cấu hình AI" readOnly className="mt-3 min-h-20 w-full rounded border bg-slate-100 p-2 text-slate-500" /><p className="mt-1 text-xs text-slate-500">Chỉ khả dụng sau khi cấu hình nhà cung cấp AI và thông tin xác thực phía máy chủ.</p></details><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu đánh giá</button></form> : null}
+                  <Timeline empty="Chưa có đánh giá.">{task.qualitative_evaluations.map((row) => <li key={row.id}><b>{dateText(row.evaluation_deadline)} · {row.evaluator?.full_name ?? "Người đánh giá"}</b><p className="whitespace-pre-wrap">{row.evaluation_text}</p></li>)}</Timeline>
+                  {task.legacy_evaluations.length ? <details className="mt-5 rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Đánh giá trước đây ({task.legacy_evaluations.length})</summary><p className="my-2 text-sm text-slate-500">Dữ liệu lịch sử được giữ nguyên và chỉ hiển thị nhận xét.</p><Timeline empty="Chưa có nhận xét cũ.">{task.legacy_evaluations.map((row) => <li key={row.id}><b>Ngày đánh giá: {row.checkpoint_date}</b><p className="whitespace-pre-wrap">{row.opinion || "Không có nhận xét."}</p></li>)}</Timeline></details> : null}
+                </Section>
+              </section>
             </section>
 
             <section id="task-panel-progress" role="tabpanel" aria-labelledby="task-tab-progress" hidden={panelHidden("progress")}>
               <Section title="Báo cáo tiến triển & vướng mắc">
                 {capabilities.report && !personal && !["done", "cancelled"].includes(task.status) ? <form onSubmit={submitProgress} className="mb-5 grid gap-3 sm:grid-cols-2"><input aria-label="Ngày báo cáo" type="date" value={reportedOn} onChange={(event) => setReportedOn(event.target.value)} required className="rounded border p-2" /><select aria-label="Trạng thái báo cáo" value={reportStatus} onChange={(event) => setReportStatus(event.target.value)} className="rounded border p-2"><option value="in_progress">Đang thực hiện</option><option value="blocked">Bị chặn</option><option value="waiting">Đang chờ</option><option value="nearly_done">Sắp xong</option></select><textarea aria-label="Tiến triển" value={progressText} onChange={(event) => setProgressText(event.target.value)} required placeholder="Nội dung tiến triển" className="rounded border p-2 sm:col-span-2" /><textarea aria-label="Vướng mắc" value={blockers} onChange={(event) => setBlockers(event.target.value)} required={reportStatus === "blocked"} placeholder="Vướng mắc (bắt buộc khi bị chặn)" className="rounded border p-2 sm:col-span-2" /><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white sm:col-span-2 sm:justify-self-start">Gửi báo cáo</button></form> : null}
                 <Timeline empty="Chưa có báo cáo.">{task.progress_reports.map((row) => <li key={row.id}><b>{dateText(row.reported_on)} · {reportLabel[row.report_status] ?? row.report_status}</b><p className="whitespace-pre-wrap">{row.progress_text}</p>{row.blockers ? <p className="mt-1 text-red-700">Vướng mắc: {row.blockers}</p> : null}</li>)}</Timeline>
-              </Section>
-            </section>
-
-            <section id="task-panel-evaluation" role="tabpanel" aria-labelledby="task-tab-evaluation" hidden={panelHidden("evaluation")}>
-              <Section title="Đánh giá công việc">
-                {capabilities.evaluate ? <form onSubmit={submitEvaluation} className="mb-5 grid gap-3"><textarea aria-label="Nội dung đánh giá" value={evaluationText} onChange={(event) => setEvaluationText(event.target.value)} required maxLength={10000} placeholder="Nhập nhận xét định tính về kết quả công việc" className="min-h-28 rounded border p-2" /><label className="grid gap-1 text-sm font-semibold">Thời hạn đánh giá<input aria-label="Thời hạn đánh giá" type="date" value={evaluationDeadline} onChange={(event) => setEvaluationDeadline(event.target.value)} required className="rounded border p-2 font-normal" /></label><details className="rounded-lg border border-dashed bg-slate-50 p-3"><summary className="cursor-pointer text-sm font-semibold">Đánh giá bằng AI</summary><textarea id="task-ai-evaluation" aria-label="Đánh giá bằng AI" disabled value="Chưa cấu hình AI" readOnly className="mt-3 min-h-20 w-full rounded border bg-slate-100 p-2 text-slate-500" /><p className="mt-1 text-xs text-slate-500">Chỉ khả dụng sau khi cấu hình nhà cung cấp AI và thông tin xác thực phía máy chủ.</p></details><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu đánh giá</button></form> : null}
-                <Timeline empty="Chưa có đánh giá.">{task.qualitative_evaluations.map((row) => <li key={row.id}><b>{dateText(row.evaluation_deadline)} · {row.evaluator?.full_name ?? "Người đánh giá"}</b><p className="whitespace-pre-wrap">{row.evaluation_text}</p></li>)}</Timeline>
-                {task.legacy_evaluations.length ? <details className="mt-5 rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Đánh giá trước đây ({task.legacy_evaluations.length})</summary><p className="my-2 text-sm text-slate-500">Dữ liệu lịch sử được giữ nguyên và chỉ hiển thị nhận xét.</p><Timeline empty="Chưa có nhận xét cũ.">{task.legacy_evaluations.map((row) => <li key={row.id}><b>Ngày đánh giá: {row.checkpoint_date}</b><p className="whitespace-pre-wrap">{row.opinion || "Không có nhận xét."}</p></li>)}</Timeline></details> : null}
               </Section>
             </section>
 
