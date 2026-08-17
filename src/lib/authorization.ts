@@ -21,6 +21,7 @@ export type TaskAccessSnapshot = {
   assigneeId: string | null;
   reviewerId: string | null;
   selfClaimable: boolean;
+  taskType: "assigned" | "personal" | null;
   status: string;
   participants: TaskParticipant[];
 };
@@ -33,6 +34,10 @@ export type TaskAction =
   | "report"
   | "review"
   | "comment"
+  | "personal_edit"
+  | "personal_deadline"
+  | "personal_cancel"
+  | "personal_complete"
   | "legacy_evaluate";
 
 export type EvaluationDecision =
@@ -148,6 +153,13 @@ export function canTaskAction(
     case "comment":
       return actor.permissions.can_comment
         && canTaskAction(actor, task, "view");
+    case "personal_edit":
+    case "personal_deadline":
+    case "personal_cancel":
+    case "personal_complete":
+      return task.taskType === "personal"
+        && (task.ownerId === actor.id || actor.roleCode === "admin")
+        && !["done", "cancelled"].includes(task.status);
     case "legacy_evaluate":
       return actor.roleCode === "admin"
         || (

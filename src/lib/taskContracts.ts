@@ -13,6 +13,7 @@ export type TaskParticipantDto = {
 export type TaskListItemDto = {
   id: string;
   title: string;
+  created_at: string;
   status: CanonicalTaskStatus;
   task_type: CanonicalTaskType | null;
   compatibility_task_type: CanonicalTaskType | null;
@@ -70,6 +71,7 @@ export type TaskDetailDto = TaskListItemDto & {
   description: string | null;
   attachment_url: string | null;
   effort_weight: number | null;
+  evaluation_criteria: string | null;
   owner: { full_name: string | null } | null;
   reviewer: { full_name: string | null } | null;
   comments: TaskCommentDto[];
@@ -78,8 +80,14 @@ export type TaskDetailDto = TaskListItemDto & {
 };
 
 export type TaskListQuery = {
-  status: string | null;
   search: string | null;
+  scope: "all" | "assigned" | "personal" | "watching";
+  taskType: CanonicalTaskType | null;
+  status: CanonicalTaskStatus | null;
+  fromDate: string | null;
+  toDate: string | null;
+  deadlineState: "on_time" | "due_soon" | "overdue" | "no_deadline" | null;
+  departmentId: string | null;
   page: number;
   pageSize: number;
 };
@@ -118,6 +126,16 @@ export type LegacyEvaluationInput = {
   isFinal: boolean;
 };
 
+export type PersonalTaskInput = {
+  title: string;
+  description: string;
+  startDate: string;
+  dueDate: string;
+  evaluationCriteria: string | null;
+};
+
+export type PersonalTaskEditInput = Omit<PersonalTaskInput, "dueDate">;
+
 export type RepositoryError = { code?: string | null };
 export type RepositoryResult<T> =
   | { ok: true; data: T }
@@ -133,6 +151,22 @@ export interface TaskRepository {
   create(
     actorId: string,
     input: LegacyCreateTaskInput,
+  ): Promise<RepositoryResult<{ id: string }>>;
+  createPersonal(
+    actorId: string,
+    input: PersonalTaskInput,
+  ): Promise<RepositoryResult<{ id: string }>>;
+  editPersonal(
+    actorId: string, taskId: string, input: PersonalTaskEditInput,
+  ): Promise<RepositoryResult<{ id: string }>>;
+  changePersonalDeadline(
+    actorId: string, taskId: string, dueDate: string, reason: string,
+  ): Promise<RepositoryResult<{ id: string }>>;
+  cancelPersonal(
+    actorId: string, taskId: string, reason: string,
+  ): Promise<RepositoryResult<{ id: string }>>;
+  completePersonal(
+    actorId: string, taskId: string,
   ): Promise<RepositoryResult<{ id: string }>>;
   update(
     actorId: string,

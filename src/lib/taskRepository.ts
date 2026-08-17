@@ -12,6 +12,8 @@ import type {
   LegacyCreateTaskInput,
   LegacyEvaluationInput,
   LegacyUpdateTaskInput,
+  PersonalTaskEditInput,
+  PersonalTaskInput,
   RepositoryResult,
   TaskDetailDto,
   TaskListItemDto,
@@ -23,6 +25,7 @@ import type {
 const TASK_LIST_FIELDS = [
   "id",
   "title",
+  "created_at",
   "status",
   "task_type",
   "start_date",
@@ -45,6 +48,7 @@ const TASK_DETAIL_FIELDS = [
   "description",
   "attachment_url",
   "effort_weight",
+  "evaluation_criteria",
   "owner:staff_users!tasks_owner_id_fkey(full_name)",
   "reviewer:staff_users!tasks_reviewer_id_fkey(full_name)",
 ].join(",");
@@ -57,6 +61,7 @@ type TaskAccessRow = {
   assignee_id: string | null;
   reviewer_id: string | null;
   self_claimable: boolean;
+  task_type: "assigned" | "personal" | null;
   status: string;
   task_assignees: {
     user_id: string;
@@ -86,6 +91,7 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
   assigneeId: row.assignee_id,
   reviewerId: row.reviewer_id,
   selfClaimable: row.self_claimable,
+  taskType: row.task_type,
   status: row.status,
   participants: (row.task_assignees ?? []).map((participant) => ({
     userId: participant.user_id,
@@ -133,8 +139,54 @@ export const taskRepository: TaskRepository = {
       .select(TASK_LIST_FIELDS, { count: "exact" })
       .order("created_at", { ascending: false });
     if (scope.data.length > 0) dbQuery = dbQuery.or(scope.data.join(","));
+    if (query.scope === "personal") {
+      dbQuery = dbQuery.eq("task_type", "personal").eq("owner_id", actor.id);
+    } else if (query.scope === "assigned") {
+      dbQuery = dbQuery
+        .eq("task_type", "assigned")
+        .or(`owner_id.eq.${actor.id},assignee_id.eq.${actor.id}`);
+    } else if (query.scope === "watching") {
+      const watcher = await serverSupabase
+        .from("task_assignees")
+        .select("task_id")
+        .eq("user_id", actor.id)
+        .eq("assignment_role", "watcher");
+      if (watcher.error) return fail(watcher.error);
+      const watcherIds = (watcher.data ?? []).map((row) => row.task_id as string);
+      if (watcherIds.length === 0) {
+        return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
+      }
+      dbQuery = dbQuery.in("id", watcherIds);
+    }
+    if (query.taskType) dbQuery = dbQuery.eq("task_type", query.taskType);
     if (query.status) dbQuery = dbQuery.eq("status", query.status);
     if (query.search) dbQuery = dbQuery.ilike("title", `%${query.search}%`);
+    if (query.fromDate) dbQuery = dbQuery.gte("start_date", query.fromDate);
+    if (query.toDate) dbQuery = dbQuery.lte("due_date", query.toDate);
+    if (query.departmentId) {
+      const canUseDepartment = hasOrganizationTaskView(actor)
+        || (actor.permissions.can_view_department_tasks
+          && actor.departmentId === query.departmentId);
+      if (!canUseDepartment) {
+        return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
+      }
+      dbQuery = dbQuery.eq("department_id", query.departmentId);
+    }
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
+    const dueSoon = new Date(`${today}T00:00:00Z`);
+    dueSoon.setUTCDate(dueSoon.getUTCDate() + 3);
+    const dueSoonDate = dueSoon.toISOString().slice(0, 10);
+    if (query.deadlineState === "no_deadline") dbQuery = dbQuery.is("due_date", null);
+    if (query.deadlineState === "overdue") {
+      dbQuery = dbQuery.lt("due_date", today).not("status", "in", "(done,cancelled)");
+    }
+    if (query.deadlineState === "due_soon") {
+      dbQuery = dbQuery.gte("due_date", today).lte("due_date", dueSoonDate)
+        .not("status", "in", "(done,cancelled)");
+    }
+    if (query.deadlineState === "on_time") dbQuery = dbQuery.gte("due_date", today);
     const from = (query.page - 1) * query.pageSize;
     const to = from + query.pageSize - 1;
     const { data, error, count } = await dbQuery.range(from, to);
@@ -155,7 +207,7 @@ export const taskRepository: TaskRepository = {
       .from("tasks")
       .select(
         "id,department_id,created_by,owner_id,assignee_id,reviewer_id," +
-        "self_claimable,status,task_assignees(user_id,assignment_role)",
+        "self_claimable,task_type,status,task_assignees(user_id,assignment_role)",
       )
       .eq("id", taskId)
       .maybeSingle();
@@ -228,6 +280,39 @@ export const taskRepository: TaskRepository = {
       p_due_date: input.dueDate,
       p_collaborator_ids: input.collaboratorIds,
     },
+  ),
+
+  createPersonal: (actorId, input: PersonalTaskInput) => mutation(
+    "api_create_personal_task",
+    {
+      p_actor_id: actorId, p_title: input.title, p_description: input.description,
+      p_start_date: input.startDate, p_due_date: input.dueDate,
+      p_evaluation_criteria: input.evaluationCriteria,
+    },
+  ),
+
+  editPersonal: (actorId, taskId, input: PersonalTaskEditInput) => mutation(
+    "api_edit_personal_task",
+    {
+      p_actor_id: actorId, p_task_id: taskId, p_title: input.title,
+      p_description: input.description, p_start_date: input.startDate,
+      p_evaluation_criteria: input.evaluationCriteria,
+    },
+  ),
+
+  changePersonalDeadline: (actorId, taskId, dueDate, reason) => mutation(
+    "api_change_personal_task_deadline",
+    { p_actor_id: actorId, p_task_id: taskId, p_new_due_date: dueDate, p_reason: reason },
+  ),
+
+  cancelPersonal: (actorId, taskId, reason) => mutation(
+    "api_cancel_personal_task",
+    { p_actor_id: actorId, p_task_id: taskId, p_reason: reason },
+  ),
+
+  completePersonal: (actorId, taskId) => mutation(
+    "api_complete_personal_task",
+    { p_actor_id: actorId, p_task_id: taskId },
   ),
 
   update: (actorId, taskId, input: LegacyUpdateTaskInput) => mutation(

@@ -4,6 +4,7 @@ import type {
   TaskAction,
 } from "./authorization";
 import type { ServerAuthUser } from "./serverSession";
+import { parseTaskListSearchParams } from "./taskFilters.mjs";
 import type {
   LegacyCreateTaskInput,
   LegacyEvaluationInput,
@@ -104,18 +105,11 @@ export function createTaskApplication(deps: Dependencies) {
       const guard = await deps.readActor();
       if (!guard.ok) return guard.response;
       const url = new URL(request.url);
-      const page = Number(url.searchParams.get("page") ?? "1");
-      const pageSize = Number(url.searchParams.get("pageSize") ?? "25");
-      if (
-        !Number.isInteger(page) || page < 1
-        || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100
-      ) return deps.error("invalid_request", 400);
-      const result = await deps.repository.list(toActor(guard.actor), {
-        status: cleanText(url.searchParams.get("status"), 40) || null,
-        search: cleanText(url.searchParams.get("q"), 200) || null,
-        page,
-        pageSize,
-      });
+      const query = parseTaskListSearchParams(url.searchParams);
+      if (query.fromDate && query.toDate && query.fromDate > query.toDate) {
+        return deps.error("invalid_request", 400);
+      }
+      const result = await deps.repository.list(toActor(guard.actor), query);
       return result.ok
         ? deps.json({ tasks: result.data })
         : deps.rpcFailure(result.error);
@@ -146,6 +140,79 @@ export function createTaskApplication(deps: Dependencies) {
               ),
         },
       });
+    },
+
+    async createPersonal(request: Request) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const title = cleanText(body.title, 500);
+      const description = cleanText(body.description, 10000);
+      const startDate = dateValue(body.startDate);
+      const dueDate = dateValue(body.dueDate);
+      const evaluationCriteria = cleanText(body.evaluationCriteria, 10000) || null;
+      if (!title || !description || !startDate || !dueDate || startDate > dueDate) {
+        return deps.error("invalid_request", 400);
+      }
+      const result = await deps.repository.createPersonal(actor.id, {
+        title, description, startDate, dueDate, evaluationCriteria,
+      });
+      return result.ok
+        ? deps.json({ task: result.data }, 201)
+        : deps.rpcFailure(result.error);
+    },
+
+    async editPersonal(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const taskId = await authorizeMutation(actor, taskIdValue, "personal_edit");
+      if (taskId instanceof Response) return taskId;
+      const title = cleanText(body.title, 500);
+      const description = cleanText(body.description, 10000);
+      const startDate = dateValue(body.startDate);
+      const evaluationCriteria = cleanText(body.evaluationCriteria, 10000) || null;
+      if (!title || !description || !startDate) return deps.error("invalid_request", 400);
+      const result = await deps.repository.editPersonal(actor.id, taskId, {
+        title, description, startDate, evaluationCriteria,
+      });
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async changePersonalDeadline(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const taskId = await authorizeMutation(actor, taskIdValue, "personal_deadline");
+      if (taskId instanceof Response) return taskId;
+      const dueDate = dateValue(body.dueDate);
+      const reason = cleanText(body.reason, 2000);
+      if (!dueDate || !reason) return deps.error("invalid_request", 400);
+      const result = await deps.repository.changePersonalDeadline(
+        actor.id, taskId, dueDate, reason,
+      );
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async cancelPersonal(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const taskId = await authorizeMutation(actor, taskIdValue, "personal_cancel");
+      if (taskId instanceof Response) return taskId;
+      const reason = cleanText(body.reason, 2000);
+      if (!reason) return deps.error("invalid_request", 400);
+      const result = await deps.repository.cancelPersonal(actor.id, taskId, reason);
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async completePersonal(request: Request, taskIdValue: unknown) {
+      const guard = await deps.mutationActor();
+      if (!guard.ok) return guard.response;
+      const taskId = await authorizeMutation(guard.actor, taskIdValue, "personal_complete");
+      if (taskId instanceof Response) return taskId;
+      const result = await deps.repository.completePersonal(guard.actor.id, taskId);
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
     },
 
     async create(request: Request) {
