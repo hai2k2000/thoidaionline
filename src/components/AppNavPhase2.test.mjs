@@ -35,3 +35,19 @@ test("client permission DTO includes every Phase-1 navigation permission", () =>
   assert.match(authSource, /can_evaluate_step2/);
   assert.match(authSource, /can_manage_rubrics/);
 });
+
+test("both canonical route shells render the permission-driven sidebar", () => {
+  const taskCenter = fs.readFileSync(
+    new URL("./TaskCenterShell.tsx", import.meta.url),
+    "utf8",
+  );
+  const taskAssign = fs.readFileSync(
+    new URL("./TaskAssignShell.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(taskCenter, /<AppNav/);
+  assert.match(taskCenter, /currentPath="\/tasks"/);
+  assert.match(taskAssign, /<AppNav/);
+  assert.match(taskAssign, /currentPath="\/tasks\/assign"/);
+});
