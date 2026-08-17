@@ -3,13 +3,14 @@ export type Phase2NavigationAccess = {
   canAssignTask: boolean;
   canEvaluateStep1: boolean;
   canEvaluateStep2: boolean;
+  isDepartmentManager?: boolean;
   canManageRubrics: boolean;
   canManageUsers: boolean;
   canManagePermissions: boolean;
 };
 
 export type Phase2NavigationItem = {
-  id: "assign" | "tasks" | "account" | "users" | "departments"
+  id: "assign" | "tasks" | "evaluations" | "account" | "users" | "departments"
     | "permissions" | "evaluation-rubrics" | "department-managers";
   href: string;
 };
@@ -30,6 +31,10 @@ export function getPhase2Navigation(
         ? [{ id: "assign", href: "/tasks/assign" } as const]
         : []),
       { id: "tasks", href: "/tasks" },
+      ...((access.canEvaluateStep1 && access.isDepartmentManager)
+        || (access.roleCode === "tong_bien_tap" && access.canEvaluateStep2)
+        ? [{ id: "evaluations", href: "/evaluations" } as const]
+        : []),
     ],
     account: [{ id: "account", href: "/account" }],
     configuration: [

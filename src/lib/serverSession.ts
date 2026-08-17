@@ -24,6 +24,7 @@ export type ServerAuthUser = {
   role_name: string;
   role_level: number;
   active: boolean;
+  is_department_manager: boolean;
   permissions: PermissionSet;
 };
 
@@ -78,6 +79,14 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   };
   if (session.sessionVersion !== row.session_version) return null;
   if (!row.roles) return null;
+  const managedDepartments = await serverSupabase
+    .from("departments")
+    .select("id")
+    .eq("manager_id", row.id)
+    .eq("active", true)
+    .limit(1);
+  const isDepartmentManager = !managedDepartments.error
+    && (managedDepartments.data?.length ?? 0) > 0;
 
   return {
     id: row.id,
@@ -89,6 +98,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     role_name: row.roles.name,
     role_level: row.roles.level,
     active: row.active,
+    is_department_manager: isDepartmentManager,
     permissions: normalizePermissions(row.roles.role_permissions),
   };
 }

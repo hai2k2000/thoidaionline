@@ -14,6 +14,7 @@ type AppNavProps = {
 const labels = {
   assign: "Giao vi\u1ec7c",
   tasks: "Qu\u1ea3n l\u00fd c\u00f4ng vi\u1ec7c",
+  evaluations: "\u0110\u00e1nh gi\u00e1 nh\u00e2n vi\u00ean",
   account: "T\u00e0i kho\u1ea3n",
   users: "Qu\u1ea3n l\u00fd nh\u00e2n vi\u00ean",
   departments: "Ph\u00f2ng ban",
@@ -136,6 +137,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
     canAssignTask: hasPermission("can_assign_task"),
     canEvaluateStep1: hasPermission("can_evaluate_step1"),
     canEvaluateStep2: hasPermission("can_evaluate_step2"),
+    isDepartmentManager: user?.is_department_manager === true,
     canManageRubrics: hasPermission("can_manage_rubrics"),
     canManageUsers: hasPermission("can_manage_users"),
     canManagePermissions: hasPermission("can_manage_permissions"),

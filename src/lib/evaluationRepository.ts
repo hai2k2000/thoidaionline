@@ -13,6 +13,35 @@ export type EvaluationItem = {
   factors: RubricFactor[]; evidence: EvaluationEvidence[]; canSelf: boolean; canManager: boolean; canTbt: boolean;
 };
 export type EvaluationPageData = { items: EvaluationItem[]; openCycles: { id: string; name: string; start_date: string; end_date: string }[]; currentUserId: string };
+export type PersonnelEvaluationSubject = {
+  employeeId: string; employeeName: string; departmentId: string | null;
+  departmentName: string; isDepartmentManager: boolean;
+  reviewId: string | null; reviewStatus: string | null;
+  workflowType: string | null; cycleId: string | null;
+  cycleName: string | null; cycleStart: string | null; cycleEnd: string | null;
+  selfScore: number | null; managerScore: number | null;
+  finalScore: number | null; rank: string | null;
+};
+export type PersonnelEvaluationTask = {
+  id: string; title: string; difficulty: string; completion_status: string;
+  deadline_outcome: string; due_date: string | null;
+};
+export type PersonnelEvaluationScore = {
+  stage: "self" | "manager" | "tbt"; factor_code: string;
+  score: number; comment: string | null;
+};
+export type PersonnelEvaluationDetail = {
+  employeeId: string; employeeName: string; departmentName: string;
+  reviewId: string | null; reviewStatus: string | null; workflowType: string | null;
+  cycleName: string | null; cycleStart: string | null; cycleEnd: string | null;
+  allowedAction: "manager" | "tbt" | null;
+  factors: RubricFactor[]; scores: PersonnelEvaluationScore[];
+  tasks: PersonnelEvaluationTask[];
+};
+export type PersonnelEvaluationData = {
+  subjects: PersonnelEvaluationSubject[]; detail: PersonnelEvaluationDetail | null;
+  from: string; to: string; selectedEmployeeId: string | null;
+};
 
 type RawReview = {
   id: string; employee_id: string; status: string; workflow_type: string | null; self_score: number | null; reviewer_score: number | null; final_score: number | null; rank: string | null;
@@ -63,6 +92,80 @@ export const evaluationRepository = {
       };
     }));
     return { items, openCycles: (cyclesResult.data ?? []) as EvaluationPageData["openCycles"], currentUserId: actor.id };
+  },
+
+  async personnelList(actor: AuthorizationActor, filters: {
+    from: string; to: string; employeeId: string | null;
+  }): Promise<
+    | { ok: true; data: PersonnelEvaluationData }
+    | { ok: false; errorCode: string | null }
+  > {
+    const subjectsResult = await serverSupabase.rpc(
+      "api_list_personnel_evaluation_subjects",
+      { p_actor: actor.id, p_from: filters.from, p_to: filters.to },
+    );
+    if (subjectsResult.error) {
+      return { ok: false, errorCode: subjectsResult.error.code ?? null };
+    }
+    type RawSubject = {
+      employee_id: string; employee_name: string;
+      department_id: string | null; department_name: string;
+      is_department_manager: boolean; review_id: string | null;
+      review_status: string | null; workflow_type: string | null;
+      cycle_id: string | null; cycle_name: string | null;
+      cycle_start: string | null; cycle_end: string | null;
+      self_score: number | null; manager_score: number | null;
+      final_score: number | null; rank: string | null;
+    };
+    const subjects = ((subjectsResult.data ?? []) as RawSubject[]).map(
+      (row): PersonnelEvaluationSubject => ({
+        employeeId: row.employee_id, employeeName: row.employee_name,
+        departmentId: row.department_id, departmentName: row.department_name,
+        isDepartmentManager: row.is_department_manager,
+        reviewId: row.review_id, reviewStatus: row.review_status,
+        workflowType: row.workflow_type, cycleId: row.cycle_id,
+        cycleName: row.cycle_name, cycleStart: row.cycle_start,
+        cycleEnd: row.cycle_end, selfScore: row.self_score,
+        managerScore: row.manager_score, finalScore: row.final_score,
+        rank: row.rank,
+      }),
+    );
+    let detail: PersonnelEvaluationDetail | null = null;
+    if (filters.employeeId) {
+      const detailResult = await serverSupabase.rpc(
+        "api_get_personnel_evaluation_detail",
+        {
+          p_actor: actor.id, p_employee: filters.employeeId,
+          p_from: filters.from, p_to: filters.to,
+        },
+      );
+      if (detailResult.error) {
+        return { ok: false, errorCode: detailResult.error.code ?? null };
+      }
+      const row = detailResult.data as {
+        employee_id: string; employee_name: string; department_name: string;
+        review_id: string | null; review_status: string | null;
+        workflow_type: string | null; cycle_name: string | null;
+        cycle_start: string | null; cycle_end: string | null;
+        allowed_action: "manager" | "tbt" | null;
+        factors: RubricFactor[]; scores: PersonnelEvaluationScore[];
+        tasks: PersonnelEvaluationTask[];
+      };
+      detail = {
+        employeeId: row.employee_id, employeeName: row.employee_name,
+        departmentName: row.department_name, reviewId: row.review_id,
+        reviewStatus: row.review_status, workflowType: row.workflow_type,
+        cycleName: row.cycle_name, cycleStart: row.cycle_start,
+        cycleEnd: row.cycle_end, allowedAction: row.allowed_action,
+        factors: row.factors ?? [], scores: row.scores ?? [],
+        tasks: row.tasks ?? [],
+      };
+    }
+    return {
+      ok: true,
+      data: { subjects, detail, from: filters.from, to: filters.to,
+        selectedEmployeeId: filters.employeeId },
+    };
   },
 
   async rubrics() {

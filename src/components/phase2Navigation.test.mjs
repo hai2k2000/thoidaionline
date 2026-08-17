@@ -36,6 +36,7 @@ test("manager sees assignment and step-one evaluation while TBT cannot assign", 
     roleCode: "truong_phong",
     canAssignTask: true,
     canEvaluateStep1: true,
+    isDepartmentManager: true,
   });
   const tbt = getPhase2Navigation({
     ...employee,
@@ -46,10 +47,12 @@ test("manager sees assignment and step-one evaluation while TBT cannot assign", 
   assert.deepEqual(manager.primary, [
     { id: "assign", href: "/tasks/assign" },
     { id: "tasks", href: "/tasks" },
+    { id: "evaluations", href: "/evaluations" },
   ]);
   assert.equal(manager.showEvaluationTab, true);
   assert.deepEqual(tbt.primary, [
     { id: "tasks", href: "/tasks" },
+    { id: "evaluations", href: "/evaluations" },
   ]);
   assert.equal(tbt.showEvaluationTab, true);
 });

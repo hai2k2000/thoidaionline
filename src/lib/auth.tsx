@@ -12,6 +12,7 @@ type AuthUser = {
   role_code: string;
   role_name: string;
   active: boolean;
+  is_department_manager: boolean;
   permissions: PermissionSet;
 };
 
