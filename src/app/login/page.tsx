@@ -17,7 +17,7 @@ export default function LoginPage() {
       const res = await login(identifier.trim(), password);
       if (!res.ok) return setMessage(`❌ ${res.error}`);
       setMessage("✅ Đăng nhập thành công.");
-      router.push("/");
+      router.replace("/tasks");
     } catch {
       setMessage("❌ Không kết nối được dữ liệu đăng nhập. Vui lòng thử lại.");
     }

@@ -11,5 +11,5 @@ type LegacyRedirectPageProps = {
 export default async function LegacyRedirectPage({
   searchParams,
 }: LegacyRedirectPageProps) {
-  redirect(buildLegacyTaskRedirectFromParams("/tasks/pending-review", await searchParams));
+  redirect(buildLegacyTaskRedirectFromParams("/planning/reports", await searchParams));
 }

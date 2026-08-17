@@ -72,3 +72,23 @@ export function buildLegacyTaskRedirect(
   const query = search.toString();
   return query ? `/tasks?${query}` : "/tasks";
 }
+
+export type LegacySearchParams = Record<
+  string,
+  string | string[] | undefined
+>;
+
+export function buildLegacyTaskRedirectFromParams(
+  path: LegacyTaskRoute,
+  params: LegacySearchParams,
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (Array.isArray(value)) {
+      value.forEach((item) => search.append(key, item));
+    } else if (value !== undefined) {
+      search.append(key, value);
+    }
+  }
+  return buildLegacyTaskRedirect(path, search.toString());
+}

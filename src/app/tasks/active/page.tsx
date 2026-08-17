@@ -1,5 +1,15 @@
-import TaskStatusTablePage from "@/components/TaskStatusTablePage";
+import { redirect } from "next/navigation";
+import {
+  buildLegacyTaskRedirectFromParams,
+  type LegacySearchParams,
+} from "@/components/phase2Navigation";
 
-export default function TasksActivePage() {
-  return <TaskStatusTablePage title="Công việc đang triển khai" currentPath="/tasks/active" mode="active" />;
+type LegacyRedirectPageProps = {
+  searchParams: Promise<LegacySearchParams>;
+};
+
+export default async function LegacyRedirectPage({
+  searchParams,
+}: LegacyRedirectPageProps) {
+  redirect(buildLegacyTaskRedirectFromParams("/tasks/active", await searchParams));
 }

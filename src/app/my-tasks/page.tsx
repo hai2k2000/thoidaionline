@@ -1,14 +1,15 @@
-"use client";
+import { redirect } from "next/navigation";
+import {
+  buildLegacyTaskRedirectFromParams,
+  type LegacySearchParams,
+} from "@/components/phase2Navigation";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+type LegacyRedirectPageProps = {
+  searchParams: Promise<LegacySearchParams>;
+};
 
-export default function MyTasksPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/");
-  }, [router]);
-
-  return null;
+export default async function LegacyRedirectPage({
+  searchParams,
+}: LegacyRedirectPageProps) {
+  redirect(buildLegacyTaskRedirectFromParams("/my-tasks", await searchParams));
 }
