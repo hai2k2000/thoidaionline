@@ -2,15 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
 
 type Department = { id: string; code: string; name: string; active: boolean };
+type DepartmentPayload = { departments?: Department[]; error?: { code?: string } };
 
 export default function DepartmentsPage() {
   const router = useRouter();
-  const { loading: authLoading, user, hasPermission, logout } = useAuth();
+  const { loading: authLoading, user, logout } = useAuth();
 
   const [deps, setDeps] = useState<Department[]>([]);
   const [code, setCode] = useState("");
@@ -18,37 +18,52 @@ export default function DepartmentsPage() {
   const [message, setMessage] = useState("Đang tải...");
 
   const loadDeps = async () => {
-    const { data, error } = await supabase.from("departments").select("id,code,name,active").order("name");
-    if (error) return setMessage(`❌ ${error.message}`), undefined;
-    setDeps((data ?? []) as Department[]);
-    setMessage("✅ Đã tải phòng ban.");
+    try {
+      const response = await fetch("/api/departments", { cache: "no-store" });
+      const payload = await response.json().catch(() => null) as DepartmentPayload | null;
+      if (!response.ok) throw new Error(payload?.error?.code || "operation_failed");
+      setDeps(payload?.departments ?? []);
+      setMessage("✅ Đã tải phòng ban.");
+    } catch {
+      setMessage("❌ Không thể tải phòng ban.");
+    }
   };
 
   const createDepartment = async () => {
     if (!code.trim() || !name.trim()) return setMessage("❌ Cần nhập mã phòng ban và tên phòng ban."), undefined;
     const normalizedCode = code.trim().toLowerCase().replace(/\s+/g, "-");
-    const { error } = await supabase.from("departments").insert({ code: normalizedCode, name: name.trim(), active: true });
-    if (error) return setMessage(`❌ ${error.message}`), undefined;
+    const response = await fetch("/api/departments", {
+      method: "POST",
+      cache: "no-store",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: normalizedCode, name: name.trim() }),
+    });
+    if (!response.ok) return setMessage("❌ Không thể tạo phòng ban."), undefined;
     setCode("");
     setName("");
     await loadDeps();
   };
 
   const updateDepartment = async (id: string, patch: Partial<Department>) => {
-    const { error } = await supabase.from("departments").update(patch).eq("id", id);
-    if (error) return setMessage(`❌ ${error.message}`), undefined;
+    const response = await fetch("/api/departments", {
+      method: "PATCH",
+      cache: "no-store",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, name: patch.name, active: patch.active }),
+    });
+    if (!response.ok) return setMessage("❌ Không thể cập nhật phòng ban."), undefined;
     await loadDeps();
   };
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
-    if (!hasPermission("can_manage_users")) return void router.push("/");
+    if (user.role_code !== "admin" || !user.permissions.can_manage_users) return void router.push("/");
     const t = setTimeout(() => {
       void loadDeps();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, hasPermission, router]);
+  }, [authLoading, user, router]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
