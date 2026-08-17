@@ -7,6 +7,7 @@ import { resolveTaskCenterView } from "@/lib/taskCenterView";
 import { parseTaskListSearchParams } from "@/lib/taskFilters.mjs";
 import { taskRepository } from "@/lib/taskRepository";
 import type { TaskListResult } from "@/lib/taskContracts";
+import { evaluationRepository, type EvaluationPageData } from "@/lib/evaluationRepository";
 
 type TasksPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -31,8 +32,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     roleLevel: user.role_level,
     permissions: user.permissions,
   };
-  const canViewEvaluations =
-    user.permissions.can_evaluate_step1 || user.permissions.can_evaluate_step2;
+  const canViewEvaluations = user.permissions.can_evaluate_step1
+    || user.permissions.can_evaluate_step2
+    || user.id === actor.id;
   const rawParams = await searchParams;
   const view = resolveTaskCenterView(rawParams.view, canViewEvaluations);
   const query = parseTaskListSearchParams(toUrlSearchParams(rawParams));
@@ -46,6 +48,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     if (result.ok) tasks = result.data;
     else listError = true;
   }
+  let evaluations: EvaluationPageData = { items: [], openCycles: [], currentUserId: user.id };
+  if (view === "evaluations") evaluations = await evaluationRepository.list(actor, rawParams);
 
   let departments: { id: string; name: string }[] = [];
   if (hasOrganizationTaskView(actor) || user.permissions.can_view_department_tasks) {
@@ -67,6 +71,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       canViewEvaluations={canViewEvaluations}
       currentUserId={user.id}
       departments={departments}
+      evaluations={evaluations}
       listError={listError}
       query={query}
       tasks={tasks}

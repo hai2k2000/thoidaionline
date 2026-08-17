@@ -8,12 +8,15 @@ import { useAuth } from "@/lib/auth";
 import { taskListHref } from "@/lib/taskFilters.mjs";
 import type { TaskCenterView } from "@/lib/taskCenterView";
 import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
+import EmployeeEvaluationShell from "@/components/EmployeeEvaluationShell";
+import type { EvaluationPageData } from "@/lib/evaluationRepository";
 
 type Props = {
   canAssignTask: boolean;
   canViewEvaluations: boolean;
   currentUserId: string;
   departments: { id: string; name: string }[];
+  evaluations: EvaluationPageData;
   listError: boolean;
   query: TaskListQuery;
   tasks: TaskListResult;
@@ -74,7 +77,7 @@ function FilterFields({ query, departments }: Pick<Props, "query" | "departments
 }
 
 export default function TaskCenterShell(props: Props) {
-  const { canAssignTask, canViewEvaluations, currentUserId, departments, listError, query, tasks, userLabel, view } = props;
+  const { canAssignTask, canViewEvaluations, currentUserId, departments, evaluations, listError, query, tasks, userLabel, view } = props;
   const router = useRouter();
   const { logout } = useAuth();
   const onLogout = () => { logout(); router.replace("/login"); };
@@ -102,7 +105,7 @@ export default function TaskCenterShell(props: Props) {
           </header>
 
           {view === "evaluations" ? (
-            <section className="mt-4 rounded-xl border bg-white p-4 shadow-sm"><h2 className="text-lg font-semibold">Đánh giá nhân viên</h2><p className="mt-2 text-sm text-slate-600">Khu vực đánh giá được mở theo quyền của bạn.</p></section>
+            <EmployeeEvaluationShell data={evaluations} />
           ) : (
             <>
               <nav aria-label="Phạm vi công việc" className="mt-4 flex flex-wrap gap-2">
