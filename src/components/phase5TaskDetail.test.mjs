@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 
-test("Phase 5 task detail is server-scoped and ordered by canonical sections", () => {
+test("Phase 5 task detail is server-scoped and retains canonical content in compact navigation", () => {
   const page = read("../app/tasks/[id]/page.tsx");
   const shell = read("../components/TaskDetailShell.tsx");
   assert.match(page, /getSessionUser/);
@@ -13,10 +13,12 @@ test("Phase 5 task detail is server-scoped and ordered by canonical sections", (
   assert.doesNotMatch(page, /"use client"/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
   const sections = ["Thông tin chung", "Nội dung công việc", "Tiêu chí đánh giá", "Đánh giá công việc", "Báo cáo tiến triển & vướng mắc", "Trao đổi", "Đính kèm", "Lịch sử"];
+  for (const section of sections) assert.ok(shell.includes(section), `${section} must remain reachable`);
+  const tabs = ["Tổng quan", "Tiến độ", "Đánh giá", "Bình luận", "Lịch sử"];
   let offset = -1;
-  for (const section of sections) {
-    const next = shell.indexOf(section);
-    assert.ok(next > offset, `${section} must follow the canonical detail order`);
+  for (const tab of tabs) {
+    const next = shell.indexOf(`label: "${tab}"`);
+    assert.ok(next > offset, `${tab} must follow the compact navigation order`);
     offset = next;
   }
 });
