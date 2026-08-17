@@ -2,27 +2,39 @@ begin;
 
 do $$
 declare
-  v_claim regprocedure := 'public.claim_task_plan(uuid,uuid)'::regprocedure;
-  v_eval regprocedure := 'public.save_task_evaluation_checkpoint(uuid,uuid,uuid,integer,integer,text,boolean,text,date,boolean)'::regprocedure;
+  v_functions regprocedure[] := array[
+    'public.claim_task_plan(uuid,uuid)'::regprocedure,
+    'public.save_task_evaluation_checkpoint(uuid,uuid,uuid,integer,integer,text,boolean,text,date,boolean)'::regprocedure,
+    'public.api_create_task(uuid,text,text,uuid,uuid,uuid,text,date,uuid[])'::regprocedure,
+    'public.api_update_task(uuid,uuid,text,date,boolean)'::regprocedure,
+    'public.api_claim_task_plan(uuid,uuid)'::regprocedure,
+    'public.api_report_task_progress(uuid,uuid,integer,text,text)'::regprocedure,
+    'public.api_review_task_completion(uuid,uuid,text,text)'::regprocedure,
+    'public.api_save_task_evaluation_checkpoint(uuid,uuid,uuid,integer,integer,text,boolean,text,date,boolean)'::regprocedure,
+    'public.api_add_task_comment(uuid,uuid,text)'::regprocedure,
+    'public.api_create_bulk_task_plan(uuid,text,date,uuid,text,jsonb,uuid)'::regprocedure
+  ];
+  v_function regprocedure;
 begin
-  if has_function_privilege('anon', v_claim, 'EXECUTE') then
-    raise exception 'anon must not execute claim_task_plan';
-  end if;
-  if has_function_privilege('authenticated', v_claim, 'EXECUTE') then
-    raise exception 'authenticated must not execute claim_task_plan directly';
-  end if;
-  if has_function_privilege('anon', v_eval, 'EXECUTE') then
-    raise exception 'anon must not execute save_task_evaluation_checkpoint';
-  end if;
-  if has_function_privilege('authenticated', v_eval, 'EXECUTE') then
-    raise exception 'authenticated must not execute save_task_evaluation_checkpoint directly';
-  end if;
-  if not has_function_privilege('service_role', v_claim, 'EXECUTE') then
-    raise exception 'service_role must execute claim_task_plan';
-  end if;
-  if not has_function_privilege('service_role', v_eval, 'EXECUTE') then
-    raise exception 'service_role must execute save_task_evaluation_checkpoint';
-  end if;
+  foreach v_function in array v_functions loop
+    if has_function_privilege('anon',v_function,'EXECUTE')
+       or has_function_privilege('authenticated',v_function,'EXECUTE')
+       or exists (
+         select 1
+         from pg_proc p
+         cross join lateral aclexplode(
+           coalesce(p.proacl,acldefault('f',p.proowner))
+         ) acl
+         where p.oid=v_function
+           and acl.grantee=0
+           and acl.privilege_type='EXECUTE'
+       ) then
+      raise exception 'non-service role can execute %',v_function;
+    end if;
+    if not has_function_privilege('service_role',v_function,'EXECUTE') then
+      raise exception 'service_role cannot execute %',v_function;
+    end if;
+  end loop;
 end;
 $$;
 
