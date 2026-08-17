@@ -13,6 +13,8 @@ const employee = {
   canEvaluateStep1: false,
   canEvaluateStep2: false,
   canManageRubrics: false,
+  canManageUsers: false,
+  canManagePermissions: false,
 };
 
 test("employee navigation exposes only Task Center and account", () => {
@@ -68,6 +70,59 @@ test("shared-rubric configuration remains admin-only", () => {
     }).configuration,
     [],
   );
+});
+
+test("admin configuration restores legacy administration beside new configuration", () => {
+  assert.deepEqual(
+    getPhase2Navigation({
+      ...employee,
+      roleCode: "admin",
+      canManageUsers: true,
+      canManagePermissions: true,
+      canManageRubrics: true,
+    }).configuration,
+    [
+      { id: "users", href: "/users" },
+      { id: "departments", href: "/departments" },
+      { id: "permissions", href: "/permissions" },
+      {
+        id: "department-managers",
+        href: "/configuration/department-managers",
+      },
+      {
+        id: "evaluation-rubrics",
+        href: "/configuration/evaluation-rubrics",
+      },
+    ],
+  );
+});
+
+test("legacy administration visibility is fail-closed by admin role and permission", () => {
+  const usersOnly = getPhase2Navigation({
+    ...employee,
+    roleCode: "admin",
+    canManageUsers: true,
+  });
+  const permissionsOnly = getPhase2Navigation({
+    ...employee,
+    roleCode: "admin",
+    canManagePermissions: true,
+  });
+  const nonAdmin = getPhase2Navigation({
+    ...employee,
+    canManageUsers: true,
+    canManagePermissions: true,
+  });
+
+  assert.deepEqual(usersOnly.configuration, [
+    { id: "users", href: "/users" },
+    { id: "departments", href: "/departments" },
+    { id: "department-managers", href: "/configuration/department-managers" },
+  ]);
+  assert.deepEqual(permissionsOnly.configuration, [
+    { id: "permissions", href: "/permissions" },
+  ]);
+  assert.deepEqual(nonAdmin.configuration, []);
 });
 
 test("legacy redirects preserve unrelated query state and lock canonical filters", () => {

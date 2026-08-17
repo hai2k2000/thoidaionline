@@ -17,7 +17,15 @@ test("sidebar consumes the canonical Phase-2 navigation policy", () => {
   assert.match(navSource, /can_evaluate_step1/);
   assert.match(navSource, /can_evaluate_step2/);
   assert.match(navSource, /can_manage_rubrics/);
+  assert.match(navSource, /can_manage_users/);
+  assert.match(navSource, /can_manage_permissions/);
   assert.doesNotMatch(navSource, /groups\.map|tasks\/active|planning\/reports|href="\/performance"/);
+});
+
+test("sidebar renders labels for every restored legacy administration route", () => {
+  assert.match(navSource, /users:\s*"Qu\\u1ea3n l\\u00fd nh\\u00e2n vi\\u00ean"/);
+  assert.match(navSource, /departments:\s*"Ph\\u00f2ng ban"/);
+  assert.match(navSource, /permissions:\s*"Ph\\u00e2n quy\\u1ec1n"/);
 });
 
 test("sidebar implements the required off-canvas accessibility contract", () => {
