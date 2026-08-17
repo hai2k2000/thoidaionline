@@ -48,3 +48,26 @@ test("UUID validation is centralized", () => {
   assert.match(source, /UUID_PATTERN/);
   assert.match(source, /export function asUuid/);
 });
+const permissionsRoute = readFileSync(
+  new URL("../app/api/permissions/route.ts", import.meta.url),
+  "utf8",
+);
+
+test("permission API is Admin-only and exposes the five Phase-1 fields", () => {
+  assert.match(permissionsRoute, /actor\.role_code\s*!==\s*["']admin["']/);
+  assert.match(permissionsRoute, /PERMISSION_KEYS/);
+  for (const key of [
+    "can_assign_task",
+    "can_view_department_tasks",
+    "can_evaluate_step1",
+    "can_evaluate_step2",
+    "can_manage_rubrics",
+  ]) {
+    assert.match(permissionsRoute, new RegExp(key));
+  }
+  assert.match(permissionsRoute, /requireReadActor/);
+  assert.match(permissionsRoute, /requireMutationActor/);
+  assert.doesNotMatch(permissionsRoute, /\["admin",\s*"tong_bien_tap"/);
+  assert.match(permissionsRoute, /logServerAudit/);
+  assert.doesNotMatch(permissionsRoute, /services\/audit/);
+});
