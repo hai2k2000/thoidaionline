@@ -3,7 +3,7 @@ import "server-only";
 import type { AuthorizationActor } from "@/lib/authorization";
 import { serverSupabase } from "@/lib/serverSupabase";
 
-export type AssignmentDepartment = { id: string; name: string; hasManager: boolean };
+export type AssignmentDepartment = { id: string; name: string; managerId: string | null; hasManager: boolean };
 export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; canReview: boolean };
 
 export const taskAssignmentRepository = {
@@ -24,6 +24,7 @@ export const taskAssignmentRepository = {
       departments: (departments.data ?? []).map((row) => ({
         id: row.id as string,
         name: row.name as string,
+        managerId: row.manager_id as string | null,
         hasManager: row.manager_id !== null,
       })),
       people: (people.data ?? []).map((row) => ({
