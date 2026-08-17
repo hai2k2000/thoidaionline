@@ -121,11 +121,11 @@ test("task detail source hides mutations from employees and removes legacy contr
   assert.doesNotMatch(source, />\s*Có đóng góp\s*</);
 });
 
-test("employee summary source exposes modal task navigation", () => {
+test("legacy performance route redirects into the Task Center evaluation tab", () => {
   const source = readFileSync(new URL("../app/performance/page.tsx", import.meta.url), "utf8");
-  assert.match(source, /selectedEmployee/);
-  assert.match(source, /taskDetailUrl\(row\.taskId\)/);
-  assert.match(source, /router\.push/);
+  assert.match(source, /buildLegacyTaskRedirectFromParams/);
+  assert.match(source, /"\/performance"/);
+  assert.doesNotMatch(source, /@\/lib\/supabase/);
 });
 
 test("local checkpoint dates do not use UTC ISO truncation", () => {
@@ -136,12 +136,6 @@ test("local checkpoint dates do not use UTC ISO truncation", () => {
 test("task detail selects final checkpoints instead of newer mid-period feedback", () => {
   const source = readFileSync(new URL("../app/tasks/[id]/page.tsx", import.meta.url), "utf8");
   assert.match(source, /selectLatestFinalEvaluations\(rows\)/);
-});
-
-test("performance loads all tasks and checkpoints without silent fixed limits", () => {
-  const source = readFileSync(new URL("../app/performance/page.tsx", import.meta.url), "utf8");
-  assert.match(source, /fetchAllRows/);
-  assert.doesNotMatch(source, /\.limit\((5000|20000)\)/);
 });
 
 test("migration prevents anonymous updates to task effort weight", () => {
