@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
 import { sortStaffRows } from "@/lib/staffOrdering";
 import { getPasswordResetDisabledReason, passwordResetMessage } from "@/lib/adminPasswordResetUi";
+import { getPasswordPolicyError, PASSWORD_POLICY_HINT } from "@/lib/passwordPolicy";
 
 type Role = { id: string; code?: string; name: string; level?: number };
 type JobTitle = { id: string; code?: string; name: string; display_order?: number; active?: boolean };
@@ -26,6 +27,7 @@ type User = {
 };
 type UsersPayload = { error?: string; roles?: Role[]; job_titles?: JobTitle[]; departments?: Department[]; users?: User[] };
 type ResetState = "idle" | "confirming" | "submitting" | "success" | "error";
+type SetPasswordState = "idle" | "editing" | "submitting";
 
 const canViewUsers = (code: string) => ["admin", "tong_bien_tap", "tbt_read_only"].includes(code);
 
@@ -42,6 +44,9 @@ export default function UsersPage() {
   const [selected, setSelected] = useState<User | null>(null);
   const [resetState, setResetState] = useState<ResetState>("idle");
   const [resetToast, setResetToast] = useState("");
+  const [setPasswordState, setSetPasswordState] = useState<SetPasswordState>("idle");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState("");
   const [editJobTitle, setEditJobTitle] = useState("");
@@ -94,9 +99,12 @@ export default function UsersPage() {
   const clearPasswordResetState = () => {
     setResetState("idle");
     setResetToast("");
+    setSetPasswordState("idle");
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
-  const canCloseSelectedUser = resetState !== "submitting";
+  const canCloseSelectedUser = resetState !== "submitting" && setPasswordState !== "submitting";
 
   const closeSelectedUser = () => {
     if (!canCloseSelectedUser) return;
@@ -172,6 +180,37 @@ export default function UsersPage() {
     }
   };
 
+  const submitAdminSetPassword = async () => {
+    if (!selected || !isAdmin || setPasswordState === "submitting") return;
+    if (selected.id === user?.id) return setResetToast("Hãy dùng chức năng quên mật khẩu cho tài khoản Admin đang đăng nhập.");
+    if (!selected.active) return setResetToast("Không thể đặt mật khẩu cho tài khoản đã khóa.");
+    if (newPassword !== confirmPassword) return setResetToast("Mật khẩu xác nhận không khớp.");
+    const policyError = getPasswordPolicyError(newPassword);
+    if (policyError) return setResetToast(policyError);
+    setSetPasswordState("submitting");
+    setResetToast("");
+    try {
+      const response = await fetch("/api/auth/admin-set-password", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: selected.id, newPassword, confirmPassword }),
+      });
+      const payload = await response.json().catch(() => null) as { error?: string; message?: string } | null;
+      setResetToast(response.ok ? (payload?.message || "Đã cập nhật mật khẩu.") : (payload?.error || "Không thể cập nhật mật khẩu."));
+      if (response.ok) {
+        setSetPasswordState("idle");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        setSetPasswordState("editing");
+      }
+    } catch {
+      setResetToast("Lỗi kết nối. Vui lòng thử lại.");
+      setSetPasswordState("editing");
+    }
+  };
+
   const createUser = async () => {
     if (!isAdmin) return;
     const response = await fetch("/api/users", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify(newUser) });
@@ -196,6 +235,9 @@ export default function UsersPage() {
           <button type="button" disabled={resetDisabledReason !== null} onClick={() => setResetState("confirming")} className="rounded border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-800 disabled:cursor-not-allowed disabled:opacity-50">
             {resetState === "submitting" ? "Đang gửi..." : "Đặt lại mật khẩu"}
           </button>
+          <button type="button" disabled={!selected.active || selected.id === user?.id || setPasswordState === "submitting"} onClick={() => { setResetToast(""); setSetPasswordState("editing"); }} className="ml-2 rounded border border-sky-300 px-3 py-2 text-sm font-semibold text-sky-800 disabled:cursor-not-allowed disabled:opacity-50">
+            Đặt mật khẩu mới
+          </button>
           {resetDisabledReason && resetState !== "submitting" ? <p className="mt-1 max-w-xs text-xs text-slate-500">{resetDisabledReason}</p> : null}
         </div>
       ) : null}
@@ -212,6 +254,21 @@ export default function UsersPage() {
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" onClick={() => setResetState("idle")} className="rounded bg-slate-200 px-3 py-2 text-sm">Hủy</button>
             <button type="button" onClick={() => void submitPasswordReset()} className="rounded bg-orange-500 px-3 py-2 text-sm font-semibold text-white">Gửi liên kết</button>
+          </div>
+        </div>
+      </div>
+    ) : null}
+    {setPasswordState !== "idle" ? (
+      <div role="dialog" aria-modal="true" aria-labelledby="admin-set-password-title" className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+          <h3 id="admin-set-password-title" className="text-lg font-semibold">Đặt mật khẩu mới</h3>
+          <p className="mt-2 text-sm text-slate-600">Đặt mật khẩu mới cho {selected.full_name}. Các phiên đăng nhập cũ sẽ bị thu hồi.</p>
+          <label className="mt-4 block text-sm">Mật khẩu mới<input type="password" autoComplete="new-password" disabled={setPasswordState === "submitting"} className="mt-1 w-full rounded border px-3 py-2" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
+          <label className="mt-3 block text-sm">Xác nhận mật khẩu<input type="password" autoComplete="new-password" disabled={setPasswordState === "submitting"} className="mt-1 w-full rounded border px-3 py-2" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></label>
+          <p className="mt-2 text-xs text-slate-500">{PASSWORD_POLICY_HINT}</p>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" disabled={setPasswordState === "submitting"} onClick={() => { setSetPasswordState("idle"); setNewPassword(""); setConfirmPassword(""); }} className="rounded bg-slate-200 px-3 py-2 text-sm disabled:opacity-50">Hủy</button>
+            <button type="button" disabled={setPasswordState === "submitting"} onClick={() => void submitAdminSetPassword()} className="rounded bg-sky-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{setPasswordState === "submitting" ? "Đang cập nhật..." : "Cập nhật mật khẩu"}</button>
           </div>
         </div>
       </div>
