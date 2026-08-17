@@ -1,5 +1,6 @@
 const TASK_SCOPES = ["all", "assigned", "personal", "watching"];
 const TASK_TYPES = ["assigned", "personal"];
+const TASK_STATUS_GROUPS = ["completed", "unfinished", "returned"];
 const TASK_STATUSES = [
   "new", "in_progress", "blocked", "waiting", "pending_review",
   "done", "rejected", "cancelled",
@@ -34,6 +35,8 @@ export function parseTaskListSearchParams(params) {
     scope: member(TASK_SCOPES, params.get("scope")) ?? "all",
     taskType: member(TASK_TYPES, params.get("type")) ?? null,
     status: member(TASK_STATUSES, params.get("status")) ?? null,
+    statusGroup: member(TASK_STATUS_GROUPS, params.get("state"))
+      ?? (params.get("status") === "active" ? "unfinished" : null),
     fromDate: validDate(params.get("from")),
     toDate: validDate(params.get("to")),
     deadlineState: member(DEADLINE_STATES, params.get("deadline")) ?? null,
@@ -57,6 +60,7 @@ export function taskListHref(query, patch) {
   if (next.taskType) params.set("type", next.taskType);
   if (next.status) params.set("status", next.status);
   if (next.fromDate) params.set("from", next.fromDate);
+  if (next.statusGroup) params.set("state", next.statusGroup);
   if (next.toDate) params.set("to", next.toDate);
   if (next.deadlineState) params.set("deadline", next.deadlineState);
   if (next.departmentId) params.set("department", next.departmentId);

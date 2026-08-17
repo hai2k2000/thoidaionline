@@ -98,6 +98,7 @@ export type TaskListQuery = {
   scope: "all" | "assigned" | "personal" | "watching";
   taskType: CanonicalTaskType | null;
   status: CanonicalTaskStatus | null;
+  statusGroup: "completed" | "unfinished" | "returned" | null;
   fromDate: string | null;
   toDate: string | null;
   deadlineState: "on_time" | "due_soon" | "overdue" | "no_deadline" | null;

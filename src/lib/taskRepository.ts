@@ -144,10 +144,12 @@ export const taskRepository: TaskRepository = {
       .order("created_at", { ascending: false });
     if (scope.data.length > 0) dbQuery = dbQuery.or(scope.data.join(","));
     if (query.scope === "personal") {
-      dbQuery = dbQuery.eq("task_type", "personal").eq("owner_id", actor.id);
+      dbQuery = dbQuery.eq("owner_id", actor.id).or(
+        "task_type.eq.personal,and(task_type.is.null,plan_period.in.(daily,weekly,monthly))",
+      );
     } else if (query.scope === "assigned") {
       dbQuery = dbQuery
-        .eq("task_type", "assigned")
+        .or("task_type.eq.assigned,and(task_type.is.null,plan_period.eq.ad_hoc,self_claimable.eq.false)")
         .or(`owner_id.eq.${actor.id},assignee_id.eq.${actor.id}`);
     } else if (query.scope === "watching") {
       const watcher = await serverSupabase
@@ -162,8 +164,21 @@ export const taskRepository: TaskRepository = {
       }
       dbQuery = dbQuery.in("id", watcherIds);
     }
-    if (query.taskType) dbQuery = dbQuery.eq("task_type", query.taskType);
+    if (query.taskType === "personal") {
+      dbQuery = dbQuery.or(
+        "task_type.eq.personal,and(task_type.is.null,plan_period.in.(daily,weekly,monthly))",
+      );
+    } else if (query.taskType === "assigned") {
+      dbQuery = dbQuery.or("task_type.eq.assigned,and(task_type.is.null,plan_period.eq.ad_hoc,self_claimable.eq.false)");
+    }
     if (query.status) dbQuery = dbQuery.eq("status", query.status);
+    if (query.statusGroup === "completed") dbQuery = dbQuery.eq("status", "done");
+    if (query.statusGroup === "returned") dbQuery = dbQuery.eq("status", "rejected");
+    if (query.statusGroup === "unfinished") {
+      dbQuery = dbQuery.in("status", [
+        "new", "in_progress", "blocked", "waiting", "pending_review",
+      ]);
+    }
     if (query.search) dbQuery = dbQuery.ilike("title", `%${query.search}%`);
     if (query.fromDate) dbQuery = dbQuery.gte("start_date", query.fromDate);
     if (query.toDate) dbQuery = dbQuery.lte("due_date", query.toDate);

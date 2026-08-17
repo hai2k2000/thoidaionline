@@ -34,15 +34,10 @@ export function resolveTaskCompatibility(
     };
   }
 
-  const hasOwner = task.owner_id !== null
-    || task.assignee_id !== null
-    || (task.task_assignees ?? []).some(({ assignment_role }) =>
-      assignment_role === "owner" || assignment_role === "assignee"
-    );
   const compatibilityTaskType = task.plan_period === "ad_hoc"
     && !task.self_claimable
     ? "assigned"
-    : ["daily", "weekly", "monthly"].includes(task.plan_period) && hasOwner
+    : ["daily", "weekly", "monthly"].includes(task.plan_period)
       ? "personal"
       : null;
 

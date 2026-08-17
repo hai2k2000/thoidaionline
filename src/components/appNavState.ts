@@ -44,10 +44,10 @@ export const groups: Group[] = [
   },
   {
     key: "planning",
-    label: "Kế hoạch",
+    label: "Nhiệm vụ cá nhân",
     items: [
-      { href: "/planning", label: "Lập kế hoạch" },
-      { href: "/planning/reports", label: "Báo cáo kế hoạch" },
+      { href: "/tasks/personal/new", label: "Tạo nhiệm vụ cá nhân" },
+      { href: "/tasks?type=personal", label: "Danh sách nhiệm vụ cá nhân" },
     ],
   },
   {
@@ -99,7 +99,7 @@ export const isActive = (currentPath: string, href: string) => {
   return currentPath === href;
 };
 
-export const isSidebarGroupVisible = (key: GroupKey) => key !== "assets" && key !== "docs";
+export const isSidebarGroupVisible = (key: GroupKey) => !["planning", "assets", "docs"].includes(key);
 
 export const toggleOpenGroup = (openGroup: GroupKey | null, nextGroup: GroupKey) =>
   openGroup === nextGroup ? null : nextGroup;

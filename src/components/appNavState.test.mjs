@@ -24,8 +24,8 @@ test("assignment and planning links live only in their required accordions", () 
     { href: "/performance", label: "Đánh giá" },
   ]);
   assert.deepEqual(planning?.items, [
-    { href: "/planning", label: "Lập kế hoạch" },
-    { href: "/planning/reports", label: "Báo cáo kế hoạch" },
+    { href: "/tasks/personal/new", label: "Tạo nhiệm vụ cá nhân" },
+    { href: "/tasks?type=personal", label: "Danh sách nhiệm vụ cá nhân" },
   ]);
 });
 
@@ -50,7 +50,7 @@ test("sidebar keeps work and planning visible and preserves existing hidden modu
 
   assert.deepEqual(
     visibleGroups.map((group) => group.key),
-    ["work", "planning", "hr", "admin"],
+    ["work", "hr", "admin"],
   );
   assert.equal(groups.find((group) => group.key === "admin")?.label, "Cấu hình");
   assert.equal(
@@ -74,9 +74,9 @@ test("work opens by default while planning routes open the planning accordion", 
   assert.equal(getInitialOpenGroup(visibleGroups, "/"), "work");
   assert.equal(getInitialOpenGroup(visibleGroups, "/tasks/active"), "work");
   assert.equal(getInitialOpenGroup(visibleGroups, "/performance"), "work");
-  assert.equal(getInitialOpenGroup(visibleGroups, "/planning"), "planning");
-  assert.equal(getInitialOpenGroup(visibleGroups, "/planning/reports"), "planning");
-  assert.equal(getInitialOpenGroup(visibleGroups, "/my-tasks"), "planning");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/planning"), "work");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/planning/reports"), "work");
+  assert.equal(getInitialOpenGroup(visibleGroups, "/my-tasks"), "work");
   assert.equal(getInitialOpenGroup(visibleGroups, "/attendance"), "work");
   assert.equal(getInitialOpenGroup(visibleGroups, "/profile"), "work");
 });
@@ -99,7 +99,7 @@ test("active-route fallback is preserved when work is not visible", () => {
     (group) => group.key !== "work" && isSidebarGroupVisible(group.key),
   );
 
-  assert.equal(getInitialOpenGroup(groupsWithoutWork, "/planning/reports"), "planning");
+  assert.equal(getInitialOpenGroup(groupsWithoutWork, "/planning/reports"), null);
   assert.equal(getInitialOpenGroup(groupsWithoutWork, "/attendance"), "hr");
   assert.equal(getInitialOpenGroup(groupsWithoutWork, "/users"), "admin");
   assert.equal(getInitialOpenGroup(groupsWithoutWork, "/profile"), null);

@@ -45,9 +45,9 @@ test("legacy plan ownership includes participant rows and monthly plans", () => 
   });
 });
 
-test("unclaimed legacy plans stay untyped and read-only", () => {
+test("unclaimed legacy plans remain classified as personal and read-only", () => {
   assert.deepEqual(resolveTaskCompatibility(base), {
-    compatibility_task_type: null,
+    compatibility_task_type: "personal",
     legacy_read_only: true,
   });
 });

@@ -11,12 +11,13 @@ test("Phase 4 Task Center is server-filtered and responsive", () => {
   assert.match(page, /taskRepository\.list/);
   assert.match(page, /getSessionUser/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
-  assert.match(shell, /\+ Nhi(?:ệ|&#7879;)m v(?:ụ|&#7909;) c(?:á|&#225;) nh(?:â|&#226;)n/);
+  assert.match(shell, /\+ Tạo công việc/);
+  assert.match(shell, /\+ Tạo nhiệm vụ cá nhân/);
   assert.match(shell, /space-y-3 lg:hidden/);
   assert.match(shell, /hidden overflow-x-auto lg:block/);
   assert.match(shell, /name="scope"/);
   assert.match(shell, /name="q"/);
-  assert.match(shell, /name="status"/);
+  assert.match(shell, /name="state"/);
   assert.match(shell, /name="deadline"/);
 });
 

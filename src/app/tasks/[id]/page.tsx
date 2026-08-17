@@ -46,5 +46,6 @@ export default async function TaskDetailPage({ params }: Props) {
     attachment: action("attachment"),
     personalComplete: action("personal_complete"),
     personalCancel: action("personal_cancel"),
+    personalDeadline: action("personal_deadline"),
   }} />;
 }

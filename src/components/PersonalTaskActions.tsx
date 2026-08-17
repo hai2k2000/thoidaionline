@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type Props = { taskId: string; canEdit: boolean; terminal: boolean };
+type Props = { taskId: string; canEdit: boolean; canClaim: boolean; terminal: boolean };
 
-export default function PersonalTaskActions({ taskId, canEdit, terminal }: Props) {
+export default function PersonalTaskActions({ taskId, canEdit, canClaim, terminal }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -27,7 +27,29 @@ export default function PersonalTaskActions({ taskId, canEdit, terminal }: Props
     router.refresh();
   };
 
-  if (!canEdit || terminal) return null;
+  const claim = async () => {
+    setBusy(true);
+    setError("");
+    const response = await fetch("/api/tasks/claim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId }),
+    }).catch(() => null);
+    setBusy(false);
+    if (!response?.ok) return setError("Không thể bắt đầu nhiệm vụ. Vui lòng thử lại."), undefined;
+    router.refresh();
+  };
+
+  if (terminal) return null;
+  if (canClaim && !canEdit) return (
+    <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
+      <button disabled={busy} onClick={() => void claim()} className="rounded bg-orange-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
+        Thực hiện
+      </button>
+      {error ? <span role="alert" className="text-xs text-red-700">{error}</span> : null}
+    </div>
+  );
+  if (!canEdit) return null;
   return (
     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
       <Link href={`/tasks/personal/${taskId}/edit`} className="rounded border px-2 py-1 text-xs font-semibold">
@@ -44,7 +66,7 @@ export default function PersonalTaskActions({ taskId, canEdit, terminal }: Props
         }}
         className="rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 disabled:opacity-50"
       >
-        Hủy
+        Hủy nhiệm vụ
       </button>
       {error ? <span role="alert" className="text-xs text-red-700">{error}</span> : null}
     </div>
