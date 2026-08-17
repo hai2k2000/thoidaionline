@@ -300,8 +300,8 @@ test("legacy evaluation validates and never grants TBT step2 through the old pat
       isFinal: true,
     }),
   });
-  assert.equal((await harness.app.evaluate(request)).status, 200);
-  assert.equal(harness.calls[0][0], "evaluate");
+  assert.equal((await harness.app.evaluate(request)).status, 409);
+  assert.equal(harness.calls.length, 0);
 });
 
 test("list, detail and mutation responses are private no-store at runtime", async () => {

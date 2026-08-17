@@ -21,7 +21,7 @@ type Dependencies = {
   readActor: () => Promise<Guard>;
   mutationActor: () => Promise<Guard>;
   json: (body: unknown, status?: number) => Response;
-  error: (code: "forbidden" | "invalid_request" | "not_found", status: number) => Response;
+  error: (code: "forbidden" | "invalid_request" | "not_found" | "conflict", status: number) => Response;
   rpcFailure: (error: { code?: string | null }) => Response;
   asUuid: (value: unknown) => string | null;
   canAssignToDepartment: (
@@ -503,12 +503,11 @@ export function createTaskApplication(deps: Dependencies) {
     async evaluate(request: Request) {
       const guarded = await guardedBody(request);
       if (guarded instanceof Response) return guarded;
-      const { actor, body } = guarded;
+      const { body } = guarded;
       const employeeId = deps.asUuid(body?.employeeId);
       if (!employeeId) return deps.error("invalid_request", 400);
-      let input: Omit<LegacyEvaluationInput, "employeeId">;
       try {
-        input = deps.normalizeLegacyEvaluationInput({
+        deps.normalizeLegacyEvaluationInput({
           rating: body?.rating,
           effortWeight: body?.effortWeight,
           completion: body?.completion,
@@ -520,21 +519,8 @@ export function createTaskApplication(deps: Dependencies) {
       } catch {
         return deps.error("invalid_request", 400);
       }
-      const taskId = await authorizeMutation(
-        actor, body.taskId, "legacy_evaluate",
-      );
-      if (taskId instanceof Response) return taskId;
-      const result = await deps.repository.evaluate(actor.id, taskId, {
-        employeeId,
-        rating: input.rating,
-        effortWeight: input.effortWeight,
-        completion: input.completion,
-        onTime: input.onTime,
-        opinion: input.opinion ?? null,
-        checkpointDate: input.checkpointDate,
-        isFinal: input.isFinal,
-      });
-      return result.ok ? deps.json({ ok: true }) : deps.rpcFailure(result.error);
+      // legacy_evaluation_retired: Phase 8 keeps 1-10 checkpoints read-only.
+      return deps.error("conflict", 409);
     },
 
     async comment(request: Request, taskIdValue: unknown) {

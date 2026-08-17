@@ -22,7 +22,7 @@ test("employee navigation exposes only Task Center and account", () => {
     { id: "tasks", href: "/tasks" },
   ]);
   assert.deepEqual(navigation.account, [
-    { id: "account", href: "/profile" },
+    { id: "account", href: "/account" },
   ]);
   assert.equal(navigation.showEvaluationTab, false);
   assert.deepEqual(navigation.configuration, []);

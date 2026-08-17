@@ -28,7 +28,7 @@ export function getPhase2Navigation(
         : []),
       { id: "tasks", href: "/tasks" },
     ],
-    account: [{ id: "account", href: "/profile" }],
+    account: [{ id: "account", href: "/account" }],
     configuration:
       access.roleCode === "admin" && access.canManageRubrics
         ? [
