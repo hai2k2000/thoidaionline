@@ -95,6 +95,7 @@ const makeHarness = ({
       ? { id: taskId, legacy_evaluations: [] }
       : null),
     create: (...args) => { calls.push(["create", ...args]); return result({ id: "new" }); },
+    assign: (...args) => { calls.push(["assign", ...args]); return result({ id: "assigned" }); },
     update: (...args) => { calls.push(["update", ...args]); return result({ id: args[1] }); },
     claim: (...args) => { calls.push(["claim", ...args]); return result({}); },
     report: (...args) => { calls.push(["report", ...args]); return result({}); },
@@ -127,6 +128,41 @@ const makeHarness = ({
 
 const taskId = "00000000-0000-4000-8000-000000000010";
 const employeeId = "00000000-0000-4000-8000-000000000011";
+const departmentId = "00000000-0000-4000-8000-000000000012";
+const reviewerId = "00000000-0000-4000-8000-000000000013";
+
+test("Phase 6 assignment derives actor from session and enforces department permission", async () => {
+  const body = {
+    actorId: "00000000-0000-4000-8000-000000000099",
+    title: "Công việc mới",
+    description: "Nội dung",
+    departmentId,
+    assigneeId: employeeId,
+    reviewerId,
+    dueDate: "2026-08-30",
+    evaluationCriteria: "Tiêu chí",
+    collaboratorIds: [],
+    watcherIds: [],
+    recurrenceFrequency: "weekly",
+    recurrenceEndsOn: "2026-09-30",
+  };
+  const denied = makeHarness({ mutationActor: makeActor({ department_id: departmentId }) });
+  assert.equal((await denied.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST", body: JSON.stringify(body),
+  }))).status, 403);
+
+  const manager = makeActor({
+    department_id: departmentId,
+    permissions: normalizePermissions({ can_assign_task: true }),
+  });
+  const allowed = makeHarness({ mutationActor: manager });
+  assert.equal((await allowed.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST", body: JSON.stringify(body),
+  }))).status, 201);
+  assert.equal(allowed.calls[0][0], "assign");
+  assert.equal(allowed.calls[0][1], "actor");
+  assert.equal(allowed.calls[0][2].recurrenceFrequency, "weekly");
+});
 
 test("list requires a signed actor and delegates server-side pagination", async () => {
   const denied = makeHarness({ readActor: null });

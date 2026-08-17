@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Thoidai Work task recurrence daily
+
+[Timer]
+OnCalendar=*-*-* 00:15:00
+Persistent=true
+RandomizedDelaySec=120
+Unit=thoidai-task-recurrence.service
+
+[Install]
+WantedBy=timers.target

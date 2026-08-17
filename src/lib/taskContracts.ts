@@ -124,6 +124,20 @@ export type LegacyCreateTaskInput = {
   collaboratorIds: string[];
 };
 
+export type AssignedTaskInput = {
+  title: string;
+  description: string;
+  departmentId: string;
+  assigneeId: string;
+  reviewerId: string;
+  dueDate: string;
+  evaluationCriteria: string | null;
+  collaboratorIds: string[];
+  watcherIds: string[];
+  recurrenceFrequency: "weekly" | "monthly" | null;
+  recurrenceEndsOn: string | null;
+};
+
 export type LegacyUpdateTaskInput = {
   status?: "new" | "in_progress";
   dueDate?: string | null;
@@ -165,6 +179,10 @@ export interface TaskRepository {
   create(
     actorId: string,
     input: LegacyCreateTaskInput,
+  ): Promise<RepositoryResult<{ id: string }>>;
+  assign(
+    actorId: string,
+    input: AssignedTaskInput,
   ): Promise<RepositoryResult<{ id: string }>>;
   createPersonal(
     actorId: string,

@@ -6,6 +6,7 @@ import type {
 import type { ServerAuthUser } from "./serverSession";
 import { parseTaskListSearchParams } from "./taskFilters.mjs";
 import type {
+  AssignedTaskInput,
   LegacyCreateTaskInput,
   LegacyEvaluationInput,
   TaskRepository,
@@ -366,6 +367,56 @@ export function createTaskApplication(deps: Dependencies) {
         collaboratorIds,
       };
       const result = await deps.repository.create(guard.actor.id, input);
+      return result.ok
+        ? deps.json({ task: result.data }, 201)
+        : deps.rpcFailure(result.error);
+    },
+
+    async assign(request: Request) {
+      const guard = await deps.mutationActor();
+      if (!guard.ok) return guard.response;
+      const actor = toActor(guard.actor);
+      const body = await bodyObject(request);
+      const title = cleanText(body?.title, 500);
+      const description = cleanText(body?.description, 10000);
+      const departmentId = deps.asUuid(body?.departmentId);
+      const assigneeId = deps.asUuid(body?.assigneeId);
+      const reviewerId = deps.asUuid(body?.reviewerId);
+      const dueDate = dateValue(body?.dueDate);
+      const evaluationCriteria = cleanText(body?.evaluationCriteria, 10000) || null;
+      const recurrenceFrequency = body?.recurrenceFrequency === "weekly"
+        || body?.recurrenceFrequency === "monthly"
+        ? body.recurrenceFrequency
+        : body?.recurrenceFrequency === null ? null : undefined;
+      const recurrenceEndsOn = body?.recurrenceEndsOn === null
+        ? null : dateValue(body?.recurrenceEndsOn);
+      const ids = (value: unknown) => Array.isArray(value)
+        ? [...new Set(value.map(deps.asUuid).filter((id): id is string => id !== null))]
+        : null;
+      const collaboratorIds = ids(body?.collaboratorIds);
+      const watcherIds = ids(body?.watcherIds);
+      if (!title || !description || !departmentId || !assigneeId || !reviewerId
+        || !dueDate || !collaboratorIds || !watcherIds
+        || recurrenceFrequency === undefined
+        || (body?.recurrenceEndsOn !== null && !recurrenceEndsOn)
+        || (recurrenceFrequency === null && recurrenceEndsOn !== null)
+        || (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate)) {
+        return deps.error("invalid_request", 400);
+      }
+      if (!deps.canAssignToDepartment(actor, departmentId)) {
+        return deps.error("forbidden", 403);
+      }
+      const input: AssignedTaskInput = {
+        title, description, departmentId, assigneeId, reviewerId, dueDate,
+        evaluationCriteria,
+        collaboratorIds: collaboratorIds.filter((id) => id !== assigneeId),
+        watcherIds: watcherIds.filter(
+          (id) => id !== assigneeId && !collaboratorIds.includes(id),
+        ),
+        recurrenceFrequency,
+        recurrenceEndsOn,
+      };
+      const result = await deps.repository.assign(guard.actor.id, input);
       return result.ok
         ? deps.json({ task: result.data }, 201)
         : deps.rpcFailure(result.error);

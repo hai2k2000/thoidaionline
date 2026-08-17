@@ -9,6 +9,7 @@ import {
 } from "@/lib/authorization";
 import { resolveTaskCompatibility } from "@/lib/taskCompatibility";
 import type {
+  AssignedTaskInput,
   LegacyCreateTaskInput,
   LegacyEvaluationInput,
   LegacyUpdateTaskInput,
@@ -276,6 +277,24 @@ export const taskRepository: TaskRepository = {
       p_assignment_mode: input.assignmentMode,
       p_due_date: input.dueDate,
       p_collaborator_ids: input.collaboratorIds,
+    },
+  ),
+
+  assign: (actorId, input: AssignedTaskInput) => mutation(
+    "api_assign_task",
+    {
+      p_actor_id: actorId,
+      p_title: input.title,
+      p_description: input.description,
+      p_department_id: input.departmentId,
+      p_assignee_id: input.assigneeId,
+      p_reviewer_id: input.reviewerId,
+      p_due_date: input.dueDate,
+      p_evaluation_criteria: input.evaluationCriteria,
+      p_collaborator_ids: input.collaboratorIds,
+      p_watcher_ids: input.watcherIds,
+      p_recurrence_frequency: input.recurrenceFrequency,
+      p_recurrence_ends_on: input.recurrenceEndsOn,
     },
   ),
 

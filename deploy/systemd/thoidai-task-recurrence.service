@@ -1,0 +1,12 @@
+[Unit]
+Description=Thoidai Work task recurrence runner
+After=network.target thoidai-work.service
+Requires=thoidai-work.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/thoidai-work
+ExecStart=/usr/bin/node /opt/thoidai-work/scripts/run-task-recurrence.mjs
+NoNewPrivileges=true
+PrivateTmp=true
