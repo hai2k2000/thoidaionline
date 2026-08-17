@@ -39,6 +39,7 @@ export type TaskAction =
   | "personal_deadline"
   | "personal_cancel"
   | "personal_complete"
+  | "evaluate"
   | "legacy_evaluate";
 
 export type EvaluationDecision =
@@ -168,6 +169,7 @@ export function canTaskAction(
       return task.taskType === "personal"
         && (task.ownerId === actor.id || actor.roleCode === "admin")
         && !["done", "cancelled"].includes(task.status);
+    case "evaluate":
     case "legacy_evaluate":
       return actor.roleCode === "admin"
         || (

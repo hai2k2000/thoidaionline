@@ -5,6 +5,7 @@ export type ApiErrorCode =
   | "invalid_request"
   | "not_found"
   | "conflict"
+  | "service_unavailable"
   | "operation_failed";
 
 const NO_STORE_HEADERS = {

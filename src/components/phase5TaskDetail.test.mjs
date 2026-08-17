@@ -12,7 +12,7 @@ test("Phase 5 task detail is server-scoped and ordered by canonical sections", (
   assert.match(page, /canTaskAction/);
   assert.doesNotMatch(page, /"use client"/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
-  const sections = ["Thông tin chung", "Nội dung công việc", "Tiêu chí đánh giá", "Báo cáo tiến triển & vướng mắc", "Trao đổi", "Đánh giá cũ", "Đính kèm", "Lịch sử"];
+  const sections = ["Thông tin chung", "Nội dung công việc", "Tiêu chí đánh giá", "Đánh giá công việc", "Báo cáo tiến triển & vướng mắc", "Trao đổi", "Đính kèm", "Lịch sử"];
   let offset = -1;
   for (const section of sections) {
     const next = shell.indexOf(section);

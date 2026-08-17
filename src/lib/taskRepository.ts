@@ -236,7 +236,8 @@ export const taskRepository: TaskRepository = {
 
   async detail(taskId) {
     const [taskResult, commentResult, legacyProgressResult, evaluationResult,
-      progressResult, deadlineResult, statusResult, attachmentResult] = await Promise.all([
+      progressResult, qualitativeEvaluationResult, deadlineResult, statusResult,
+      attachmentResult] = await Promise.all([
       serverSupabase.from("tasks").select(TASK_DETAIL_FIELDS).eq("id", taskId).maybeSingle(),
       serverSupabase.from("task_comments")
         .select("id,content,created_at,user_id,staff_users(full_name)")
@@ -250,6 +251,9 @@ export const taskRepository: TaskRepository = {
       serverSupabase.from("task_progress_reports")
         .select("id,reported_by,reported_on,report_status,progress_text,blockers,created_at")
         .eq("task_id", taskId).order("reported_on", { ascending: false }).order("created_at", { ascending: false }),
+      serverSupabase.from("task_qualitative_evaluations")
+        .select("id,evaluation_text,evaluation_deadline,created_at,evaluator:staff_users!task_qualitative_evaluations_evaluator_id_fkey(full_name)")
+        .eq("task_id", taskId).order("created_at", { ascending: false }),
       serverSupabase.from("task_deadline_history")
         .select("id,old_due_date,new_due_date,reason,changed_at")
         .eq("task_id", taskId).order("changed_at", { ascending: false }),
@@ -261,19 +265,22 @@ export const taskRepository: TaskRepository = {
         .eq("task_id", taskId).order("created_at", { ascending: false }),
     ]);
     const error = taskResult.error ?? commentResult.error ?? legacyProgressResult.error
-      ?? evaluationResult.error ?? progressResult.error ?? deadlineResult.error
+      ?? evaluationResult.error ?? progressResult.error ?? qualitativeEvaluationResult.error
+      ?? deadlineResult.error
       ?? statusResult.error ?? attachmentResult.error;
     if (error) return fail(error);
     if (!taskResult.data) return ok(null);
     return ok({
       ...(taskResult.data as unknown as Omit<TaskDetailDto,
         "comments" | "progress_logs" | "legacy_evaluations" | "progress_reports"
+        | "qualitative_evaluations"
         | "deadline_history" | "status_events" | "attachments">),
       ...resolveTaskCompatibility(taskResult.data as unknown as TaskListItemDto),
       comments: (commentResult.data ?? []) as unknown as TaskDetailDto["comments"],
       progress_logs: (legacyProgressResult.data ?? []) as unknown as TaskDetailDto["progress_logs"],
       legacy_evaluations: (evaluationResult.data ?? []) as unknown as TaskDetailDto["legacy_evaluations"],
       progress_reports: (progressResult.data ?? []) as unknown as TaskDetailDto["progress_reports"],
+      qualitative_evaluations: (qualitativeEvaluationResult.data ?? []) as unknown as TaskDetailDto["qualitative_evaluations"],
       deadline_history: (deadlineResult.data ?? []) as unknown as TaskDetailDto["deadline_history"],
       status_events: (statusResult.data ?? []) as unknown as TaskDetailDto["status_events"],
       attachments: (attachmentResult.data ?? []) as unknown as TaskDetailDto["attachments"],
@@ -351,6 +358,12 @@ export const taskRepository: TaskRepository = {
     { p_actor_id: actorId, p_task_id: taskId, p_reported_on: input.reportedOn,
       p_report_status: input.reportStatus, p_progress_text: input.progressText,
       p_blockers: input.blockers },
+  ),
+  submitQualitativeEvaluation: (actorId, taskId, input) => mutation(
+    "api_submit_task_qualitative_evaluation",
+    { p_actor_id: actorId, p_task_id: taskId,
+      p_evaluation_text: input.evaluationText,
+      p_evaluation_deadline: input.evaluationDeadline },
   ),
   submitAssignedCompletion: (actorId, taskId) => mutation(
     "api_submit_assigned_task_completion", { p_actor_id: actorId, p_task_id: taskId },

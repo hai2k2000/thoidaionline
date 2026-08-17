@@ -111,11 +111,12 @@ test("forward migration grants TBT evaluation access without generic admin permi
   assert.doesNotMatch(sql, /update\s+public\.role_permissions/i);
 });
 
-test("task detail source hides mutations from employees and removes legacy controls", () => {
+test("task detail gates qualitative mutation and removes legacy score controls", () => {
   const source = readFileSync(new URL("../components/TaskDetailShell.tsx", import.meta.url), "utf8");
-  assert.match(source, /Dữ liệu cũ chỉ đọc/);
-  assert.match(source, /Ý kiến đánh giá/);
-  assert.doesNotMatch(source, /Lưu đánh giá|saveEvaluation/);
+  assert.match(source, /capabilities\.evaluate/);
+  assert.match(source, /Đánh giá công việc/);
+  assert.match(source, /Lưu đánh giá/);
+  assert.doesNotMatch(source, /rating\}\/10|Điểm[^\n]*1[^\n]*10/);
   assert.doesNotMatch(source, />\s*Việc khó\s*</);
   assert.doesNotMatch(source, />\s*Có cải tiến\s*</);
   assert.doesNotMatch(source, />\s*Có đóng góp\s*</);

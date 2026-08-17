@@ -101,6 +101,7 @@ const makeHarness = ({
     report: (...args) => { calls.push(["report", ...args]); return result({}); },
     review: (...args) => { calls.push(["review", ...args]); return result({}); },
     evaluate: (...args) => { calls.push(["evaluate", ...args]); return result({}); },
+    submitQualitativeEvaluation: (...args) => { calls.push(["submitQualitativeEvaluation", ...args]); return result({}); },
     comment: (...args) => { calls.push(["comment", ...args]); return result({}); },
     bulkPlan: (...args) => { calls.push(["bulkPlan", ...args]); return result({}); },
   };
@@ -259,6 +260,58 @@ test("watcher may comment but may not report", async () => {
   });
   assert.equal((await harness.app.report(report)).status, 403);
   assert.equal((await harness.app.comment(comment, taskId)).status, 201);
+});
+
+test("qualitative task evaluation validates text/date and defaults deadline in the RPC", async () => {
+  const manager = makeActor({
+    id: "reviewer",
+    permissions: normalizePermissions({ can_evaluate_step1: true }),
+  });
+  const harness = makeHarness({
+    mutationActor: manager,
+    taskAccess: access({ reviewerId: "reviewer" }),
+  });
+  const valid = new Request("https://example.test/api/tasks/evaluations", {
+    method: "POST",
+    body: JSON.stringify({ evaluationText: "Hoàn thành đúng yêu cầu." }),
+  });
+  assert.equal((await harness.app.submitQualitativeEvaluation(valid, taskId)).status, 201);
+  assert.deepEqual(harness.calls[0], [
+    "submitQualitativeEvaluation", "reviewer", taskId,
+    { evaluationText: "Hoàn thành đúng yêu cầu.", evaluationDeadline: null },
+  ]);
+
+  for (const body of [
+    { evaluationText: "" },
+    { evaluationText: "Hợp lệ", evaluationDeadline: "2026-02-30" },
+  ]) {
+    const invalid = new Request("https://example.test/api/tasks/evaluations", {
+      method: "POST", body: JSON.stringify(body),
+    });
+    assert.equal((await harness.app.submitQualitativeEvaluation(invalid, taskId)).status, 400);
+  }
+});
+
+test("qualitative evaluation is reviewer-scoped and AI is explicitly unavailable", async () => {
+  const unrelated = makeHarness({
+    taskAccess: access({ ownerId: "owner", assigneeId: "assignee", reviewerId: "reviewer" }),
+  });
+  const request = new Request("https://example.test/api/tasks/evaluations", {
+    method: "POST", body: JSON.stringify({ evaluationText: "Không được phép" }),
+  });
+  assert.equal((await unrelated.app.submitQualitativeEvaluation(request, taskId)).status, 403);
+  assert.equal(unrelated.calls.length, 0);
+
+  const manager = makeActor({
+    id: "reviewer",
+    permissions: normalizePermissions({ can_evaluate_step1: true }),
+  });
+  const allowed = makeHarness({ mutationActor: manager, taskAccess: access({ reviewerId: "reviewer" }) });
+  const ai = new Request("https://example.test/api/tasks/ai-evaluation", {
+    method: "POST", body: JSON.stringify({}),
+  });
+  assert.equal((await allowed.app.generateAiEvaluation(ai, taskId)).status, 503);
+  assert.equal(allowed.calls.length, 0);
 });
 
 test("legacy evaluation validates and never grants TBT step2 through the old path", async () => {

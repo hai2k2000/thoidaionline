@@ -21,7 +21,7 @@ type Dependencies = {
   readActor: () => Promise<Guard>;
   mutationActor: () => Promise<Guard>;
   json: (body: unknown, status?: number) => Response;
-  error: (code: "forbidden" | "invalid_request" | "not_found" | "conflict", status: number) => Response;
+  error: (code: "forbidden" | "invalid_request" | "not_found" | "conflict" | "service_unavailable", status: number) => Response;
   rpcFailure: (error: { code?: string | null }) => Response;
   asUuid: (value: unknown) => string | null;
   canAssignToDepartment: (
@@ -65,10 +65,13 @@ const cleanText = (value: unknown, max: number) => {
   return [...normalized].length <= max ? normalized : "";
 };
 
-const dateValue = (value: unknown) =>
-  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+const dateValue = (value: unknown) => {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
     ? value
     : null;
+};
 
 export function createTaskApplication(deps: Dependencies) {
   const taskGuard = async (
@@ -164,6 +167,38 @@ export function createTaskApplication(deps: Dependencies) {
         reportedOn, reportStatus, progressText, blockers,
       });
       return result.ok ? deps.json({ report: result.data }, 201) : deps.rpcFailure(result.error);
+    },
+
+    async submitQualitativeEvaluation(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const evaluationText = cleanText(body.evaluationText, 10000);
+      const suppliedDeadline = body.evaluationDeadline !== undefined
+        && body.evaluationDeadline !== null
+        && body.evaluationDeadline !== "";
+      const evaluationDeadline = suppliedDeadline
+        ? dateValue(body.evaluationDeadline)
+        : null;
+      if (!evaluationText || (suppliedDeadline && !evaluationDeadline)) {
+        return deps.error("invalid_request", 400);
+      }
+      const taskId = await authorizeMutation(actor, taskIdValue, "evaluate");
+      if (taskId instanceof Response) return taskId;
+      const result = await deps.repository.submitQualitativeEvaluation(actor.id, taskId, {
+        evaluationText, evaluationDeadline,
+      });
+      return result.ok
+        ? deps.json({ evaluation: result.data }, 201)
+        : deps.rpcFailure(result.error);
+    },
+
+    async generateAiEvaluation(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const taskId = await authorizeMutation(guarded.actor, taskIdValue, "evaluate");
+      if (taskId instanceof Response) return taskId;
+      return deps.error("service_unavailable", 503);
     },
 
     async submitAssignedCompletion(_request: Request, taskIdValue: unknown) {
