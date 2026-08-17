@@ -7,6 +7,7 @@ import {
   type TaskAccessSnapshot,
   type TaskParticipant,
 } from "@/lib/authorization";
+import { resolveTaskCompatibility } from "@/lib/taskCompatibility";
 import type {
   LegacyCreateTaskInput,
   LegacyEvaluationInput,
@@ -23,6 +24,8 @@ const TASK_LIST_FIELDS = [
   "id",
   "title",
   "status",
+  "task_type",
+  "start_date",
   "progress_percent",
   "due_date",
   "assignee_id",
@@ -137,7 +140,10 @@ export const taskRepository: TaskRepository = {
     const { data, error, count } = await dbQuery.range(from, to);
     if (error) return fail(error);
     return ok({
-      items: (data ?? []) as unknown as TaskListItemDto[],
+      items: ((data ?? []) as unknown as TaskListItemDto[]).map((item) => ({
+        ...item,
+        ...resolveTaskCompatibility(item),
+      })),
       total: count ?? 0,
       page: query.page,
       pageSize: query.pageSize,
@@ -200,6 +206,7 @@ export const taskRepository: TaskRepository = {
         TaskDetailDto,
         "comments" | "progress_logs" | "legacy_evaluations"
       >),
+      ...resolveTaskCompatibility(taskResult.data as unknown as TaskListItemDto),
       comments: (commentResult.data ?? []) as unknown as TaskDetailDto["comments"],
       progress_logs:
         (progressResult.data ?? []) as unknown as TaskDetailDto["progress_logs"],

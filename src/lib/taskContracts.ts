@@ -1,12 +1,7 @@
 import type { AuthorizationActor, TaskAccessSnapshot } from "./authorization";
+import type { CanonicalTaskStatus, CanonicalTaskType } from "./taskCompatibility";
 
 export type AssignmentRole = "owner" | "assignee" | "watcher";
-export type LegacyTaskStatus =
-  | "new"
-  | "in_progress"
-  | "pending_review"
-  | "done"
-  | "rejected";
 
 export type TaskParticipantDto = {
   user_id: string;
@@ -18,7 +13,11 @@ export type TaskParticipantDto = {
 export type TaskListItemDto = {
   id: string;
   title: string;
-  status: LegacyTaskStatus;
+  status: CanonicalTaskStatus;
+  task_type: CanonicalTaskType | null;
+  compatibility_task_type: CanonicalTaskType | null;
+  legacy_read_only: boolean;
+  start_date: string | null;
   progress_percent: number;
   due_date: string | null;
   assignee_id: string | null;
@@ -27,7 +26,7 @@ export type TaskListItemDto = {
   reviewer_id: string | null;
   department_id: string | null;
   assignment_mode: string;
-  plan_period: string;
+  plan_period: "ad_hoc" | "daily" | "weekly" | "monthly";
   self_claimable: boolean;
   departments: { name: string } | null;
   task_assignees: TaskParticipantDto[];
