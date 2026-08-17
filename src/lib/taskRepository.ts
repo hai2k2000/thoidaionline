@@ -17,18 +17,21 @@ import type {
   RepositoryResult,
   TaskDetailDto,
   TaskListItemDto,
-  TaskListQuery,
-  TaskListResult,
   TaskRepository,
 } from "@/lib/taskContracts";
 
 const TASK_LIST_FIELDS = [
   "id",
   "title",
+  "priority",
   "created_at",
   "status",
   "task_type",
   "start_date",
+  "completion_submitted_at",
+  "completed_at",
+  "cancelled_at",
+  "cancel_reason",
   "progress_percent",
   "due_date",
   "assignee_id",
@@ -216,54 +219,48 @@ export const taskRepository: TaskRepository = {
   },
 
   async detail(taskId) {
-    const [taskResult, commentResult, progressResult, evaluationResult] =
-      await Promise.all([
-        serverSupabase
-          .from("tasks")
-          .select(TASK_DETAIL_FIELDS)
-          .eq("id", taskId)
-          .maybeSingle(),
-        serverSupabase
-          .from("task_comments")
-          .select("id,content,created_at,user_id,staff_users(full_name)")
-          .eq("task_id", taskId)
-          .order("created_at", { ascending: false }),
-        serverSupabase
-          .from("task_progress_logs")
-          .select(
-            "id,old_progress,new_progress,note,created_at,user_id," +
-            "staff_users!task_progress_logs_user_id_fkey(full_name)",
-          )
-          .eq("task_id", taskId)
-          .order("created_at", { ascending: false }),
-        serverSupabase
-          .from("task_evaluation_checkpoints")
-          .select(
-            "id,task_id,employee_id,reviewer_id,rating,effort_weight," +
-            "total_score,completion,on_time,opinion,checkpoint_date," +
-            "is_final,created_at",
-          )
-          .eq("task_id", taskId)
-          .order("checkpoint_date", { ascending: false })
-          .order("created_at", { ascending: false }),
-      ]);
-    const error = taskResult.error
-      ?? commentResult.error
-      ?? progressResult.error
-      ?? evaluationResult.error;
+    const [taskResult, commentResult, legacyProgressResult, evaluationResult,
+      progressResult, deadlineResult, statusResult, attachmentResult] = await Promise.all([
+      serverSupabase.from("tasks").select(TASK_DETAIL_FIELDS).eq("id", taskId).maybeSingle(),
+      serverSupabase.from("task_comments")
+        .select("id,content,created_at,user_id,staff_users(full_name)")
+        .eq("task_id", taskId).order("created_at", { ascending: false }),
+      serverSupabase.from("task_progress_logs")
+        .select("id,old_progress,new_progress,note,created_at,user_id,staff_users!task_progress_logs_user_id_fkey(full_name)")
+        .eq("task_id", taskId).order("created_at", { ascending: false }),
+      serverSupabase.from("task_evaluation_checkpoints")
+        .select("id,task_id,employee_id,reviewer_id,rating,effort_weight,total_score,completion,on_time,opinion,checkpoint_date,is_final,created_at")
+        .eq("task_id", taskId).order("checkpoint_date", { ascending: false }).order("created_at", { ascending: false }),
+      serverSupabase.from("task_progress_reports")
+        .select("id,reported_by,reported_on,report_status,progress_text,blockers,created_at")
+        .eq("task_id", taskId).order("reported_on", { ascending: false }).order("created_at", { ascending: false }),
+      serverSupabase.from("task_deadline_history")
+        .select("id,old_due_date,new_due_date,reason,changed_at")
+        .eq("task_id", taskId).order("changed_at", { ascending: false }),
+      serverSupabase.from("task_status_events")
+        .select("id,from_status,to_status,reason,created_at")
+        .eq("task_id", taskId).order("created_at", { ascending: false }),
+      serverSupabase.from("task_attachments")
+        .select("id,file_name,mime_type,size_bytes,created_at,uploaded_by")
+        .eq("task_id", taskId).order("created_at", { ascending: false }),
+    ]);
+    const error = taskResult.error ?? commentResult.error ?? legacyProgressResult.error
+      ?? evaluationResult.error ?? progressResult.error ?? deadlineResult.error
+      ?? statusResult.error ?? attachmentResult.error;
     if (error) return fail(error);
     if (!taskResult.data) return ok(null);
     return ok({
-      ...(taskResult.data as unknown as Omit<
-        TaskDetailDto,
-        "comments" | "progress_logs" | "legacy_evaluations"
-      >),
+      ...(taskResult.data as unknown as Omit<TaskDetailDto,
+        "comments" | "progress_logs" | "legacy_evaluations" | "progress_reports"
+        | "deadline_history" | "status_events" | "attachments">),
       ...resolveTaskCompatibility(taskResult.data as unknown as TaskListItemDto),
       comments: (commentResult.data ?? []) as unknown as TaskDetailDto["comments"],
-      progress_logs:
-        (progressResult.data ?? []) as unknown as TaskDetailDto["progress_logs"],
-      legacy_evaluations:
-        (evaluationResult.data ?? []) as unknown as TaskDetailDto["legacy_evaluations"],
+      progress_logs: (legacyProgressResult.data ?? []) as unknown as TaskDetailDto["progress_logs"],
+      legacy_evaluations: (evaluationResult.data ?? []) as unknown as TaskDetailDto["legacy_evaluations"],
+      progress_reports: (progressResult.data ?? []) as unknown as TaskDetailDto["progress_reports"],
+      deadline_history: (deadlineResult.data ?? []) as unknown as TaskDetailDto["deadline_history"],
+      status_events: (statusResult.data ?? []) as unknown as TaskDetailDto["status_events"],
+      attachments: (attachmentResult.data ?? []) as unknown as TaskDetailDto["attachments"],
     });
   },
 
@@ -314,6 +311,38 @@ export const taskRepository: TaskRepository = {
     "api_complete_personal_task",
     { p_actor_id: actorId, p_task_id: taskId },
   ),
+
+  submitStructuredProgress: (actorId, taskId, input) => mutation(
+    "api_submit_task_progress_report",
+    { p_actor_id: actorId, p_task_id: taskId, p_reported_on: input.reportedOn,
+      p_report_status: input.reportStatus, p_progress_text: input.progressText,
+      p_blockers: input.blockers },
+  ),
+  submitAssignedCompletion: (actorId, taskId) => mutation(
+    "api_submit_assigned_task_completion", { p_actor_id: actorId, p_task_id: taskId },
+  ),
+  reviewAssignedCompletion: (actorId, taskId, decision, reason) => mutation(
+    "api_review_assigned_task_completion",
+    { p_actor_id: actorId, p_task_id: taskId, p_decision: decision, p_reason: reason },
+  ),
+  cancelAssigned: (actorId, taskId, reason) => mutation(
+    "api_cancel_assigned_task", { p_actor_id: actorId, p_task_id: taskId, p_reason: reason },
+  ),
+  changeAssignedDeadline: (actorId, taskId, dueDate, reason) => mutation(
+    "api_change_assigned_task_deadline",
+    { p_actor_id: actorId, p_task_id: taskId, p_new_due_date: dueDate, p_reason: reason },
+  ),
+  addAttachmentMetadata: (actorId, taskId, input) => mutation(
+    "api_add_task_attachment",
+    { p_actor_id: actorId, p_task_id: taskId, p_storage_path: input.storagePath,
+      p_file_name: input.fileName, p_mime_type: input.mimeType, p_size_bytes: input.sizeBytes },
+  ),
+  async attachment(taskId, attachmentId) {
+    const { data, error } = await serverSupabase.from("task_attachments")
+      .select("id,file_name,mime_type,size_bytes,created_at,uploaded_by,storage_path")
+      .eq("task_id", taskId).eq("id", attachmentId).maybeSingle();
+    return error ? fail(error) : ok(data as unknown as (TaskDetailDto["attachments"][number] & { storage_path: string }) | null);
+  },
 
   update: (actorId, taskId, input: LegacyUpdateTaskInput) => mutation(
     "api_update_task",

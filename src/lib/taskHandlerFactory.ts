@@ -36,6 +36,9 @@ type Dependencies = {
     input: Record<string, unknown>,
   ) => Omit<LegacyEvaluationInput, "employeeId">;
   newUuid: () => string;
+  uploadPrivateAttachment: (path: string, file: File) => Promise<{ ok: true } | { ok: false; error: { code?: string | null } }>;
+  removePrivateAttachment: (path: string) => Promise<void>;
+  signPrivateAttachment: (path: string) => Promise<{ ok: true; url: string } | { ok: false; error: { code?: string | null } }>;
 };
 
 const toActor = (user: ServerAuthUser): AuthorizationActor => ({
@@ -140,6 +143,115 @@ export function createTaskApplication(deps: Dependencies) {
               ),
         },
       });
+    },
+
+    async submitStructuredProgress(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const taskId = await authorizeMutation(actor, taskIdValue, "report");
+      if (taskId instanceof Response) return taskId;
+      const reportedOn = dateValue(body.reportedOn);
+      const reportStatus = ["in_progress", "blocked", "waiting", "nearly_done"]
+        .find((value) => value === body.reportStatus);
+      const progressText = cleanText(body.progressText, 10000);
+      const blockers = cleanText(body.blockers, 10000) || null;
+      if (!reportedOn || !reportStatus || !progressText || (reportStatus === "blocked" && !blockers)) {
+        return deps.error("invalid_request", 400);
+      }
+      const result = await deps.repository.submitStructuredProgress(actor.id, taskId, {
+        reportedOn, reportStatus, progressText, blockers,
+      });
+      return result.ok ? deps.json({ report: result.data }, 201) : deps.rpcFailure(result.error);
+    },
+
+    async submitAssignedCompletion(_request: Request, taskIdValue: unknown) {
+      const guard = await deps.mutationActor();
+      if (!guard.ok) return guard.response;
+      const taskId = await authorizeMutation(guard.actor, taskIdValue, "report");
+      if (taskId instanceof Response) return taskId;
+      const result = await deps.repository.submitAssignedCompletion(guard.actor.id, taskId);
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async reviewAssignedCompletion(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const taskId = await authorizeMutation(actor, taskIdValue, "review");
+      if (taskId instanceof Response) return taskId;
+      const decision = body.decision === "approve" || body.decision === "return" ? body.decision : null;
+      const reason = cleanText(body.reason, 2000) || null;
+      if (!decision || (decision === "return" && !reason)) return deps.error("invalid_request", 400);
+      const result = await deps.repository.reviewAssignedCompletion(actor.id, taskId, decision, reason);
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async cancelAssigned(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const taskId = await authorizeMutation(actor, taskIdValue, "update");
+      if (taskId instanceof Response) return taskId;
+      const reason = cleanText(body.reason, 2000);
+      if (!reason) return deps.error("invalid_request", 400);
+      const result = await deps.repository.cancelAssigned(actor.id, taskId, reason);
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async changeAssignedDeadline(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const taskId = await authorizeMutation(actor, taskIdValue, "update");
+      if (taskId instanceof Response) return taskId;
+      const dueDate = dateValue(body.dueDate);
+      const reason = cleanText(body.reason, 2000);
+      if (!dueDate || !reason) return deps.error("invalid_request", 400);
+      const result = await deps.repository.changeAssignedDeadline(actor.id, taskId, dueDate, reason);
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async uploadAttachment(request: Request, taskIdValue: unknown) {
+      const guard = await deps.mutationActor();
+      if (!guard.ok) return guard.response;
+      const taskId = await authorizeMutation(guard.actor, taskIdValue, "attachment");
+      if (taskId instanceof Response) return taskId;
+      const form = await request.formData().catch(() => null);
+      const file = form?.get("file");
+      const allowed = new Set(["application/pdf", "image/png", "image/jpeg",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
+      if (!(file instanceof File) || file.size < 1 || file.size > 10485760 || !allowed.has(file.type)) {
+        return deps.error("invalid_request", 400);
+      }
+      const safeName = file.name.normalize("NFC").replace(/[^\p{L}\p{N}._-]+/gu, "-").slice(-180) || "attachment";
+      const storagePath = `${taskId}/${deps.newUuid()}-${safeName}`;
+      const upload = await deps.uploadPrivateAttachment(storagePath, file);
+      if (!upload.ok) return deps.rpcFailure(upload.error);
+      const result = await deps.repository.addAttachmentMetadata(guard.actor.id, taskId, {
+        storagePath, fileName: file.name.slice(0, 500), mimeType: file.type, sizeBytes: file.size,
+      });
+      if (!result.ok) {
+        await deps.removePrivateAttachment(storagePath);
+        return deps.rpcFailure(result.error);
+      }
+      return deps.json({ attachment: result.data }, 201);
+    },
+
+    async downloadAttachment(taskIdValue: unknown, attachmentIdValue: unknown) {
+      const guard = await deps.readActor();
+      if (!guard.ok) return guard.response;
+      const taskId = deps.asUuid(taskIdValue);
+      const attachmentId = deps.asUuid(attachmentIdValue);
+      if (!taskId || !attachmentId) return deps.error("invalid_request", 400);
+      const access = await taskGuard(guard.actor, taskId, "view");
+      if (access instanceof Response) return access;
+      const attachment = await deps.repository.attachment(taskId, attachmentId);
+      if (!attachment.ok) return deps.rpcFailure(attachment.error);
+      if (!attachment.data) return deps.error("not_found", 404);
+      const signed = await deps.signPrivateAttachment(attachment.data.storage_path);
+      return signed.ok ? deps.json({ url: signed.url }) : deps.rpcFailure(signed.error);
     },
 
     async createPersonal(request: Request) {

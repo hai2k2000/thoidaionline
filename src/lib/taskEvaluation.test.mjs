@@ -112,10 +112,10 @@ test("forward migration grants TBT evaluation access without generic admin permi
 });
 
 test("task detail source hides mutations from employees and removes legacy controls", () => {
-  const source = readFileSync(new URL("../app/tasks/[id]/page.tsx", import.meta.url), "utf8");
-  assert.match(source, /canEditEvaluation\s*\?/);
+  const source = readFileSync(new URL("../components/TaskDetailShell.tsx", import.meta.url), "utf8");
+  assert.match(source, /Dữ liệu cũ chỉ đọc/);
   assert.match(source, /Ý kiến đánh giá/);
-  assert.match(source, /Lưu đánh giá/);
+  assert.doesNotMatch(source, /Lưu đánh giá|saveEvaluation/);
   assert.doesNotMatch(source, />\s*Việc khó\s*</);
   assert.doesNotMatch(source, />\s*Có cải tiến\s*</);
   assert.doesNotMatch(source, />\s*Có đóng góp\s*</);
@@ -133,9 +133,10 @@ test("local checkpoint dates do not use UTC ISO truncation", () => {
   assert.doesNotMatch(source, /new Date\(\)\.toISOString\(\)\.slice\(0, 10\)/);
 });
 
-test("task detail selects final checkpoints instead of newer mid-period feedback", () => {
-  const source = readFileSync(new URL("../app/tasks/[id]/page.tsx", import.meta.url), "utf8");
-  assert.match(source, /selectLatestFinalEvaluations\(rows\)/);
+test("task detail renders legacy checkpoints without a mutation path", () => {
+  const source = readFileSync(new URL("../components/TaskDetailShell.tsx", import.meta.url), "utf8");
+  assert.match(source, /task\.legacy_evaluations\.map/);
+  assert.doesNotMatch(source, /save_task_evaluation_checkpoint|\/evaluate/);
 });
 
 test("migration prevents anonymous updates to task effort weight", () => {

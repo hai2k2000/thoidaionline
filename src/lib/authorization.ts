@@ -34,6 +34,7 @@ export type TaskAction =
   | "report"
   | "review"
   | "comment"
+  | "attachment"
   | "personal_edit"
   | "personal_deadline"
   | "personal_cancel"
@@ -153,6 +154,13 @@ export function canTaskAction(
     case "comment":
       return actor.permissions.can_comment
         && canTaskAction(actor, task, "view");
+    case "attachment":
+      return actor.roleCode === "admin"
+        || task.createdBy === actor.id
+        || task.ownerId === actor.id
+        || task.assigneeId === actor.id
+        || isParticipant(actor, task, false)
+        || (actor.permissions.can_assign_task && sameDepartment(actor, task));
     case "personal_edit":
     case "personal_deadline":
     case "personal_cancel":

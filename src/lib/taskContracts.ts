@@ -13,12 +13,17 @@ export type TaskParticipantDto = {
 export type TaskListItemDto = {
   id: string;
   title: string;
+  priority: string;
   created_at: string;
   status: CanonicalTaskStatus;
   task_type: CanonicalTaskType | null;
   compatibility_task_type: CanonicalTaskType | null;
   legacy_read_only: boolean;
   start_date: string | null;
+  completion_submitted_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
   progress_percent: number;
   due_date: string | null;
   assignee_id: string | null;
@@ -67,6 +72,11 @@ export type LegacyEvaluationDto = {
   created_at: string;
 };
 
+export type TaskProgressReportDto = { id: string; reported_by: string; reported_on: string; report_status: string; progress_text: string; blockers: string | null; created_at: string; };
+export type TaskDeadlineHistoryDto = { id: string; old_due_date: string | null; new_due_date: string | null; reason: string; changed_at: string; };
+export type TaskStatusEventDto = { id: string; from_status: string | null; to_status: string; reason: string | null; created_at: string; };
+export type TaskAttachmentDto = { id: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; uploaded_by: string; };
+
 export type TaskDetailDto = TaskListItemDto & {
   description: string | null;
   attachment_url: string | null;
@@ -77,6 +87,10 @@ export type TaskDetailDto = TaskListItemDto & {
   comments: TaskCommentDto[];
   progress_logs: TaskProgressLogDto[];
   legacy_evaluations: LegacyEvaluationDto[];
+  progress_reports: TaskProgressReportDto[];
+  deadline_history: TaskDeadlineHistoryDto[];
+  status_events: TaskStatusEventDto[];
+  attachments: TaskAttachmentDto[];
 };
 
 export type TaskListQuery = {
@@ -168,6 +182,13 @@ export interface TaskRepository {
   completePersonal(
     actorId: string, taskId: string,
   ): Promise<RepositoryResult<{ id: string }>>;
+  submitStructuredProgress(actorId: string, taskId: string, input: { reportedOn: string; reportStatus: string; progressText: string; blockers: string | null }): Promise<RepositoryResult<unknown>>;
+  submitAssignedCompletion(actorId: string, taskId: string): Promise<RepositoryResult<unknown>>;
+  reviewAssignedCompletion(actorId: string, taskId: string, decision: "approve" | "return", reason: string | null): Promise<RepositoryResult<unknown>>;
+  cancelAssigned(actorId: string, taskId: string, reason: string): Promise<RepositoryResult<unknown>>;
+  changeAssignedDeadline(actorId: string, taskId: string, dueDate: string, reason: string): Promise<RepositoryResult<unknown>>;
+  addAttachmentMetadata(actorId: string, taskId: string, input: { storagePath: string; fileName: string; mimeType: string; sizeBytes: number }): Promise<RepositoryResult<TaskAttachmentDto>>;
+  attachment(taskId: string, attachmentId: string): Promise<RepositoryResult<(TaskAttachmentDto & { storage_path: string }) | null>>;
   update(
     actorId: string,
     taskId: string,

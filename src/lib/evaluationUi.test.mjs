@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 
 test("evaluation UI uses Vietnamese difficulty and evaluation-date wording", () => {
-  const taskSource = readFileSync(new URL("../app/tasks/[id]/page.tsx", import.meta.url), "utf8");
+  const taskSource = readFileSync(new URL("../components/TaskDetailShell.tsx", import.meta.url), "utf8");
   const performanceSource = readFileSync(new URL("../app/performance/page.tsx", import.meta.url), "utf8");
   const helperSource = readFileSync(new URL("./taskEvaluation.ts", import.meta.url), "utf8");
   const userFacingSource = [taskSource, performanceSource, helperSource].join("\n");
@@ -15,13 +15,9 @@ test("evaluation UI uses Vietnamese difficulty and evaluation-date wording", () 
   assert.doesNotMatch(userFacingSource, /Tr\u1ecdng s\u1ed1|tr\u1ecdng s\u1ed1|>[^<{]*checkpoint[^<{]*</iu);
 });
 
-test("task evaluation is an accessible accordion closed by default", () => {
-  const source = readFileSync(new URL("../app/tasks/[id]/page.tsx", import.meta.url), "utf8");
-  assert.match(source, /const \[evaluationOpen, setEvaluationOpen\] = useState\(false\)/);
-  assert.match(source, /aria-expanded=\{evaluationOpen\}/);
-  assert.match(source, /aria-controls="task-evaluation-panel"/);
-  assert.match(source, /id="task-evaluation-panel"/);
-  assert.match(source, /onClick=\{\(\) => setEvaluationOpen\(\(open\) => !open\)\}/);
-  assert.match(source, /if \(error\)[\s\S]*setEvaluationOpen\(true\)/);
-  assert.match(source, /\{evaluationOpen \? \(/);
+test("legacy task evaluation is visibly read-only in Phase 5", () => {
+  const source = readFileSync(new URL("../components/TaskDetailShell.tsx", import.meta.url), "utf8");
+  assert.match(source, /Đánh giá cũ/);
+  assert.match(source, /Dữ liệu cũ chỉ đọc/);
+  assert.doesNotMatch(source, /Lưu đánh giá|saveEvaluation|evaluationOpen/);
 });
