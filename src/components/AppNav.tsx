@@ -20,10 +20,10 @@ const labels = {
 } as const;
 
 const linkClass = (active: boolean) =>
-  `block rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+  `group flex items-center rounded-lg border-l-4 px-3 py-2.5 text-sm font-semibold transition-colors ${
     active
-      ? "border-orange-200 bg-orange-50 text-orange-800"
-      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+      ? "border-orange-500 bg-orange-50 text-orange-900 shadow-sm"
+      : "border-transparent text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
   }`;
 
 function isNavigationActive(currentPath: string, href: string) {
@@ -48,12 +48,18 @@ function NavContent({
   userLabel?: string;
 }) {
   return (
-    <div className="flex h-full flex-col p-3">
-      <p className="rounded-lg bg-orange-50 px-3 py-2 text-sm font-bold text-orange-700">
-        TH\u1edcI \u0110\u1ea0I WORK
-      </p>
+    <div className="flex h-full flex-col p-4">
+      <div className="border-b border-orange-100 pb-4">
+        <div className="flex items-center gap-3">
+          <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-base font-black text-white shadow-sm">TD</span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-extrabold tracking-wide text-slate-950">TH\u1edcI \u0110\u1ea0I WORK</p>
+            <p className="mt-0.5 text-xs text-slate-500">Qu\u1ea3n tr\u1ecb c\u00f4ng vi\u1ec7c n\u1ed9i b\u1ed9</p>
+          </div>
+        </div>
+      </div>
 
-      <nav aria-label="Menu ch\u00ednh" className="mt-4 space-y-2">
+      <nav aria-label="Menu ch\u00ednh" className="mt-4 space-y-1">
         {navigation.primary.map((item) => (
           <Link
             key={item.id}
@@ -67,11 +73,11 @@ function NavContent({
       </nav>
 
       {navigation.configuration.length > 0 ? (
-        <div className="mt-5 border-t pt-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+        <div className="mt-6 border-t border-slate-200 pt-4">
+          <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
             C\u1ea5u h\u00ecnh
           </p>
-          <nav aria-label="C\u1ea5u h\u00ecnh" className="space-y-2">
+          <nav aria-label="C\u1ea5u h\u00ecnh" className="space-y-1">
             {navigation.configuration.map((item) => (
               <Link
                 key={item.id}
@@ -86,8 +92,11 @@ function NavContent({
         </div>
       ) : null}
 
-      <div className="mt-auto border-t pt-4">
-        <p className="mb-2 truncate text-xs text-slate-500">{userLabel ?? "-"}</p>
+      <div className="mt-auto border-t border-slate-200 pt-4">
+        <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">\u0110ang \u0111\u0103ng nh\u1eadp</p>
+          <p className="mt-0.5 truncate text-sm font-semibold text-slate-700">{userLabel ?? "-"}</p>
+        </div>
         {navigation.account.map((item) => (
           <Link
             key={item.id}
@@ -104,7 +113,7 @@ function NavContent({
             onNavigate();
             onLogout();
           }}
-          className="mt-2 w-full rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-left text-sm font-semibold text-orange-800 hover:bg-orange-100"
+          className="mt-2 w-full rounded-lg border border-orange-200 bg-orange-50 px-3 py-2.5 text-left text-sm font-semibold text-orange-800 hover:bg-orange-100"
         >
           \u0110\u0103ng xu\u1ea5t
         </button>
@@ -176,7 +185,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         \u2630 Menu
       </button>
 
-      <div className="hidden min-h-[calc(100vh-2rem)] rounded-xl border bg-white lg:sticky lg:top-4 lg:block">
+      <div className="hidden min-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border bg-white lg:sticky lg:top-4 lg:block">
         <NavContent
           currentPath={currentPath}
           navigation={navigation}
@@ -200,7 +209,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
             role="dialog"
             aria-modal="true"
             aria-label="Menu ch\u00ednh"
-            className="fixed inset-y-0 left-0 z-50 w-[min(232px,calc(100vw-48px))] overflow-y-auto border-r bg-white shadow-xl lg:hidden"
+            className="fixed inset-y-0 left-0 z-50 w-[min(232px,calc(100vw-48px))] overflow-y-auto border-r bg-white shadow-2xl lg:hidden"
           >
             <NavContent
               currentPath={currentPath}

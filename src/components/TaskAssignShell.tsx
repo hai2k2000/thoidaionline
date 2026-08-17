@@ -7,7 +7,7 @@ import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import type { AssignmentDepartment, AssignmentPerson } from "@/lib/taskAssignmentRepository";
 
-const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal text-slate-900";
+const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
 export default function TaskAssignShell({ departments, people, userLabel }: {
   departments: AssignmentDepartment[];
@@ -70,15 +70,15 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
   };
 
   return <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
-    <div className="flex w-full flex-col gap-4 lg:flex-row">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 lg:flex-row lg:gap-6">
       <AppNav currentPath="/tasks/assign" userLabel={userLabel} onLogout={() => { logout(); router.replace("/login"); }} />
       <main className="min-w-0 flex-1">
-        <header className="rounded-xl border bg-white p-4 shadow-sm">
+        <header className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
           <Link href="/tasks" className="text-sm font-semibold text-orange-700 hover:underline">← Quay lại Quản lý công việc</Link>
           <h1 className="mt-3 text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
           <p className="mt-1 text-sm text-slate-600">Trưởng phòng chính của người thực hiện được thêm làm người theo dõi tự động.</p>
         </header>
-        <form onSubmit={submit} className="mt-4 grid gap-4 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
+        <form onSubmit={submit} className="mt-4 grid gap-5 rounded-xl border bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-2">
           <Field label="Tên công việc"><input name="title" required maxLength={500} className={controlClass} /></Field>
           <Field label="Phòng ban"><select name="departmentId" required value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
           <Field label="Nội dung" wide><textarea name="description" required maxLength={10000} rows={5} className={controlClass} /></Field>

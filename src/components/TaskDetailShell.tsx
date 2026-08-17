@@ -14,7 +14,8 @@ type Capabilities = {
 };
 
 const statusLabel: Record<string, string> = {
-  new: "Mới", in_progress: "Đang làm", pending_review: "Chờ duyệt",
+  new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc",
+  waiting: "Chờ phối hợp", pending_review: "Chờ duyệt",
   rejected: "Trả lại", done: "Hoàn thành", cancelled: "Đã hủy",
 };
 const reportLabel: Record<string, string> = {
@@ -89,11 +90,11 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const personal = task.task_type === "personal";
   const deadlineState = classifyTaskDeadline(task);
 
-  return <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
-    <div className="mx-auto flex max-w-7xl gap-4">
+  return <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 lg:flex-row lg:gap-6">
       <AppNav currentPath={`/tasks/${task.id}`} userLabel={userLabel} onLogout={logout} />
       <main className="min-w-0 flex-1 space-y-4">
-        <div className="flex items-center justify-between"><div><Link href="/tasks" className="text-sm text-orange-700">← Công việc</Link><h1 className="text-2xl font-bold">{task.title}</h1></div><span className="rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-800">{statusLabel[task.status] ?? task.status}</span></div>
+        <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6"><div><Link href="/tasks" className="text-sm text-orange-700">← Công việc</Link><h1 className="mt-1 text-2xl font-bold">{task.title}</h1></div><span className="rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-800">{statusLabel[task.status] ?? task.status}</span></div>
         {message ? <p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p> : null}
 
         <Section title="Thông tin chung"><dl className="grid gap-3 sm:grid-cols-2"><Item label="Loại" value={personal ? "Cá nhân" : "Được giao"} /><Item label="Mức độ khó" value={difficultyLabel[task.priority] ?? task.priority} /><Item label="Phụ trách" value={task.owner?.full_name ?? "—"} /><Item label="Người duyệt" value={task.reviewer?.full_name ?? "—"} /><Item label="Phòng ban" value={task.departments?.name ?? "—"} /><Item label="Hạn" value={dateText(task.due_date)} /><Item label="Phân loại hạn" value={deadlineState} /></dl></Section>
@@ -119,6 +120,6 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   </div>;
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) { return <section className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="mb-4 text-lg font-bold">{title}</h2>{children}</section>; }
-function Item({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs font-semibold uppercase text-slate-500">{label}</dt><dd>{value}</dd></div>; }
-function Timeline({ children, empty }: { children: ReactNode; empty: string }) { const rows = Array.isArray(children) ? children : [children]; return rows.length && rows.some(Boolean) ? <ul className="space-y-3">{children}</ul> : <p className="text-sm text-slate-500">{empty}</p>; }
+function Section({ title, children }: { title: string; children: ReactNode }) { return <section className="rounded-xl border bg-white p-4 shadow-sm sm:p-5"><h2 className="mb-4 text-lg font-bold">{title}</h2>{children}</section>; }
+function Item({ label, value }: { label: string; value: string }) { return <div className="rounded-lg bg-slate-50 px-3 py-2"><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 font-medium text-slate-800">{value}</dd></div>; }
+function Timeline({ children, empty }: { children: ReactNode; empty: string }) { const rows = Array.isArray(children) ? children : [children]; return rows.length && rows.some(Boolean) ? <ul className="space-y-3 border-l-2 border-orange-100 pl-4 text-sm">{children}</ul> : <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">{empty}</p>; }
