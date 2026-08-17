@@ -46,6 +46,7 @@ const deadlineLabel = (dueDate: string | null, status: string) => {
 function FilterFields({ query, departments }: Pick<Props, "query" | "departments">) {
   return (
     <>
+      {query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
       <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm theo tên công việc" className="rounded-lg border px-3 py-2" />
       <select name="type" defaultValue={query.taskType ?? ""} className="rounded-lg border px-3 py-2">
         <option value="">Mọi tính chất</option><option value="assigned">Được giao</option><option value="personal">Cá nhân</option>

@@ -14,6 +14,7 @@ test("Phase 4 Task Center is server-filtered and responsive", () => {
   assert.match(shell, /\+ Nhi(?:ệ|&#7879;)m v(?:ụ|&#7909;) c(?:á|&#225;) nh(?:â|&#226;)n/);
   assert.match(shell, /md:hidden/);
   assert.match(shell, /hidden[^\n]*md:table/);
+  assert.match(shell, /name="scope"/);
   assert.match(shell, /name="q"/);
   assert.match(shell, /name="status"/);
   assert.match(shell, /name="deadline"/);
