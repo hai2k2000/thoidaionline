@@ -15,6 +15,7 @@ const labels = {
   assign: "Giao vi\u1ec7c",
   tasks: "Qu\u1ea3n l\u00fd c\u00f4ng vi\u1ec7c",
   account: "T\u00e0i kho\u1ea3n",
+  "department-managers": "Tr\u01b0\u1edfng ph\u00f2ng ch\u00ednh",
   "evaluation-rubrics": "B\u1ed9 ti\u00eau ch\u00ed \u0111\u00e1nh gi\u00e1 chung",
 } as const;
 
@@ -124,6 +125,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
     canEvaluateStep1: hasPermission("can_evaluate_step1"),
     canEvaluateStep2: hasPermission("can_evaluate_step2"),
     canManageRubrics: hasPermission("can_manage_rubrics"),
+    canManageUsers: hasPermission("can_manage_users"),
   });
 
   const restoreMenuFocus = useCallback(() => {

@@ -4,10 +4,11 @@ export type Phase2NavigationAccess = {
   canEvaluateStep1: boolean;
   canEvaluateStep2: boolean;
   canManageRubrics: boolean;
+  canManageUsers: boolean;
 };
 
 export type Phase2NavigationItem = {
-  id: "assign" | "tasks" | "account" | "evaluation-rubrics";
+  id: "assign" | "tasks" | "account" | "evaluation-rubrics" | "department-managers";
   href: string;
 };
 
@@ -29,15 +30,20 @@ export function getPhase2Navigation(
       { id: "tasks", href: "/tasks" },
     ],
     account: [{ id: "account", href: "/account" }],
-    configuration:
-      access.roleCode === "admin" && access.canManageRubrics
-        ? [
-            {
-              id: "evaluation-rubrics",
-              href: "/configuration/evaluation-rubrics",
-            },
-          ]
-        : [],
+    configuration: [
+      ...(access.roleCode === "admin" && access.canManageUsers
+        ? [{
+            id: "department-managers",
+            href: "/configuration/department-managers",
+          } as const]
+        : []),
+      ...(access.roleCode === "admin" && access.canManageRubrics
+        ? [{
+            id: "evaluation-rubrics",
+            href: "/configuration/evaluation-rubrics",
+          } as const]
+        : []),
+    ],
     showEvaluationTab:
       access.canEvaluateStep1 || access.canEvaluateStep2,
   };
