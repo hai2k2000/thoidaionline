@@ -28,6 +28,11 @@ type Dependencies = {
     actor: AuthorizationActor,
     departmentId: string | null,
   ) => boolean;
+  resolveAssignmentParticipants: (actor: AuthorizationActor, input: {
+    departmentId: string; assigneeId: string; reviewerId: string;
+    collaboratorIds: string[]; watcherIds: string[];
+    groupDepartmentId: string | null; excludedMemberIds: string[];
+  }) => Promise<{ ok: true; collaboratorIds: string[]; watcherIds: string[] } | { ok: false }>;
   canTaskAction: (
     actor: AuthorizationActor,
     task: TaskAccessSnapshot,
@@ -430,8 +435,12 @@ export function createTaskApplication(deps: Dependencies) {
         : null;
       const collaboratorIds = ids(body?.collaboratorIds);
       const watcherIds = ids(body?.watcherIds);
+      const groupDepartmentId = body?.groupDepartmentId === undefined || body?.groupDepartmentId === null
+        ? null : deps.asUuid(body.groupDepartmentId);
+      const excludedMemberIds = body?.excludedMemberIds === undefined ? [] : ids(body.excludedMemberIds);
       if (!title || !description || !departmentId || !assigneeId || !reviewerId
-        || !dueDate || !collaboratorIds || !watcherIds
+        || !dueDate || !collaboratorIds || !watcherIds || !excludedMemberIds
+        || (body?.groupDepartmentId !== undefined && body?.groupDepartmentId !== null && !groupDepartmentId)
         || recurrenceFrequency === undefined
         || (body?.recurrenceEndsOn !== null && !recurrenceEndsOn)
         || (recurrenceFrequency === null && recurrenceEndsOn !== null)
@@ -441,13 +450,16 @@ export function createTaskApplication(deps: Dependencies) {
       if (!deps.canAssignToDepartment(actor, departmentId)) {
         return deps.error("forbidden", 403);
       }
+      const resolved = await deps.resolveAssignmentParticipants(actor, {
+        departmentId, assigneeId, reviewerId, collaboratorIds, watcherIds,
+        groupDepartmentId, excludedMemberIds,
+      });
+      if (!resolved.ok) return deps.error("invalid_request", 400);
       const input: AssignedTaskInput = {
         title, description, departmentId, assigneeId, reviewerId, dueDate,
         evaluationCriteria,
-        collaboratorIds: collaboratorIds.filter((id) => id !== assigneeId),
-        watcherIds: watcherIds.filter(
-          (id) => id !== assigneeId && !collaboratorIds.includes(id),
-        ),
+        collaboratorIds: resolved.collaboratorIds,
+        watcherIds: resolved.watcherIds,
         recurrenceFrequency,
         recurrenceEndsOn,
       };

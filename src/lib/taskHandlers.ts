@@ -17,6 +17,7 @@ import {
 } from "@/lib/serverApi";
 import { createTaskApplication } from "@/lib/taskHandlerFactory";
 import { taskRepository } from "@/lib/taskRepository";
+import { taskAssignmentRepository } from "@/lib/taskAssignmentRepository";
 import { serverSupabase } from "@/lib/serverSupabase";
 
 const privateAttachments = serverSupabase.storage.from("task-private");
@@ -30,6 +31,7 @@ export const taskHandlers = createTaskApplication({
   rpcFailure,
   asUuid,
   canAssignToDepartment,
+  resolveAssignmentParticipants: (actor, input) => taskAssignmentRepository.resolveParticipants(actor, input),
   canTaskAction,
   normalizeLegacyEvaluationInput,
   newUuid: randomUUID,

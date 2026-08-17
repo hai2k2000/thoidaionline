@@ -120,6 +120,11 @@ const makeHarness = ({
       ? value
       : null,
     canAssignToDepartment,
+    resolveAssignmentParticipants: async (_actor, input) => ({
+      ok: true,
+      collaboratorIds: input.collaboratorIds.filter((id) => id !== input.assigneeId),
+      watcherIds: input.watcherIds,
+    }),
     canTaskAction,
     normalizeLegacyEvaluationInput,
     newUuid: () => "00000000-0000-4000-8000-000000000099",

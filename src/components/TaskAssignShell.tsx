@@ -17,6 +17,9 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
   const router = useRouter();
   const { logout } = useAuth();
   const [departmentId, setDepartmentId] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
+  const [assignmentMode, setAssignmentMode] = useState<"individual" | "department_group">("individual");
+  const [excludedMemberIds, setExcludedMemberIds] = useState<string[]>([]);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -48,6 +51,8 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
       evaluationCriteria: String(form.get("evaluationCriteria") ?? ""),
       collaboratorIds: values("collaboratorIds"),
       watcherIds: values("watcherIds"),
+      groupDepartmentId: assignmentMode === "department_group" ? departmentId : null,
+      excludedMemberIds: assignmentMode === "department_group" ? excludedMemberIds : [],
       recurrenceFrequency: recurrenceFrequency || null,
       recurrenceEndsOn: recurrenceFrequency
         ? String(form.get("recurrenceEndsOn") ?? "") || null : null,
@@ -88,14 +93,15 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
         </header>
         <form onSubmit={submit} className="mt-4 grid gap-5 rounded-xl border bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-2">
           <Field label="Tên công việc"><input name="title" required maxLength={500} className={controlClass} /></Field>
-          <Field label="Phòng ban"><select name="departmentId" required value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
+          <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
+          <Field label="Cách chọn người"><select value={assignmentMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); }} className={controlClass}><option value="individual">Cá nhân</option><option value="department_group">Nhóm phòng ban</option></select></Field>
           {departmentId ? <div role={managerLabel ? "status" : "alert"} className={`rounded-lg border px-3 py-2 text-sm lg:col-span-2 ${managerLabel ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
             {managerLabel
               ? `Theo dõi mặc định: ${managerLabel}. Hệ thống kiểm tra lại Trưởng phòng chính hiện hành khi lưu.`
               : "Phòng ban này chưa có Trưởng phòng chính; không thể giao việc."}
           </div> : null}
           <Field label="Nội dung" wide><textarea name="description" required maxLength={10000} rows={5} className={controlClass} /></Field>
-          <Field label="Người thực hiện"><select name="assigneeId" required className={controlClass}><option value="">Chọn người thực hiện</option>{scopedPeople.map(personOption)}</select></Field>
+          <Field label="Người chịu trách nhiệm chính"><select name="assigneeId" required value={assigneeId} className={controlClass} onChange={(event) => { setAssigneeId(event.target.value); setExcludedMemberIds((current) => current.filter((id) => id !== event.target.value)); }}><option value="">Chọn người thực hiện</option>{scopedPeople.map(personOption)}</select></Field>
           <Field label="Người duyệt"><select name="reviewerId" required className={controlClass}><option value="">Chọn người duyệt</option>{people.filter((person) => person.canReview).map(personOption)}</select></Field>
           <Field label="Hạn hoàn thành"><input name="dueDate" type="date" required className={controlClass} /></Field>
           <Field label="Lặp lại"><select name="recurrenceFrequency" value={recurrenceFrequency} onChange={(e) => setRecurrenceFrequency(e.target.value)} className={controlClass}><option value="">Không lặp</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></Field>
@@ -104,7 +110,7 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
             <textarea name="evaluationCriteria" maxLength={10000} rows={6} placeholder={"Mô tả kết quả cần đạt, các mức điểm và trọng số. Ví dụ:\n- Đúng yêu cầu: 50 điểm\n- Đúng hạn: 30 điểm\n- Chất lượng trình bày: 20 điểm"} className={controlClass} />
             <span className="font-normal text-slate-500">Barem được lưu cùng công việc và có thể nhập, chỉnh sửa trực tiếp trước khi giao việc.</span>
           </Field>
-          <Field label="Người phối hợp"><select name="collaboratorIds" multiple className={`${controlClass} min-h-32`}>{scopedPeople.map(personOption)}</select></Field>
+          {assignmentMode === "individual" ? <Field label="Người phối hợp"><select name="collaboratorIds" multiple className={`${controlClass} min-h-32`}>{scopedPeople.map(personOption)}</select></Field> : <Field label="Danh sách thành viên active" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên active.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành khi lưu. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field>}
           <Field label="Người theo dõi bổ sung"><select name="watcherIds" multiple aria-describedby="watcher-help" className={`${controlClass} min-h-32`}>{people.map(personOption)}</select><span id="watcher-help" className="font-normal text-slate-500">Giữ Ctrl/Cmd để chọn nhiều người. Trưởng phòng chính được thêm tự động và các lựa chọn trùng sẽ được gộp.</span></Field>
           <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className={controlClass} /></Field>
           <div className="flex items-end"><button disabled={busy || !departmentId || !selectedDepartment?.managerId} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : "Giao việc"}</button></div>
