@@ -2,45 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRoleAccessPolicy } from "@/components/appNavState";
-import { supabase } from "@/lib/supabase";
-
-type PermissionKey =
-  | "can_manage_users"
-  | "can_manage_permissions"
-  | "can_create_task"
-  | "can_edit_all_tasks"
-  | "can_comment";
-
-type PermissionRow = {
-  can_manage_users: boolean;
-  can_manage_permissions: boolean;
-  can_create_task: boolean;
-  can_edit_all_tasks: boolean;
-  can_comment: boolean;
-};
-
-type RoleRow = {
-  code: string;
-  name: string;
-  role_permissions: PermissionRow | null;
-};
-
-type StaffProfileRow = {
-  id: string;
-  full_name: string;
-  email: string | null;
-  phone: string | null;
-  active: boolean;
-  roles: RoleRow | null;
-};
-
-type LoginRow = {
-  id: string;
-  email: string | null;
-  phone: string | null;
-  password: string | null;
-  active: boolean;
-};
+import type { PermissionKey, PermissionSet } from "@/lib/permissions";
 
 type AuthUser = {
   id: string;
@@ -50,7 +12,7 @@ type AuthUser = {
   role_code: string;
   role_name: string;
   active: boolean;
-  permissions: Record<PermissionKey, boolean>;
+  permissions: PermissionSet;
 };
 
 type ModuleKey = "hr" | "assets" | "documents" | "performance";
@@ -68,26 +30,13 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 const SESSION_KEY = "thoidai_work_user_id";
-
-function toAuthUser(row: StaffProfileRow): AuthUser {
-  const perms = row.roles?.role_permissions;
-  return {
-    id: row.id,
-    full_name: row.full_name,
-    email: row.email,
-    username: null,
-    role_code: row.roles?.code ?? "",
-    role_name: row.roles?.name ?? "",
-    active: row.active,
-    permissions: {
-      can_manage_users: !!perms?.can_manage_users,
-      can_manage_permissions: !!perms?.can_manage_permissions,
-      can_create_task: !!perms?.can_create_task,
-      can_edit_all_tasks: !!perms?.can_edit_all_tasks,
-      can_comment: !!perms?.can_comment,
-    },
-  };
-}
+const PHASE2_PERMISSION_KEYS = new Set<PermissionKey>([
+  "can_assign_task",
+  "can_view_department_tasks",
+  "can_evaluate_step1",
+  "can_evaluate_step2",
+  "can_manage_rubrics",
+]);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -104,28 +53,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       void (async () => {
         await loadSession();
         setLoading(false);
       })();
     }, 0);
-
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, []);
 
   const login = async (identifier: string, password: string) => {
-    const normalizedIdentifier = identifier.trim().toLowerCase();
-    const normalizedPassword = password.trim();
-
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ identifier: normalizedIdentifier, password: normalizedPassword }),
+      body: JSON.stringify({
+        identifier: identifier.trim().toLowerCase(),
+        password: password.trim(),
+      }),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => null) as { error?: string } | null;
-      return { ok: false, error: payload?.error || "Sai tài khoản hoặc mật khẩu." };
+      return {
+        ok: false,
+        error: payload?.error || "Sai t\u00e0i kho\u1ea3n ho\u1eb7c m\u1eadt kh\u1ea9u.",
+      };
     }
     localStorage.removeItem(SESSION_KEY);
     await loadSession();
@@ -140,8 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasPermission = (key: PermissionKey) => {
     if (!user) return false;
+    if (PHASE2_PERMISSION_KEYS.has(key)) {
+      return user.permissions[key] === true;
+    }
     if (getRoleAccessPolicy(user.role_code).readOnly) return false;
-
     if (user.role_code === "admin") return true;
 
     const assignmentRoles = new Set([
@@ -150,45 +103,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       "phu_trach_phong_phong_vien",
       "phu_trach_phong_bien_tap",
     ]);
-
-    // Quy ước nghiệp vụ: chỉ lãnh đạo + trưởng/phụ trách phòng mới được giao việc và xem/sửa toàn bộ việc.
     if (key === "can_create_task" || key === "can_edit_all_tasks") {
       return assignmentRoles.has(user.role_code);
     }
-
-    return !!user.permissions[key];
+    return user.permissions[key] === true;
   };
 
   const canAccessModule = (module: ModuleKey) => {
     if (!user) return false;
-
     const rolePolicy = getRoleAccessPolicy(user.role_code);
     if (rolePolicy.readOnly) {
-      return rolePolicy.modules.includes(module === "performance" ? "hr" : (module === "documents" ? "documents" : module));
+      const policyModule = module === "performance"
+        ? "hr"
+        : module === "documents"
+          ? "documents"
+          : module;
+      return rolePolicy.modules.includes(policyModule);
     }
 
     const leadership = new Set(["admin", "pho_tong_bien_tap"]);
     const operations = new Set(["phu_trach_phong_tri_su", "tri_su"]);
-    const managers = new Set(["phu_trach_phong_bien_tap", "phu_trach_phong_phong_vien"]);
-
+    const managers = new Set([
+      "phu_trach_phong_bien_tap",
+      "phu_trach_phong_phong_vien",
+    ]);
     if (leadership.has(user.role_code)) return true;
-
-    if (module === "hr") return true;
-    if (module === "assets") return true;
-    if (module === "documents") return operations.has(user.role_code) || managers.has(user.role_code);
-    if (module === "performance") return managers.has(user.role_code) || operations.has(user.role_code);
-
+    if (module === "hr" || module === "assets") return true;
+    if (module === "documents") {
+      return operations.has(user.role_code) || managers.has(user.role_code);
+    }
+    if (module === "performance") {
+      return managers.has(user.role_code) || operations.has(user.role_code);
+    }
     return false;
   };
 
-  const isReadOnly = () => !!user && getRoleAccessPolicy(user.role_code).readOnly;
-  const canViewAllWorkHr = () => !!user && getRoleAccessPolicy(user.role_code).viewAllWorkHr;
+  const isReadOnly = () =>
+    !!user && getRoleAccessPolicy(user.role_code).readOnly;
+  const canViewAllWorkHr = () =>
+    !!user && getRoleAccessPolicy(user.role_code).viewAllWorkHr;
 
-  return <AuthContext.Provider value={{ loading, user, login, logout, hasPermission, canAccessModule, isReadOnly, canViewAllWorkHr }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        loading,
+        user,
+        login,
+        logout,
+        hasPermission,
+        canAccessModule,
+        isReadOnly,
+        canViewAllWorkHr,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
 }
