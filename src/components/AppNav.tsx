@@ -26,8 +26,8 @@ const labels = {
 const linkClass = (active: boolean) =>
   `group flex items-center rounded-xl border-l-4 px-3 py-2.5 text-sm font-semibold transition-all ${
     active
-      ? "border-orange-400 bg-orange-500 text-white shadow-lg shadow-orange-950/20"
-      : "border-transparent text-slate-200 hover:border-orange-400/70 hover:bg-white/10 hover:text-white"
+      ? "border-orange-500 bg-orange-50 text-orange-900 shadow-sm ring-1 ring-orange-100"
+      : "border-transparent text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
   }`;
 
 function isNavigationActive(currentPath: string, href: string) {
@@ -53,17 +53,17 @@ function NavContent({
 }) {
   return (
     <div className="flex h-full flex-col p-4">
-      <div className="border-b border-white/15 pb-4">
+      <div className="border-b border-orange-100 pb-4">
         <div className="flex items-center gap-3">
           <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-base font-black text-white shadow-sm">TD</span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-extrabold tracking-wide text-white">THỜI ĐẠI WORK</p>
-            <p className="mt-0.5 text-xs text-slate-300">Quản trị công việc nội bộ</p>
+            <p className="truncate text-sm font-extrabold tracking-wide text-slate-950">THỜI ĐẠI WORK</p>
+            <p className="mt-0.5 text-xs text-slate-500">Quản trị công việc nội bộ</p>
           </div>
         </div>
       </div>
 
-      <nav aria-label="Menu chính" className="mt-5 space-y-1.5">
+      <nav aria-label="Menu chính" className="mt-4 space-y-1">
         {navigation.primary.map((item) => (
           <Link
             key={item.id}
@@ -77,11 +77,11 @@ function NavContent({
       </nav>
 
       {navigation.configuration.length > 0 ? (
-        <div className="mt-6 border-t border-white/15 pt-4">
-          <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-orange-300">
+        <div className="mt-6 border-t border-slate-200 pt-4">
+          <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
             Cấu hình
           </p>
-          <nav aria-label="Cấu hình" className="space-y-1.5">
+          <nav aria-label="Cấu hình" className="space-y-1">
             {navigation.configuration.map((item) => (
               <Link
                 key={item.id}
@@ -96,10 +96,10 @@ function NavContent({
         </div>
       ) : null}
 
-      <div className="mt-auto border-t border-white/15 pt-4">
-        <div className="mb-3 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-200">Đang đăng nhập</p>
-          <p className="mt-0.5 truncate text-sm font-semibold text-white">{userLabel ?? "-"}</p>
+      <div className="mt-auto border-t border-slate-200 pt-4">
+        <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Đang đăng nhập</p>
+          <p className="mt-0.5 truncate text-sm font-semibold text-slate-700">{userLabel ?? "-"}</p>
         </div>
         {navigation.account.map((item) => (
           <Link
@@ -117,7 +117,7 @@ function NavContent({
             onNavigate();
             onLogout();
           }}
-          className="mt-2 w-full rounded-xl border border-orange-300/40 bg-orange-500 px-3 py-2.5 text-left text-sm font-bold text-white shadow-sm transition hover:bg-orange-400"
+          className="mt-2 w-full rounded-lg border border-orange-200 bg-orange-50 px-3 py-2.5 text-left text-sm font-semibold text-orange-800 transition hover:bg-orange-100"
         >
           Đăng xuất
         </button>
@@ -186,12 +186,12 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         aria-expanded={mobileOpen}
         aria-controls="phase2-mobile-navigation"
         onClick={() => setMobileOpen(true)}
-        className="mb-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-left text-sm font-bold text-white shadow-lg lg:hidden"
+        className="mb-2 w-full rounded-lg border bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 shadow-sm lg:hidden"
       >
         ☰ Menu
       </button>
 
-      <div className="hidden min-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-slate-700 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-950 shadow-xl shadow-slate-950/20 lg:sticky lg:top-4 lg:block">
+      <div className="hidden min-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-orange-200 bg-white shadow-md shadow-orange-100/50 lg:sticky lg:top-4 lg:block">
         <NavContent
           currentPath={currentPath}
           navigation={navigation}
@@ -215,7 +215,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
             role="dialog"
             aria-modal="true"
             aria-label="Menu chính"
-            className="fixed inset-y-0 left-0 z-50 w-[min(232px,calc(100vw-48px))] overflow-y-auto border-r border-slate-700 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-950 shadow-2xl lg:hidden"
+            className="fixed inset-y-0 left-0 z-50 w-[min(232px,calc(100vw-48px))] overflow-y-auto border-r bg-white shadow-2xl lg:hidden"
           >
             <NavContent
               currentPath={currentPath}
