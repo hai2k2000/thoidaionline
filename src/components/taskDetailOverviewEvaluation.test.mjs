@@ -35,11 +35,11 @@ test("legacy evaluation hash opens overview and focuses the merged workspace", (
   assert.match(source, /id="task-evaluation-workspace"[^>]*tabIndex=\{-1\}/);
 });
 
-test("merged evaluation keeps permissions, API, AI unavailable and history", () => {
+test("merged evaluation keeps permissions, manual ChatGPT input, API and history", () => {
   assert.match(source, /capabilities\.evaluate/);
   assert.match(source, /\/evaluations/);
-  assert.match(source, /Đánh giá bằng AI/);
-  assert.match(source, /Chưa cấu hình AI/);
+  assert.match(source, /Dán đánh giá từ ChatGPT/);
+  assert.doesNotMatch(source, /Chưa cấu hình AI/);
   assert.match(source, /qualitative_evaluations/);
   assert.match(source, /legacy_evaluations/);
 });

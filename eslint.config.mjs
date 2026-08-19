@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Operational snapshots and generated release copies are not source.
+    ".codex-backups/**",
+    "backups/**",
+    "releases/**",
+    "mobile/**",
   ]),
 ]);
 

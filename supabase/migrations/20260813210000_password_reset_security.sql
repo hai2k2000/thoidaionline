@@ -1,13 +1,11 @@
 create extension if not exists pgcrypto;
 
-do $$
-begin
-  if (select count(*) from public.staff_users where lower(username) = 'thanhhai') <> 1 then
-    raise exception 'Expected exactly one thanhhai account';
-  end if;
-  update public.staff_users set email = 'hai.baothoidai@gmail.com' where lower(username) = 'thanhhai';
-end;
-$$;
+-- Historical installations may not contain this optional bootstrap account.
+-- Update it when present without making password-reset schema deployment depend
+-- on tenant-specific user data.
+update public.staff_users
+set email = 'hai.baothoidai@gmail.com'
+where lower(username) = 'thanhhai';
 
 alter table public.staff_users add column if not exists password_hash text;
 update public.staff_users

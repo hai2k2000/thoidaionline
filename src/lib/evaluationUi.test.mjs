@@ -11,7 +11,7 @@ test("evaluation UI uses Vietnamese qualitative and deadline wording", () => {
   assert.match(taskSource, /Mức độ khó/u);
   assert.match(taskSource, /Thời hạn đánh giá/u);
   assert.match(taskSource, /Đánh giá công việc/u);
-  assert.match(taskSource, /Đánh giá bằng AI/u);
+  assert.match(taskSource, /Dán đánh giá từ ChatGPT/u);
   assert.doesNotMatch(userFacingSource, /Trọng số|trọng số|>[^<{]*checkpoint[^<{]*</iu);
 });
 

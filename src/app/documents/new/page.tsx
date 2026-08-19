@@ -6,12 +6,16 @@ import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { assignDocument, createDocument, listDocuments, type DocumentDirection, type OfficialDocument } from "@/lib/services";
+import { errorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type StaffUser = { id: string; full_name: string; username?: string | null };
 
 export default function DocumentCreatePage() {
   const router = useRouter();
   const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { notify } = useActionFeedback();
+  const [busy, setBusy] = useState(false);
 
   const [rows, setRows] = useState<OfficialDocument[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
@@ -39,19 +43,21 @@ export default function DocumentCreatePage() {
   };
 
   const onCreate = async () => {
-    const result = await createDocument({ doc_code: docCode, title, direction }, user?.id);
-    if (!result.ok) return setMessage(`❌ ${result.error}`);
+    if (busy) return; setBusy(true);
+    try { const result = await createDocument({ doc_code: docCode, title, direction }, user?.id);
+    if (!result.ok) throw new Error(result.error);
     setDocCode("");
     setTitle("");
-    setMessage("✅ Đã thêm tài liệu.");
-    await loadData();
+    notify("success", "Đã thêm tài liệu."); setMessage("✅ Đã thêm tài liệu."); await loadData();
+    } catch (error) { const text = errorMessage(error, "Không thể thêm tài liệu."); notify("error", text); setMessage(`❌ ${text}`); } finally { setBusy(false); }
   };
 
   const onAssign = async () => {
-    const result = await assignDocument(documentId, assigneeId, user?.id);
-    if (!result.ok) return setMessage(`❌ ${result.error}`);
-    setMessage("✅ Đã giao xử lý tài liệu.");
-    await loadData();
+    if (busy) return; setBusy(true);
+    try { const result = await assignDocument(documentId, assigneeId, user?.id);
+    if (!result.ok) throw new Error(result.error);
+    notify("success", "Đã giao xử lý tài liệu."); setMessage("✅ Đã giao xử lý tài liệu."); await loadData();
+    } catch (error) { const text = errorMessage(error, "Không thể giao xử lý tài liệu."); notify("error", text); setMessage(`❌ ${text}`); } finally { setBusy(false); }
   };
 
   useEffect(() => {
@@ -85,7 +91,7 @@ export default function DocumentCreatePage() {
               <option value="outgoing">Công văn đi</option>
               <option value="common">Tài liệu chung</option>
             </select>
-            <button onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Thêm</button>
+            <button disabled={busy} onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Đang xử lý..." : "Thêm"}</button>
           </div>
 
           <h3 className="mt-4 mb-2 text-sm font-semibold">Giao xử lý tài liệu</h3>
@@ -98,7 +104,7 @@ export default function DocumentCreatePage() {
               <option value="">Chọn người xử lý</option>
               {staffUsers.map((u) => <option key={u.id} value={u.id}>{u.full_name} ({u.username ?? "-"})</option>)}
             </select>
-            <button onClick={onAssign} className="rounded bg-slate-700 px-4 py-2 text-sm font-semibold text-white">Giao xử lý</button>
+            <button disabled={busy} onClick={onAssign} className="rounded bg-slate-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Giao xử lý</button>
           </div>
 
           <p className="mt-2 text-sm text-slate-600">{message}</p>

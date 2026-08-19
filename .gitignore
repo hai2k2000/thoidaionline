@@ -23,6 +23,17 @@
 # misc
 .DS_Store
 *.pem
+*.orig
+*.pre-forgot
+AGENTS.md.backup-*
+
+# local snapshots and release artifacts
+/.codex-backups/
+/backups/
+/releases/
+
+# vercel
+.vercel
 
 # debug
 npm-debug.log*
@@ -33,9 +44,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
-
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo

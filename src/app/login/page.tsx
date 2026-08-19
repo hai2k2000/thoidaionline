@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,26 +34,25 @@ export default function LoginPage() {
             <p className="text-xs text-slate-500">Hệ thống quản lý công việc nội bộ</p>
           </div>
         </div>
-        <div className="mt-4 space-y-3">
+        <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="mt-4 space-y-3">
           <input
             className="w-full rounded border px-3 py-3 text-base"
             placeholder="Username, email hoặc số điện thoại"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
           />
-          <input
-            type="password"
+          <PasswordInput
             className="w-full rounded border px-3 py-3 text-base"
             placeholder="Mật khẩu"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button onClick={submit} className="w-full rounded bg-slate-900 px-4 py-3 text-base font-semibold text-white">
+          <button type="submit" className="w-full rounded bg-slate-900 px-4 py-3 text-base font-semibold text-white">
             Đăng nhập
           </button>
           <Link className="block text-center text-sm text-blue-700 underline" href="/forgot-password">Quên mật khẩu?</Link>
           <p className="text-sm text-slate-600">{message}</p>
-        </div>
+        </form>
       </div>
     </main>
   );

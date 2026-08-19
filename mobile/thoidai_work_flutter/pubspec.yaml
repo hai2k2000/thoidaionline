@@ -1,0 +1,59 @@
+name: thoidai_work_flutter
+description: Mobile app Flutter cho he thong Thoi Dai Work.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  connectivity_plus: ^6.1.5
+  file_picker: ^10.3.7
+  firebase_core: ^4.2.1
+  firebase_messaging: ^16.0.4
+  http: ^1.6.0
+  open_filex: ^4.7.0
+  package_info_plus: ^8.3.1
+  path_provider: ^2.1.5
+  supabase_flutter: ^2.10.0
+  shared_preferences: ^2.3.5
+  intl: ^0.20.1
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.7
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/thoidai-logo.png
+    - assets/app-icon.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/app-icon.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/app-icon.png
+  min_sdk_android: 23
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  color_dark: "#0F172A"
+  image: assets/app-icon.png
+  image_dark: assets/app-icon.png
+  android: true
+  ios: false
+  web: false
+  android_12:
+    color: "#FFFFFF"
+    color_dark: "#0F172A"
+    image: assets/app-icon.png
+    image_dark: assets/app-icon.png

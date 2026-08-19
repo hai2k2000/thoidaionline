@@ -5,20 +5,25 @@ import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { assignAsset, createAsset, type AssetStatus } from "@/lib/services";
+import { assignAsset, createAsset } from "@/lib/services";
+import { errorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type StaffUser = { id: string; full_name: string; username?: string | null; active?: boolean };
 type Department = { id: string; name: string; active?: boolean };
+type AssetStatus = "available" | "in_use" | "maintenance" | "broken" | "liquidated";
 
 export default function AssetCreatePage() {
   const router = useRouter();
   const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { notify } = useActionFeedback();
+  const [busy, setBusy] = useState(false);
 
   const [assetCode, setAssetCode] = useState("");
   const [assetName, setAssetName] = useState("");
   const [category, setCategory] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
-  const [status, setStatus] = useState<"available" | "in_use" | "maintenance" | "broken" | "liquidated">("in_use");
+  const [status, setStatus] = useState<AssetStatus>("in_use");
   const [note, setNote] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -50,7 +55,9 @@ export default function AssetCreatePage() {
   }, [authLoading, user, canAccessModule, router]);
 
   const onCreate = async () => {
-    const result = await createAsset(
+    if (busy) return;
+    setBusy(true);
+    try { const result = await createAsset(
       {
         asset_code: assetCode || undefined,
         asset_name: assetName,
@@ -62,7 +69,7 @@ export default function AssetCreatePage() {
       user?.id,
     );
 
-    if (!result.ok) return setMessage(`❌ ${result.error}`);
+    if (!result.ok) throw new Error(result.error);
 
     const created = result.data;
     if (created?.id && (assigneeId || departmentId)) {
@@ -75,10 +82,10 @@ export default function AssetCreatePage() {
         },
         user?.id,
       );
-      if (!assignRes.ok) return setMessage(`⚠️ Đã thêm tài sản nhưng giao chưa thành công: ${assignRes.error}`);
+      if (!assignRes.ok) throw new Error(`Đã thêm tài sản nhưng giao chưa thành công: ${assignRes.error}`);
     }
 
-    setMessage("✅ Đã thêm tài sản.");
+    notify("success", "Đã thêm tài sản."); setMessage("✅ Đã thêm tài sản.");
     setAssetCode("");
     setAssetName("");
     setCategory("");
@@ -87,6 +94,8 @@ export default function AssetCreatePage() {
     setNote("");
     setAssigneeId("");
     setDepartmentId("");
+    } catch (error) { const text = errorMessage(error, "Không thể thêm tài sản."); notify("error", text); setMessage(`❌ ${text}`); }
+    finally { setBusy(false); }
   };
 
   return (
@@ -133,7 +142,7 @@ export default function AssetCreatePage() {
 
             <p className="mt-2 text-xs text-slate-500">Có thể chọn giao cho nhân viên hoặc phòng ban ngay khi thêm tài sản.</p>
             <div className="mt-3">
-              <button onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Thêm tài sản</button>
+              <button disabled={busy} onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Đang thêm..." : "Thêm tài sản"}</button>
             </div>
             <p className="mt-2 text-sm text-slate-600">{message}</p>
           </section>

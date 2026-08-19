@@ -10,7 +10,6 @@ type TaskRow = {
   id: string;
   title: string;
   status: "new" | "in_progress" | "pending_review" | "done" | "rejected";
-  priority: "low" | "normal" | "high" | "urgent";
   progress_percent: number;
   due_date: string | null;
   owner_id: string | null;
@@ -39,13 +38,6 @@ const statusLabel: Record<TaskRow["status"], string> = {
   rejected: "Trả lại",
 };
 
-const priorityLabel: Record<TaskRow["priority"], string> = {
-  low: "Dễ",
-  normal: "Vừa",
-  high: "Khó",
-  urgent: "Rất khó",
-};
-
 const assetStatusLabel: Record<string, string> = {
   available: "Sẵn sàng",
   in_use: "Đang sử dụng",
@@ -69,7 +61,7 @@ export default function ProfilePage() {
     const [taskRes, assetRes] = await Promise.all([
       supabase
         .from("tasks")
-        .select("id,title,status,priority,progress_percent,due_date,owner_id,assignee_id,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),assignee:staff_users!tasks_assignee_id_fkey(full_name),task_assignees(user_id,assignment_role,staff_users(full_name))")
+        .select("id,title,status,progress_percent,due_date,owner_id,assignee_id,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),assignee:staff_users!tasks_assignee_id_fkey(full_name),task_assignees(user_id,assignment_role,staff_users(full_name))")
         .order("created_at", { ascending: false })
         .limit(500),
       supabase
@@ -166,7 +158,6 @@ export default function ProfilePage() {
               <tr>
                 <th className="px-2 py-2">Tiêu đề</th>
                 <th className="px-2 py-2">Phòng ban</th>
-                <th className="px-2 py-2">Độ khó</th>
                 <th className="px-2 py-2">Trạng thái</th>
                 <th className="px-2 py-2">Tiến độ</th>
                 <th className="px-2 py-2">Deadline</th>
@@ -179,13 +170,12 @@ export default function ProfilePage() {
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{t.title}</span>
                   </td>
                   <td className="px-2 py-2">{t.departments?.name ?? "-"}</td>
-                  <td className="px-2 py-2">{priorityLabel[t.priority]}</td>
                   <td className="px-2 py-2">{statusLabel[t.status]}</td>
                   <td className="px-2 py-2">{t.progress_percent}%</td>
                   <td className="px-2 py-2">{t.due_date ?? "-"}</td>
                 </tr>
               ))}
-              {tasksAssignedToMe.length === 0 ? <tr><td className="px-2 py-4 text-slate-500" colSpan={6}>Chưa có việc được giao.</td></tr> : null}
+              {tasksAssignedToMe.length === 0 ? <tr><td className="px-2 py-4 text-slate-500" colSpan={5}>Chưa có việc được giao.</td></tr> : null}
             </tbody>
           </table>
         </section>
@@ -197,7 +187,6 @@ export default function ProfilePage() {
               <tr>
                 <th className="px-2 py-2">Tiêu đề</th>
                 <th className="px-2 py-2">Người phụ trách</th>
-                <th className="px-2 py-2">Độ khó</th>
                 <th className="px-2 py-2">Trạng thái</th>
                 <th className="px-2 py-2">Deadline</th>
               </tr>
@@ -209,12 +198,11 @@ export default function ProfilePage() {
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{t.title}</span>
                   </td>
                   <td className="px-2 py-2">{t.assignee?.full_name ?? "-"}</td>
-                  <td className="px-2 py-2">{priorityLabel[t.priority]}</td>
                   <td className="px-2 py-2">{statusLabel[t.status]}</td>
                   <td className="px-2 py-2">{t.due_date ?? "-"}</td>
                 </tr>
               ))}
-              {tasksAssignedByMe.length === 0 ? <tr><td className="px-2 py-4 text-slate-500" colSpan={5}>Bạn chưa giao việc nào.</td></tr> : null}
+              {tasksAssignedByMe.length === 0 ? <tr><td className="px-2 py-4 text-slate-500" colSpan={4}>Bạn chưa giao việc nào.</td></tr> : null}
             </tbody>
           </table>
         </section>

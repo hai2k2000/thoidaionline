@@ -2,9 +2,11 @@ import "server-only";
 
 import type { AuthorizationActor } from "@/lib/authorization";
 import { serverSupabase } from "@/lib/serverSupabase";
+import { resolvePersonnelEvaluationAction } from "@/lib/personnelEvaluationAccess";
 
 export type RubricFactor = { position: number; factor_code: string; label: string; description: string; max_score: number; band_definitions: unknown };
 export type RubricVersion = { id: string; version_no: number; status: "draft" | "published" | "retired"; effective_from: string | null; published_at: string | null; evaluation_rubric_factors: RubricFactor[] };
+export type PerformanceCycleHistory = { id: string; code: string; name: string; start_date: string; end_date: string; status: string; rubric_versions: string; total_reviews: number; self_draft_count: number; awaiting_manager_count: number; awaiting_tbt_count: number; published_count: number; other_count: number };
 export type EvaluationEvidence = { id: string; title: string; status: string; due_date: string | null };
 export type EvaluationItem = {
   id: string; employeeId: string; employeeName: string; departmentId: string | null; departmentName: string;
@@ -23,8 +25,26 @@ export type PersonnelEvaluationSubject = {
   finalScore: number | null; rank: string | null;
 };
 export type PersonnelEvaluationTask = {
-  id: string; title: string; difficulty: string; completion_status: string;
+  id: string; title: string; description: string | null; status: string;
+  department_id: string | null; department_name: string | null;
+  assignee_id: string | null; assignee_name: string | null;
+  reviewer_id: string | null; reviewer_name: string | null;
+  difficulty: string; completion_status: string;
   deadline_outcome: string; due_date: string | null;
+  evaluation_criteria: string | null; task_type: string | null;
+  assignment_mode: string | null; plan_period: string | null;
+  progress_percent: number; start_date: string | null; created_at: string;
+  completion_submitted_at: string | null; completed_at: string | null;
+  cancelled_at: string | null; cancel_reason: string | null;
+  owner_id: string | null; owner_name: string | null;
+  attachments: { id: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; uploaded_by: string | null }[];
+  progress_reports: { id: string; reported_by: string; reported_on: string; report_status: string; progress_text: string; blockers: string | null; created_at: string }[];
+  progress_logs: { id: string; old_progress: number | null; new_progress: number; note: string | null; created_at: string; user_id: string | null }[];
+  comments: { id: string; content: string; created_at: string; user_id: string | null; author_name: string | null }[];
+  qualitative_evaluations: { id: string; evaluation_text: string; evaluation_deadline: string; evaluation_source: string; created_at: string; evaluator_name: string | null }[];
+  legacy_evaluations: { id: string; employee_id: string; opinion: string | null; checkpoint_date: string; created_at: string }[];
+  deadline_history: { id: string; old_due_date: string | null; new_due_date: string | null; reason: string; changed_at: string }[];
+  status_events: { id: string; from_status: string | null; to_status: string; reason: string | null; created_at: string }[];
 };
 export type PersonnelEvaluationScore = {
   stage: "self" | "manager" | "tbt"; factor_code: string;
@@ -58,6 +78,7 @@ const canSee = (actor: AuthorizationActor, review: RawReview) => {
 
 export const evaluationRepository = {
   async list(actor: AuthorizationActor, filters: Record<string, string | string[] | undefined> = {}): Promise<EvaluationPageData> {
+    await serverSupabase.rpc("api_ensure_current_performance_cycle", { p_actor: actor.id });
     const [reviewsResult, cyclesResult] = await Promise.all([
       serverSupabase.from("performance_reviews").select("id,employee_id,status,workflow_type,self_score,reviewer_score,final_score,rank,rubric_snapshot,performance_cycles!inner(id,name,start_date,end_date),staff_users!performance_reviews_employee_id_fkey!inner(full_name,department_id,departments(name,manager_id))").order("created_at", { ascending: false }),
       serverSupabase.from("performance_cycles").select("id,name,start_date,end_date").eq("status", "open").order("start_date", { ascending: false }),
@@ -94,12 +115,46 @@ export const evaluationRepository = {
     return { items, openCycles: (cyclesResult.data ?? []) as EvaluationPageData["openCycles"], currentUserId: actor.id };
   },
 
+  async personnelDetail(actor: AuthorizationActor, filters: {
+    from: string; to: string; employeeId: string;
+  }): Promise<{ ok: true; data: PersonnelEvaluationDetail } | { ok: false; errorCode: string | null }> {
+    await serverSupabase.rpc("api_ensure_current_performance_cycle", { p_actor: actor.id });
+    const result = await serverSupabase.rpc("api_get_personnel_evaluation_detail", {
+      p_actor: actor.id, p_employee: filters.employeeId,
+      p_from: filters.from, p_to: filters.to,
+    });
+    if (result.error) return { ok: false, errorCode: result.error.code ?? null };
+    const row = result.data as {
+      employee_id: string; employee_name: string; department_name: string;
+      review_id: string | null; review_status: string | null; workflow_type: string | null;
+      cycle_name: string | null; cycle_start: string | null; cycle_end: string | null;
+      allowed_action: "manager" | "tbt" | null; factors: RubricFactor[];
+      scores: PersonnelEvaluationScore[]; tasks: PersonnelEvaluationTask[];
+    };
+    return { ok: true, data: {
+      employeeId: row.employee_id, employeeName: row.employee_name,
+      departmentName: row.department_name, reviewId: row.review_id,
+      reviewStatus: row.review_status, workflowType: row.workflow_type,
+      cycleName: row.cycle_name, cycleStart: row.cycle_start, cycleEnd: row.cycle_end,
+      allowedAction: resolvePersonnelEvaluationAction({
+        directTbtEnabled: process.env.TBT_DIRECT_EVALUATION_ENABLED === "true",
+        roleCode: actor.roleCode,
+        canEvaluateStep2: actor.permissions.can_evaluate_step2,
+        reviewStatus: row.review_status,
+        hasTbtScore: (row.scores ?? []).some((score) => score.stage === "tbt"),
+        rpcAction: row.allowed_action,
+      }), factors: row.factors ?? [],
+      scores: row.scores ?? [], tasks: row.tasks ?? [],
+    } };
+  },
+
   async personnelList(actor: AuthorizationActor, filters: {
     from: string; to: string; employeeId: string | null;
   }): Promise<
     | { ok: true; data: PersonnelEvaluationData }
     | { ok: false; errorCode: string | null }
   > {
+    await serverSupabase.rpc("api_ensure_current_performance_cycle", { p_actor: actor.id });
     const subjectsResult = await serverSupabase.rpc(
       "api_list_personnel_evaluation_subjects",
       { p_actor: actor.id, p_from: filters.from, p_to: filters.to },
@@ -156,7 +211,14 @@ export const evaluationRepository = {
         departmentName: row.department_name, reviewId: row.review_id,
         reviewStatus: row.review_status, workflowType: row.workflow_type,
         cycleName: row.cycle_name, cycleStart: row.cycle_start,
-        cycleEnd: row.cycle_end, allowedAction: row.allowed_action,
+        cycleEnd: row.cycle_end, allowedAction: resolvePersonnelEvaluationAction({
+          directTbtEnabled: process.env.TBT_DIRECT_EVALUATION_ENABLED === "true",
+          roleCode: actor.roleCode,
+          canEvaluateStep2: actor.permissions.can_evaluate_step2,
+          reviewStatus: row.review_status,
+          hasTbtScore: (row.scores ?? []).some((score) => score.stage === "tbt"),
+          rpcAction: row.allowed_action,
+        }),
         factors: row.factors ?? [], scores: row.scores ?? [],
         tasks: row.tasks ?? [],
       };
@@ -168,12 +230,13 @@ export const evaluationRepository = {
     };
   },
 
-  async rubrics() {
+  async rubrics(actorId: string) {
+    await serverSupabase.rpc("api_ensure_current_performance_cycle", { p_actor: actorId });
     const [rubrics, cycles] = await Promise.all([
       serverSupabase.from("evaluation_rubric_versions").select("id,version_no,status,effective_from,published_at,evaluation_rubric_factors(position,factor_code,label,description,max_score,band_definitions)").order("version_no", { ascending: false }),
-      serverSupabase.from("performance_cycles").select("id,code,name,start_date,end_date,status").order("start_date", { ascending: false }),
+      serverSupabase.rpc("api_list_performance_cycle_history", { p_actor: actorId }),
     ]);
-    return { rubrics: (rubrics.data ?? []) as unknown as RubricVersion[], cycles: cycles.data ?? [], failed: Boolean(rubrics.error || cycles.error) };
+    return { rubrics: (rubrics.data ?? []) as unknown as RubricVersion[], cycles: (cycles.data ?? []) as PerformanceCycleHistory[], failed: Boolean(rubrics.error || cycles.error) };
   },
 
   rpc(name: string, args: Record<string, unknown>) { return serverSupabase.rpc(name, args); },

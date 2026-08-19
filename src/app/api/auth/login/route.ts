@@ -10,14 +10,15 @@ export async function POST(request: Request) {
   const password = body?.password?.trim();
   if (!identifier || !password) return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
 
+  const roleLifecycleEnabled = process.env.ROLE_LIFECYCLE_ENABLED === "true";
   const { data, error } = await serverSupabase
     .from("staff_users")
-    .select("id,password,password_hash,active,session_version")
+    .select(`id,password,password_hash,active,session_version${roleLifecycleEnabled ? ",roles!inner(active)" : ""}`)
     .or(`username.eq.${identifier},email.ilike.${identifier},phone.eq.${identifier}`)
     .limit(1)
     .maybeSingle();
-  const row = data as { id: string; password: string | null; password_hash: string | null; active: boolean; session_version: number } | null;
-  const valid = row && row.active && (isBcryptHash(row.password_hash)
+  const row = data as { id: string; password: string | null; password_hash: string | null; active: boolean; session_version: number; roles?: { active: boolean } | null } | null;
+  const valid = row && row.active && (!roleLifecycleEnabled || row.roles?.active === true) && (isBcryptHash(row.password_hash)
     ? await verifyPassword(password, row.password_hash)
     : (row.password ?? "123456").trim() === password);
   if (error || !row || !valid) {

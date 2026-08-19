@@ -2,146 +2,76 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState, type UIEvent } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import type {
   PersonnelEvaluationData,
-  PersonnelEvaluationDetail,
-  RubricFactor,
 } from "@/lib/evaluationRepository";
 
 const reviewLabels: Record<string, string> = {
-  self_draft: "Chờ nhân viên tự đánh giá",
+  self_draft: "Chờ Trưởng phòng chấm bước 1",
   awaiting_manager: "Chờ Trưởng phòng chấm bước 1",
   awaiting_tbt: "Chờ Tổng Biên tập chấm bước 2",
   published: "Đã công bố",
 };
 
-const difficultyLabels: Record<string, string> = {
-  low: "Dễ",
-  medium: "Trung bình",
-  high: "Khó",
-  easy: "Dễ",
-  normal: "Trung bình",
-  hard: "Khó",
-};
-
-const completionLabels: Record<string, string> = {
-  completed: "Hoàn thành",
-  unfinished: "Chưa hoàn thành",
-};
-
-const deadlineLabels: Record<string, string> = {
-  on_time: "Đúng hạn",
-  overdue: "Quá hạn",
-  in_time: "Trong hạn",
-  no_deadline: "Không có thời hạn",
-};
-
-function ScoreForm({ detail }: { detail: PersonnelEvaluationDetail }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
-  if (!detail.allowedAction || !detail.reviewId) return null;
-  const action = detail.allowedAction;
-
-  const submit = async (formData: FormData) => {
-    setBusy(true);
-    setFailed(false);
-    const scores = detail.factors.map((factor: RubricFactor) => ({
-      factor_code: factor.factor_code,
-      score: Number(formData.get(`score-${factor.factor_code}`)),
-      comment: String(formData.get(`comment-${factor.factor_code}`) ?? ""),
-    }));
-    const response = await fetch(`/api/evaluations/${detail.reviewId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, scores }),
-    });
-    setBusy(false);
-    if (!response.ok) setFailed(true);
-    else router.refresh();
-  };
-
-  return (
-    <form action={submit} className="mt-4 rounded-xl border bg-orange-50 p-4">
-      <h3 className="font-bold">
-        {action === "manager"
-          ? "Trưởng phòng chấm bước 1"
-          : "Tổng Biên tập chấm bước 2 và công bố"}
-      </h3>
-      <div className="mt-3 grid gap-3">
-        {detail.factors.map((factor) => (
-          <label key={factor.factor_code} className="grid gap-1 text-sm lg:grid-cols-[minmax(0,1fr)_120px_minmax(0,1fr)] lg:items-center">
-            <span>{factor.label} (0–{factor.max_score})</span>
-            <input required type="number" min="0" max={factor.max_score} step="0.01" name={`score-${factor.factor_code}`} className="rounded border bg-white px-3 py-2" />
-            <input name={`comment-${factor.factor_code}`} placeholder="Nhận xét/bằng chứng" className="rounded border bg-white px-3 py-2" />
-          </label>
-        ))}
-      </div>
-      {failed ? <p role="alert" className="mt-2 text-sm text-red-700">Không thể gửi đánh giá. Trạng thái hoặc quyền đã thay đổi.</p> : null}
-      <button disabled={busy} className="mt-3 rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-60">
-        {busy ? "Đang gửi…" : action === "manager" ? "Gửi bước 1" : "Công bố bước 2"}
-      </button>
-    </form>
-  );
-}
-
-function Detail({ detail }: { detail: PersonnelEvaluationDetail }) {
-  const score = (factorCode: string, stage: string) =>
-    detail.scores.find((row) => row.factor_code === factorCode && row.stage === stage);
-
-  return (
-    <section className="space-y-4 rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-orange-600">Chi tiết trong kỳ</p>
-        <h2 className="mt-1 text-xl font-bold">{detail.employeeName}</h2>
-        <p className="text-sm text-slate-600">{detail.departmentName}</p>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[780px] border-collapse text-sm">
-          <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Tên công việc</th><th className="p-2">Độ khó</th><th className="p-2">Trạng thái hoàn thành</th><th className="p-2">Thời hạn</th></tr></thead>
-          <tbody>{detail.tasks.map((task, index) => <tr key={task.id} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><Link className="text-orange-700 underline" href={`/tasks/${task.id}`}>{task.title}</Link></td><td className="p-2">{difficultyLabels[task.difficulty] ?? task.difficulty}</td><td className="p-2">{completionLabels[task.completion_status] ?? task.completion_status}</td><td className="p-2">{deadlineLabels[task.deadline_outcome] ?? task.deadline_outcome}</td></tr>)}</tbody>
-        </table>
-        {!detail.tasks.length ? <p className="p-5 text-center text-slate-500">Không có công việc trong khoảng ngày đã chọn.</p> : null}
-      </div>
-
-      <div>
-        <h3 className="font-bold">Bảng chấm điểm cá nhân</h3>
-        <p className="mt-1 text-sm text-slate-600">{detail.reviewStatus ? reviewLabels[detail.reviewStatus] ?? detail.reviewStatus : "Chưa có hồ sơ đánh giá trong kỳ."}</p>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-sm">
-            <thead><tr className="border-b text-left text-slate-600"><th className="p-2">Tiêu chí</th><th className="p-2">Tối đa</th><th className="p-2">Nhân viên</th><th className="p-2">Trưởng phòng</th><th className="p-2">Tổng Biên tập</th></tr></thead>
-            <tbody>{detail.factors.map((factor) => <tr key={factor.factor_code} className="border-b"><td className="p-2 font-semibold">{factor.label}</td><td className="p-2">{factor.max_score}</td><td className="p-2">{score(factor.factor_code, "self")?.score ?? "—"}</td><td className="p-2">{score(factor.factor_code, "manager")?.score ?? "—"}</td><td className="p-2">{score(factor.factor_code, "tbt")?.score ?? "—"}</td></tr>)}</tbody>
-          </table>
-        </div>
-      </div>
-      <ScoreForm detail={detail} />
-    </section>
-  );
-}
-
-export default function PersonnelEvaluationShell({ data, invalidFilters, loadFailed, userLabel }: {
+export default function PersonnelEvaluationShell({ data, invalidFilters, loadFailed, userLabel, isLeader }: {
   data: PersonnelEvaluationData;
   invalidFilters: boolean;
   loadFailed: boolean;
   userLabel: string;
+  isLeader: boolean;
 }) {
   const router = useRouter();
   const { logout } = useAuth();
+  const [showAdditional, setShowAdditional] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [scoreFilter, setScoreFilter] = useState("");
+  const [visibleLimit, setVisibleLimit] = useState(5);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scopedSubjects = data.subjects.filter((person) =>
+    (!isLeader || showAdditional || person.isDepartmentManager)
+    && (!statusFilter || person.reviewStatus === statusFilter),
+  );
+  const departments = Array.from(new Map(data.subjects.map((person) => [person.departmentId ?? "", person.departmentName])).entries()).filter(([id]) => id);
+  const filteredSubjects = scopedSubjects.filter((person) =>
+    (!departmentFilter || person.departmentId === departmentFilter)
+    && (!roleFilter || (roleFilter === "manager" ? person.isDepartmentManager : !person.isDepartmentManager))
+    && (!scoreFilter || (scoreFilter === "unscored" ? person.managerScore == null && person.finalScore == null : scoreFilter === "manager" ? person.managerScore != null && person.finalScore == null : person.finalScore != null)),
+  );
+  const visibleSubjects = filteredSubjects.slice(0, visibleLimit);
+  const loadMoreOnScroll = (event: UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    if (element.scrollTop + element.clientHeight >= element.scrollHeight - 24) {
+      setVisibleLimit((value) => Math.min(value + 5, filteredSubjects.length));
+    }
+  };
   const onLogout = () => { logout(); router.replace("/login"); };
+  const expandTbt = () => { setShowAdditional(true); setVisibleLimit(5); requestAnimationFrame(() => scrollRef.current?.focus()); };
+  const helperText = isLeader && !showAdditional
+    ? `Đang hiển thị ${scopedSubjects.length} trưởng phòng. Bấm “Đánh giá thêm nhân viên” để xem ${data.subjects.length} nhân viên.`
+    : `Đang hiển thị ${visibleSubjects.length}/${filteredSubjects.length} nhân viên theo bộ lọc.`;
 
   return (
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 lg:flex-row lg:gap-6">
         <AppNav currentPath="/evaluations" userLabel={userLabel} onLogout={onLogout} />
         <main className="min-w-0 flex-1 space-y-4">
-          <header className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
+      <header className="flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div>
             <p className="text-xs font-bold uppercase tracking-wide text-orange-600">ĐÁNH GIÁ NHÂN SỰ</p>
             <h1 className="mt-1 text-2xl font-bold">Nhân viên trực thuộc</h1>
-            <p className="mt-1 text-sm text-slate-600">Chọn nhân viên để xem công việc trong kỳ và thực hiện bước chấm được phân quyền.</p>
+            <p className="mt-1 text-sm text-slate-600">Chọn nhân viên để xem công việc và chấm theo quyền.</p></div>
+            <div className="flex min-w-0 max-w-full items-center gap-2 overflow-x-auto sm:flex-nowrap">
+              <select value={departmentFilter} onChange={(event) => { setDepartmentFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc phòng ban" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Phòng ban</option>{departments.map(([id,name]) => <option key={id} value={id}>{name}</option>)}</select>
+              <select value={roleFilter} onChange={(event) => { setRoleFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc vai trò" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Vai trò</option><option value="manager">Trưởng phòng</option><option value="employee">Nhân viên</option></select>
+              <select value={scoreFilter} onChange={(event) => { setScoreFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc trạng thái điểm" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Trạng thái điểm</option><option value="unscored">Chưa chấm</option><option value="manager">QL đã chấm</option><option value="complete">Đã chấm đủ</option></select>
+              <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc trạng thái đánh giá" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Trạng thái</option>{Object.entries(reviewLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>
+              {isLeader ? <button type="button" onClick={showAdditional ? () => { setShowAdditional(false); setVisibleLimit(5); } : expandTbt} className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold">{showAdditional ? "Chỉ Trưởng phòng" : `Đánh giá thêm nhân viên (${data.subjects.length})`}</button> : null}
+            </div>
           </header>
 
           <form action="/evaluations" className="grid gap-3 rounded-xl border bg-white p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
@@ -154,13 +84,13 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
           {loadFailed ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-800">Không thể tải dữ liệu đánh giá.</p> : null}
 
           <section className="overflow-hidden rounded-xl border bg-white p-4 shadow-sm">
-            <div className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-sm">
-              <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Nhân viên</th><th className="p-2">Phòng ban</th><th className="p-2">Vai trò</th><th className="p-2">Trạng thái đánh giá</th></tr></thead>
-              <tbody>{data.subjects.map((person, index) => <tr key={person.employeeId} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><Link className="text-orange-700 underline" href={`/evaluations?from=${data.from}&to=${data.to}&employee=${person.employeeId}`}>{person.employeeName}</Link></td><td className="p-2">{person.departmentName}</td><td className="p-2">{person.isDepartmentManager ? "Trưởng phòng" : "Nhân viên"}</td><td className="p-2">{person.reviewStatus ? reviewLabels[person.reviewStatus] ?? person.reviewStatus : "Chưa có hồ sơ"}</td></tr>)}</tbody>
-            </table></div>
-            {!data.subjects.length && !invalidFilters && !loadFailed ? <p className="p-6 text-center text-slate-500">Không có nhân viên trong phạm vi đánh giá.</p> : null}
+            <p className="mb-2 text-sm text-slate-600" role="status">{helperText}</p>
+            <div ref={scrollRef} tabIndex={0} onScroll={loadMoreOnScroll} className="max-h-[520px] overflow-auto" aria-label="Danh sách nhân viên, cuộn để xem thêm"><table className="w-full min-w-[860px] border-collapse text-sm">
+              <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Nhân viên</th><th className="p-2">Phòng ban</th><th className="p-2">Vai trò</th><th className="p-2">Trạng thái đánh giá</th><th className="p-2">Tổng điểm</th></tr></thead>
+              <tbody>{visibleSubjects.map((person, index) => <tr key={person.employeeId} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><Link className="text-orange-700 underline" target="_blank" rel="noopener noreferrer" href={`/evaluations/${person.employeeId}?from=${data.from}&to=${data.to}`}>{person.employeeName}</Link></td><td className="p-2">{person.departmentName}</td><td className="p-2">{person.isDepartmentManager ? "Trưởng phòng" : "Nhân viên"}</td><td className="p-2">{person.reviewStatus ? reviewLabels[person.reviewStatus] ?? person.reviewStatus : "Chưa có hồ sơ"}</td><td className="p-2 font-semibold">{person.finalScore ?? person.managerScore ?? "—"}</td></tr>)}</tbody>
+            </table>{visibleLimit < filteredSubjects.length ? <div className="sticky bottom-0 flex justify-center bg-white/95 p-2"><button type="button" onClick={() => setVisibleLimit((value) => Math.min(value + 5, filteredSubjects.length))} className="rounded border px-3 py-2 text-sm font-semibold">Xem thêm 5 nhân viên</button></div> : null}</div>
+            {!filteredSubjects.length && !invalidFilters && !loadFailed ? <p className="p-6 text-center text-slate-500">Không có nhân viên phù hợp bộ lọc.</p> : null}
           </section>
-          {data.detail ? <Detail detail={data.detail} /> : null}
         </main>
       </div>
     </div>

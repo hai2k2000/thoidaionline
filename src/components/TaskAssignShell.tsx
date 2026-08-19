@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import type { AssignmentDepartment, AssignmentPerson } from "@/lib/taskAssignmentRepository";
+import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
@@ -16,6 +18,7 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
 }) {
   const router = useRouter();
   const { logout } = useAuth();
+  const { notify } = useActionFeedback();
   const [departmentId, setDepartmentId] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [assignmentMode, setAssignmentMode] = useState<"individual" | "department_group">("individual");
@@ -35,7 +38,7 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedDepartment?.managerId) {
-      setMessage("Phòng ban đã chọn chưa có Trưởng phòng chính. Hãy cấu hình trước khi giao việc.");
+      const text = "Phòng ban đã chọn chưa có Trưởng phòng chính. Hãy cấu hình trước khi giao việc."; setMessage(text); notify("error", text);
       return;
     }
     setBusy(true); setMessage("");
@@ -63,9 +66,7 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!response.ok) throw new Error(response.status === 403
-        ? "Bạn không có quyền giao công việc này."
-        : "Không thể tạo công việc. Kiểm tra Trưởng phòng chính và dữ liệu biểu mẫu.");
+      if (!response.ok) throw new Error(await responseErrorMessage(response, response.status === 403 ? "Bạn không có quyền giao công việc này." : "Không thể tạo công việc."));
       const result = await response.json() as { task: { id: string } };
       const attachment = form.get("attachment");
       if (attachment instanceof File && attachment.size > 0) {
@@ -73,12 +74,13 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
         const uploaded = await fetch(`/api/tasks/${result.task.id}/attachments`, {
           method: "POST", body: upload,
         });
-        if (!uploaded.ok) throw new Error("Công việc đã tạo nhưng tệp đính kèm chưa tải lên được.");
+        if (!uploaded.ok) throw new Error(await responseErrorMessage(uploaded, "Công việc đã tạo nhưng tệp đính kèm chưa tải lên được."));
       }
+      notify("success", "Đã giao công việc thành công.");
       router.push(`/tasks/${result.task.id}`);
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Có lỗi xảy ra.");
+      const text = errorMessage(error, "Có lỗi xảy ra."); setMessage(text); notify("error", text);
     } finally { setBusy(false); }
   };
 

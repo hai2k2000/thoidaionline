@@ -283,7 +283,7 @@ test("qualitative task evaluation validates text/date and defaults deadline in t
   assert.equal((await harness.app.submitQualitativeEvaluation(valid, taskId)).status, 201);
   assert.deepEqual(harness.calls[0], [
     "submitQualitativeEvaluation", "reviewer", taskId,
-    { evaluationText: "Hoàn thành đúng yêu cầu.", evaluationDeadline: null },
+    { evaluationText: "Hoàn thành đúng yêu cầu.", evaluationDeadline: null, evaluationSource: "chatgpt" },
   ]);
 
   for (const body of [
@@ -406,4 +406,23 @@ test("production handler wiring imports every injected dependency from owned mod
   assert.match(source, /canTaskAction/);
   assert.match(source, /normalizeLegacyEvaluationInput/);
   assert.doesNotMatch(source, /taskEvaluation/);
+});
+
+test("leader qualitative evaluation uses explicit source and direct manager/TBT capability", async () => {
+  const manager = makeActor({ id: "manager", role_code: "phu_trach_phong_bien_tap", permissions: normalizePermissions({ can_evaluate_step1: true }) });
+  const harness = makeHarness({ mutationActor: manager, taskAccess: access({ departmentManagerId: "manager" }) });
+  const request = new Request("https://example.test/api/tasks/evaluations", { method: "POST", body: JSON.stringify({ evaluationText: "Đánh giá lãnh đạo", evaluationSource: "leader" }) });
+  assert.equal((await harness.app.submitQualitativeEvaluation(request, taskId)).status, 201);
+  assert.deepEqual(harness.calls[0], ["submitQualitativeEvaluation", "manager", taskId, { evaluationText: "Đánh giá lãnh đạo", evaluationDeadline: null, evaluationSource: "leader" }]);
+});
+
+test("TBT step2 may submit leader evaluation but ordinary watcher may not", async () => {
+  const tbt = makeActor({ id: "tbt", role_code: "tong_bien_tap", permissions: normalizePermissions({ can_evaluate_step2: true }) });
+  const allowed = makeHarness({ mutationActor: tbt, taskAccess: access({ ownerId: "owner", participants: [] }) });
+  const body = { evaluationText: "Ý kiến TBT", evaluationSource: "leader" };
+  const request = new Request("https://example.test/api/tasks/evaluations", { method: "POST", body: JSON.stringify(body) });
+  assert.equal((await allowed.app.submitQualitativeEvaluation(request, taskId)).status, 201);
+  const watcher = makeHarness({ taskAccess: access({ ownerId: "owner", participants: [{ userId: "actor", assignmentRole: "watcher" }] }) });
+  const denied = new Request("https://example.test/api/tasks/evaluations", { method: "POST", body: JSON.stringify(body) });
+  assert.equal((await watcher.app.submitQualitativeEvaluation(denied, taskId)).status, 403);
 });

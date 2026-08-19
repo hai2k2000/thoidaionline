@@ -179,19 +179,25 @@ export function createTaskApplication(deps: Dependencies) {
       if (guarded instanceof Response) return guarded;
       const { actor, body } = guarded;
       const evaluationText = cleanText(body.evaluationText, 10000);
+      const evaluationSource = body.evaluationSource === undefined
+        ? "chatgpt"
+        : body.evaluationSource === "chatgpt" || body.evaluationSource === "leader"
+          ? body.evaluationSource
+          : null;
       const suppliedDeadline = body.evaluationDeadline !== undefined
         && body.evaluationDeadline !== null
         && body.evaluationDeadline !== "";
       const evaluationDeadline = suppliedDeadline
         ? dateValue(body.evaluationDeadline)
         : null;
-      if (!evaluationText || (suppliedDeadline && !evaluationDeadline)) {
+      if (!evaluationText || !evaluationSource || (suppliedDeadline && !evaluationDeadline)) {
         return deps.error("invalid_request", 400);
       }
-      const taskId = await authorizeMutation(actor, taskIdValue, "evaluate");
+      const taskId = await authorizeMutation(actor, taskIdValue,
+        evaluationSource === "leader" ? "leader_evaluate" : "evaluate");
       if (taskId instanceof Response) return taskId;
       const result = await deps.repository.submitQualitativeEvaluation(actor.id, taskId, {
-        evaluationText, evaluationDeadline,
+        evaluationText, evaluationDeadline, evaluationSource,
       });
       return result.ok
         ? deps.json({ evaluation: result.data }, 201)

@@ -7,6 +7,8 @@ import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { type Asset } from "@/lib/services";
 import { supabase } from "@/lib/supabase";
+import { errorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 const assetStatusLabel: Record<string, string> = {
   available: "Sẵn sàng",
@@ -20,6 +22,7 @@ export default function AssetDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
+  const { notify } = useActionFeedback();
 
   const [asset, setAsset] = useState<Asset | null>(null);
   const [message, setMessage] = useState("Đang tải...");
@@ -69,9 +72,9 @@ export default function AssetDetailPage() {
         .eq("id", asset.id);
 
       if (error) throw error;
-      setMessage("✅ Đã cập nhật thông tin tài sản.");
+      notify("success", "Đã cập nhật thông tin tài sản."); setMessage("✅ Đã cập nhật thông tin tài sản.");
     } catch (e) {
-      setMessage(`❌ ${(e as Error).message}`);
+      const text = errorMessage(e, "Không thể cập nhật thông tin tài sản."); notify("error", text); setMessage(`❌ ${text}`);
     } finally {
       setSaving(false);
     }

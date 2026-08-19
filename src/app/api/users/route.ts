@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { sortStaffRows } from "@/lib/staffOrdering";
+import { validateEmail, validatePhone } from "@/lib/userContactValidation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -22,11 +23,13 @@ const canEditUsers = (roleCode: string) => roleCode === "admin";
 export async function GET() {
   const actor = await getSessionUser();
   if (!actor || !canViewUsers(actor.role_code)) return json({ error: "Không có quyền." }, { status: 403 });
+  const roleLifecycleEnabled = process.env.ROLE_LIFECYCLE_ENABLED === "true";
+  const rolesQuery = serverSupabase.from("roles").select(roleLifecycleEnabled ? "id,code,name,level,active" : "id,code,name,level").order("level", { ascending: false });
   const [roles, departments, jobTitles, users] = await Promise.all([
-    serverSupabase.from("roles").select("id,code,name,level").order("level", { ascending: false }),
+    roleLifecycleEnabled ? rolesQuery.eq("active", true) : rolesQuery,
     serverSupabase.from("departments").select("id,code,name,active").order("name"),
     serverSupabase.from("job_titles").select("id,code,name,display_order,active").order("display_order").order("name"),
-    serverSupabase.from("staff_users").select("id,full_name,username,email,role_id,job_title_id,department_id,active,list_order,roles(code,name,level),job_titles(code,name,display_order,active),departments!staff_users_department_id_fkey(code,name)"),
+    serverSupabase.from("staff_users").select("id,full_name,username,email,phone,role_id,job_title_id,department_id,active,list_order,roles(code,name,level),job_titles(code,name,display_order,active),departments!staff_users_department_id_fkey(code,name)"),
   ]);
   const error = roles.error || departments.error || jobTitles.error || users.error;
   if (error) return json({ error: "Không thể tải dữ liệu nhân sự." }, { status: 500 });
@@ -46,6 +49,8 @@ type Body = {
   department_id?: unknown;
   active?: unknown;
   user_id?: unknown;
+  email?: unknown;
+  phone?: unknown;
 };
 
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
@@ -63,6 +68,7 @@ async function mutate(request: Request, mode: "create" | "update") {
   const actor = await getSessionUser();
   if (!actor || !canEditUsers(actor.role_code)) return json({ error: "Chỉ Admin được thay đổi nhân sự." }, { status: 403 });
   const body = await request.json().catch(() => null) as Body | null;
+  const roleLifecycleEnabled = process.env.ROLE_LIFECYCLE_ENABLED === "true";
 
   if (mode === "create") {
     const fullName = text(body?.full_name);
@@ -70,7 +76,16 @@ async function mutate(request: Request, mode: "create" | "update") {
     const roleId = text(body?.role_id);
     const jobTitleId = text(body?.job_title_id);
     const departmentId = text(body?.department_id);
+    const email = validateEmail(body?.email);
+    const phone = validatePhone(body?.phone);
+    if (body?.email && !email) return json({ error: "Email không hợp lệ." }, { status: 400 });
+    if (body?.phone && !phone) return json({ error: "Số điện thoại không hợp lệ." }, { status: 400 });
     if (fullName.length < 2 || !username || !roleId || !jobTitleId || !departmentId) return json({ error: "Thiếu dữ liệu user." }, { status: 400 });
+    if (roleLifecycleEnabled) {
+      const { data: role, error: roleError } = await serverSupabase.from("roles").select("id,active").eq("id", roleId).maybeSingle();
+      if (roleError) return json({ error: "Không thể kiểm tra vai trò." }, { status: 500 });
+      if (!role?.active) return json({ error: "Không thể gán vai trò đã khóa." }, { status: 400 });
+    }
     const { data: jobTitle, error: jobTitleError } = await serverSupabase.from("job_titles").select("id,active").eq("id", jobTitleId).maybeSingle();
     if (jobTitleError) return json({ error: "Không thể kiểm tra chức vụ." }, { status: 500 });
     if (!jobTitle) return json({ error: "Chức vụ không tồn tại." }, { status: 400 });
@@ -81,6 +96,8 @@ async function mutate(request: Request, mode: "create" | "update") {
       role_id: roleId,
       job_title_id: jobTitleId,
       department_id: departmentId,
+      email,
+      phone,
       active: true,
       password: "123456",
     }).select("id,full_name,username,role_id,job_title_id,department_id,active").single();
@@ -92,12 +109,12 @@ async function mutate(request: Request, mode: "create" | "update") {
   if (!userId) return json({ error: "Thiếu user." }, { status: 400 });
   const { data: currentUser, error: currentUserError } = await serverSupabase
     .from("staff_users")
-    .select("id,job_title_id")
+    .select("id,role_id,job_title_id")
     .eq("id", userId)
     .maybeSingle();
   if (currentUserError) return json({ error: "Không thể kiểm tra user." }, { status: 500 });
   if (!currentUser) return json({ error: "Không tìm thấy user." }, { status: 404 });
-  const patch: Record<string, string | boolean> = {};
+  const patch: Record<string, string | boolean | null> = {};
   if (body && Object.prototype.hasOwnProperty.call(body, "full_name")) {
     const fullName = text(body.full_name);
     if (fullName.length < 2 || fullName.length > 120) return json({ error: "Tên không hợp lệ." }, { status: 400 });
@@ -106,6 +123,11 @@ async function mutate(request: Request, mode: "create" | "update") {
   if (body && Object.prototype.hasOwnProperty.call(body, "role_id")) {
     const roleId = text(body.role_id);
     if (!roleId) return json({ error: "Role quyền không hợp lệ." }, { status: 400 });
+    if (roleLifecycleEnabled) {
+      const { data: role, error: roleError } = await serverSupabase.from("roles").select("id,active").eq("id", roleId).maybeSingle();
+      if (roleError) return json({ error: "Không thể kiểm tra vai trò." }, { status: 500 });
+      if (!role?.active && currentUser.role_id !== roleId) return json({ error: "Không thể gán vai trò đã khóa." }, { status: 400 });
+    }
     patch.role_id = roleId;
   }
   if (body && Object.prototype.hasOwnProperty.call(body, "job_title_id")) {
@@ -125,6 +147,18 @@ async function mutate(request: Request, mode: "create" | "update") {
   if (body && Object.prototype.hasOwnProperty.call(body, "active")) {
     if (typeof body.active !== "boolean") return json({ error: "Trạng thái không hợp lệ." }, { status: 400 });
     patch.active = body.active;
+  }
+  if (body && Object.prototype.hasOwnProperty.call(body, "email")) {
+    if (body.email !== null && typeof body.email !== "string") return json({ error: "Email không hợp lệ." }, { status: 400 });
+    const email = validateEmail(body.email);
+    if (body.email && !email) return json({ error: "Email không hợp lệ." }, { status: 400 });
+    patch.email = email as string | null;
+  }
+  if (body && Object.prototype.hasOwnProperty.call(body, "phone")) {
+    if (body.phone !== null && typeof body.phone !== "string") return json({ error: "Số điện thoại không hợp lệ." }, { status: 400 });
+    const phone = validatePhone(body.phone);
+    if (body.phone && !phone) return json({ error: "Số điện thoại không hợp lệ." }, { status: 400 });
+    patch.phone = phone as string | null;
   }
   if (!Object.keys(patch).length) return json({ error: "Không có trường được phép cập nhật." }, { status: 400 });
   const { data, error } = await serverSupabase.from("staff_users").update(patch).eq("id", userId).select("id,full_name,username,role_id,job_title_id,department_id,active").maybeSingle();

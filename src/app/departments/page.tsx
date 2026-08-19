@@ -4,18 +4,25 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
+import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type Department = { id: string; code: string; name: string; active: boolean };
 type DepartmentPayload = { departments?: Department[]; error?: { code?: string } };
+type DepartmentStatusFilter = "active" | "locked" | "all";
 
 export default function DepartmentsPage() {
   const router = useRouter();
   const { loading: authLoading, user, logout } = useAuth();
+  const { notify } = useActionFeedback();
+  const [busy, setBusy] = useState(false);
 
   const [deps, setDeps] = useState<Department[]>([]);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("Đang tải...");
+  const [statusFilter, setStatusFilter] = useState<DepartmentStatusFilter>("active");
+  const visibleDepartments = deps.filter((department) => statusFilter === "all" || department.active === (statusFilter === "active"));
 
   const loadDeps = async () => {
     try {
@@ -30,29 +37,37 @@ export default function DepartmentsPage() {
   };
 
   const createDepartment = async () => {
-    if (!code.trim() || !name.trim()) return setMessage("❌ Cần nhập mã phòng ban và tên phòng ban."), undefined;
+    if (busy) return;
+    if (!code.trim() || !name.trim()) return notify("error", "Cần nhập mã phòng ban và tên phòng ban.");
     const normalizedCode = code.trim().toLowerCase().replace(/\s+/g, "-");
-    const response = await fetch("/api/departments", {
+    setBusy(true);
+    try { const response = await fetch("/api/departments", {
       method: "POST",
       cache: "no-store",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ code: normalizedCode, name: name.trim() }),
     });
-    if (!response.ok) return setMessage("❌ Không thể tạo phòng ban."), undefined;
+    if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể tạo phòng ban."));
     setCode("");
     setName("");
-    await loadDeps();
+    notify("success", "Đã tạo phòng ban."); await loadDeps();
+    } catch (error) { notify("error", errorMessage(error, "Không thể tạo phòng ban.")); }
+    finally { setBusy(false); }
   };
 
   const updateDepartment = async (id: string, patch: Partial<Department>) => {
-    const response = await fetch("/api/departments", {
+    if (busy) return;
+    setBusy(true);
+    try { const response = await fetch("/api/departments", {
       method: "PATCH",
       cache: "no-store",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id, name: patch.name, active: patch.active }),
     });
-    if (!response.ok) return setMessage("❌ Không thể cập nhật phòng ban."), undefined;
-    await loadDeps();
+    if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể cập nhật phòng ban."));
+    notify("success", "Đã cập nhật phòng ban."); await loadDeps();
+    } catch (error) { notify("error", errorMessage(error, "Không thể cập nhật phòng ban.")); }
+    finally { setBusy(false); }
   };
 
   useEffect(() => {
@@ -82,12 +97,22 @@ export default function DepartmentsPage() {
           <div className="grid gap-2 md:grid-cols-3">
             <input className="rounded border px-3 py-2" placeholder="Mã phòng ban (vd: content)" value={code} onChange={(e) => setCode(e.target.value)} />
             <input className="rounded border px-3 py-2" placeholder="Tên phòng ban" value={name} onChange={(e) => setName(e.target.value)} />
-            <button onClick={createDepartment} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600">Tạo phòng ban</button>
+            <button disabled={busy} onClick={createDepartment} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50">{busy ? "Đang lưu..." : "Tạo phòng ban"}</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>
 
         <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-slate-600">Hiển thị {visibleDepartments.length}/{deps.length} phòng ban</p>
+            <label className="flex items-center gap-2 text-sm font-semibold">Trạng thái
+              <select aria-label="Lọc trạng thái phòng ban" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as DepartmentStatusFilter)} className="rounded border bg-white px-3 py-2 font-normal">
+                <option value="active">Đang hoạt động</option>
+                <option value="locked">Đã khóa</option>
+                <option value="all">Tất cả</option>
+              </select>
+            </label>
+          </div>
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50">
               <tr>
@@ -98,7 +123,7 @@ export default function DepartmentsPage() {
               </tr>
             </thead>
             <tbody>
-              {deps.map((d) => (
+              {visibleDepartments.map((d) => (
                 <tr key={d.id} className="border-t">
                   <td className="px-2 py-2">{d.code}</td>
                   <td className="px-2 py-2">
@@ -112,6 +137,7 @@ export default function DepartmentsPage() {
               ))}
             </tbody>
           </table>
+          {!visibleDepartments.length ? <p className="py-6 text-center text-sm text-slate-500">Không có phòng ban phù hợp bộ lọc.</p> : null}
         </section>
         </div>
       </div>

@@ -6,6 +6,7 @@ const route = readFileSync(new URL("../app/api/auth/admin-set-password/route.ts"
 const handler = readFileSync(new URL("./adminSetPassword.ts", import.meta.url), "utf8");
 const policy = readFileSync(new URL("./passwordPolicy.ts", import.meta.url), "utf8");
 const ui = readFileSync(new URL("../app/users/page.tsx", import.meta.url), "utf8");
+const passwordInput = readFileSync(new URL("../components/PasswordInput.tsx", import.meta.url), "utf8");
 const migration = readFileSync(new URL("../../supabase/migrations/20260817190000_admin_set_staff_password.sql", import.meta.url), "utf8");
 
 test("shared policy is strong and used by both reset flows", () => {
@@ -38,7 +39,8 @@ test("handler validates target and only hashes/RPCs after validation", () => {
 });
 
 test("UI has private password confirmation modal and prevents self/inactive targets", () => {
-  assert.match(ui, /type="password"/);
+  assert.match(ui, /<PasswordInput/);
+  assert.match(passwordInput, /type=\{visible \? "text" : "password"\}/);
   assert.match(ui, /newPassword/);
   assert.match(ui, /confirmPassword/);
   assert.match(ui, /selected\.id\s*===\s*user\?\.id/);

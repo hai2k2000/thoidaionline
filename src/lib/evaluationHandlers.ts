@@ -38,10 +38,7 @@ const mutation = async (request: Request) => {
 
 const createReview = async (request: Request) => {
   const guard = await requireMutationActor(); if (!guard.ok) return guard.response;
-  const body = await readJsonObject(request); const cycleId = asUuid(body?.cycleId);
-  if (!cycleId) return apiError("invalid_request", 400);
-  const result = await evaluationRepository.rpc("api_create_performance_review", { p_actor: guard.actor.id, p_cycle: cycleId, p_employee: guard.actor.id });
-  return result.error ? rpcFailure(result.error) : apiJson({ data: result.data }, 201);
+  return apiError("forbidden", 403);
 };
 
 const submit = async (request: Request, reviewId: string) => {

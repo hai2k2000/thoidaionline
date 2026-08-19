@@ -4,17 +4,9 @@ import { NextResponse } from "next/server";
 type TaskRow = {
   title: string;
   due_date: string | null;
-  priority: "low" | "normal" | "high" | "urgent";
   status: string;
   departments?: { name: string } | null;
   staff_users?: { full_name: string } | null;
-};
-
-const priorityEmoji: Record<string, string> = {
-  low: "🟢",
-  normal: "🔵",
-  high: "🟠",
-  urgent: "🔴",
 };
 
 export async function POST(req: Request) {
@@ -38,7 +30,7 @@ export async function POST(req: Request) {
 
     const { data, error } = await supabase
       .from("tasks")
-      .select("title, due_date, priority, status, departments(name), staff_users!tasks_assignee_id_fkey(full_name)")
+      .select("title, due_date, status, departments(name), staff_users!tasks_assignee_id_fkey(full_name)")
       .neq("status", "done")
       .not("due_date", "is", null)
       .gte("due_date", from)
@@ -51,7 +43,7 @@ export async function POST(req: Request) {
     const tasks = (data ?? []) as unknown as TaskRow[];
     const lines = tasks.map((t, i) => {
       const due = t.due_date ? new Date(t.due_date).toLocaleDateString("vi-VN") : "-";
-      return `${i + 1}. ${priorityEmoji[t.priority] || "•"} ${t.title} | hạn: ${due} | phụ trách: ${t.staff_users?.full_name || "-"} | phòng: ${t.departments?.name || "-"}`;
+      return `${i + 1}. ${t.title} | hạn: ${due} | phụ trách: ${t.staff_users?.full_name || "-"} | phòng: ${t.departments?.name || "-"}`;
     });
 
     const text = tasks.length

@@ -46,7 +46,7 @@ test("primary and permission-gated workflow actions stay reachable", () => {
 
 test("rare material is progressively disclosed without removing it", () => {
   assert.match(source, /<details/);
-  assert.match(source, /Đánh giá bằng AI/);
+  assert.match(source, /Dán đánh giá từ ChatGPT/);
   assert.match(source, /Đánh giá trước đây/);
   assert.match(source, /Tiến độ cũ/);
   assert.match(source, /Đính kèm/);

@@ -30,6 +30,7 @@ test("Task Center page is server-session scoped and never imports browser Supaba
   assert.doesNotMatch(page, /@\/lib\/supabase/);
   assert.doesNotMatch(shell, /@\/lib\/supabase/);
   assert.match(shell, /\/tasks\?view=work/);
-  assert.match(shell, /\/tasks\?view=evaluations/);
-  assert.match(shell, /canViewEvaluations/);
+  assert.match(page, /rawParams\.view === "evaluations"/);
+  assert.match(page, /redirect\(`\/evaluations/);
+  assert.doesNotMatch(shell, /\/tasks\?view=evaluations/);
 });

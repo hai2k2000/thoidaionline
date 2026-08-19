@@ -47,11 +47,12 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   const session = verifySessionToken(token);
   if (!session) return null;
 
+  const roleLifecycleEnabled = process.env.ROLE_LIFECYCLE_ENABLED === "true";
   const { data, error } = await serverSupabase
     .from("staff_users")
     .select(
       "id,full_name,email,username,department_id,active,session_version," +
-      "roles(code,name,level,role_permissions(" +
+      `roles(code,name,level${roleLifecycleEnabled ? ",active" : ""},role_permissions(` +
       "can_manage_users,can_manage_permissions,can_create_task," +
       "can_edit_all_tasks,can_comment,can_assign_task," +
       "can_view_department_tasks,can_evaluate_step1," +
@@ -74,11 +75,12 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
       code: string;
       name: string;
       level: number;
+      active?: boolean;
       role_permissions: Partial<PermissionSet> | null;
     } | null;
   };
   if (session.sessionVersion !== row.session_version) return null;
-  if (!row.roles) return null;
+  if (!row.roles || (roleLifecycleEnabled && row.roles.active !== true)) return null;
   const managedDepartments = await serverSupabase
     .from("departments")
     .select("id")

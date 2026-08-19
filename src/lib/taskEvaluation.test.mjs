@@ -14,9 +14,9 @@ const {
   taskDetailUrl,
 } = evaluation;
 
-test("only editor-in-chief and existing administrators can edit task evaluations", () => {
-  assert.equal(canEditTaskEvaluation({ roleCode: "tong_bien_tap", canManageUsers: false }), true);
-  assert.equal(canEditTaskEvaluation({ roleCode: "tbt_read_only", canManageUsers: false }), true);
+test("only administrators and existing user managers can edit legacy task evaluations", () => {
+  assert.equal(canEditTaskEvaluation({ roleCode: "tong_bien_tap", canManageUsers: false }), false);
+  assert.equal(canEditTaskEvaluation({ roleCode: "tbt_read_only", canManageUsers: false }), false);
   assert.equal(canEditTaskEvaluation({ roleCode: "pho_tong_bien_tap", canManageUsers: true }), true);
   assert.equal(canEditTaskEvaluation({ roleCode: "admin", canManageUsers: true }), true);
   assert.equal(canEditTaskEvaluation({ roleCode: "pho_tong_bien_tap", canManageUsers: false }), false);
@@ -65,9 +65,7 @@ test("weighted average compares task size fairly", () => {
   assert.equal(summary.taskCount, 2);
   assert.equal(summary.completedCount, 2);
   assert.equal(summary.notCompletedCount, 0);
-  assert.equal(summary.totalWeight, 9);
-  assert.equal(summary.weightedPoints, 74);
-  assert.equal(summary.weightedAverage, 74 / 9);
+  assert.equal(summary.totalScore, 74);
 });
 
 test("only the latest final checkpoint per employee and task is aggregated", () => {
@@ -82,9 +80,7 @@ test("only the latest final checkpoint per employee and task is aggregated", () 
   assert.equal(selected[0].id, "new-final");
 
   const summary = summarizeEmployeeEvaluation({ tasks: [{ id: "t1", status: "done" }], evaluations: rows, employeeId: "u1" });
-  assert.equal(summary.totalWeight, 5);
-  assert.equal(summary.weightedPoints, 45);
-  assert.equal(summary.weightedAverage, 9);
+  assert.equal(summary.totalScore, 45);
 });
 
 test("employee modal task rows route to task detail", () => {

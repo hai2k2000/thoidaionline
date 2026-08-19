@@ -20,6 +20,7 @@ type PermissionRow = PermissionSet & {
     code: string;
     name: string;
     level: number;
+    active: boolean;
   } | null;
 };
 
@@ -30,33 +31,57 @@ const PHASE_ONE_PERMISSION_KEYS = [
   "can_evaluate_step2",
   "can_manage_rubrics",
 ] as const satisfies readonly (typeof PERMISSION_KEYS)[number][];
+const ROLE_LIFECYCLE_ENABLED = process.env.ROLE_LIFECYCLE_ENABLED === "true";
 
 const SELECT_FIELDS = [
   "role_id",
   ...PERMISSION_KEYS,
-  "roles(id,code,name,level)",
+  `roles!inner(id,code,name,level${ROLE_LIFECYCLE_ENABLED ? ",active" : ""})`,
 ].join(",");
 
-export async function GET() {
+export async function GET(request: Request) {
   const guard = await requireReadActor();
   if (!guard.ok) return guard.response;
   if (guard.actor.role_code !== "admin") {
     return apiError("forbidden", 403);
   }
-  const { data, error } = await serverSupabase
+  const status = new URL(request.url).searchParams.get("status") ?? "active";
+  if (!["active", "locked", "all"].includes(status)) return apiError("invalid_request", 400);
+  let query = serverSupabase
     .from("role_permissions")
     .select(SELECT_FIELDS)
     .order("role_id");
+  if (ROLE_LIFECYCLE_ENABLED && status !== "all") query = query.eq("roles.active", status === "active");
+  const { data, error } = await query;
   if (error) return rpcFailure(error);
   return apiJson({
-    permissions: (data ?? []) as unknown as PermissionRow[],
+    permissions: ((data ?? []) as unknown as PermissionRow[]).map((row) => ({ ...row, roles: row.roles ? { ...row.roles, active: row.roles.active ?? true } : null })),
     can_rename: true,
+    can_manage_roles: true,
   });
 }
 
 const text = (value: unknown) => typeof value === "string"
   ? value.normalize("NFC").trim().replace(/\s+/gu, " ")
   : "";
+
+export async function POST(request: Request) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
+  if (!ROLE_LIFECYCLE_ENABLED) return apiError("operation_failed", 503);
+  const body = await readJsonObject(request);
+  const code = text(body?.code).toLowerCase();
+  const name = text(body?.name);
+  const level = typeof body?.level === "number" ? body.level : Number.NaN;
+  if (!/^[a-z][a-z0-9_]{2,49}$/.test(code) || [...name].length < 2 || [...name].length > 120 || !Number.isInteger(level) || level < 1 || level > 99) return apiError("invalid_request", 400);
+  const result = await serverSupabase.rpc("api_create_role", { p_actor: guard.actor.id, p_code: code, p_name: name, p_level: level });
+  if (result.error?.code === "23505") return apiError("conflict", 409);
+  if (result.error) return rpcFailure(result.error);
+  const role = result.data as { id: string; code: string; name: string; level: number; active: boolean };
+  await logServerAudit({ actorId: guard.actor.id, module: "admin", entityType: "role", entityId: role.id, action: "create", newData: { code: role.code, name: role.name, level: role.level, active: role.active } });
+  return apiJson({ role }, 201);
+}
 
 export async function PATCH(request: Request) {
   const guard = await requireMutationActor();
@@ -73,6 +98,19 @@ export async function PATCH(request: Request) {
   const permission = typeof body?.permission === "string"
     ? body.permission
     : "";
+  if (typeof body?.active === "boolean") {
+    if (!ROLE_LIFECYCLE_ENABLED) return apiError("operation_failed", 503);
+    if (permission || name) return apiError("invalid_request", 400);
+    const before = await serverSupabase.from("roles").select("id,code,name,level,active").eq("id", roleId).maybeSingle();
+    if (before.error) return rpcFailure(before.error);
+    if (!before.data) return apiError("not_found", 404);
+    if (before.data.code === "admin" && body.active === false) return apiError("forbidden", 403);
+    const result = await serverSupabase.rpc("api_set_role_active", { p_actor: guard.actor.id, p_role: roleId, p_active: body.active });
+    if (result.error) return rpcFailure(result.error);
+    const role = result.data as { id: string; code: string; name: string; level: number; active: boolean };
+    await logServerAudit({ actorId: guard.actor.id, module: "admin", entityType: "role", entityId: role.id, action: role.active ? "unlock" : "lock", oldData: { active: before.data.active }, newData: { active: role.active } });
+    return apiJson({ role });
+  }
   if (permission) {
     if (
       name

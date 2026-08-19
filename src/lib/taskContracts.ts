@@ -73,7 +73,8 @@ export type LegacyEvaluationDto = {
 };
 
 export type TaskProgressReportDto = { id: string; reported_by: string; reported_on: string; report_status: string; progress_text: string; blockers: string | null; created_at: string; };
-export type TaskQualitativeEvaluationDto = { id: string; evaluation_text: string; evaluation_deadline: string; created_at: string; evaluator: { full_name: string | null } | null; };
+export type TaskQualitativeEvaluationSource = "chatgpt" | "leader";
+export type TaskQualitativeEvaluationDto = { id: string; evaluation_text: string; evaluation_deadline: string; evaluation_source: TaskQualitativeEvaluationSource; created_at: string; evaluator: { full_name: string | null } | null; };
 export type TaskDeadlineHistoryDto = { id: string; old_due_date: string | null; new_due_date: string | null; reason: string; changed_at: string; };
 export type TaskStatusEventDto = { id: string; from_status: string | null; to_status: string; reason: string | null; created_at: string; };
 export type TaskAttachmentDto = { id: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; uploaded_by: string; };
@@ -170,6 +171,7 @@ export type PersonalTaskEditInput = Omit<PersonalTaskInput, "dueDate">;
 export type QualitativeEvaluationInput = {
   evaluationText: string;
   evaluationDeadline: string | null;
+  evaluationSource: TaskQualitativeEvaluationSource;
 };
 
 export type RepositoryError = { code?: string | null };

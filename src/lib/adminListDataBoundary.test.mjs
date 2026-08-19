@@ -40,3 +40,32 @@ test("department mutations accept only explicit validated fields", () => {
   assert.match(handlers, /active/);
   assert.doesNotMatch(handlers, /serverSupabase/);
 });
+
+
+test("department page hides locked rows by default and keeps an unlock filter", () => {
+  const page = read("../app/departments/page.tsx");
+  assert.match(page, /useState<DepartmentStatusFilter>\("active"\)/);
+  assert.match(page, /Đang hoạt động/);
+  assert.match(page, /Đã khóa/);
+  assert.match(page, /Tất cả/);
+  assert.match(page, /visibleDepartments/);
+  assert.match(page, /visibleDepartments\.map/);
+  assert.match(page, /active: !d\.active/);
+  assert.match(page, /Hiển thị.*visibleDepartments\.length/);
+});
+
+
+test("job-title catalog keeps exactly seven canonical active titles", () => {
+  const migration = read("../../supabase/migrations/20260819103000_canonical_job_titles.sql");
+  const page = read("../app/job-titles/page.tsx");
+  const route = read("../app/api/job-titles/route.ts");
+  for (const code of ["tong_bien_tap","pho_tong_bien_tap","truong_phong","pho_truong_phong","ke_toan_truong","phong_vien","nhan_vien"]) assert.match(migration, new RegExp(code));
+  assert.doesNotMatch(migration, /delete\s+from\s+public\.job_titles/i);
+  assert.match(migration, /active=false/);
+  assert.match(page, /JobTitleStatusFilter/);
+  assert.match(page, /Đang hoạt động/);
+  assert.match(page, /Đã khóa/);
+  assert.match(page, /Tất cả/);
+  assert.match(page, /Cũ/);
+  assert.match(route, /CANONICAL_JOB_TITLE_CODES/);
+});

@@ -12,11 +12,16 @@ test("task detail replaces 1-10 scoring with qualitative evaluation and task dea
   assert.doesNotMatch(detail, /rating\}\/10|Điểm[^\n]*1[^\n]*10/);
 });
 
-test("AI evaluation is visible but honestly fail-closed without a provider", () => {
+test("manual ChatGPT evaluation can be pasted without enabling an AI provider", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   const factory = read("./taskHandlerFactory.ts");
-  assert.match(detail, /Đánh giá bằng AI/);
-  assert.match(detail, /Chưa cấu hình AI/);
+  assert.match(detail, /Dán đánh giá từ ChatGPT/);
+  assert.match(detail, /Nội dung đánh giá từ ChatGPT/);
+  assert.doesNotMatch(detail, /disabled value="Chưa cấu hình AI"/);
+  assert.match(detail, /evaluationText, evaluationDeadline/);
+  assert.match(detail, /Đánh giá của lãnh đạo/);
+  assert.match(detail, /leaderEvaluationText/);
+  assert.match(detail, /evaluationSource: "leader"/);
   assert.match(factory, /service_unavailable[\s\S]*503/);
   assert.doesNotMatch(factory, /api\.openai\.com|anthropic|gemini/i);
 });
@@ -55,4 +60,14 @@ test("qualitative evaluation migration is additive, audited and service-role onl
   assert.match(sql, /grant execute[\s\S]*service_role/i);
   assert.match(sql, /if not coalesce\(v_allowed,false\)/i);
   assert.doesNotMatch(sql, /drop\s+(?:table|column)|truncate|delete\s+from|alter\s+table\s+public\.task_evaluation_checkpoints/i);
+});
+
+test("qualitative evaluation provenance is stored and leader authorization is explicit", () => {
+  const migration = read("../../supabase/migrations/20260818120000_leader_task_qualitative_evaluation.sql");
+  assert.match(migration, /evaluation_source/);
+  assert.match(migration, /chatgpt.*leader|leader.*chatgpt/i);
+  assert.match(migration, /departments[\s\S]*manager_id/);
+  assert.match(migration, /can_evaluate_step2/);
+  const authorization = read("./authorization.ts");
+  assert.match(authorization, /leader_evaluate/);
 });

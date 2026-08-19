@@ -4,19 +4,34 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 import { listEmployeeProfiles, type EmployeeProfile } from "@/lib/services";
 import AppNav from "@/components/AppNav";
+import { sortStaffRows } from "@/lib/staffOrdering";
 
 type StaffUser = {
   id: string;
   full_name: string;
   username?: string | null;
   active?: boolean;
+  list_order?: number | null;
   role_code?: string | null;
-  role_name?: string | null;
+  role_level?: number | null;
+  job_title_code?: string | null;
+  job_title_name?: string | null;
+  job_title_display_order?: number | null;
   department_code?: string | null;
   department_name?: string | null;
+};
+
+type StaffApiUser = {
+  id: string;
+  full_name: string;
+  username?: string | null;
+  active?: boolean;
+  list_order?: number | null;
+  roles?: { code?: string | null; name?: string | null; level?: number | null } | null;
+  job_titles?: { code?: string | null; name?: string | null; display_order?: number | null } | null;
+  departments?: { code?: string | null; name?: string | null } | null;
 };
 
 export default function HrProfilesPage() {
@@ -37,72 +52,40 @@ export default function HrProfilesPage() {
   }, [rows]);
 
   const mergedRows = useMemo(() => {
-    const roleRank: Record<string, number> = {
-      tong_bien_tap: 1,
-      pho_tong_bien_tap: 2,
-      phu_trach_phong_tri_su: 3,
-      phu_trach_phong_bien_tap: 3,
-      phu_trach_phong_phong_vien: 3,
-      tri_su: 4,
-      bien_tap_vien: 4,
-      phong_vien: 5,
-    };
-
-    const departmentRank: Record<string, number> = {
-      leadership: 1,
-      editorial: 2,
-      admin: 3,
-      reporter: 4,
-      general: 5,
-    };
-
-    return staffUsers
-      .map((u) => ({ user: u, profile: profileMap.get(u.id) ?? null }))
-      .filter(({ user: su }) => {
+    const filteredUsers = staffUsers.filter((su) => {
         const okName = !qName.trim() || su.full_name.toLowerCase().includes(qName.toLowerCase());
         const okDepartment = !qDepartment || (su.department_code ?? "") === qDepartment;
         return okName && okDepartment;
-      })
-      .sort((a, b) => {
-        const roleA = roleRank[(a.user as { role_code?: string }).role_code ?? ""] ?? 99;
-        const roleB = roleRank[(b.user as { role_code?: string }).role_code ?? ""] ?? 99;
-        if (roleA !== roleB) return roleA - roleB;
-
-        const depA = departmentRank[(a.user as { department_code?: string }).department_code ?? ""] ?? 99;
-        const depB = departmentRank[(b.user as { department_code?: string }).department_code ?? ""] ?? 99;
-        if (depA !== depB) return depA - depB;
-
-        return a.user.full_name.localeCompare(b.user.full_name, "vi");
       });
+
+    return sortStaffRows(filteredUsers)
+      .map((u) => ({ user: u, profile: profileMap.get(u.id) ?? null }));
   }, [staffUsers, profileMap, qName, qDepartment]);
 
   const loadData = async () => {
-    const [profilesRes, usersRes] = await Promise.all([
+    const [profilesRes, usersResponse] = await Promise.all([
       listEmployeeProfiles(),
-      supabase
-        .from("staff_users")
-        .select("id,full_name,username,active,roles(code,name),departments(code,name)")
-        .order("full_name"),
+      fetch("/api/hr/staff", { cache: "no-store" }),
     ]);
 
     if (!profilesRes.ok) return setMessage(`❌ ${profilesRes.error}`);
-    if (usersRes.error) return setMessage(`❌ ${usersRes.error.message}`);
+    const usersPayload = await usersResponse.json().catch(() => null) as { error?: string; users?: StaffApiUser[] } | null;
+    if (!usersResponse.ok) return setMessage(`❌ ${usersPayload?.error || "Không thể tải dữ liệu nhân sự."}`);
 
     setRows(profilesRes.data);
-    let normalizedUsers = ((usersRes.data ?? []) as Array<
-      StaffUser & {
-        roles?: { code?: string | null; name?: string | null } | null;
-        departments?: { code?: string | null; name?: string | null } | null;
-      }
-    >)
+    let normalizedUsers = (usersPayload?.users ?? [])
       .filter((u) => u.active !== false)
       .map((u) => ({
         id: u.id,
         full_name: u.full_name,
         username: u.username,
         active: u.active,
+        list_order: u.list_order,
         role_code: u.roles?.code ?? null,
-        role_name: u.roles?.name ?? null,
+        role_level: u.roles?.level ?? null,
+        job_title_code: u.job_titles?.code ?? null,
+        job_title_name: u.job_titles?.name ?? null,
+        job_title_display_order: u.job_titles?.display_order ?? null,
         department_code: u.departments?.code ?? null,
         department_name: u.departments?.name ?? null,
       }));
@@ -196,7 +179,7 @@ export default function HrProfilesPage() {
                         {su.full_name}
                       </Link>
                     </td>
-                    <td className="px-2 py-2">{su.role_name ?? "-"}</td>
+                    <td className="px-2 py-2">{su.job_title_name ?? "-"}</td>
                     <td className="px-2 py-2">{su.department_name ?? "-"}</td>
                     <td className="px-2 py-2">{profile?.date_of_birth ? new Date(profile.date_of_birth).getFullYear() : "-"}</td>
                     <td className="px-2 py-2">{profile?.address ?? "-"}</td>

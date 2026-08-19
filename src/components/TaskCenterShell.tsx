@@ -8,16 +8,12 @@ import { useAuth } from "@/lib/auth";
 import { taskListHref } from "@/lib/taskFilters.mjs";
 import type { TaskCenterView } from "@/lib/taskCenterView";
 import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
-import EmployeeEvaluationShell from "@/components/EmployeeEvaluationShell";
-import type { EvaluationPageData } from "@/lib/evaluationRepository";
 
 type Props = {
   canAssignTask: boolean;
   canClaimTasks: boolean;
-  canViewEvaluations: boolean;
   currentUserId: string;
   departments: { id: string; name: string }[];
-  evaluations: EvaluationPageData;
   listError: boolean;
   query: TaskListQuery;
   tasks: TaskListResult;
@@ -77,7 +73,7 @@ function FilterFields({ query, departments }: Pick<Props, "query" | "departments
 }
 
 export default function TaskCenterShell(props: Props) {
-  const { canAssignTask, canClaimTasks, canViewEvaluations, currentUserId, departments, evaluations, listError, query, tasks, userLabel, view } = props;
+  const { canAssignTask, canClaimTasks, currentUserId, departments, listError, query, tasks, userLabel, view } = props;
   const router = useRouter();
   const { logout } = useAuth();
   const onLogout = () => { logout(); router.replace("/login"); };
@@ -103,14 +99,10 @@ export default function TaskCenterShell(props: Props) {
             </div>
             <nav aria-label="Task Center" className="mt-4 flex flex-wrap gap-2">
               <Link href="/tasks?view=work" aria-current={view === "work" ? "page" : undefined} className={tabClass(view === "work")}>Công việc</Link>
-              {canViewEvaluations ? <Link href="/tasks?view=evaluations" aria-current={view === "evaluations" ? "page" : undefined} className={tabClass(view === "evaluations")}>Đánh giá nhân viên</Link> : null}
             </nav>
           </header>
 
-          {view === "evaluations" ? (
-            <EmployeeEvaluationShell data={evaluations} />
-          ) : (
-            <>
+          <>
               <nav aria-label="Phạm vi công việc" className="mt-4 flex flex-wrap gap-2">
                 {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"]].map(([scope,label]) => (
                   <Link key={scope} href={taskListHref(query, { scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
@@ -155,8 +147,7 @@ export default function TaskCenterShell(props: Props) {
                 ) : null}
                 <nav aria-label="Phân trang" className="mt-4 flex items-center justify-between border-t pt-4 text-sm"><span>Trang {tasks.page}/{totalPages} · {tasks.total} công việc</span><div className="flex gap-2">{tasks.page > 1 ? <Link className="rounded border px-3 py-2" href={taskListHref(query, { page: tasks.page - 1 })}>Trước</Link> : null}{tasks.page < totalPages ? <Link className="rounded border px-3 py-2" href={taskListHref(query, { page: tasks.page + 1 })}>Sau</Link> : null}</div></nav>
               </section>
-            </>
-          )}
+          </>
         </main>
       </div>
     </div>

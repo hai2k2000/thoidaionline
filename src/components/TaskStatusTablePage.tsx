@@ -11,19 +11,11 @@ type Task = {
   id: string;
   title: string;
   assignee_id?: string | null;
-  priority: "low" | "normal" | "high" | "urgent";
   status: "new" | "in_progress" | "pending_review" | "done" | "rejected";
   progress_percent: number;
   due_date: string | null;
   departments?: { name: string } | null;
   task_assignees?: { user_id: string; staff_users?: { full_name: string | null } | null }[];
-};
-
-const priorityLabel: Record<Task["priority"], string> = {
-  low: "Dễ",
-  normal: "Vừa",
-  high: "Khó",
-  urgent: "Rất khó",
 };
 
 const statusLabel: Record<Task["status"], string> = {
@@ -32,13 +24,6 @@ const statusLabel: Record<Task["status"], string> = {
   pending_review: "Chờ duyệt",
   done: "Hoàn thành",
   rejected: "Trả lại",
-};
-
-const priorityTone: Record<Task["priority"], string> = {
-  low: "bg-slate-100 text-slate-700",
-  normal: "bg-gradient-to-r from-orange-100 to-amber-200 text-orange-800",
-  high: "bg-amber-100 text-amber-700",
-  urgent: "bg-orange-100 text-orange-800",
 };
 
 const statusTone: Record<Task["status"], string> = {
@@ -66,7 +51,7 @@ export default function TaskStatusTablePage({
   const loadData = async () => {
     const { data, error } = await supabase
       .from("tasks")
-      .select("id,title,assignee_id,priority,status,progress_percent,due_date,departments(name),task_assignees(user_id,staff_users(full_name))")
+      .select("id,title,assignee_id,status,progress_percent,due_date,departments(name),task_assignees(user_id,staff_users(full_name))")
       .order("created_at", { ascending: false })
       .limit(500);
 
@@ -121,7 +106,6 @@ export default function TaskStatusTablePage({
                     <th className="px-3 py-2">Công việc</th>
                     <th className="px-3 py-2">Phòng</th>
                     <th className="px-3 py-2">Giao cho ai</th>
-                    <th className="px-3 py-2 whitespace-nowrap">Độ khó</th>
                     <th className="px-3 py-2">Đến hạn</th>
                     <th className="px-3 py-2">Tiến độ</th>
                     <th className="px-3 py-2">Trạng thái</th>
@@ -137,7 +121,6 @@ export default function TaskStatusTablePage({
                       </td>
                       <td className="px-3 py-2">{t.departments?.name ?? "-"}</td>
                       <td className="px-3 py-2">{t.task_assignees?.map((a) => a.staff_users?.full_name).filter(Boolean).join(", ") || "-"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap"><span className={`inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold ${priorityTone[t.priority]}`}>{priorityLabel[t.priority]}</span></td>
                       <td className="px-3 py-2">{t.due_date ? new Date(t.due_date).toLocaleDateString("vi-VN") : "-"}</td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <div className="w-28">
@@ -155,7 +138,7 @@ export default function TaskStatusTablePage({
                     </tr>
                   ))}
                   {rows.length === 0 ? (
-                    <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-500">Không có công việc.</td></tr>
+                    <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">Không có công việc.</td></tr>
                   ) : null}
                 </tbody>
               </table>

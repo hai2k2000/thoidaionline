@@ -6,6 +6,8 @@ export type CompletionLevel = "not_done" | "done" | "excellent";
 export type EvaluationAccess = {
   roleCode?: string | null;
   canManageUsers?: boolean;
+  isTaskCreator?: boolean;
+  isTaskReviewer?: boolean;
 };
 
 export type TaskEvaluationInput = {
@@ -25,6 +27,7 @@ export type TaskEvaluationRow = {
   reviewer_id?: string | null;
   rating: number;
   effort_weight: number;
+  total_score?: number | null;
   completion?: CompletionLevel;
   on_time?: boolean;
   opinion?: string | null;
@@ -39,17 +42,29 @@ export type EvaluationTask = {
 };
 
 export const canEditTaskEvaluation = ({ roleCode, canManageUsers }: EvaluationAccess) =>
-  roleCode === "tong_bien_tap" || roleCode === "tbt_read_only" || canManageUsers === true;
+  roleCode === "admin" || canManageUsers === true;
+
+const REVIEWER_ROLES = new Set(["pho_tong_bien_tap", "phu_trach_phong_tri_su", "phu_trach_phong_phong_vien", "phu_trach_phong_bien_tap"]);
+
+export const canSubmitTaskEvaluation = ({ roleCode, canManageUsers, isTaskCreator, isTaskReviewer }: EvaluationAccess) => {
+  if (!roleCode || roleCode === "tong_bien_tap" || roleCode === "tbt_read_only") return false;
+  if (roleCode === "admin" || canManageUsers === true) return true;
+  return isTaskCreator === true || (isTaskReviewer === true && REVIEWER_ROLES.has(roleCode));
+};
 
 export function normalizeEvaluationInput(input: TaskEvaluationInput & Record<string, unknown>): TaskEvaluationInput {
-  if (!RATING_OPTIONS.includes(input.rating as (typeof RATING_OPTIONS)[number])) {
+  if (!Number.isInteger(input.rating) || !RATING_OPTIONS.includes(input.rating as (typeof RATING_OPTIONS)[number])) {
     throw new RangeError("Điểm đánh giá phải từ 1 đến 10.");
   }
-  if (!WEIGHT_OPTIONS.includes(input.effortWeight as (typeof WEIGHT_OPTIONS)[number])) {
+  if (!Number.isInteger(input.effortWeight) || !WEIGHT_OPTIONS.includes(input.effortWeight as (typeof WEIGHT_OPTIONS)[number])) {
     throw new RangeError("\u004d\u1ee9c \u0111\u1ed9 kh\u00f3 c\u1ee7a c\u00f4ng vi\u1ec7c kh\u00f4ng h\u1ee3p l\u1ec7.");
   }
   if (!["not_done", "done", "excellent"].includes(input.completion)) {
     throw new RangeError("Mức hoàn thành không hợp lệ.");
+  }
+  if (typeof input.onTime !== "boolean") throw new RangeError("Tiến độ không hợp lệ.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.checkpointDate) || Number.isNaN(Date.parse(input.checkpointDate + "T00:00:00Z"))) {
+    throw new RangeError("Ngày đánh giá không hợp lệ.");
   }
 
   return {
@@ -93,16 +108,13 @@ export function summarizeEmployeeEvaluation({
   const finalEvaluations = selectLatestFinalEvaluations(evaluations).filter(
     (row) => row.employee_id === employeeId && taskIds.has(row.task_id),
   );
-  const totalWeight = finalEvaluations.reduce((sum, row) => sum + row.effort_weight, 0);
-  const weightedPoints = finalEvaluations.reduce((sum, row) => sum + row.rating * row.effort_weight, 0);
+  const totalScore = finalEvaluations.reduce((sum, row) => sum + (row.total_score ?? row.rating * row.effort_weight), 0);
 
   return {
     taskCount: uniqueTasks.length,
     completedCount: uniqueTasks.filter((task) => task.status === "done").length,
     notCompletedCount: uniqueTasks.filter((task) => task.status !== "done").length,
-    totalWeight,
-    weightedPoints,
-    weightedAverage: totalWeight > 0 ? weightedPoints / totalWeight : 0,
+    totalScore,
     finalEvaluations,
   };
 }

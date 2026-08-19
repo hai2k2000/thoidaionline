@@ -1,0 +1,11 @@
+[Unit]
+Description=Open Thoidai monthly performance evaluation on the first day
+
+[Timer]
+OnCalendar=*-*-01 00:20:00 Asia/Ho_Chi_Minh
+Persistent=true
+RandomizedDelaySec=120
+Unit=thoidai-monthly-evaluation.service
+
+[Install]
+WantedBy=timers.target

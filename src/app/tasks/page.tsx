@@ -7,7 +7,6 @@ import { resolveTaskCenterView } from "@/lib/taskCenterView";
 import { parseTaskListSearchParams } from "@/lib/taskFilters.mjs";
 import { taskRepository } from "@/lib/taskRepository";
 import type { TaskListResult } from "@/lib/taskContracts";
-import { evaluationRepository, type EvaluationPageData } from "@/lib/evaluationRepository";
 
 type TasksPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -33,9 +32,13 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     permissions: user.permissions,
   };
   const canViewEvaluations = user.permissions.can_evaluate_step1
-    || user.permissions.can_evaluate_step2
-    || user.id === actor.id;
+    || user.permissions.can_evaluate_step2;
   const rawParams = await searchParams;
+  if (rawParams.view === "evaluations") {
+    if (!canViewEvaluations) redirect("/tasks");
+    const params = toUrlSearchParams(rawParams); params.delete("view");
+    redirect(`/evaluations${params.toString() ? `?${params.toString()}` : ""}`);
+  }
   const view = resolveTaskCenterView(rawParams.view, canViewEvaluations);
   const query = parseTaskListSearchParams(toUrlSearchParams(rawParams));
 
@@ -48,8 +51,6 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     if (result.ok) tasks = result.data;
     else listError = true;
   }
-  let evaluations: EvaluationPageData = { items: [], openCycles: [], currentUserId: user.id };
-  if (view === "evaluations") evaluations = await evaluationRepository.list(actor, rawParams);
 
   let departments: { id: string; name: string }[] = [];
   if (hasOrganizationTaskView(actor) || user.permissions.can_view_department_tasks) {
@@ -69,10 +70,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     <TaskCenterShell
       canAssignTask={user.permissions.can_assign_task}
       canClaimTasks={!['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
-      canViewEvaluations={canViewEvaluations}
       currentUserId={user.id}
       departments={departments}
-      evaluations={evaluations}
       listError={listError}
       query={query}
       tasks={tasks}

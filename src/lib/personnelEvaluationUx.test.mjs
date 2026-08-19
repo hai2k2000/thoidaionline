@@ -41,7 +41,10 @@ test("dedicated personnel evaluation page and navigation are manager-or-leader o
 });
 
 test("personnel evaluation UI lists employees and drills into period tasks and rubric scores", () => {
-  const shell = read("../components/PersonnelEvaluationShell.tsx");
+  const listShell = read("../components/PersonnelEvaluationShell.tsx");
+  const detailShell = read("../components/PersonnelEvaluationDetailShell.tsx");
+  const shell = listShell + detailShell;
+  const modal = read("../components/TaskDetailModal.tsx");
   for (const label of [
     "Nhân viên trực thuộc",
     "Ngày bắt đầu",
@@ -56,7 +59,19 @@ test("personnel evaluation UI lists employees and drills into period tasks and r
     assert.match(shell, new RegExp(label));
   }
   assert.match(shell, /employeeId/);
-  assert.match(shell, /\/tasks\/\$\{task\.id\}/);
+  assert.match(shell, /setSelectedTask\(task\)/);
+  assert.match(shell, /TaskDetailModal/);
+  assert.match(modal, /role="dialog"/);
+  assert.match(modal, /aria-modal="true"/);
+  assert.match(modal, /Escape/);
+  assert.match(modal, /target="_blank"/);
+  for (const field of ["evaluation_criteria", "attachments", "progress_reports", "progress_logs", "comments", "qualitative_evaluations", "legacy_evaluations", "deadline_history", "status_events"]) assert.match(modal, new RegExp(field));
+  assert.match(modal, /Tổng quan/);
+  assert.match(modal, /Tiến độ/);
+  assert.match(modal, /Bình luận/);
+  assert.match(modal, /Đánh giá/);
+  assert.match(modal, /Lịch sử/);
+  assert.doesNotMatch(modal, /fetch\(|method:\s*"POST"|review-completion|cancel-assigned/);
   assert.match(shell, /manager|Trưởng phòng/);
   assert.match(shell, /tbt|Tổng Biên tập/);
   assert.doesNotMatch(shell, /rating|\/10|Điểm từ 1 đến 10/i);
@@ -86,4 +101,25 @@ test("submitted personnel stages remain state-machine protected without invented
   assert.match(phase7, /invalid review state/);
   assert.match(phase7, /published performance reviews are immutable/);
   assert.doesNotMatch(handlers, /overwrite|revise|correction/i);
+});
+
+
+test("personnel evaluations split list and scoring detail routes", () => {
+  const listPage = read("../app/evaluations/page.tsx");
+  const detailPage = read("../app/evaluations/[employeeId]/page.tsx");
+  const listShell = read("../components/PersonnelEvaluationShell.tsx");
+  const detailShell = read("../components/PersonnelEvaluationDetailShell.tsx");
+  assert.match(listShell, /target="_blank"/);
+  assert.match(listShell, /rel="noopener noreferrer"/);
+  assert.match(listShell, /\/evaluations\/\$\{person\.employeeId\}/);
+  assert.doesNotMatch(listShell, /function ScoreForm|function Detail|TaskDetailModal/);
+  assert.match(listPage, /redirect\(\`\/evaluations\/\$\{filters\.employeeId\}/);
+  assert.match(detailPage, /personnelDetail/);
+  assert.match(detailPage, /notFound/);
+  assert.match(detailPage, /can_evaluate_step1/);
+  assert.match(detailPage, /can_evaluate_step2/);
+  assert.match(detailShell, /Quay về danh sách/);
+  assert.match(detailShell, /from=\$\{from\}&to=\$\{to\}/);
+  assert.match(detailShell, /ScoreForm/);
+  assert.match(detailShell, /TaskDetailModal/);
 });

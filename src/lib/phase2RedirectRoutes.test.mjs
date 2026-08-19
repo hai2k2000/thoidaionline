@@ -42,3 +42,9 @@ test("successful login replaces history with Task Center", () => {
   assert.match(source, /router\.replace\("\/tasks"\)/);
   assert.doesNotMatch(source, /router\.(?:push|replace)\("\/"\)/);
 });
+
+test("login submits when Enter is pressed in the credential form", () => {
+  const source = fs.readFileSync(new URL("../app/login/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /<form[\s\S]*onSubmit=\{\(event\) => \{ event\.preventDefault\(\); void submit\(\); \}\}/);
+  assert.match(source, /<button type="submit"[\s\S]*Đăng nhập/);
+});

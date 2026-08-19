@@ -19,7 +19,7 @@
 ## 3) Reminder/Notification
 - [ ] Xác nhận route reminder chạy được: `POST /api/notify/due-soon?days=3`
 - [ ] Trên dashboard bấm nút "Nhắc việc sắp đến hạn" để test tay
-- [ ] Kiểm tra cron Vercel trong `vercel.json` (mặc định 08:00 ICT)
+- [ ] Kiểm tra cron/timer trên VPS (mặc định 08:00 ICT)
 - [ ] Xác nhận Telegram/email nhận được tin nhắn
 
 ## 4) Bảo mật & vận hành
@@ -33,3 +33,4 @@
 - [ ] Test lọc/tìm kiếm/phân trang
 - [ ] Test phân quyền: admin/manager/ops/reporter
 - [ ] Xác nhận UX với người dùng thật và chốt vòng cải tiến tiếp theo
+ vòng cải tiến tiếp theo

@@ -7,10 +7,12 @@ import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import type { TaskDetailDto } from "@/lib/taskContracts";
 import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
+import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type Capabilities = {
   report: boolean; review: boolean; update: boolean; comment: boolean;
-  attachment: boolean; evaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean;
+  attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean;
 };
 type TabId = "overview" | "progress" | "comments" | "history";
 
@@ -40,6 +42,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
 }) {
   const router = useRouter();
   const { logout } = useAuth();
+  const { notify } = useActionFeedback();
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [tabsReady, setTabsReady] = useState(false);
   const [message, setMessage] = useState("");
@@ -50,6 +53,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const [blockers, setBlockers] = useState("");
   const [comment, setComment] = useState("");
   const [evaluationText, setEvaluationText] = useState("");
+  const [leaderEvaluationText, setLeaderEvaluationText] = useState("");
   const [evaluationDeadline, setEvaluationDeadline] = useState(task.due_date ?? today());
   const [contentExpanded, setContentExpanded] = useState(false);
 
@@ -90,10 +94,10 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
     setBusy(true); setMessage("");
     try {
       const response = await fetch(path, init);
-      if (!response.ok) throw new Error("Yêu cầu không thành công.");
-      setMessage("Đã cập nhật."); router.refresh(); return response;
+      if (!response.ok) throw new Error(await responseErrorMessage(response, "Yêu cầu không thành công."));
+      notify("success", "Đã cập nhật thành công."); setMessage("Đã cập nhật."); router.refresh(); return response;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Có lỗi xảy ra."); return null;
+      const text = errorMessage(error, "Có lỗi xảy ra."); notify("error", text); setMessage(text); return null;
     } finally { setBusy(false); }
   };
   const jsonPost = (path: string, body: object = {}) => request(path, {
@@ -115,8 +119,13 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   };
   const submitEvaluation = async (event: FormEvent) => {
     event.preventDefault();
-    const response = await jsonPost(`/api/tasks/${task.id}/evaluations`, { evaluationText, evaluationDeadline });
+    const response = await jsonPost(`/api/tasks/${task.id}/evaluations`, { evaluationText, evaluationDeadline, evaluationSource: "chatgpt" });
     if (response) setEvaluationText("");
+  };
+  const submitLeaderEvaluation = async (event: FormEvent) => {
+    event.preventDefault();
+    const response = await jsonPost(`/api/tasks/${task.id}/evaluations`, { evaluationText: leaderEvaluationText, evaluationDeadline, evaluationSource: "leader" });
+    if (response) setLeaderEvaluationText("");
   };
   const upload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -165,8 +174,9 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
               </button>
               <section id="task-evaluation-workspace" tabIndex={-1} aria-label="Đánh giá công việc" className="scroll-mt-4 focus:outline-none">
                 <Section title="Đánh giá công việc">
-                  {capabilities.evaluate ? <form onSubmit={submitEvaluation} className="mb-5 grid gap-3"><textarea aria-label="Nội dung đánh giá" value={evaluationText} onChange={(event) => setEvaluationText(event.target.value)} required maxLength={10000} placeholder="Nhập nhận xét định tính về kết quả công việc" className="min-h-28 rounded border p-2" /><label className="grid gap-1 text-sm font-semibold">Thời hạn đánh giá<input aria-label="Thời hạn đánh giá" type="date" value={evaluationDeadline} onChange={(event) => setEvaluationDeadline(event.target.value)} required className="rounded border p-2 font-normal" /></label><details className="rounded-lg border border-dashed bg-slate-50 p-3"><summary className="cursor-pointer text-sm font-semibold">Đánh giá bằng AI</summary><textarea id="task-ai-evaluation" aria-label="Đánh giá bằng AI" disabled value="Chưa cấu hình AI" readOnly className="mt-3 min-h-20 w-full rounded border bg-slate-100 p-2 text-slate-500" /><p className="mt-1 text-xs text-slate-500">Chỉ khả dụng sau khi cấu hình nhà cung cấp AI và thông tin xác thực phía máy chủ.</p></details><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu đánh giá</button></form> : null}
-                  <Timeline empty="Chưa có đánh giá.">{task.qualitative_evaluations.map((row) => <li key={row.id}><b>{dateText(row.evaluation_deadline)} · {row.evaluator?.full_name ?? "Người đánh giá"}</b><p className="whitespace-pre-wrap">{row.evaluation_text}</p></li>)}</Timeline>
+                  {capabilities.evaluate ? <form onSubmit={submitEvaluation} className="mb-5 grid gap-3"><label className="grid gap-1 text-sm font-semibold">Thời hạn đánh giá<input aria-label="Thời hạn đánh giá" type="date" value={evaluationDeadline} onChange={(event) => setEvaluationDeadline(event.target.value)} required className="rounded border p-2 font-normal" /></label><details className="rounded-lg border border-dashed bg-slate-50 p-3" open><summary className="cursor-pointer text-sm font-semibold">Dán đánh giá từ ChatGPT</summary><textarea id="task-ai-evaluation" aria-label="Nội dung đánh giá từ ChatGPT" value={evaluationText} onChange={(event) => setEvaluationText(event.target.value)} required maxLength={10000} placeholder="Dán nội dung đánh giá đã được ChatGPT soạn sẵn" className="mt-3 min-h-28 w-full rounded border p-2" /><p className="mt-1 text-xs text-slate-500">Kiểm tra nội dung trước khi lưu. Nội dung sẽ được lưu như đánh giá định tính của bạn.</p></details><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu đánh giá</button></form> : null}
+                  {capabilities.leaderEvaluate ? <form onSubmit={submitLeaderEvaluation} className="mb-5 grid gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3"><label className="grid gap-1 text-sm font-semibold">Đánh giá của lãnh đạo (Trưởng phòng/TBT)<textarea aria-label="Đánh giá của lãnh đạo" value={leaderEvaluationText} onChange={(event) => setLeaderEvaluationText(event.target.value)} required maxLength={10000} placeholder="Nhập nhận xét của lãnh đạo về công việc" className="min-h-28 rounded border bg-white p-2 font-normal" /></label><button disabled={busy} className="rounded bg-emerald-700 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu đánh giá lãnh đạo</button></form> : null}
+                  <Timeline empty="Chưa có đánh giá.">{task.qualitative_evaluations.map((row) => <li key={row.id}><b>{dateText(row.evaluation_deadline)} · {row.evaluation_source === "leader" ? "Lãnh đạo" : "ChatGPT"} · {row.evaluator?.full_name ?? "Người đánh giá"}</b><p className="whitespace-pre-wrap">{row.evaluation_text}</p></li>)}</Timeline>
                   {task.legacy_evaluations.length ? <details className="mt-5 rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Đánh giá trước đây ({task.legacy_evaluations.length})</summary><p className="my-2 text-sm text-slate-500">Dữ liệu lịch sử được giữ nguyên và chỉ hiển thị nhận xét.</p><Timeline empty="Chưa có nhận xét cũ.">{task.legacy_evaluations.map((row) => <li key={row.id}><b>Ngày đánh giá: {row.checkpoint_date}</b><p className="whitespace-pre-wrap">{row.opinion || "Không có nhận xét."}</p></li>)}</Timeline></details> : null}
                 </Section>
               </section>

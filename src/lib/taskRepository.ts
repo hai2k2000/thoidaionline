@@ -64,6 +64,7 @@ type TaskAccessRow = {
   owner_id: string | null;
   assignee_id: string | null;
   reviewer_id: string | null;
+  departments: { manager_id: string | null } | null;
   self_claimable: boolean;
   task_type: "assigned" | "personal" | null;
   status: string;
@@ -94,6 +95,7 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
   ownerId: row.owner_id,
   assigneeId: row.assignee_id,
   reviewerId: row.reviewer_id,
+  departmentManagerId: row.departments?.manager_id ?? null,
   selfClaimable: row.self_claimable,
   taskType: row.task_type,
   status: row.status,
@@ -225,7 +227,7 @@ export const taskRepository: TaskRepository = {
     const { data, error } = await serverSupabase
       .from("tasks")
       .select(
-        "id,department_id,created_by,owner_id,assignee_id,reviewer_id," +
+        "id,department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id)," +
         "self_claimable,task_type,status,task_assignees(user_id,assignment_role)",
       )
       .eq("id", taskId)
@@ -252,7 +254,7 @@ export const taskRepository: TaskRepository = {
         .select("id,reported_by,reported_on,report_status,progress_text,blockers,created_at")
         .eq("task_id", taskId).order("reported_on", { ascending: false }).order("created_at", { ascending: false }),
       serverSupabase.from("task_qualitative_evaluations")
-        .select("id,evaluation_text,evaluation_deadline,created_at,evaluator:staff_users!task_qualitative_evaluations_evaluator_id_fkey(full_name)")
+        .select("id,evaluation_text,evaluation_deadline,evaluation_source,created_at,evaluator:staff_users!task_qualitative_evaluations_evaluator_id_fkey(full_name)")
         .eq("task_id", taskId).order("created_at", { ascending: false }),
       serverSupabase.from("task_deadline_history")
         .select("id,old_due_date,new_due_date,reason,changed_at")
@@ -363,7 +365,8 @@ export const taskRepository: TaskRepository = {
     "api_submit_task_qualitative_evaluation",
     { p_actor_id: actorId, p_task_id: taskId,
       p_evaluation_text: input.evaluationText,
-      p_evaluation_deadline: input.evaluationDeadline },
+      p_evaluation_deadline: input.evaluationDeadline,
+      p_evaluation_source: input.evaluationSource },
   ),
   submitAssignedCompletion: (actorId, taskId) => mutation(
     "api_submit_assigned_task_completion", { p_actor_id: actorId, p_task_id: taskId },

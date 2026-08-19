@@ -7,6 +7,6 @@ export default async function EvaluationRubricsPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.role_code !== "admin" || !user.permissions.can_manage_rubrics) redirect("/tasks");
-  const data = await evaluationRepository.rubrics();
+  const data = await evaluationRepository.rubrics(user.id);
   return <EvaluationRubricShell userLabel={user.full_name} {...data} />;
 }

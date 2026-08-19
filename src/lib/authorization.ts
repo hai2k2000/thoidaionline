@@ -20,6 +20,7 @@ export type TaskAccessSnapshot = {
   ownerId: string | null;
   assigneeId: string | null;
   reviewerId: string | null;
+  departmentManagerId: string | null;
   selfClaimable: boolean;
   taskType: "assigned" | "personal" | null;
   status: string;
@@ -40,6 +41,7 @@ export type TaskAction =
   | "personal_cancel"
   | "personal_complete"
   | "evaluate"
+  | "leader_evaluate"
   | "legacy_evaluate";
 
 export type EvaluationDecision =
@@ -122,7 +124,7 @@ export function canTaskAction(
   }
 
   if (actor.roleCode === "tbt_read_only") return false;
-  if (actor.roleCode === "tong_bien_tap" && action !== "comment") {
+  if (actor.roleCode === "tong_bien_tap" && action !== "comment" && action !== "leader_evaluate") {
     return false;
   }
 
@@ -179,6 +181,10 @@ export function canTaskAction(
             || task.reviewerId === actor.id
           )
         );
+    case "leader_evaluate":
+      return actor.roleCode === "admin"
+        || (actor.roleCode === "tong_bien_tap" && actor.permissions.can_evaluate_step2)
+        || (actor.permissions.can_evaluate_step1 && task.departmentManagerId === actor.id);
   }
 }
 

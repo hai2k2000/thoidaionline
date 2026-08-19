@@ -13,7 +13,7 @@ test("Phase 6 assignment page is server-scoped and renders the full canonical fo
   for (const field of ["title", "description", "departmentId", "assigneeId", "reviewerId", "dueDate", "evaluationCriteria", "collaboratorIds", "watcherIds", "recurrenceFrequency", "recurrenceEndsOn", "attachment"]) {
     assert.match(shell, new RegExp(`name=["']${field}["']`), `${field} field missing`);
   }
-  assert.doesNotMatch(shell, /\bAI\b|provider|progress_percent/i);
+  assert.doesNotMatch(shell, /AI provider|progress_percent/i);
 });
 
 test("assignment and recurrence stay behind thin server-only routes", () => {

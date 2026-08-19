@@ -3,41 +3,45 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type Props = { taskId: string; canEdit: boolean; canClaim: boolean; terminal: boolean };
 
 export default function PersonalTaskActions({ taskId, canEdit, canClaim, terminal }: Props) {
   const router = useRouter();
+  const { notify } = useActionFeedback();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const mutate = async (action: "complete" | "cancel", reason?: string) => {
     setBusy(true);
     setError("");
-    const response = await fetch(`/api/tasks/${taskId}/${action}`, {
+    try { const response = await fetch(`/api/tasks/${taskId}/${action}`, {
       method: "POST",
       headers: reason ? { "Content-Type": "application/json" } : undefined,
       body: reason ? JSON.stringify({ reason }) : undefined,
-    }).catch(() => null);
-    setBusy(false);
-    if (!response?.ok) {
-      setError("Không thể cập nhật nhiệm vụ. Vui lòng thử lại.");
-      return;
-    }
+    });
+    if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể cập nhật nhiệm vụ."));
+    notify("success", action === "complete" ? "Đã hoàn thành nhiệm vụ." : "Đã hủy nhiệm vụ.");
     router.refresh();
+    } catch (error) { const text = errorMessage(error, "Không thể cập nhật nhiệm vụ."); setError(text); notify("error", text); }
+    finally { setBusy(false); }
   };
 
   const claim = async () => {
     setBusy(true);
     setError("");
-    const response = await fetch("/api/tasks/claim", {
+    try { const response = await fetch("/api/tasks/claim", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ taskId }),
-    }).catch(() => null);
-    setBusy(false);
-    if (!response?.ok) return setError("Không thể bắt đầu nhiệm vụ. Vui lòng thử lại."), undefined;
+    });
+    if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể bắt đầu nhiệm vụ."));
+    notify("success", "Đã bắt đầu nhiệm vụ.");
     router.refresh();
+    } catch (error) { const text = errorMessage(error, "Không thể bắt đầu nhiệm vụ."); setError(text); notify("error", text); }
+    finally { setBusy(false); }
   };
 
   if (terminal) return null;

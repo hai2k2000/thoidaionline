@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type InitialTask = {
   id: string;
@@ -16,6 +18,7 @@ type Props = { initialTask?: InitialTask };
 
 export default function PersonalTaskForm({ initialTask }: Props) {
   const router = useRouter();
+  const { notify } = useActionFeedback();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const editing = Boolean(initialTask);
@@ -30,43 +33,38 @@ export default function PersonalTaskForm({ initialTask }: Props) {
     const evaluationCriteria = String(form.get("evaluationCriteria") ?? "").trim();
     const deadlineReason = String(form.get("deadlineReason") ?? "").trim();
     if (!title || !description || !startDate || !dueDate || startDate > dueDate) {
-      setError("Vui lòng nhập đủ thông tin và bảo đảm ngày bắt đầu không sau deadline.");
+      const text = "Vui lòng nhập đủ thông tin và bảo đảm ngày bắt đầu không sau deadline."; setError(text); notify("error", text);
       return;
     }
     if (editing && dueDate !== initialTask?.dueDate && !deadlineReason) {
-      setError("Cần nhập lý do khi thay đổi deadline.");
+      const text = "Cần nhập lý do khi thay đổi deadline."; setError(text); notify("error", text);
       return;
     }
     setBusy(true);
     setError("");
     const body = { title, description, startDate, dueDate, evaluationCriteria };
-    const response = await fetch(
+    try { const response = await fetch(
       editing ? `/api/tasks/${initialTask?.id}/personal` : "/api/tasks/personal",
       {
         method: editing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       },
-    ).catch(() => null);
-    if (!response?.ok) {
-      setBusy(false);
-      setError("Không thể lưu nhiệm vụ cá nhân.");
-      return;
-    }
+    );
+    if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể lưu nhiệm vụ cá nhân."));
     if (editing && dueDate !== initialTask?.dueDate) {
       const deadline = await fetch(`/api/tasks/${initialTask?.id}/deadline`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dueDate, reason: deadlineReason }),
-      }).catch(() => null);
-      if (!deadline?.ok) {
-        setBusy(false);
-        setError("Nội dung đã lưu nhưng chưa đổi được deadline. Vui lòng thử lại.");
-        return;
-      }
+      });
+      if (!deadline.ok) throw new Error(await responseErrorMessage(deadline, "Nội dung đã lưu nhưng chưa đổi được deadline."));
     }
+    notify("success", editing ? "Đã cập nhật nhiệm vụ cá nhân." : "Đã tạo nhiệm vụ cá nhân.");
     router.push("/tasks?scope=personal");
     router.refresh();
+    } catch (error) { const text = errorMessage(error, "Không thể lưu nhiệm vụ cá nhân."); setError(text); notify("error", text); }
+    finally { setBusy(false); }
   };
 
   return (

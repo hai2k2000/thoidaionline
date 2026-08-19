@@ -28,6 +28,9 @@ export default async function PersonnelEvaluationsPage({ searchParams }: Props) 
     await searchParams,
     todayInVietnam(),
   );
+  if (filters.ok && filters.employeeId) {
+    redirect(`/evaluations/${filters.employeeId}?from=${filters.from}&to=${filters.to}`);
+  }
   const actor = {
     id: user.id,
     departmentId: user.department_id,
@@ -52,6 +55,7 @@ export default async function PersonnelEvaluationsPage({ searchParams }: Props) 
       invalidFilters={!filters.ok}
       loadFailed={!result.ok}
       userLabel={user.full_name}
+      isLeader={leader}
     />
   );
 }

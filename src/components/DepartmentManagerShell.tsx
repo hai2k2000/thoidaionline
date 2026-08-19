@@ -8,6 +8,8 @@ import type {
   DepartmentManagerCandidate,
   DepartmentManagerDepartment,
 } from "@/lib/departmentManagerRepository";
+import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type Props = {
   userLabel: string;
@@ -24,6 +26,7 @@ export default function DepartmentManagerShell({
 }: Props) {
   const router = useRouter();
   const { logout } = useAuth();
+  const { notify } = useActionFeedback();
   const [busyDepartment, setBusyDepartment] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
@@ -32,17 +35,15 @@ export default function DepartmentManagerShell({
     if (!managerId) return;
     setBusyDepartment(departmentId);
     setError(false);
-    const response = await fetch("/api/department-managers", {
+    try { const response = await fetch("/api/department-managers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ departmentId, managerId }),
     });
-    setBusyDepartment(null);
-    if (!response.ok) {
-      setError(true);
-      return;
-    }
+    if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể lưu Trưởng phòng chính."));
+    notify("success", "Đã lưu Trưởng phòng chính.");
     router.refresh();
+    } catch (error) { setError(true); notify("error", errorMessage(error, "Không thể lưu Trưởng phòng chính.")); } finally { setBusyDepartment(null); }
   };
 
   return (

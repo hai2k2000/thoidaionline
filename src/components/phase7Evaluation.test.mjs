@@ -17,19 +17,14 @@ test("shared rubric configuration is Admin-only and versioned through server API
   }
 });
 
-test("evaluation tab has scoped filters, evidence links and all canonical workflow stages", () => {
+test("legacy task evaluation view redirects to canonical personnel evaluation", () => {
   const page = read("../app/tasks/page.tsx");
-  const shell = read("./EmployeeEvaluationShell.tsx");
-  assert.match(page, /evaluationRepository/);
+  const shell = read("./TaskCenterShell.tsx");
+  assert.match(page, /rawParams\.view\s*===\s*["']evaluations["']/);
+  assert.match(page, /redirect\(`\/evaluations/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
-  for (const field of ["from", "to", "department", "employee", "status"]) {
-    assert.match(shell, new RegExp(`name=["']${field}["']`), `${field} filter missing`);
-  }
-  assert.match(shell, /\/tasks\/\$\{task\.id\}/);
-  assert.match(shell, /self|Tự đánh giá/);
-  assert.match(shell, /manager|Trưởng phòng/);
-  assert.match(shell, /tbt|Tổng Biên tập/);
-  assert.match(shell, /Đánh giá cũ — thang 1–10/);
+  assert.doesNotMatch(shell, /EmployeeEvaluationShell/);
+  assert.doesNotMatch(shell, /tasks\?view=evaluations/);
 });
 
 test("Phase 7 workflow stays behind same-origin session routes and service-role RPCs", () => {

@@ -7,6 +7,8 @@ import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { upsertEmployeeProfile, type EmployeeProfile } from "@/lib/services";
+import { errorMessage } from "@/lib/actionFeedback";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type Staff = {
   id: string;
@@ -14,13 +16,17 @@ type Staff = {
   username?: string | null;
   email?: string | null;
   roles?: { name?: string | null } | null;
+  job_titles?: { name?: string | null } | null;
   departments?: { name?: string | null } | null;
 };
+
+type StaffResponse = { error?: string; users?: Staff[] };
 
 export default function HrProfileDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { loading: authLoading, user, logout, canAccessModule, hasPermission, isReadOnly, canViewAllWorkHr } = useAuth();
+  const { notify } = useActionFeedback();
 
   const [staff, setStaff] = useState<Staff | null>(null);
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
@@ -29,19 +35,16 @@ export default function HrProfileDetailPage() {
   const [profileFile, setProfileFile] = useState<File | null>(null);
 
   const load = async (id: string) => {
-    const [sRes, pRes] = await Promise.all([
-      supabase
-        .from("staff_users")
-        .select("id,full_name,username,email,roles(name),departments(name)")
-        .eq("id", id)
-        .single(),
+    const [staffResponse, pRes] = await Promise.all([
+      fetch(`/api/hr/staff?user_id=${encodeURIComponent(id)}`, { cache: "no-store" }),
       supabase.from("employee_profiles").select("*").eq("user_id", id).maybeSingle(),
     ]);
 
-    if (sRes.error) return setMessage(`❌ ${sRes.error.message}`);
+    const staffPayload = await staffResponse.json().catch(() => null) as StaffResponse | null;
+    if (!staffResponse.ok) return setMessage(`❌ ${staffPayload?.error || "Không thể tải dữ liệu nhân sự."}`);
     if (pRes.error) return setMessage(`❌ ${pRes.error.message}`);
 
-    setStaff((sRes.data ?? null) as Staff | null);
+    setStaff(staffPayload?.users?.[0] ?? null);
     setProfile(
       ((pRes.data ?? { user_id: id }) as EmployeeProfile) || {
         user_id: id,
@@ -70,9 +73,9 @@ export default function HrProfileDetailPage() {
       if (!r.ok) throw new Error(r.error);
       setProfile(r.data);
       setProfileFile(null);
-      setMessage("✅ Đã cập nhật hồ sơ nhân sự.");
+      notify("success", "Đã cập nhật hồ sơ nhân sự."); setMessage("✅ Đã cập nhật hồ sơ nhân sự.");
     } catch (e) {
-      setMessage(`❌ ${(e as Error).message}`);
+      const text = errorMessage(e, "Không thể cập nhật hồ sơ nhân sự."); notify("error", text); setMessage(`❌ ${text}`);
     } finally {
       setSaving(false);
     }
@@ -118,7 +121,7 @@ export default function HrProfileDetailPage() {
             <div><b>Username:</b> {staff?.username ?? "-"}</div>
             <div><b>Email:</b> {staff?.email ?? "-"}</div>
             <div><b>Phòng ban:</b> {staff?.departments?.name ?? "-"}</div>
-            <div><b>Chức vụ:</b> {staff?.roles?.name ?? "-"}</div>
+            <div><b>Chức vụ:</b> {staff?.job_titles?.name ?? "-"}</div>
 
             <div>
               <label className="mb-1 block text-xs font-semibold text-slate-600">Ngày sinh</label>
