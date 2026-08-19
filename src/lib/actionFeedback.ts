@@ -32,8 +32,20 @@ export function errorMessage(error: unknown, fallback: string) {
 
 export async function responseErrorMessage(response: Response, fallback: string) {
   const payload = await response.json().catch(() => null) as {
-    error?: string;
+    error?: string | { code?: string; message?: string };
     message?: string;
   } | null;
-  return payload?.error || payload?.message || fallback;
+  const error = typeof payload?.error === "string"
+    ? payload.error
+    : payload?.error?.message || payload?.error?.code;
+  const labels: Record<string, string> = {
+    operation_failed: "Thao tác thất bại.",
+    service_unavailable: "Dịch vụ tạm thời chưa sẵn sàng.",
+    forbidden: "Bạn không có quyền thực hiện thao tác này.",
+    invalid_request: "Dữ liệu gửi lên không hợp lệ.",
+    conflict: "Dữ liệu đang xung đột, hãy tải lại trang.",
+    not_found: "Không tìm thấy dữ liệu.",
+    unauthenticated: "Phiên đăng nhập đã hết hạn.",
+  };
+  return error ? labels[error] || error : payload?.message || fallback;
 }
