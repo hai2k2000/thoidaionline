@@ -111,6 +111,9 @@ test("personnel evaluations split list and scoring detail routes", () => {
   const detailShell = read("../components/PersonnelEvaluationDetailShell.tsx");
   assert.match(listShell, /target="_blank"/);
   assert.match(listShell, /rel="noopener noreferrer"/);
+  assert.match(listShell, /Tổng Biên tập có thể chấm trực tiếp/);
+  assert.match(listShell, /Chấm trực tiếp/);
+  assert.match(listShell, /directTbtStatuses/);
   assert.match(listShell, /\/evaluations\/\$\{person\.employeeId\}/);
   assert.doesNotMatch(listShell, /function ScoreForm|function Detail|TaskDetailModal/);
   assert.match(listPage, /redirect\(\`\/evaluations\/\$\{filters\.employeeId\}/);

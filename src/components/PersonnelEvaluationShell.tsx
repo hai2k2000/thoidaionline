@@ -16,6 +16,8 @@ const reviewLabels: Record<string, string> = {
   published: "Đã công bố",
 };
 
+const directTbtStatuses = new Set(["awaiting_manager", "awaiting_tbt"]);
+
 export default function PersonnelEvaluationShell({ data, invalidFilters, loadFailed, userLabel, isLeader }: {
   data: PersonnelEvaluationData;
   invalidFilters: boolean;
@@ -51,6 +53,11 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
   };
   const onLogout = () => { logout(); router.replace("/login"); };
   const expandTbt = () => { setShowAdditional(true); setVisibleLimit(5); requestAnimationFrame(() => scrollRef.current?.focus()); };
+  const reviewLabel = (status: string | null) => {
+    if (!status) return "Chưa có hồ sơ";
+    if (isLeader && status === "awaiting_manager") return "Tổng Biên tập có thể chấm trực tiếp";
+    return reviewLabels[status] ?? status;
+  };
   const helperText = isLeader && !showAdditional
     ? `Đang hiển thị ${scopedSubjects.length} trưởng phòng. Bấm “Đánh giá thêm nhân viên” để xem ${data.subjects.length} nhân viên.`
     : `Đang hiển thị ${visibleSubjects.length}/${filteredSubjects.length} nhân viên theo bộ lọc.`;
@@ -69,7 +76,7 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
               <select value={departmentFilter} onChange={(event) => { setDepartmentFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc phòng ban" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Phòng ban</option>{departments.map(([id,name]) => <option key={id} value={id}>{name}</option>)}</select>
               <select value={roleFilter} onChange={(event) => { setRoleFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc vai trò" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Vai trò</option><option value="manager">Trưởng phòng</option><option value="employee">Nhân viên</option></select>
               <select value={scoreFilter} onChange={(event) => { setScoreFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc trạng thái điểm" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Trạng thái điểm</option><option value="unscored">Chưa chấm</option><option value="manager">QL đã chấm</option><option value="complete">Đã chấm đủ</option></select>
-              <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc trạng thái đánh giá" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Trạng thái</option>{Object.entries(reviewLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>
+              <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc trạng thái đánh giá" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Trạng thái</option>{Object.keys(reviewLabels).map((value) => <option key={value} value={value}>{reviewLabel(value)}</option>)}</select>
               {isLeader ? <button type="button" onClick={showAdditional ? () => { setShowAdditional(false); setVisibleLimit(5); } : expandTbt} className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold">{showAdditional ? "Chỉ Trưởng phòng" : `Đánh giá thêm nhân viên (${data.subjects.length})`}</button> : null}
             </div>
           </header>
@@ -86,8 +93,12 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
           <section className="overflow-hidden rounded-xl border bg-white p-4 shadow-sm">
             <p className="mb-2 text-sm text-slate-600" role="status">{helperText}</p>
             <div ref={scrollRef} tabIndex={0} onScroll={loadMoreOnScroll} className="max-h-[520px] overflow-auto" aria-label="Danh sách nhân viên, cuộn để xem thêm"><table className="w-full min-w-[860px] border-collapse text-sm">
-              <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Nhân viên</th><th className="p-2">Phòng ban</th><th className="p-2">Vai trò</th><th className="p-2">Trạng thái đánh giá</th><th className="p-2">Tổng điểm</th></tr></thead>
-              <tbody>{visibleSubjects.map((person, index) => <tr key={person.employeeId} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><Link className="text-orange-700 underline" target="_blank" rel="noopener noreferrer" href={`/evaluations/${person.employeeId}?from=${data.from}&to=${data.to}`}>{person.employeeName}</Link></td><td className="p-2">{person.departmentName}</td><td className="p-2">{person.isDepartmentManager ? "Trưởng phòng" : "Nhân viên"}</td><td className="p-2">{person.reviewStatus ? reviewLabels[person.reviewStatus] ?? person.reviewStatus : "Chưa có hồ sơ"}</td><td className="p-2 font-semibold">{person.finalScore ?? person.managerScore ?? "—"}</td></tr>)}</tbody>
+              <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Nhân viên</th><th className="p-2">Phòng ban</th><th className="p-2">Vai trò</th><th className="p-2">Trạng thái đánh giá</th><th className="p-2">Tổng điểm</th><th className="p-2">Thao tác</th></tr></thead>
+              <tbody>{visibleSubjects.map((person, index) => {
+                const detailHref = `/evaluations/${person.employeeId}?from=${data.from}&to=${data.to}`;
+                const canScoreDirectly = isLeader && person.reviewStatus != null && directTbtStatuses.has(person.reviewStatus);
+                return <tr key={person.employeeId} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><Link className="text-orange-700 underline" target="_blank" rel="noopener noreferrer" href={detailHref}>{person.employeeName}</Link></td><td className="p-2">{person.departmentName}</td><td className="p-2">{person.isDepartmentManager ? "Trưởng phòng" : "Nhân viên"}</td><td className="p-2">{reviewLabel(person.reviewStatus)}</td><td className="p-2 font-semibold">{person.finalScore ?? person.managerScore ?? "—"}</td><td className="p-2"><Link className={canScoreDirectly ? "inline-flex rounded-lg bg-orange-600 px-3 py-2 font-semibold text-white" : "inline-flex rounded-lg border px-3 py-2 font-semibold text-slate-700"} target="_blank" rel="noopener noreferrer" href={detailHref}>{canScoreDirectly ? "Chấm trực tiếp" : "Xem chi tiết"}</Link></td></tr>;
+              })}</tbody>
             </table>{visibleLimit < filteredSubjects.length ? <div className="sticky bottom-0 flex justify-center bg-white/95 p-2"><button type="button" onClick={() => setVisibleLimit((value) => Math.min(value + 5, filteredSubjects.length))} className="rounded border px-3 py-2 text-sm font-semibold">Xem thêm 5 nhân viên</button></div> : null}</div>
             {!filteredSubjects.length && !invalidFilters && !loadFailed ? <p className="p-6 text-center text-slate-500">Không có nhân viên phù hợp bộ lọc.</p> : null}
           </section>
