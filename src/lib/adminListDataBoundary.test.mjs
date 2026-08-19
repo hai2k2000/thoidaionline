@@ -54,6 +54,18 @@ test("department page hides locked rows by default and keeps an unlock filter", 
   assert.match(page, /Hiển thị.*visibleDepartments\.length/);
 });
 
+test("user page shows active staff by default and exposes lock controls", () => {
+  const page = read("../app/users/page.tsx");
+  const route = read("../app/api/users/route.ts");
+  assert.match(page, />\("active"\)/);
+  assert.match(page, /Trạng thái: Đang hoạt động/);
+  assert.match(page, /Trạng thái: Đã khóa/);
+  assert.match(page, /Trạng thái: Tất cả/);
+  assert.match(page, /toggleUserActive/);
+  assert.match(page, /u\.active \? "Khóa" : "Mở khóa"/);
+  assert.match(route, /Không thể tự khóa tài khoản đang đăng nhập/);
+});
+
 
 test("job-title catalog keeps exactly seven canonical active titles", () => {
   const migration = read("../../supabase/migrations/20260819103000_canonical_job_titles.sql");

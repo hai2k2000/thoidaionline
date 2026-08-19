@@ -146,6 +146,7 @@ async function mutate(request: Request, mode: "create" | "update") {
   }
   if (body && Object.prototype.hasOwnProperty.call(body, "active")) {
     if (typeof body.active !== "boolean") return json({ error: "Trạng thái không hợp lệ." }, { status: 400 });
+    if (body.active === false && userId === actor.id) return json({ error: "Không thể tự khóa tài khoản đang đăng nhập." }, { status: 403 });
     patch.active = body.active;
   }
   if (body && Object.prototype.hasOwnProperty.call(body, "email")) {

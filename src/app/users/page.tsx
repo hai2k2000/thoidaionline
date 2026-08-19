@@ -71,7 +71,7 @@ export default function UsersPage() {
   const [filterDepId, setFilterDepId] = useState("");
   const [filterStatus, setFilterStatus] = useState<
     "all" | "active" | "disabled"
-  >("all");
+  >("active");
   const [selected, setSelected] = useState<User | null>(null);
   const [resetState, setResetState] = useState<ResetState>("idle");
   const [resetToast, setResetToast] = useState("");
@@ -225,6 +225,26 @@ export default function UsersPage() {
       router.refresh();
     } catch (error) {
       notify("error", errorMessage(error, "Không thể cập nhật user."));
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const toggleUserActive = async (target: User) => {
+    if (!isAdmin || savingUser || target.id === user?.id) return;
+    setSavingUser(true);
+    try {
+      const response = await fetch("/api/users", {
+        method: "PATCH",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ user_id: target.id, active: !target.active }),
+      });
+      if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể đổi trạng thái nhân viên."));
+      notify("success", target.active ? "Đã khóa tài khoản nhân viên." : "Đã mở khóa tài khoản nhân viên.");
+      await loadAll(target.active ? "✅ Đã khóa tài khoản nhân viên." : "✅ Đã mở khóa tài khoản nhân viên.");
+    } catch (error) {
+      notify("error", errorMessage(error, "Không thể đổi trạng thái nhân viên."));
     } finally {
       setSavingUser(false);
     }
@@ -452,14 +472,14 @@ export default function UsersPage() {
                   )
                 }
               >
+                <option value="active">Trạng thái: Đang hoạt động</option>
+                <option value="disabled">Trạng thái: Đã khóa</option>
                 <option value="all">Trạng thái: Tất cả</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disable</option>
               </select>
               <button
                 onClick={() => {
                   setFilterDepId("");
-                  setFilterStatus("all");
+                  setFilterStatus("active");
                 }}
                 className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold"
               >
@@ -477,6 +497,7 @@ export default function UsersPage() {
                     <th className="px-2 py-2">Role quyền</th>
                     <th className="px-2 py-2">Phòng ban</th>
                     <th className="px-2 py-2">Trạng thái</th>
+                    {isAdmin ? <th className="px-2 py-2">Thao tác</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -498,14 +519,15 @@ export default function UsersPage() {
                           "-"}
                       </td>
                       <td className="px-2 py-2">
-                        {u.active ? "active" : "disable"}
+                        {u.active ? "Đang hoạt động" : "Đã khóa"}
                       </td>
+                      {isAdmin ? <td className="px-2 py-2"><button type="button" disabled={savingUser || u.id === user?.id} onClick={() => void toggleUserActive(u)} className="rounded bg-slate-200 px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">{u.active ? "Khóa" : "Mở khóa"}</button></td> : null}
                     </tr>
                   ))}
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={isAdmin ? 7 : 6}
                         className="px-2 py-6 text-center text-slate-500"
                       >
                         Không có user phù hợp bộ lọc.
