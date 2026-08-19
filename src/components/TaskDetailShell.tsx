@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import type { TaskDetailDto } from "@/lib/taskContracts";
@@ -14,14 +14,6 @@ type Capabilities = {
   report: boolean; review: boolean; update: boolean; comment: boolean;
   attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean;
 };
-type TabId = "overview" | "progress" | "comments" | "history";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "overview", label: "Tổng quan" },
-  { id: "progress", label: "Tiến độ" },
-  { id: "comments", label: "Bình luận" },
-  { id: "history", label: "Lịch sử" },
-];
 const statusLabel: Record<string, string> = {
   new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc", waiting: "Chờ phối hợp",
   pending_review: "Chờ duyệt", rejected: "Trả lại", done: "Hoàn thành", cancelled: "Đã hủy",
@@ -43,8 +35,6 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const router = useRouter();
   const { logout } = useAuth();
   const { notify } = useActionFeedback();
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
-  const [tabsReady, setTabsReady] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [reportedOn, setReportedOn] = useState(today());
@@ -55,41 +45,6 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const [evaluationText, setEvaluationText] = useState("");
   const [leaderEvaluationText, setLeaderEvaluationText] = useState("");
   const [evaluationDeadline, setEvaluationDeadline] = useState(task.due_date ?? today());
-  const [contentExpanded, setContentExpanded] = useState(false);
-
-  useEffect(() => {
-    const syncHash = () => {
-      const hash = window.location.hash.slice(1);
-      if (hash === "evaluation") {
-        setActiveTab("overview");
-        setTabsReady(true);
-        window.requestAnimationFrame(() => {
-          const evaluationWorkspace = document.getElementById("task-evaluation-workspace");
-          evaluationWorkspace?.focus({ preventScroll: true });
-          evaluationWorkspace?.scrollIntoView({ block: "start" });
-        });
-        return;
-      }
-      if (TABS.some((tab) => tab.id === hash)) setActiveTab(hash as TabId);
-      setTabsReady(true);
-    };
-    syncHash();
-    window.addEventListener("hashchange", syncHash);
-    return () => window.removeEventListener("hashchange", syncHash);
-  }, []);
-
-  const activateTab = (id: TabId, focus = false) => {
-    setActiveTab(id);
-    setTabsReady(true);
-    window.history.replaceState(null, "", `#${id}`);
-    if (focus) document.getElementById(`task-tab-${id}`)?.focus();
-  };
-  const handleTabKey = (event: KeyboardEvent<HTMLAnchorElement>, index: number) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    event.preventDefault();
-    const delta = event.key === "ArrowRight" ? 1 : -1;
-    activateTab(TABS[(index + delta + TABS.length) % TABS.length].id, true);
-  };
   const request = async (path: string, init: RequestInit) => {
     setBusy(true); setMessage("");
     try {
@@ -142,7 +97,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const deadlineState = classifyTaskDeadline(task);
   const canComplete = personal ? capabilities.personalComplete : capabilities.report && !["pending_review", "done", "cancelled"].includes(task.status);
   const completePath = personal ? "complete" : "submit-completion";
-  const panelHidden = (id: TabId) => tabsReady && activeTab !== id;
+  const latestProgress = task.progress_reports[0] ?? null;
 
   return <div className="min-h-screen bg-slate-50 px-3 py-3 text-slate-900 sm:px-4 lg:px-6">
     <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 lg:flex-row lg:gap-6">
@@ -157,21 +112,10 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
         </header>
         {message ? <p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p> : null}
 
-        <nav aria-label="Điều hướng chi tiết công việc" role="tablist" className="grid grid-cols-2 gap-1 rounded-xl border bg-white p-1 shadow-sm sm:grid-cols-4">
-          {TABS.map((tab, index) => <a key={tab.id} id={`task-tab-${tab.id}`} href={`#${tab.id}`} role="tab" aria-selected={activeTab === tab.id} aria-controls={`task-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} onClick={(event) => { event.preventDefault(); activateTab(tab.id); }} onKeyDown={(event) => handleTabKey(event, index)} className={`rounded-lg px-2 py-2 text-center text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500 ${activeTab === tab.id ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{tab.label}</a>)}
-        </nav>
-
         <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="min-w-0 space-y-3">
-            <section id="task-panel-overview" role="tabpanel" aria-labelledby="task-tab-overview" hidden={panelHidden("overview")} className="space-y-3">
-              <div id="task-overview-content" className={contentExpanded ? "space-y-3" : "max-h-[42vh] space-y-3 overflow-y-auto overscroll-contain pr-1"}>
-                <Section title="Nội dung công việc"><p className="whitespace-pre-wrap leading-7">{task.description || "—"}</p></Section>
-                <Section title="Tiêu chí đánh giá"><p className="whitespace-pre-wrap leading-7">{task.evaluation_criteria || "—"}</p></Section>
-                <Section title="Minh chứng đính kèm"><Timeline empty="Chưa có minh chứng đính kèm.">{task.attachments.map((row) => <li key={row.id} className="break-words"><span>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB</span><button onClick={() => download(row.id)} className="mt-1 block text-orange-700 underline">Tải xuống</button></li>)}</Timeline></Section>
-              </div>
-              <button type="button" aria-expanded={contentExpanded} aria-controls="task-overview-content" onClick={() => setContentExpanded((expanded) => !expanded)} className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-orange-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
-                {contentExpanded ? "Thu gọn nội dung" : "Xem toàn bộ nội dung"}
-              </button>
+            <section aria-label="Tổng quan" className="space-y-3">
+              <Section title="Tổng quan"><p className="whitespace-pre-wrap leading-7">{task.description || "—"}</p></Section>
               <section id="task-evaluation-workspace" tabIndex={-1} aria-label="Đánh giá công việc" className="scroll-mt-4 focus:outline-none">
                 <Section title="Đánh giá công việc">
                   {capabilities.evaluate ? <form onSubmit={submitEvaluation} className="mb-5 grid gap-3"><label className="grid gap-1 text-sm font-semibold">Thời hạn đánh giá<input aria-label="Thời hạn đánh giá" type="date" value={evaluationDeadline} onChange={(event) => setEvaluationDeadline(event.target.value)} required className="rounded border p-2 font-normal" /></label><details className="rounded-lg border border-dashed bg-slate-50 p-3" open><summary className="cursor-pointer text-sm font-semibold">Dán đánh giá từ ChatGPT</summary><textarea id="task-ai-evaluation" aria-label="Nội dung đánh giá từ ChatGPT" value={evaluationText} onChange={(event) => setEvaluationText(event.target.value)} required maxLength={10000} placeholder="Dán nội dung đánh giá đã được ChatGPT soạn sẵn" className="mt-3 min-h-28 w-full rounded border p-2" /><p className="mt-1 text-xs text-slate-500">Kiểm tra nội dung trước khi lưu. Nội dung sẽ được lưu như đánh giá định tính của bạn.</p></details><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu đánh giá</button></form> : null}
@@ -182,31 +126,23 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
               </section>
             </section>
 
-            <section id="task-panel-progress" role="tabpanel" aria-labelledby="task-tab-progress" hidden={panelHidden("progress")}>
-              <Section title="Báo cáo tiến triển & vướng mắc">
-                {capabilities.report && !personal && !["done", "cancelled"].includes(task.status) ? <form onSubmit={submitProgress} className="mb-5 grid gap-3 sm:grid-cols-2"><input aria-label="Ngày báo cáo" type="date" value={reportedOn} onChange={(event) => setReportedOn(event.target.value)} required className="rounded border p-2" /><select aria-label="Trạng thái báo cáo" value={reportStatus} onChange={(event) => setReportStatus(event.target.value)} className="rounded border p-2"><option value="in_progress">Đang thực hiện</option><option value="blocked">Bị chặn</option><option value="waiting">Đang chờ</option><option value="nearly_done">Sắp xong</option></select><textarea aria-label="Tiến triển" value={progressText} onChange={(event) => setProgressText(event.target.value)} required placeholder="Nội dung tiến triển" className="rounded border p-2 sm:col-span-2" /><textarea aria-label="Vướng mắc" value={blockers} onChange={(event) => setBlockers(event.target.value)} required={reportStatus === "blocked"} placeholder="Vướng mắc (bắt buộc khi bị chặn)" className="rounded border p-2 sm:col-span-2" /><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white sm:col-span-2 sm:justify-self-start">Gửi báo cáo</button></form> : null}
-                <Timeline empty="Chưa có báo cáo.">{task.progress_reports.map((row) => <li key={row.id}><b>{dateText(row.reported_on)} · {reportLabel[row.report_status] ?? row.report_status}</b><p className="whitespace-pre-wrap">{row.progress_text}</p>{row.blockers ? <p className="mt-1 text-red-700">Vướng mắc: {row.blockers}</p> : null}</li>)}</Timeline>
-              </Section>
-            </section>
-
-            <section id="task-panel-comments" role="tabpanel" aria-labelledby="task-tab-comments" hidden={panelHidden("comments")}>
+            <section aria-label="Bình luận">
               <Section title="Trao đổi">{capabilities.comment ? <form onSubmit={submitComment} className="mb-5 flex flex-col gap-2 sm:flex-row"><input value={comment} onChange={(event) => setComment(event.target.value)} required maxLength={5000} placeholder="Viết bình luận" className="min-w-0 flex-1 rounded border p-2" /><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white">Gửi</button></form> : null}<Timeline empty="Chưa có trao đổi.">{task.comments.map((row) => <li key={row.id}><b>{row.staff_users?.full_name ?? "Người dùng"}</b> · {dateText(row.created_at)}<p className="whitespace-pre-wrap">{row.content}</p></li>)}</Timeline></Section>
-            </section>
-
-            <section id="task-panel-history" role="tabpanel" aria-labelledby="task-tab-history" hidden={panelHidden("history")}>
-              <Section title="Lịch sử"><div className="space-y-3"><details open className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Thay đổi hạn ({task.deadline_history.length})</summary><div className="mt-3"><Timeline empty="Chưa đổi hạn.">{task.deadline_history.map((row) => <li key={row.id}>{dateText(row.changed_at)}: {dateText(row.old_due_date)} → {dateText(row.new_due_date)} · {row.reason}</li>)}</Timeline></div></details><details open className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Trạng thái ({task.status_events.length})</summary><div className="mt-3"><Timeline empty="Chưa có sự kiện.">{task.status_events.map((row) => <li key={row.id}>{dateText(row.created_at)}: {row.from_status ? `${statusLabel[row.from_status] ?? row.from_status} → ` : ""}{statusLabel[row.to_status] ?? row.to_status}{row.reason ? ` · ${row.reason}` : ""}</li>)}</Timeline></div></details><details className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Tiến độ cũ ({task.progress_logs.length})</summary><p className="my-2 text-sm text-slate-500">Dữ liệu phần trăm cũ chỉ đọc.</p><Timeline empty="Chưa có dữ liệu cũ.">{task.progress_logs.map((row) => <li key={row.id}>{dateText(row.created_at)} · {row.note || "Cập nhật tiến độ cũ"}</li>)}</Timeline></details></div></Section>
             </section>
           </div>
 
           <aside aria-label="Thông tin nhanh" className="order-first space-y-3 lg:order-none lg:sticky lg:top-3">
-            <Section title="Thông tin chung"><dl className="grid grid-cols-2 gap-2 lg:grid-cols-1"><Item label="Loại" value={personal ? "Nhiệm vụ cá nhân" : "Công việc được giao"} /><Item label="Mức độ khó" value={difficultyLabel[task.priority] ?? task.priority} /><Item label="Phụ trách" value={task.owner?.full_name ?? "—"} /><Item label="Người duyệt" value={task.reviewer?.full_name ?? "—"} /><Item label="Phòng ban" value={task.departments?.name ?? "—"} /><Item label="Hạn" value={dateText(task.due_date)} /></dl></Section>
+            <Section title="Thông tin chung"><dl className="grid grid-cols-2 gap-2 lg:grid-cols-1"><Item label="Loại" value={personal ? "Nhiệm vụ cá nhân" : "Công việc được giao"} /><Item label="Mức độ khó" value={difficultyLabel[task.priority] ?? task.priority} /><Item label="Phụ trách" value={task.owner?.full_name ?? "—"} /><Item label="Người duyệt" value={task.reviewer?.full_name ?? "—"} /><Item label="Phòng ban" value={task.departments?.name ?? "—"} /><Item label="Hạn" value={dateText(task.due_date)} /><Item label="Tiến độ" value={latestProgress ? `${reportLabel[latestProgress.report_status] ?? latestProgress.report_status} · ${dateText(latestProgress.reported_on)}` : "Chưa có báo cáo"} /></dl></Section>
             {(capabilities.review || capabilities.update || capabilities.personalCancel || capabilities.personalDeadline) ? <Section title="Thao tác"><div className="flex flex-wrap gap-2">
               {!personal && capabilities.review && task.status === "pending_review" ? <><button disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/review-completion`, { decision: "approve" })} className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Duyệt</button><button disabled={busy} onClick={() => reasonAction(`/api/tasks/${task.id}/review-completion`, "Trả lại", { decision: "return" })} className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-white">Trả lại</button></> : null}
               {personal && capabilities.personalDeadline ? <Link href={`/tasks/personal/${task.id}/edit`} className="rounded border px-3 py-2 text-sm">Đổi ngày</Link> : null}
               {((personal && capabilities.personalCancel) || (!personal && capabilities.update && !["done", "cancelled"].includes(task.status))) ? <button disabled={busy} onClick={() => reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy nhiệm vụ")} className="rounded bg-red-700 px-3 py-2 text-sm text-white">Hủy nhiệm vụ</button> : null}
               {!personal && capabilities.update && !["done", "cancelled"].includes(task.status) ? <button disabled={busy} onClick={async () => { const dueDate = window.prompt("Ngày kết thúc mới (YYYY-MM-DD):", task.due_date ?? ""); if (dueDate) await reasonAction(`/api/tasks/${task.id}/deadline-assigned`, "Đổi ngày", { dueDate }); }} className="rounded border px-3 py-2 text-sm">Đổi ngày</button> : null}
             </div></Section> : null}
-            <details className="rounded-xl border bg-white p-4 shadow-sm" open={task.attachments.length > 0}><summary className="cursor-pointer font-bold">Đính kèm ({task.attachments.length})</summary>{capabilities.attachment ? <form onSubmit={upload} className="mt-3 grid gap-2"><input name="file" type="file" required accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className="min-w-0 rounded border bg-white p-2 text-sm" /><button disabled={busy} className="rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Tải lên riêng tư</button></form> : null}<div className="mt-3"><Timeline empty="Chưa có tệp.">{task.attachments.map((row) => <li key={row.id} className="break-words"><span>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB</span><button onClick={() => download(row.id)} className="mt-1 block text-orange-700 underline">Tải xuống</button></li>)}</Timeline></div></details>
+            <details className="rounded-xl border bg-white p-4 shadow-sm"><summary className="cursor-pointer font-bold">Tiêu chí đánh giá</summary><p className="mt-3 whitespace-pre-wrap text-sm leading-6">{task.evaluation_criteria || "Chưa có tiêu chí đánh giá."}</p></details>
+            <details className="rounded-xl border bg-white p-4 shadow-sm"><summary className="cursor-pointer font-bold">Tiến độ ({task.progress_reports.length})</summary><div className="mt-3">{capabilities.report && !personal && !["done", "cancelled"].includes(task.status) ? <form onSubmit={submitProgress} className="mb-4 grid gap-2"><input aria-label="Ngày báo cáo" type="date" value={reportedOn} onChange={(event) => setReportedOn(event.target.value)} required className="min-w-0 rounded border p-2 text-sm" /><select aria-label="Trạng thái báo cáo" value={reportStatus} onChange={(event) => setReportStatus(event.target.value)} className="min-w-0 rounded border p-2 text-sm"><option value="in_progress">Đang thực hiện</option><option value="blocked">Bị chặn</option><option value="waiting">Đang chờ</option><option value="nearly_done">Sắp xong</option></select><textarea aria-label="Tiến triển" value={progressText} onChange={(event) => setProgressText(event.target.value)} required placeholder="Nội dung tiến triển" className="min-w-0 rounded border p-2 text-sm" /><textarea aria-label="Vướng mắc" value={blockers} onChange={(event) => setBlockers(event.target.value)} required={reportStatus === "blocked"} placeholder="Vướng mắc (bắt buộc khi bị chặn)" className="min-w-0 rounded border p-2 text-sm" /><button disabled={busy} className="rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Gửi báo cáo</button></form> : null}<Timeline empty="Chưa có báo cáo.">{task.progress_reports.map((row) => <li key={row.id}><b>{dateText(row.reported_on)} · {reportLabel[row.report_status] ?? row.report_status}</b><p className="whitespace-pre-wrap">{row.progress_text}</p>{row.blockers ? <p className="mt-1 text-red-700">Vướng mắc: {row.blockers}</p> : null}</li>)}</Timeline></div></details>
+            <details className="rounded-xl border bg-white p-4 shadow-sm"><summary className="cursor-pointer font-bold">Lịch sử ({task.deadline_history.length + task.status_events.length + task.progress_logs.length})</summary><div className="mt-3 space-y-3"><details className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Thay đổi hạn ({task.deadline_history.length})</summary><div className="mt-3"><Timeline empty="Chưa đổi hạn.">{task.deadline_history.map((row) => <li key={row.id}>{dateText(row.changed_at)}: {dateText(row.old_due_date)} → {dateText(row.new_due_date)} · {row.reason}</li>)}</Timeline></div></details><details className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Trạng thái ({task.status_events.length})</summary><div className="mt-3"><Timeline empty="Chưa có sự kiện.">{task.status_events.map((row) => <li key={row.id}>{dateText(row.created_at)}: {row.from_status ? `${statusLabel[row.from_status] ?? row.from_status} → ` : ""}{statusLabel[row.to_status] ?? row.to_status}{row.reason ? ` · ${row.reason}` : ""}</li>)}</Timeline></div></details><details className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Tiến độ cũ ({task.progress_logs.length})</summary><p className="my-2 text-sm text-slate-500">Dữ liệu phần trăm cũ chỉ đọc.</p><Timeline empty="Chưa có dữ liệu cũ.">{task.progress_logs.map((row) => <li key={row.id}>{dateText(row.created_at)} · {row.note || "Cập nhật tiến độ cũ"}</li>)}</Timeline></details></div></details>
+            <details className="rounded-xl border bg-white p-4 shadow-sm"><summary className="cursor-pointer font-bold">Đính kèm ({task.attachments.length})</summary>{capabilities.attachment ? <form onSubmit={upload} className="mt-3 grid gap-2"><input name="file" type="file" required accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className="min-w-0 rounded border bg-white p-2 text-sm" /><button disabled={busy} className="rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Tải lên riêng tư</button></form> : null}<div className="mt-3"><Timeline empty="Chưa có tệp.">{task.attachments.map((row) => <li key={row.id} className="break-words"><span>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB</span><button onClick={() => download(row.id)} className="mt-1 block text-orange-700 underline">Tải xuống</button></li>)}</Timeline></div></details>
           </aside>
         </div>
       </main>

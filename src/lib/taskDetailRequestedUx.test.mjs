@@ -34,6 +34,17 @@ test("progress report stays date plus status plus narrative with no percentage U
   assert.doesNotMatch(detail, /progress_percent|type="range"|Tiến độ\s*%/i);
 });
 
+test("task detail defaults to one overview and collapses secondary information in the sidebar", () => {
+  const detail = read("../components/TaskDetailShell.tsx");
+  assert.doesNotMatch(detail, /role="tablist"|task-panel-progress|task-panel-history/);
+  assert.match(detail, /<Section title="Tổng quan"/);
+  assert.doesNotMatch(detail, /Minh chứng đính kèm/);
+  assert.match(detail, /<Item label="Tiến độ"/);
+  for (const label of ["Tiêu chí đánh giá", "Tiến độ", "Lịch sử", "Đính kèm"]) {
+    assert.match(detail, new RegExp(`<summary[^>]*>${label}`));
+  }
+});
+
 test("completion action is rendered in the responsive top header", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   const header = detail.indexOf("task-completion-action");

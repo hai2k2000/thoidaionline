@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 
-test("Phase 5 task detail is server-scoped and retains canonical content in compact navigation", () => {
+test("Phase 5 task detail is server-scoped and keeps secondary content in the right sidebar", () => {
   const page = read("../app/tasks/[id]/page.tsx");
   const shell = read("../components/TaskDetailShell.tsx");
   assert.match(page, /getSessionUser/);
@@ -12,15 +12,14 @@ test("Phase 5 task detail is server-scoped and retains canonical content in comp
   assert.match(page, /canTaskAction/);
   assert.doesNotMatch(page, /"use client"/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
-  const sections = ["Thông tin chung", "Nội dung công việc", "Tiêu chí đánh giá", "Đánh giá công việc", "Báo cáo tiến triển & vướng mắc", "Trao đổi", "Đính kèm", "Lịch sử"];
+  const sections = ["Thông tin chung", "Tổng quan", "Tiêu chí đánh giá", "Đánh giá công việc", "Trao đổi", "Đính kèm", "Lịch sử"];
   for (const section of sections) assert.ok(shell.includes(section), `${section} must remain reachable`);
-  const tabs = ["Tổng quan", "Tiến độ", "Bình luận", "Lịch sử"];
-  let offset = -1;
-  for (const tab of tabs) {
-    const next = shell.indexOf(`label: "${tab}"`);
-    assert.ok(next > offset, `${tab} must follow the compact navigation order`);
-    offset = next;
-  }
+  assert.doesNotMatch(shell, /role="tablist"|task-panel-progress|task-panel-history/);
+  assert.match(shell, /<section aria-label="Tổng quan"/);
+  assert.match(shell, /<Item label="Tiến độ"/);
+  assert.match(shell, /<summary className="cursor-pointer font-bold">Tiêu chí đánh giá/);
+  assert.match(shell, /<summary className="cursor-pointer font-bold">Tiến độ/);
+  assert.match(shell, /<summary className="cursor-pointer font-bold">Lịch sử/);
 });
 
 test("structured progress and workflow controls never use progress percent", () => {
