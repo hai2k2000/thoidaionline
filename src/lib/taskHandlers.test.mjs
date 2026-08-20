@@ -146,6 +146,7 @@ test("Phase 6 assignment derives actor from session and enforces department perm
     assigneeId: employeeId,
     reviewerId,
     dueDate: "2026-08-30",
+    dueTime: "17:30",
     evaluationCriteria: "Tiêu chí",
     collaboratorIds: [],
     watcherIds: [],
@@ -168,6 +169,7 @@ test("Phase 6 assignment derives actor from session and enforces department perm
   assert.equal(allowed.calls[0][0], "assign");
   assert.equal(allowed.calls[0][1], "actor");
   assert.equal(allowed.calls[0][2].recurrenceFrequency, "weekly");
+  assert.equal(allowed.calls[0][2].dueTime, "17:30");
 });
 
 test("list requires a signed actor and delegates server-side pagination", async () => {

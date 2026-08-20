@@ -28,6 +28,10 @@ const dateText = (value: string | null) => value ? new Intl.DateTimeFormat("vi-V
 const today = () => new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
 }).format(new Date());
+const dueText = (task: Pick<TaskDetailDto, "due_date" | "due_time">) =>
+  task.due_date
+    ? dateText(task.due_time ? `${task.due_date}T${task.due_time}+07:00` : task.due_date)
+    : "—";
 
 export default function TaskDetailShell({ task, capabilities, userLabel }: {
   task: TaskDetailDto; capabilities: Capabilities; userLabel: string;
@@ -106,7 +110,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
         <header className="rounded-2xl border bg-white px-4 py-4 shadow-sm sm:px-5">
           <Link href="/tasks" className="text-sm font-medium text-orange-700">← Công việc</Link>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0"><h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dateText(task.due_date)}</span><span>{deadlineState}</span></div></div>
+            <div className="min-w-0"><h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span><span>{deadlineState}</span></div></div>
             <div className="flex shrink-0 flex-wrap items-center gap-2"><span className="rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-800">{statusLabel[task.status] ?? task.status}</span>{canComplete ? <button data-testid="task-completion-action" disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/${completePath}`)} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Hoàn thành</button> : null}</div>
           </div>
         </header>
@@ -132,7 +136,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
           </div>
 
           <aside aria-label="Thông tin nhanh" className="order-first space-y-3 lg:order-none lg:sticky lg:top-3">
-            <Section title="Thông tin chung"><dl className="grid grid-cols-2 gap-2 lg:grid-cols-1"><Item label="Loại" value={personal ? "Nhiệm vụ cá nhân" : "Công việc được giao"} /><Item label="Mức độ khó" value={difficultyLabel[task.priority] ?? task.priority} /><Item label="Phụ trách" value={task.owner?.full_name ?? "—"} /><Item label="Người duyệt" value={task.reviewer?.full_name ?? "—"} /><Item label="Phòng ban" value={task.departments?.name ?? "—"} /><Item label="Hạn" value={dateText(task.due_date)} /><Item label="Tiến độ" value={latestProgress ? `${reportLabel[latestProgress.report_status] ?? latestProgress.report_status} · ${dateText(latestProgress.reported_on)}` : "Chưa có báo cáo"} /></dl></Section>
+            <Section title="Thông tin chung"><dl className="grid grid-cols-2 gap-2 lg:grid-cols-1"><Item label="Loại" value={personal ? "Nhiệm vụ cá nhân" : "Công việc được giao"} /><Item label="Mức độ khó" value={difficultyLabel[task.priority] ?? task.priority} /><Item label="Phụ trách" value={task.owner?.full_name ?? "—"} /><Item label="Người duyệt" value={task.reviewer?.full_name ?? "—"} /><Item label="Phòng ban" value={task.departments?.name ?? "—"} /><Item label="Hạn" value={dueText(task)} /><Item label="Tiến độ" value={latestProgress ? `${reportLabel[latestProgress.report_status] ?? latestProgress.report_status} · ${dateText(latestProgress.reported_on)}` : "Chưa có báo cáo"} /></dl></Section>
             {(capabilities.review || capabilities.update || capabilities.personalCancel || capabilities.personalDeadline) ? <Section title="Thao tác"><div className="flex flex-wrap gap-2">
               {!personal && capabilities.review && task.status === "pending_review" ? <><button disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/review-completion`, { decision: "approve" })} className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Duyệt</button><button disabled={busy} onClick={() => reasonAction(`/api/tasks/${task.id}/review-completion`, "Trả lại", { decision: "return" })} className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-white">Trả lại</button></> : null}
               {personal && capabilities.personalDeadline ? <Link href={`/tasks/personal/${task.id}/edit`} className="rounded border px-3 py-2 text-sm">Đổi ngày</Link> : null}

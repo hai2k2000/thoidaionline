@@ -26,6 +26,7 @@ export type TaskListItemDto = {
   cancel_reason: string | null;
   progress_percent: number;
   due_date: string | null;
+  due_time: string | null;
   assignee_id: string | null;
   owner_id: string | null;
   created_by: string | null;
@@ -135,10 +136,11 @@ export type AssignedTaskInput = {
   assigneeId: string;
   reviewerId: string;
   dueDate: string;
+  dueTime: string;
   evaluationCriteria: string | null;
   collaboratorIds: string[];
   watcherIds: string[];
-  recurrenceFrequency: "weekly" | "monthly" | null;
+  recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
   recurrenceEndsOn: string | null;
 };
 

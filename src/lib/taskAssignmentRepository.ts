@@ -7,19 +7,22 @@ import { resolveAssignmentSelection } from "@/lib/taskAssignmentGroup";
 export type AssignmentDepartment = { id: string; name: string; managerId: string | null; hasManager: boolean };
 export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; canReview: boolean };
 
+const REVIEWER_JOB_TITLES = ["truong_phong", "pho_truong_phong"];
+
 export const taskAssignmentRepository = {
   async options(actor: AuthorizationActor) {
     const broad = actor.roleCode === "admin" || actor.roleCode === "pho_tong_bien_tap";
     let departmentsQuery = serverSupabase.from("departments")
       .select("id,name,manager_id").eq("active", true).order("name");
     let peopleQuery = serverSupabase.from("staff_users")
-      .select("id,full_name,department_id,roles(code)").eq("active", true).order("full_name");
+      .select("id,full_name,department_id,job_titles(code)").eq("active", true).order("full_name");
     if (!broad && actor.departmentId) {
       departmentsQuery = departmentsQuery.eq("id", actor.departmentId);
       peopleQuery = peopleQuery.eq("department_id", actor.departmentId);
     }
     const [departments, people] = await Promise.all([departmentsQuery, peopleQuery]);
     if (departments.error || people.error) return { ok: false as const };
+    const managerIds = new Set((departments.data ?? []).map((row) => row.manager_id).filter(Boolean));
     return {
       ok: true as const,
       departments: (departments.data ?? []).map((row) => ({
@@ -32,10 +35,9 @@ export const taskAssignmentRepository = {
         id: row.id as string,
         fullName: row.full_name as string,
         departmentId: row.department_id as string | null,
-        canReview: [
-          "phu_trach_phong_tri_su", "phu_trach_phong_phong_vien",
-          "phu_trach_phong_bien_tap", "pho_tong_bien_tap", "tong_bien_tap",
-        ].includes((row.roles as unknown as { code?: string } | null)?.code ?? ""),
+        canReview: managerIds.has(row.id) || REVIEWER_JOB_TITLES.includes(
+          (row.job_titles as unknown as { code?: string } | null)?.code ?? "",
+        ),
       })),
     };
   },
@@ -46,7 +48,7 @@ export const taskAssignmentRepository = {
   }) {
     const broad = actor.roleCode === "admin" || actor.roleCode === "pho_tong_bien_tap";
     let peopleQuery = serverSupabase.from("staff_users")
-      .select("id,department_id,roles(code)").eq("active", true).order("id");
+      .select("id,department_id,job_titles(code)").eq("active", true).order("id");
     if (!broad && actor.departmentId) peopleQuery = peopleQuery.eq("department_id", actor.departmentId);
     const [department, people] = await Promise.all([
       serverSupabase.from("departments").select("id,manager_id").eq("id", input.departmentId).eq("active", true).maybeSingle(),
@@ -60,7 +62,9 @@ export const taskAssignmentRepository = {
       people: (people.data ?? []).map((row) => ({
         id: row.id as string,
         departmentId: row.department_id as string | null,
-        canReview: ["phu_trach_phong_tri_su", "phu_trach_phong_phong_vien", "phu_trach_phong_bien_tap", "pho_tong_bien_tap", "tong_bien_tap"].includes((row.roles as unknown as { code?: string } | null)?.code ?? ""),
+        canReview: row.id === department.data?.manager_id || REVIEWER_JOB_TITLES.includes(
+          (row.job_titles as unknown as { code?: string } | null)?.code ?? "",
+        ),
       })),
       ...input,
     });

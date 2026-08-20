@@ -22,7 +22,9 @@ export function resolveAssignmentSelection(input: AssignmentSelectionInput) {
   const memberIds = new Set(members.map((person) => person.id));
   const assignee = visible.get(input.assigneeId);
   const reviewer = visible.get(input.reviewerId);
-  if (!visible.has(input.department.managerId) || !assignee || assignee.departmentId !== input.departmentId || !reviewer?.canReview) return { ok: false as const };
+  if (!visible.has(input.department.managerId) || !assignee
+    || assignee.departmentId !== input.departmentId || !reviewer
+    || reviewer.departmentId !== input.departmentId || !reviewer.canReview) return { ok: false as const };
   if (input.groupDepartmentId !== null && input.groupDepartmentId !== input.departmentId) return { ok: false as const };
   if (input.groupDepartmentId === null && input.excludedMemberIds.length) return { ok: false as const };
   if (input.collaboratorIds.some((id) => !memberIds.has(id))) return { ok: false as const };

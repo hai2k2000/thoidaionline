@@ -23,6 +23,8 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
   const [assigneeId, setAssigneeId] = useState("");
   const [assignmentMode, setAssignmentMode] = useState<"individual" | "department_group">("individual");
   const [excludedMemberIds, setExcludedMemberIds] = useState<string[]>([]);
+  const [collaboratorIds, setCollaboratorIds] = useState<string[]>([]);
+  const [watcherIds, setWatcherIds] = useState<string[]>([]);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -43,7 +45,6 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
     }
     setBusy(true); setMessage("");
     const form = new FormData(event.currentTarget);
-    const values = (name: string) => form.getAll(name).map(String).filter(Boolean);
     const payload = {
       title: String(form.get("title") ?? ""),
       description: String(form.get("description") ?? ""),
@@ -52,8 +53,9 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
       reviewerId: String(form.get("reviewerId") ?? ""),
       dueDate: String(form.get("dueDate") ?? ""),
       evaluationCriteria: String(form.get("evaluationCriteria") ?? ""),
-      collaboratorIds: values("collaboratorIds"),
-      watcherIds: values("watcherIds"),
+      dueTime: String(form.get("dueTime") ?? ""),
+      collaboratorIds,
+      watcherIds,
       groupDepartmentId: assignmentMode === "department_group" ? departmentId : null,
       excludedMemberIds: assignmentMode === "department_group" ? excludedMemberIds : [],
       recurrenceFrequency: recurrenceFrequency || null,
@@ -95,7 +97,7 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
         </header>
         <form onSubmit={submit} className="mt-4 grid gap-5 rounded-xl border bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-2">
           <Field label="Tên công việc"><input name="title" required maxLength={500} className={controlClass} /></Field>
-          <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
+          <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); setCollaboratorIds([]); setWatcherIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
           <Field label="Cách chọn người"><select value={assignmentMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); }} className={controlClass}><option value="individual">Cá nhân</option><option value="department_group">Nhóm phòng ban</option></select></Field>
           {departmentId ? <div role={managerLabel ? "status" : "alert"} className={`rounded-lg border px-3 py-2 text-sm lg:col-span-2 ${managerLabel ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
             {managerLabel
@@ -103,17 +105,17 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
               : "Phòng ban này chưa có Trưởng phòng chính; không thể giao việc."}
           </div> : null}
           <Field label="Nội dung" wide><textarea name="description" required maxLength={10000} rows={5} className={controlClass} /></Field>
-          <Field label="Người chịu trách nhiệm chính"><select name="assigneeId" required value={assigneeId} className={controlClass} onChange={(event) => { setAssigneeId(event.target.value); setExcludedMemberIds((current) => current.filter((id) => id !== event.target.value)); }}><option value="">Chọn người thực hiện</option>{scopedPeople.map(personOption)}</select></Field>
-          <Field label="Người duyệt"><select name="reviewerId" required className={controlClass}><option value="">Chọn người duyệt</option>{people.filter((person) => person.canReview).map(personOption)}</select></Field>
-          <Field label="Hạn hoàn thành"><input name="dueDate" type="date" required className={controlClass} /></Field>
-          <Field label="Lặp lại"><select name="recurrenceFrequency" value={recurrenceFrequency} onChange={(e) => setRecurrenceFrequency(e.target.value)} className={controlClass}><option value="">Không lặp</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></Field>
+          <Field label="Người chịu trách nhiệm chính"><select name="assigneeId" required value={assigneeId} className={controlClass} onChange={(event) => { setAssigneeId(event.target.value); setExcludedMemberIds((current) => current.filter((id) => id !== event.target.value)); setCollaboratorIds((current) => current.filter((id) => id !== event.target.value)); setWatcherIds((current) => current.filter((id) => id !== event.target.value)); }}><option value="">Chọn người thực hiện</option>{scopedPeople.map(personOption)}</select></Field>
+          <Field label="Người duyệt (Trưởng/Phó phòng)"><select name="reviewerId" required className={controlClass}><option value="">Chọn người duyệt</option>{scopedPeople.filter((person) => person.canReview).map(personOption)}</select></Field>
+          <Field label="Hạn hoàn thành"><div className="grid grid-cols-[minmax(0,1fr)_120px] gap-2"><input name="dueDate" aria-label="Ngày hoàn thành" type="date" required className={controlClass} /><input name="dueTime" aria-label="Giờ hoàn thành" type="time" required defaultValue="17:00" step="60" className={controlClass} /></div></Field>
+          <Field label="Lặp lại"><select name="recurrenceFrequency" value={recurrenceFrequency} onChange={(e) => setRecurrenceFrequency(e.target.value)} className={controlClass}><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></Field>
           {recurrenceFrequency ? <Field label="Ngày kết thúc lặp"><input name="recurrenceEndsOn" type="date" className={controlClass} /></Field> : <input name="recurrenceEndsOn" type="hidden" value="" />}
           <Field label="Tiêu chí đánh giá / barem (chỉnh tay)" wide>
             <textarea name="evaluationCriteria" maxLength={10000} rows={6} placeholder={"Mô tả kết quả cần đạt, các mức điểm và trọng số. Ví dụ:\n- Đúng yêu cầu: 50 điểm\n- Đúng hạn: 30 điểm\n- Chất lượng trình bày: 20 điểm"} className={controlClass} />
             <span className="font-normal text-slate-500">Barem được lưu cùng công việc và có thể nhập, chỉnh sửa trực tiếp trước khi giao việc.</span>
           </Field>
-          {assignmentMode === "individual" ? <Field label="Người phối hợp"><select name="collaboratorIds" multiple className={`${controlClass} min-h-32`}>{scopedPeople.map(personOption)}</select></Field> : <Field label="Danh sách thành viên active" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên active.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành khi lưu. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field>}
-          <Field label="Người theo dõi bổ sung"><select name="watcherIds" multiple aria-describedby="watcher-help" className={`${controlClass} min-h-32`}>{people.map(personOption)}</select><span id="watcher-help" className="font-normal text-slate-500">Giữ Ctrl/Cmd để chọn nhiều người. Trưởng phòng chính được thêm tự động và các lựa chọn trùng sẽ được gộp.</span></Field>
+          {assignmentMode === "individual" ? <Field label="Người phối hợp"><CheckGroup name="collaboratorIds" people={scopedPeople.filter((person) => person.id !== assigneeId)} selected={collaboratorIds} onChange={setCollaboratorIds} empty="Không còn người phù hợp trong phòng." /></Field> : <Field label="Danh sách thành viên active" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên active.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành khi lưu. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field>}
+          <Field label="Người theo dõi bổ sung"><CheckGroup name="watcherIds" people={people.filter((person) => person.id !== assigneeId && !collaboratorIds.includes(person.id))} selected={watcherIds} onChange={setWatcherIds} empty="Không còn người phù hợp." /><span className="font-normal text-slate-500">Trưởng phòng chính được thêm tự động; lựa chọn trùng sẽ được gộp.</span></Field>
           <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className={controlClass} /></Field>
           <div className="flex items-end"><button disabled={busy || !departmentId || !selectedDepartment?.managerId} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : "Giao việc"}</button></div>
           {message ? <p role="alert" className="text-sm text-red-700 lg:col-span-2">{message}</p> : null}
@@ -126,4 +128,11 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
 const personOption = (person: AssignmentPerson) => <option key={person.id} value={person.id}>{person.fullName}</option>;
 function Field({ label, children, wide = false }: { label: string; children: ReactNode; wide?: boolean }) {
   return <label className={`grid gap-1 text-sm font-semibold ${wide ? "lg:col-span-2" : ""}`}><span>{label}</span>{children}</label>;
+}
+
+function CheckGroup({ name, people, selected, onChange, empty }: {
+  name: string; people: AssignmentPerson[]; selected: string[];
+  onChange: (ids: string[]) => void; empty: string;
+}) {
+  return <div className="max-h-52 space-y-1 overflow-y-auto rounded-lg border p-2">{people.map((person) => <label key={person.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 font-normal hover:bg-orange-50"><input name={name} type="checkbox" value={person.id} checked={selected.includes(person.id)} onChange={(event) => onChange(event.target.checked ? [...new Set([...selected, person.id])] : selected.filter((id) => id !== person.id))} /><span>{person.fullName}</span></label>)}{people.length === 0 ? <p className="p-2 font-normal text-slate-500">{empty}</p> : null}</div>;
 }

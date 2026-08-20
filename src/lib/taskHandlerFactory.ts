@@ -78,6 +78,11 @@ const dateValue = (value: unknown) => {
     : null;
 };
 
+const timeValue = (value: unknown) =>
+  typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)
+    ? value
+    : null;
+
 export function createTaskApplication(deps: Dependencies) {
   const taskGuard = async (
     user: ServerAuthUser,
@@ -429,8 +434,10 @@ export function createTaskApplication(deps: Dependencies) {
       const assigneeId = deps.asUuid(body?.assigneeId);
       const reviewerId = deps.asUuid(body?.reviewerId);
       const dueDate = dateValue(body?.dueDate);
+      const dueTime = timeValue(body?.dueTime);
       const evaluationCriteria = cleanText(body?.evaluationCriteria, 10000) || null;
-      const recurrenceFrequency = body?.recurrenceFrequency === "weekly"
+      const recurrenceFrequency = body?.recurrenceFrequency === "daily"
+        || body?.recurrenceFrequency === "weekly"
         || body?.recurrenceFrequency === "monthly"
         ? body.recurrenceFrequency
         : body?.recurrenceFrequency === null ? null : undefined;
@@ -445,7 +452,7 @@ export function createTaskApplication(deps: Dependencies) {
         ? null : deps.asUuid(body.groupDepartmentId);
       const excludedMemberIds = body?.excludedMemberIds === undefined ? [] : ids(body.excludedMemberIds);
       if (!title || !description || !departmentId || !assigneeId || !reviewerId
-        || !dueDate || !collaboratorIds || !watcherIds || !excludedMemberIds
+        || !dueDate || !dueTime || !collaboratorIds || !watcherIds || !excludedMemberIds
         || (body?.groupDepartmentId !== undefined && body?.groupDepartmentId !== null && !groupDepartmentId)
         || recurrenceFrequency === undefined
         || (body?.recurrenceEndsOn !== null && !recurrenceEndsOn)
@@ -462,7 +469,7 @@ export function createTaskApplication(deps: Dependencies) {
       });
       if (!resolved.ok) return deps.error("invalid_request", 400);
       const input: AssignedTaskInput = {
-        title, description, departmentId, assigneeId, reviewerId, dueDate,
+        title, description, departmentId, assigneeId, reviewerId, dueDate, dueTime,
         evaluationCriteria,
         collaboratorIds: resolved.collaboratorIds,
         watcherIds: resolved.watcherIds,

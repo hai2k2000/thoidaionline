@@ -35,6 +35,7 @@ const TASK_LIST_FIELDS = [
   "cancel_reason",
   "progress_percent",
   "due_date",
+  "due_time",
   "assignee_id",
   "owner_id",
   "created_by",
@@ -305,7 +306,7 @@ export const taskRepository: TaskRepository = {
   ),
 
   assign: (actorId, input: AssignedTaskInput) => mutation(
-    "api_assign_task",
+    "api_assign_task_v2",
     {
       p_actor_id: actorId,
       p_title: input.title,
@@ -314,6 +315,7 @@ export const taskRepository: TaskRepository = {
       p_assignee_id: input.assigneeId,
       p_reviewer_id: input.reviewerId,
       p_due_date: input.dueDate,
+      p_due_time: input.dueTime,
       p_evaluation_criteria: input.evaluationCriteria,
       p_collaborator_ids: input.collaboratorIds,
       p_watcher_ids: input.watcherIds,
