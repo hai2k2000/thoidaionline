@@ -155,10 +155,16 @@ export const evaluationRepository = {
     | { ok: false; errorCode: string | null }
   > {
     await serverSupabase.rpc("api_ensure_current_performance_cycle", { p_actor: actor.id });
-    const subjectsResult = await serverSupabase.rpc(
-      "api_list_personnel_evaluation_subjects",
-      { p_actor: actor.id, p_from: filters.from, p_to: filters.to },
-    );
+    const [subjectsResult, directTbtTitlesResult] = await Promise.all([
+      serverSupabase.rpc(
+        "api_list_personnel_evaluation_subjects",
+        { p_actor: actor.id, p_from: filters.from, p_to: filters.to },
+      ),
+      serverSupabase.from("staff_users")
+        .select("id,job_titles!inner(code)")
+        .eq("active", true)
+        .eq("job_titles.code", "pho_tong_bien_tap"),
+    ]);
     if (subjectsResult.error) {
       return { ok: false, errorCode: subjectsResult.error.code ?? null };
     }
@@ -172,11 +178,16 @@ export const evaluationRepository = {
       self_score: number | null; manager_score: number | null;
       final_score: number | null; rank: string | null;
     };
+    const directTbtEmployeeIds = new Set(
+      (directTbtTitlesResult.data ?? []).map((row) => row.id as string),
+    );
     const subjects = ((subjectsResult.data ?? []) as RawSubject[]).map(
       (row): PersonnelEvaluationSubject => ({
         employeeId: row.employee_id, employeeName: row.employee_name,
         departmentId: row.department_id, departmentName: row.department_name,
-        isDepartmentManager: row.is_department_manager,
+        isDepartmentManager: row.is_department_manager
+          || (actor.roleCode === "tong_bien_tap"
+            && directTbtEmployeeIds.has(row.employee_id)),
         reviewId: row.review_id, reviewStatus: row.review_status,
         workflowType: row.workflow_type, cycleId: row.cycle_id,
         cycleName: row.cycle_name, cycleStart: row.cycle_start,

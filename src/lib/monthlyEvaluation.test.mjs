@@ -5,6 +5,7 @@ import fs from "node:fs";
 const migration = fs.readFileSync("supabase/migrations/20260818123000_monthly_evaluation_auto_open.sql", "utf8");
 const popupMigration = fs.readFileSync("supabase/migrations/20260818130000_personnel_task_popup.sql", "utf8");
 const cycleHistoryMigration = fs.readFileSync("supabase/migrations/20260818133000_cycle_history_and_month_dedup.sql", "utf8");
+const directLeadershipMigration = fs.readFileSync("supabase/migrations/20260820154500_deputy_editor_tbt_evaluation.sql", "utf8");
 const repository = fs.readFileSync("src/lib/evaluationRepository.ts", "utf8");
 const handlers = fs.readFileSync("src/lib/evaluationHandlers.ts", "utf8");
 const employeeShell = fs.readFileSync("src/components/EmployeeEvaluationShell.tsx", "utf8");
@@ -20,6 +21,14 @@ test("monthly ensure snapshots rubric, routes manager/TBT and is idempotent", ()
   assert.match(migration, /then 'manager' else 'employee'/);
   assert.match(migration, /then 'awaiting_tbt' else 'awaiting_manager'/);
   assert.match(migration, /jsonb_agg\(jsonb_build_object/);
+});
+
+test("deputy editor is routed directly to TBT in current and future cycles", () => {
+  assert.match(directLeadershipMigration, /pho_tong_bien_tap/);
+  assert.match(directLeadershipMigration, /then 'awaiting_tbt'/);
+  assert.match(directLeadershipMigration, /reviewer_score is null/);
+  assert.match(repository, /directTbtEmployeeIds/);
+  assert.match(personnelShell, /Phó Tổng biên tập/);
 });
 
 test("admin cycle history exposes aggregate review counts without N+1", () => {
@@ -54,7 +63,7 @@ test("personnel toolbar is compact on desktop and starts with five subjects", ()
 });
 
 test("personnel list explains non-overflow state and focuses after TBT expansion", () => {
-  assert.match(personnelShell, /Đang hiển thị \$\{scopedSubjects\.length\} trưởng phòng/);
+  assert.match(personnelShell, /Đang hiển thị \$\{scopedSubjects\.length\} Trưởng phòng và Phó Tổng biên tập/);
   assert.match(personnelShell, /Đánh giá thêm nhân viên \(\$\{data\.subjects\.length\}\)/);
   assert.match(personnelShell, /scrollRef\.current\?\.focus\(\)/);
   assert.match(personnelShell, /sticky bottom-0/);
