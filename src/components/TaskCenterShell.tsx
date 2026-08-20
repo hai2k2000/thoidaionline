@@ -78,11 +78,11 @@ export default function TaskCenterShell(props: Props) {
 
   return (
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
-      <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 lg:flex-row lg:gap-6">
+      <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
         <AppNav currentPath="/tasks" userLabel={userLabel} onLogout={onLogout} />
         <main className="min-w-0 flex-1">
-          <header className="overflow-hidden rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
-            <div className="mt-2 flex flex-col items-start justify-between gap-4 sm:flex-row">
+          <header className="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm">
+            <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
               <div><h1 className="text-2xl font-bold sm:text-3xl">QUẢN LÝ CÔNG VIỆC</h1></div>
               <Link href="/tasks/personal/new" className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">+ Tạo công việc</Link>
             </div>
@@ -91,21 +91,21 @@ export default function TaskCenterShell(props: Props) {
           </header>
 
           <>
-              <nav aria-label="Phạm vi công việc" className="mt-4 flex flex-wrap gap-2">
+              <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
                 {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"],["cancelled","Đã hủy"]].map(([scope,label]) => (
                   <Link key={scope} href={taskListHref(query, { scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
                 ))}
               </nav>
 
-              <details className="mt-4 rounded-xl border bg-white p-4 shadow-sm md:hidden">
+              <details className="mt-3 rounded-xl border bg-white p-3 shadow-sm md:hidden">
                 <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>
                 <form action="/tasks" className="mt-3 grid gap-3"><FilterFields query={query} departments={departments} /></form>
               </details>
-              <form action="/tasks" className="mt-4 hidden gap-3 rounded-xl border bg-white p-4 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <form action="/tasks" className="mt-3 hidden gap-2.5 rounded-xl border bg-white p-3 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <FilterFields query={query} departments={departments} />
               </form>
 
-              <section className="mt-4 overflow-hidden rounded-xl border bg-white p-3 shadow-sm sm:p-4">
+              <section className="mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
                 {listError ? <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-800">Không thể tải danh sách công việc.</p> : null}
                 {!listError && tasks.items.length === 0 ? <p className="p-6 text-center text-slate-600">Không có công việc phù hợp.</p> : null}
                 {tasks.items.length ? (

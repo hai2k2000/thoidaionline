@@ -114,9 +114,9 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const returnReason = task.status_events.find((event) => event.to_status === "rejected" && event.reason)?.reason;
 
   return <div className="min-h-screen bg-slate-50 px-3 py-3 text-slate-900 sm:px-4 lg:px-6">
-    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 lg:flex-row lg:gap-6">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
       <AppNav currentPath={`/tasks/${task.id}`} userLabel={userLabel} onLogout={logout} />
-      <main className="min-w-0 flex-1 space-y-3">
+      <main className="min-w-0 flex-1 space-y-2.5">
         <header className="rounded-2xl border bg-white px-4 py-4 shadow-sm sm:px-5">
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0"><h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span><span>{deadlineState}</span></div></div>
@@ -125,9 +125,9 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
         </header>
         {message ? <p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p> : null}
 
-        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="min-w-0 space-y-3">
-            <section aria-label="Tổng quan" className="space-y-3">
+        <div className="grid items-start gap-2.5 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 space-y-2.5">
+            <section aria-label="Tổng quan" className="space-y-2.5">
               <Section title="Tổng quan"><p className="whitespace-pre-wrap leading-7">{task.description || "—"}</p></Section>
               {task.status === "rejected" ? <section className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-900"><h2 className="font-bold">Lý do trả lại</h2><p className="mt-2 whitespace-pre-wrap text-sm">{returnReason || "Chưa ghi nhận lý do."}</p></section> : null}
               <Section title={`Đính kèm · File (${task.attachments.length})`}>
@@ -148,7 +148,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
 
           </div>
 
-          <aside aria-label="Thông tin nhanh" className="order-first space-y-3 lg:order-none lg:sticky lg:top-3">
+          <aside aria-label="Thông tin nhanh" className="order-first space-y-2.5 lg:order-none lg:sticky lg:top-3">
             <Section title="Thông tin chung"><dl className="grid grid-cols-2 gap-2 lg:grid-cols-1"><Item label="Loại" value={personal ? "Nhiệm vụ cá nhân" : "Công việc được giao"} /><Item label="Mức độ khó" value={difficultyLabel[task.priority] ?? task.priority} /><Item label="Phụ trách" value={task.owner?.full_name ?? "—"} /><Item label="Người duyệt" value={task.reviewer?.full_name ?? "—"} /><Item label="Phòng ban" value={task.departments?.name ?? "—"} /><Item label="Hạn" value={dueText(task)} /><Item label="Tiến độ" value={latestProgress ? `${reportLabel[latestProgress.report_status] ?? latestProgress.report_status} · ${dateText(latestProgress.reported_on)}` : "Chưa có báo cáo"} /></dl></Section>
             {(capabilities.review || capabilities.update || capabilities.personalCancel || capabilities.personalDeadline || capabilities.assignedCancel || capabilities.adminEdit) ? <Section title="Thao tác"><div className="flex flex-wrap gap-2">
               {capabilities.adminEdit ? <Link href={`/tasks/${task.id}/admin-edit`} className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white">Sửa toàn bộ</Link> : null}
@@ -166,6 +166,6 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   </div>;
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) { return <section className="rounded-xl border bg-white p-4 shadow-sm"><h2 className="mb-3 text-base font-bold sm:text-lg">{title}</h2>{children}</section>; }
+function Section({ title, children }: { title: string; children: ReactNode }) { return <section className="rounded-xl border bg-white p-3.5 shadow-sm"><h2 className="mb-2 text-base font-bold sm:text-lg">{title}</h2>{children}</section>; }
 function Item({ label, value }: { label: string; value: string }) { return <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-2"><dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-0.5 break-words text-sm font-medium text-slate-800">{value}</dd></div>; }
 function Timeline({ children, empty }: { children: ReactNode; empty: string }) { const rows = Array.isArray(children) ? children : [children]; return rows.length && rows.some(Boolean) ? <ul className="space-y-3 border-l-2 border-orange-100 pl-4 text-sm">{children}</ul> : <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">{empty}</p>; }

@@ -52,8 +52,8 @@ function NavContent({
   userLabel?: string;
 }) {
   return (
-    <div className="flex h-full flex-col p-4">
-      <div className="border-b border-orange-100 pb-4">
+    <div className="flex h-full flex-col p-3">
+      <div className="border-b border-orange-100 pb-3">
         <div className="flex items-center gap-3">
           <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-base font-black text-white shadow-sm">TD</span>
           <div className="min-w-0">
@@ -63,7 +63,7 @@ function NavContent({
         </div>
       </div>
 
-      <nav aria-label="Menu chính" className="mt-4 space-y-1">
+      <nav aria-label="Menu chính" className="mt-3 space-y-0.5">
         {navigation.primary.map((item) => (
           <Link
             key={item.id}
@@ -77,7 +77,7 @@ function NavContent({
       </nav>
 
       {navigation.configuration.length > 0 ? (
-        <div className="mt-6 border-t border-slate-200 pt-4">
+        <div className="mt-4 border-t border-slate-200 pt-3">
           <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
             Cấu hình
           </p>
@@ -191,7 +191,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
         ☰ Menu
       </button>
 
-      <div className="hidden min-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-orange-200 bg-white shadow-md shadow-orange-100/50 lg:sticky lg:top-4 lg:block">
+      <div className="hidden max-h-[calc(100vh-1.5rem)] min-h-[640px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-sm lg:sticky lg:top-3 lg:block">
         <NavContent
           currentPath={currentPath}
           navigation={navigation}

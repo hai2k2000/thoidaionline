@@ -21,7 +21,7 @@ export default function AdminTaskEditForm({ task }: { task: TaskDetailDto }) {
     finally { setBusy(false); }
   };
   const control="mt-1 w-full rounded-lg border px-3 py-2";
-  return <form onSubmit={submit} className="grid gap-4 rounded-xl border bg-white p-5 shadow-sm sm:grid-cols-2">
+  return <form onSubmit={submit} className="grid gap-3 rounded-xl border bg-white p-4 shadow-sm sm:grid-cols-2">
     <label className="text-sm font-semibold sm:col-span-2">Tiêu đề<input name="title" required maxLength={500} defaultValue={task.title} className={control}/></label>
     <label className="text-sm font-semibold sm:col-span-2">Nội dung<textarea name="description" required maxLength={10000} defaultValue={task.description ?? ""} rows={6} className={control}/></label>
     <label className="text-sm font-semibold">Ngày bắt đầu<input name="startDate" type="date" required defaultValue={task.start_date ?? ""} className={control}/></label>

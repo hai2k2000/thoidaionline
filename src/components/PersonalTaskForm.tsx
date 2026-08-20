@@ -72,12 +72,12 @@ export default function PersonalTaskForm({ initialTask }: Props) {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-xl border bg-white p-4 shadow-sm">
+    <form onSubmit={submit} className="space-y-3 rounded-xl border bg-white p-4 shadow-sm">
       <div>
         <label htmlFor="title" className="text-sm font-semibold">Tên nhiệm vụ</label>
         <input id="title" name="title" required maxLength={500} defaultValue={initialTask?.title} className="mt-1 w-full rounded-lg border px-3 py-2" />
       </div>
-      {!editing ? <div className="grid gap-4 sm:grid-cols-2">
+      {!editing ? <div className="grid gap-3 sm:grid-cols-2">
         <div><label htmlFor="recurrenceFrequency" className="text-sm font-semibold">Lặp lại</label><select id="recurrenceFrequency" name="recurrenceFrequency" value={recurrenceFrequency} onChange={(event) => setRecurrenceFrequency(event.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2"><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></div>
         {recurrenceFrequency ? <div><label htmlFor="recurrenceEndsOn" className="text-sm font-semibold">Ngày kết thúc lặp</label><input id="recurrenceEndsOn" name="recurrenceEndsOn" type="date" min={initialTask?.dueDate} className="mt-1 w-full rounded-lg border px-3 py-2" /></div> : null}
       </div> : null}
@@ -85,7 +85,7 @@ export default function PersonalTaskForm({ initialTask }: Props) {
         <label htmlFor="description" className="text-sm font-semibold">Nội dung</label>
         <textarea id="description" name="description" required maxLength={10000} defaultValue={initialTask?.description ?? ""} className="mt-1 min-h-32 w-full rounded-lg border px-3 py-2" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor="startDate" className="text-sm font-semibold">Ngày bắt đầu</label>
           <input id="startDate" name="startDate" type="date" required defaultValue={initialTask?.startDate} className="mt-1 w-full rounded-lg border px-3 py-2" />

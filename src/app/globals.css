@@ -16,14 +16,16 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-vietnam-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: linear-gradient(180deg, #fff8f9 0%, #fff4e8 100%);
   color: var(--foreground);
-  font-family: "Segoe UI", Roboto, "Noto Sans", Arial, Helvetica, sans-serif;
+  font-family: var(--font-vietnam-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 button,
@@ -82,25 +84,17 @@ table {
   background: #edf6ff;
 }
 
-/* Make main bordered white panels pop with soft 3D depth */
+/* Calm, compact panels: one border and one restrained shadow. */
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white) {
   position: relative;
-  border-color: #fed7aa !important;
+  border-color: #e2e8f0 !important;
   border-width: 1px;
-  background: linear-gradient(180deg, #ffffff 0%, #fffaf5 100%) !important;
-  box-shadow:
-    0 1px 0 #ffffff inset,
-    0 -1px 0 #ffefd8 inset,
-    0 1px 0 #ffd8b0,
-    0 4px 10px rgba(234, 88, 12, 0.07);
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 :where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white):hover {
-  box-shadow:
-    0 1px 0 #ffffff inset,
-    0 -1px 0 #ffedd9 inset,
-    0 2px 0 #ffd2a6,
-    0 6px 14px rgba(234, 88, 12, 0.10);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
 }
 
 /* Make in-content section titles stand out more */
