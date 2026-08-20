@@ -89,10 +89,6 @@ test("admin configuration restores legacy administration beside new configuratio
       { id: "departments", href: "/departments" },
       { id: "permissions", href: "/permissions" },
       {
-        id: "department-managers",
-        href: "/configuration/department-managers",
-      },
-      {
         id: "evaluation-rubrics",
         href: "/configuration/evaluation-rubrics",
       },
@@ -120,7 +116,6 @@ test("legacy administration visibility is fail-closed by admin role and permissi
   assert.deepEqual(usersOnly.configuration, [
     { id: "users", href: "/users" },
     { id: "departments", href: "/departments" },
-    { id: "department-managers", href: "/configuration/department-managers" },
   ]);
   assert.deepEqual(permissionsOnly.configuration, [
     { id: "permissions", href: "/permissions" },

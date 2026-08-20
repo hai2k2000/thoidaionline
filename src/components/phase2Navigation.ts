@@ -11,7 +11,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "permissions" | "evaluation-rubrics" | "department-managers";
+    | "permissions" | "evaluation-rubrics";
   href: string;
 };
 
@@ -48,12 +48,6 @@ export function getPhase2Navigation(
         ? [
             { id: "permissions", href: "/permissions" } as const,
           ]
-        : []),
-      ...(access.roleCode === "admin" && access.canManageUsers
-        ? [{
-            id: "department-managers",
-            href: "/configuration/department-managers",
-          } as const]
         : []),
       ...(access.roleCode === "admin" && access.canManageRubrics
         ? [{

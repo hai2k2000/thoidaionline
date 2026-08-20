@@ -59,7 +59,7 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
     return reviewLabels[status] ?? status;
   };
   const helperText = isLeader && !showAdditional
-    ? `Đang hiển thị ${scopedSubjects.length} trưởng phòng. Bấm “Đánh giá thêm nhân viên” để xem ${data.subjects.length} nhân viên.`
+    ? `Đang hiển thị ${scopedSubjects.length} trưởng phòng theo cấu hình chức vụ. Bấm “Đánh giá thêm nhân viên” để xem ${data.subjects.length} nhân viên.`
     : `Đang hiển thị ${visibleSubjects.length}/${filteredSubjects.length} nhân viên theo bộ lọc.`;
 
   return (

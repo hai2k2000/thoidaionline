@@ -3,24 +3,21 @@ import fs from "node:fs";
 import test from "node:test";
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 
-test("Admin manager configuration is server-only and same-origin", () => {
+test("legacy manager configuration redirects to employee job-title configuration", () => {
   const page = read("../app/configuration/department-managers/page.tsx");
   const route = read("../app/api/department-managers/route.ts");
-  const repository = read("./departmentManagerRepository.ts");
-  assert.match(page, /role_code\s*!==\s*["']admin["']/);
-  assert.match(route, /departmentManagerHandlers/);
-  assert.match(repository, /server-only/);
-  assert.match(repository, /api_set_department_manager/);
+  assert.match(page, /redirect\(user\.role_code === "admin" \? "\/users"/);
+  assert.match(route, /status:\s*410/);
+  assert.match(route, /chức vụ nhân sự/);
   assert.doesNotMatch(page + route, /@\/lib\/supabase/);
 });
 
-test("manager configuration is present in the Admin-only navigation policy", () => {
+test("manager configuration is absent from navigation because job title is canonical", () => {
   const navigation = read("../components/phase2Navigation.ts");
   const appNavigation = read("../components/AppNav.tsx");
-  assert.match(navigation, /canManageUsers/);
-  assert.match(navigation, /department-managers/);
+  assert.doesNotMatch(navigation, /department-managers/);
   assert.match(appNavigation, /can_manage_users/);
-  assert.match(appNavigation, /Tr\\u01b0\\u1edfng ph\\u00f2ng ch\\u00ednh/);
+  assert.doesNotMatch(appNavigation, /Tr\\u01b0\\u1edfng ph\\u00f2ng ch\\u00ednh/);
 });
 
 test("manager UI requires an explicit same-department selection", () => {

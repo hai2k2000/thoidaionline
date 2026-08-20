@@ -80,9 +80,12 @@ test("personnel evaluation UI lists employees and drills into period tasks and r
 test("personnel evaluation reads are fail-closed, deterministic and service-role only", () => {
   const repository = read("./evaluationRepository.ts");
   const sql = read("../../supabase/migrations/20260817171500_personnel_evaluation_scope.sql");
+  const titleSync = read("../../supabase/migrations/20260820153000_job_title_department_manager_sync.sql");
   assert.match(repository, /api_list_personnel_evaluation_subjects/);
   assert.match(repository, /api_get_personnel_evaluation_detail/);
-  assert.match(sql, /departments\.manager_id\s*=\s*p_actor/i);
+  assert.match(titleSync, /job_titles/i);
+  assert.match(titleSync, /truong_phong/);
+  assert.match(titleSync, /sync_department_managers_from_job_titles/);
   assert.match(sql, /r\.code\s*=\s*'tong_bien_tap'/i);
   assert.match(sql, /can_evaluate_step2/i);
   assert.match(sql, /p_from\s+is\s+null|p_to\s+is\s+null/i);

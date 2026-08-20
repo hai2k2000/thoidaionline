@@ -51,12 +51,12 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   const { data, error } = await serverSupabase
     .from("staff_users")
     .select(
-      "id,full_name,email,username,department_id,active,session_version," +
+      "id,full_name,email,username,department_id,job_title_id,active,session_version," +
       `roles(code,name,level${roleLifecycleEnabled ? ",active" : ""},role_permissions(` +
       "can_manage_users,can_manage_permissions,can_create_task," +
       "can_edit_all_tasks,can_comment,can_assign_task," +
       "can_view_department_tasks,can_evaluate_step1," +
-      "can_evaluate_step2,can_manage_rubrics))",
+      "can_evaluate_step2,can_manage_rubrics)),job_titles(code)",
     )
     .eq("id", session.userId)
     .eq("active", true)
@@ -69,6 +69,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     email: string | null;
     username: string | null;
     department_id: string | null;
+    job_titles: { code: string } | null;
     active: boolean;
     session_version: number;
     roles: {
@@ -81,14 +82,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   };
   if (session.sessionVersion !== row.session_version) return null;
   if (!row.roles || (roleLifecycleEnabled && row.roles.active !== true)) return null;
-  const managedDepartments = await serverSupabase
-    .from("departments")
-    .select("id")
-    .eq("manager_id", row.id)
-    .eq("active", true)
-    .limit(1);
-  const isDepartmentManager = !managedDepartments.error
-    && (managedDepartments.data?.length ?? 0) > 0;
+  const isDepartmentManager = row.job_titles?.code === "truong_phong";
 
   return {
     id: row.id,
