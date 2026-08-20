@@ -1,5 +1,6 @@
 export type DeadlineTask = {
   due_date: string | null;
+  due_time?: string | null;
   completion_submitted_at: string | null;
 };
 export function classifyTaskDeadline(

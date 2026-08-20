@@ -9,7 +9,13 @@ export function classifyTaskDeadline(task, now = new Date()) {
   const completionDate = task.completion_submitted_at
     ? vietnamDate(new Date(task.completion_submitted_at))
     : null;
-  if (completionDate) return completionDate <= task.due_date ? "on_time" : "overdue";
+  if (completionDate) {
+    if (task.due_time && task.completion_submitted_at) {
+      const due = new Date(`${task.due_date}T${task.due_time}+07:00`);
+      return new Date(task.completion_submitted_at) <= due ? "on_time" : "overdue";
+    }
+    return completionDate <= task.due_date ? "on_time" : "overdue";
+  }
   const today = vietnamDate(now);
   if (task.due_date < today) return "overdue";
   const due = Date.parse(`${task.due_date}T00:00:00Z`);

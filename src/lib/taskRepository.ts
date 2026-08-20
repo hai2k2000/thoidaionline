@@ -166,6 +166,8 @@ export const taskRepository: TaskRepository = {
         return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
       }
       dbQuery = dbQuery.in("id", watcherIds);
+    } else if (query.scope === "cancelled") {
+      dbQuery = dbQuery.eq("status", "cancelled");
     }
     if (query.taskType === "personal") {
       dbQuery = dbQuery.or(
@@ -174,9 +176,13 @@ export const taskRepository: TaskRepository = {
     } else if (query.taskType === "assigned") {
       dbQuery = dbQuery.or("task_type.eq.assigned,and(task_type.is.null,plan_period.eq.ad_hoc,self_claimable.eq.false)");
     }
+    if (query.scope !== "cancelled" && query.statusGroup !== "cancelled") {
+      dbQuery = dbQuery.neq("status", "cancelled");
+    }
     if (query.status) dbQuery = dbQuery.eq("status", query.status);
     if (query.statusGroup === "completed") dbQuery = dbQuery.eq("status", "done");
     if (query.statusGroup === "returned") dbQuery = dbQuery.eq("status", "rejected");
+    if (query.statusGroup === "cancelled") dbQuery = dbQuery.eq("status", "cancelled");
     if (query.statusGroup === "unfinished") {
       dbQuery = dbQuery.in("status", [
         "new", "in_progress", "blocked", "waiting", "pending_review",

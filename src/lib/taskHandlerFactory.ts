@@ -243,7 +243,7 @@ export function createTaskApplication(deps: Dependencies) {
       const guarded = await guardedBody(request);
       if (guarded instanceof Response) return guarded;
       const { actor, body } = guarded;
-      const taskId = await authorizeMutation(actor, taskIdValue, "update");
+      const taskId = await authorizeMutation(actor, taskIdValue, "assigned_cancel");
       if (taskId instanceof Response) return taskId;
       const reason = cleanText(body.reason, 2000);
       if (!reason) return deps.error("invalid_request", 400);
@@ -274,15 +274,23 @@ export function createTaskApplication(deps: Dependencies) {
       const allowed = new Set(["application/pdf", "image/png", "image/jpeg",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
-      if (!(file instanceof File) || file.size < 1 || file.size > 10485760 || !allowed.has(file.type)) {
+      const extensionMime: Record<string, string> = {
+        pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      };
+      const extension = file instanceof File ? file.name.split(".").pop()?.toLowerCase() ?? "" : "";
+      const mimeType = file instanceof File && allowed.has(file.type) ? file.type : extensionMime[extension];
+      if (!(file instanceof File) || file.size < 1 || file.size > 10485760 || !mimeType) {
         return deps.error("invalid_request", 400);
       }
       const safeName = file.name.normalize("NFC").replace(/[^\p{L}\p{N}._-]+/gu, "-").slice(-180) || "attachment";
       const storagePath = `${taskId}/${deps.newUuid()}-${safeName}`;
-      const upload = await deps.uploadPrivateAttachment(storagePath, file);
+      const uploadFile = file.type === mimeType ? file : new File([file], file.name, { type: mimeType });
+      const upload = await deps.uploadPrivateAttachment(storagePath, uploadFile);
       if (!upload.ok) return deps.rpcFailure(upload.error);
       const result = await deps.repository.addAttachmentMetadata(guard.actor.id, taskId, {
-        storagePath, fileName: file.name.slice(0, 500), mimeType: file.type, sizeBytes: file.size,
+        storagePath, fileName: file.name.slice(0, 500), mimeType, sizeBytes: file.size,
       });
       if (!result.ok) {
         await deps.removePrivateAttachment(storagePath);

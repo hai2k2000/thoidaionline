@@ -71,14 +71,16 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
       if (!response.ok) throw new Error(await responseErrorMessage(response, response.status === 403 ? "Bạn không có quyền giao công việc này." : "Không thể tạo công việc."));
       const result = await response.json() as { task: { id: string } };
       const attachment = form.get("attachment");
+      let attachmentWarning = "";
       if (attachment instanceof File && attachment.size > 0) {
         const upload = new FormData(); upload.set("file", attachment);
         const uploaded = await fetch(`/api/tasks/${result.task.id}/attachments`, {
           method: "POST", body: upload,
         });
-        if (!uploaded.ok) throw new Error(await responseErrorMessage(uploaded, "Công việc đã tạo nhưng tệp đính kèm chưa tải lên được."));
+        if (!uploaded.ok) attachmentWarning = await responseErrorMessage(uploaded, "Tệp đính kèm chưa tải lên được.");
       }
-      notify("success", "Đã giao công việc thành công.");
+      notify(attachmentWarning ? "error" : "success", attachmentWarning || "Đã giao công việc thành công.");
+      if (attachmentWarning) setMessage(`Đã tạo công việc, nhưng ${attachmentWarning.toLowerCase()} Bạn có thể tải tệp tại trang chi tiết.`);
       router.push(`/tasks/${result.task.id}`);
       router.refresh();
     } catch (error) {
@@ -91,14 +93,12 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
       <AppNav currentPath="/tasks/assign" userLabel={userLabel} onLogout={() => { logout(); router.replace("/login"); }} />
       <main className="min-w-0 flex-1">
         <header className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
-          <Link href="/tasks" className="text-sm font-semibold text-orange-700 hover:underline">← Quay lại Quản lý công việc</Link>
-          <h1 className="mt-3 text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
-          <p className="mt-1 text-sm text-slate-600">Trưởng phòng chính của người thực hiện được thêm làm người theo dõi tự động.</p>
+          <h1 className="text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
         </header>
         <form onSubmit={submit} className="mt-4 grid gap-5 rounded-xl border bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-2">
           <Field label="Tên công việc"><input name="title" required maxLength={500} className={controlClass} /></Field>
           <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); setCollaboratorIds([]); setWatcherIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
-          <Field label="Cách chọn người"><select value={assignmentMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); }} className={controlClass}><option value="individual">Cá nhân</option><option value="department_group">Nhóm phòng ban</option></select></Field>
+          <Field label="Cách chọn người"><select value={assignmentMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); setCollaboratorIds([]); }} className={controlClass}><option value="individual">Cá nhân</option><option value="department_group">Nhóm phòng ban</option></select></Field>
           {departmentId ? <div role={managerLabel ? "status" : "alert"} className={`rounded-lg border px-3 py-2 text-sm lg:col-span-2 ${managerLabel ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
             {managerLabel
               ? `Theo dõi mặc định: ${managerLabel}. Hệ thống kiểm tra lại Trưởng phòng chính hiện hành khi lưu.`

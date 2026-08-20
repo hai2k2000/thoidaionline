@@ -1,6 +1,6 @@
-const TASK_SCOPES = ["all", "assigned", "personal", "watching"];
+const TASK_SCOPES = ["all", "assigned", "personal", "watching", "cancelled"];
 const TASK_TYPES = ["assigned", "personal"];
-const TASK_STATUS_GROUPS = ["completed", "unfinished", "returned"];
+const TASK_STATUS_GROUPS = ["completed", "unfinished", "returned", "cancelled"];
 const TASK_STATUSES = [
   "new", "in_progress", "blocked", "waiting", "pending_review",
   "done", "rejected", "cancelled",

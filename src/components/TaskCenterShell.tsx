@@ -6,6 +6,7 @@ import AppNav from "@/components/AppNav";
 import PersonalTaskActions from "@/components/PersonalTaskActions";
 import { useAuth } from "@/lib/auth";
 import { taskListHref } from "@/lib/taskFilters.mjs";
+import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
 import type { TaskCenterView } from "@/lib/taskCenterView";
 import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
 
@@ -26,21 +27,16 @@ const taskStatusLabel = (status: string) =>
     : status === "rejected" ? "Trả lại"
       : status === "cancelled" ? "Đã hủy"
         : "Chưa hoàn thành";
+const statusClass = (status: string) => status === "done" ? "bg-emerald-100 text-emerald-800" : status === "rejected" ? "bg-red-100 text-red-800" : status === "cancelled" ? "bg-slate-200 text-slate-600" : "bg-amber-100 text-amber-800";
 
 const tabClass = (active: boolean) => `rounded-full border px-3.5 py-2 text-sm font-semibold transition-colors ${
   active ? "border-orange-500 bg-orange-500 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:text-orange-800"
 }`;
 
-const deadlineLabel = (dueDate: string | null, status: string) => {
-  if (!dueDate) return "Không deadline";
-  if (["done", "cancelled"].includes(status)) return status === "done" ? "Đã hoàn thành" : "Đã hủy";
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
-  const days = Math.ceil((Date.parse(`${dueDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
-  if (days < 0) return "Quá hạn";
-  if (days <= 3) return "Sắp đến hạn";
-  return "Đúng hạn";
+const deadlineLabel = (task: TaskListResult["items"][number]) => {
+  if (task.status === "cancelled") return "Đã hủy";
+  const state = classifyTaskDeadline(task);
+  return state === "no_deadline" ? "Không deadline" : state === "overdue" ? "Quá hạn" : state === "due_soon" ? "Sắp đến hạn" : "Đúng hạn";
 };
 
 const dueText = (dueDate: string | null, dueTime: string | null) =>
@@ -51,20 +47,17 @@ function FilterFields({ query, departments }: Pick<Props, "query" | "departments
     <>
       {query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
       <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm theo tên công việc" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
-      <select name="type" defaultValue={query.taskType ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
-        <option value="">Mọi tính chất</option><option value="assigned">Công việc được giao</option><option value="personal">Nhiệm vụ cá nhân</option>
-      </select>
       <select name="state" defaultValue={query.statusGroup ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
-        <option value="">Mọi trạng thái</option><option value="completed">Đã hoàn thành</option><option value="unfinished">Chưa hoàn thành</option><option value="returned">Trả lại</option>
+        <option value="">Trạng thái</option><option value="completed">Đã hoàn thành</option><option value="unfinished">Chưa hoàn thành</option><option value="returned">Trả lại</option><option value="cancelled">Đã hủy</option>
       </select>
       <select name="deadline" defaultValue={query.deadlineState ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
-        <option value="">Mọi thời hạn</option><option value="on_time">Đúng hạn</option><option value="due_soon">Sắp đến hạn</option><option value="overdue">Quá hạn</option><option value="no_deadline">Không deadline</option>
+        <option value="">Thời hạn</option><option value="on_time">Đúng hạn</option><option value="due_soon">Sắp đến hạn</option><option value="overdue">Quá hạn</option><option value="no_deadline">Không deadline</option>
       </select>
       <input name="from" type="date" defaultValue={query.fromDate ?? ""} aria-label="Từ ngày" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
       <input name="to" type="date" defaultValue={query.toDate ?? ""} aria-label="Đến ngày" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
       {departments.length ? (
         <select name="department" defaultValue={query.departmentId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
-          <option value="">Mọi phòng</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
+          <option value="">Phòng</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
         </select>
       ) : null}
       <div className="flex items-stretch gap-2 sm:col-span-2 lg:col-span-1">
@@ -89,9 +82,8 @@ export default function TaskCenterShell(props: Props) {
         <AppNav currentPath="/tasks" userLabel={userLabel} onLogout={onLogout} />
         <main className="min-w-0 flex-1">
           <header className="overflow-hidden rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">THỜI ĐẠI WORK</p>
             <div className="mt-2 flex flex-col items-start justify-between gap-4 sm:flex-row">
-              <div><h1 className="text-2xl font-bold sm:text-3xl">QUẢN LÝ CÔNG VIỆC</h1><p className="mt-1 text-sm text-slate-600">Theo dõi công việc được giao và nhiệm vụ cá nhân</p></div>
+              <div><h1 className="text-2xl font-bold sm:text-3xl">QUẢN LÝ CÔNG VIỆC</h1></div>
               <details className="relative w-full sm:w-auto">
                 <summary className="cursor-pointer list-none rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm">+ Tạo công việc</summary>
                 <div className="mt-2 grid min-w-56 gap-1 rounded-xl border bg-white p-2 shadow-lg sm:absolute sm:right-0 sm:z-20">
@@ -101,13 +93,12 @@ export default function TaskCenterShell(props: Props) {
               </details>
             </div>
             <nav aria-label="Task Center" className="mt-4 flex flex-wrap gap-2">
-              <Link href="/tasks?view=work" aria-current={view === "work" ? "page" : undefined} className={tabClass(view === "work")}>Công việc</Link>
             </nav>
           </header>
 
           <>
               <nav aria-label="Phạm vi công việc" className="mt-4 flex flex-wrap gap-2">
-                {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"]].map(([scope,label]) => (
+                {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"],["cancelled","Đã hủy"]].map(([scope,label]) => (
                   <Link key={scope} href={taskListHref(query, { scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
                 ))}
               </nav>
@@ -135,7 +126,7 @@ export default function TaskCenterShell(props: Props) {
                           <td className="p-2 font-semibold">{task.title}{task.legacy_read_only ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs">Legacy chỉ đọc</span> : null}</td>
                           <td className="p-2">{task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : task.compatibility_task_type === "assigned" ? "Công việc được giao" : "Legacy"}</td>
                           <td className="p-2">{task.task_assignees.find((row) => row.assignment_role !== "watcher")?.staff_users?.full_name ?? "—"}</td>
-                          <td className="p-2">{task.departments?.name ?? "—"}</td><td className="p-2">{task.start_date ?? "—"}</td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2">{taskStatusLabel(task.status)}</td><td className="p-2">{deadlineLabel(task.due_date, task.status)}</td>
+                          <td className="p-2">{task.departments?.name ?? "—"}</td><td className="p-2">{task.start_date ?? "—"}</td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></td><td className="p-2">{deadlineLabel(task)}</td>
                           <td className="p-2"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /></td>
                         </tr>;
                       })}</tbody>
@@ -144,7 +135,7 @@ export default function TaskCenterShell(props: Props) {
                     <div className="space-y-3 lg:hidden">{tasks.items.map((task) => {
                       const canEdit = task.compatibility_task_type === "personal" && !task.legacy_read_only && task.owner_id === currentUserId;
                       const canClaim = canClaimTasks && task.self_claimable && task.status === "new" && task.assignee_id === null;
-                      return <article key={task.id} className="rounded-xl border p-4"><Link href={`/tasks/${task.id}`} className="font-bold">{task.title}</Link><dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div><dt className="text-slate-500">Tính chất</dt><dd>{task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : "Công việc được giao"}</dd></div><div><dt className="text-slate-500">Trạng thái</dt><dd>{taskStatusLabel(task.status)}</dd></div><div><dt className="text-slate-500">Deadline</dt><dd>{dueText(task.due_date, task.due_time)}</dd></div><div><dt className="text-slate-500">Thời hạn</dt><dd>{deadlineLabel(task.due_date, task.status)}</dd></div></dl><div className="mt-3"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /></div></article>;
+                      return <article key={task.id} className="rounded-xl border p-4"><Link href={`/tasks/${task.id}`} className="font-bold">{task.title}</Link><dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div><dt className="text-slate-500">Tính chất</dt><dd>{task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : "Công việc được giao"}</dd></div><div><dt className="text-slate-500">Trạng thái</dt><dd><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></dd></div><div><dt className="text-slate-500">Deadline</dt><dd>{dueText(task.due_date, task.due_time)}</dd></div><div><dt className="text-slate-500">Thời hạn</dt><dd>{deadlineLabel(task)}</dd></div></dl><div className="mt-3"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /></div></article>;
                     })}</div>
                   </>
                 ) : null}

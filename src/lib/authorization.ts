@@ -31,6 +31,7 @@ export type TaskAction =
   | "view"
   | "assign"
   | "update"
+  | "assigned_cancel"
   | "claim"
   | "report"
   | "review"
@@ -138,6 +139,8 @@ export function canTaskAction(
           actor.permissions.can_assign_task
           && sameDepartment(actor, task)
         );
+    case "assigned_cancel":
+      return actor.roleCode === "admin" || task.createdBy === actor.id;
     case "claim":
       return task.selfClaimable
         && task.status === "new"

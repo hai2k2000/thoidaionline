@@ -99,10 +99,10 @@ export type TaskDetailDto = TaskListItemDto & {
 
 export type TaskListQuery = {
   search: string | null;
-  scope: "all" | "assigned" | "personal" | "watching";
+  scope: "all" | "assigned" | "personal" | "watching" | "cancelled";
   taskType: CanonicalTaskType | null;
   status: CanonicalTaskStatus | null;
-  statusGroup: "completed" | "unfinished" | "returned" | null;
+  statusGroup: "completed" | "unfinished" | "returned" | "cancelled" | null;
   fromDate: string | null;
   toDate: string | null;
   deadlineState: "on_time" | "due_soon" | "overdue" | "no_deadline" | null;
