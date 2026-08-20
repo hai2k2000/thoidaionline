@@ -331,11 +331,13 @@ export const taskRepository: TaskRepository = {
   ),
 
   createPersonal: (actorId, input: PersonalTaskInput) => mutation(
-    "api_create_personal_task",
+    "api_create_personal_task_v2",
     {
       p_actor_id: actorId, p_title: input.title, p_description: input.description,
       p_start_date: input.startDate, p_due_date: input.dueDate,
       p_evaluation_criteria: input.evaluationCriteria,
+      p_recurrence_frequency: input.recurrenceFrequency,
+      p_recurrence_ends_on: input.recurrenceEndsOn,
     },
   ),
 
@@ -362,6 +364,13 @@ export const taskRepository: TaskRepository = {
     "api_complete_personal_task",
     { p_actor_id: actorId, p_task_id: taskId },
   ),
+  adminEditTask: (actorId, taskId, input) => mutation("api_admin_edit_task", {
+    p_actor_id: actorId, p_task_id: taskId, p_title: input.title,
+    p_description: input.description, p_start_date: input.startDate,
+    p_due_date: input.dueDate, p_due_time: input.dueTime,
+    p_priority: input.priority, p_status: input.status,
+    p_evaluation_criteria: input.evaluationCriteria, p_reason: input.reason,
+  }),
 
   submitStructuredProgress: (actorId, taskId, input) => mutation(
     "api_submit_task_progress_report",

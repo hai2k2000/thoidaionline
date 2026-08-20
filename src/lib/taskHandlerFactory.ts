@@ -323,11 +323,14 @@ export function createTaskApplication(deps: Dependencies) {
       const startDate = dateValue(body.startDate);
       const dueDate = dateValue(body.dueDate);
       const evaluationCriteria = cleanText(body.evaluationCriteria, 10000) || null;
+      const recurrenceFrequency = body.recurrenceFrequency === "daily" || body.recurrenceFrequency === "weekly" || body.recurrenceFrequency === "monthly" ? body.recurrenceFrequency : body.recurrenceFrequency === null ? null : undefined;
+      const recurrenceEndsOn = body.recurrenceEndsOn === null ? null : dateValue(body.recurrenceEndsOn);
       if (!title || !description || !startDate || !dueDate || startDate > dueDate) {
         return deps.error("invalid_request", 400);
       }
+      if (recurrenceFrequency === undefined || (body.recurrenceEndsOn !== null && !recurrenceEndsOn) || (recurrenceFrequency === null && recurrenceEndsOn !== null) || (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate)) return deps.error("invalid_request", 400);
       const result = await deps.repository.createPersonal(actor.id, {
-        title, description, startDate, dueDate, evaluationCriteria,
+        title, description, startDate, dueDate, evaluationCriteria, recurrenceFrequency, recurrenceEndsOn,
       });
       return result.ok
         ? deps.json({ task: result.data }, 201)
@@ -348,6 +351,26 @@ export function createTaskApplication(deps: Dependencies) {
       const result = await deps.repository.editPersonal(actor.id, taskId, {
         title, description, startDate, evaluationCriteria,
       });
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async adminEditTask(request: Request, taskIdValue: unknown) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      const taskId = await authorizeMutation(actor, taskIdValue, "admin_edit");
+      if (taskId instanceof Response) return taskId;
+      const title = cleanText(body.title, 500);
+      const description = cleanText(body.description, 10000);
+      const startDate = dateValue(body.startDate);
+      const dueDate = dateValue(body.dueDate);
+      const dueTime = body.dueTime === null || body.dueTime === "" ? null : timeValue(body.dueTime);
+      const priority = ["low", "normal", "high", "urgent"].find((value) => value === body.priority);
+      const status = ["new", "in_progress", "blocked", "waiting", "pending_review", "done", "rejected", "cancelled"].find((value) => value === body.status);
+      const evaluationCriteria = cleanText(body.evaluationCriteria, 10000) || null;
+      const reason = cleanText(body.reason, 2000);
+      if (!title || !description || !startDate || !dueDate || startDate > dueDate || !priority || !status || !reason || (body.dueTime !== null && body.dueTime !== "" && !dueTime)) return deps.error("invalid_request", 400);
+      const result = await deps.repository.adminEditTask(actor.id, taskId, { title, description, startDate, dueDate, dueTime, priority, status, evaluationCriteria, reason });
       return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
     },
 

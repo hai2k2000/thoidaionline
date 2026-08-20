@@ -21,6 +21,7 @@ export default function PersonalTaskForm({ initialTask }: Props) {
   const { notify } = useActionFeedback();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState("");
   const editing = Boolean(initialTask);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -32,6 +33,7 @@ export default function PersonalTaskForm({ initialTask }: Props) {
     const dueDate = String(form.get("dueDate") ?? "");
     const evaluationCriteria = String(form.get("evaluationCriteria") ?? "").trim();
     const deadlineReason = String(form.get("deadlineReason") ?? "").trim();
+    const recurrenceEndsOn = String(form.get("recurrenceEndsOn") ?? "") || null;
     if (!title || !description || !startDate || !dueDate || startDate > dueDate) {
       const text = "Vui lòng nhập đủ thông tin và bảo đảm ngày bắt đầu không sau deadline."; setError(text); notify("error", text);
       return;
@@ -42,7 +44,9 @@ export default function PersonalTaskForm({ initialTask }: Props) {
     }
     setBusy(true);
     setError("");
-    const body = { title, description, startDate, dueDate, evaluationCriteria };
+    const body = { title, description, startDate, dueDate, evaluationCriteria,
+      recurrenceFrequency: editing ? null : recurrenceFrequency || null,
+      recurrenceEndsOn: editing ? null : recurrenceEndsOn };
     try { const response = await fetch(
       editing ? `/api/tasks/${initialTask?.id}/personal` : "/api/tasks/personal",
       {
@@ -73,6 +77,10 @@ export default function PersonalTaskForm({ initialTask }: Props) {
         <label htmlFor="title" className="text-sm font-semibold">Tên nhiệm vụ</label>
         <input id="title" name="title" required maxLength={500} defaultValue={initialTask?.title} className="mt-1 w-full rounded-lg border px-3 py-2" />
       </div>
+      {!editing ? <div className="grid gap-4 sm:grid-cols-2">
+        <div><label htmlFor="recurrenceFrequency" className="text-sm font-semibold">Lặp lại</label><select id="recurrenceFrequency" name="recurrenceFrequency" value={recurrenceFrequency} onChange={(event) => setRecurrenceFrequency(event.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2"><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></div>
+        {recurrenceFrequency ? <div><label htmlFor="recurrenceEndsOn" className="text-sm font-semibold">Ngày kết thúc lặp</label><input id="recurrenceEndsOn" name="recurrenceEndsOn" type="date" min={initialTask?.dueDate} className="mt-1 w-full rounded-lg border px-3 py-2" /></div> : null}
+      </div> : null}
       <div>
         <label htmlFor="description" className="text-sm font-semibold">Nội dung</label>
         <textarea id="description" name="description" required maxLength={10000} defaultValue={initialTask?.description ?? ""} className="mt-1 min-h-32 w-full rounded-lg border px-3 py-2" />

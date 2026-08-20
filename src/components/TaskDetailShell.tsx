@@ -12,7 +12,7 @@ import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type Capabilities = {
   report: boolean; review: boolean; update: boolean; comment: boolean;
-  attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean;
+  attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
 };
 const statusLabel: Record<string, string> = {
   new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc", waiting: "Chờ phối hợp",
@@ -150,7 +150,8 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
 
           <aside aria-label="Thông tin nhanh" className="order-first space-y-3 lg:order-none lg:sticky lg:top-3">
             <Section title="Thông tin chung"><dl className="grid grid-cols-2 gap-2 lg:grid-cols-1"><Item label="Loại" value={personal ? "Nhiệm vụ cá nhân" : "Công việc được giao"} /><Item label="Mức độ khó" value={difficultyLabel[task.priority] ?? task.priority} /><Item label="Phụ trách" value={task.owner?.full_name ?? "—"} /><Item label="Người duyệt" value={task.reviewer?.full_name ?? "—"} /><Item label="Phòng ban" value={task.departments?.name ?? "—"} /><Item label="Hạn" value={dueText(task)} /><Item label="Tiến độ" value={latestProgress ? `${reportLabel[latestProgress.report_status] ?? latestProgress.report_status} · ${dateText(latestProgress.reported_on)}` : "Chưa có báo cáo"} /></dl></Section>
-            {(capabilities.review || capabilities.update || capabilities.personalCancel || capabilities.personalDeadline || capabilities.assignedCancel) ? <Section title="Thao tác"><div className="flex flex-wrap gap-2">
+            {(capabilities.review || capabilities.update || capabilities.personalCancel || capabilities.personalDeadline || capabilities.assignedCancel || capabilities.adminEdit) ? <Section title="Thao tác"><div className="flex flex-wrap gap-2">
+              {capabilities.adminEdit ? <Link href={`/tasks/${task.id}/admin-edit`} className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white">Sửa toàn bộ</Link> : null}
               {!personal && capabilities.review && task.status === "pending_review" ? <><button disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/review-completion`, { decision: "approve" })} className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Duyệt</button><button disabled={busy} onClick={returnWithDeadline} className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-white">Trả lại</button></> : null}
               {personal && capabilities.personalDeadline ? <Link href={`/tasks/personal/${task.id}/edit`} className="rounded border px-3 py-2 text-sm">Đổi ngày</Link> : null}
               {((personal && capabilities.personalCancel) || (!personal && capabilities.assignedCancel && !["done", "cancelled"].includes(task.status))) ? <button disabled={busy} onClick={() => reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy nhiệm vụ")} className="rounded bg-red-700 px-3 py-2 text-sm text-white">Hủy nhiệm vụ</button> : null}

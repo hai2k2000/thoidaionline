@@ -12,7 +12,8 @@ test("Phase 4 Task Center is server-filtered and responsive", () => {
   assert.match(page, /getSessionUser/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
   assert.match(shell, /\+ Tạo công việc/);
-  assert.match(shell, /\+ Tạo nhiệm vụ cá nhân/);
+  assert.match(shell, /href="\/tasks\/personal\/new"/);
+  assert.doesNotMatch(shell, /href="\/tasks\/assign"/);
   assert.match(shell, /space-y-3 lg:hidden/);
   assert.match(shell, /hidden overflow-x-auto lg:block/);
   assert.match(shell, /name="scope"/);
@@ -32,6 +33,7 @@ test("personal task UI and same-origin API routes exist", () => {
   assert.match(form, /startDate/);
   assert.match(form, /dueDate/);
   assert.match(form, /deadlineReason/);
+  for (const frequency of ["daily", "weekly", "monthly"]) assert.match(form, new RegExp(frequency));
   assert.match(actions, /cancel/);
   assert.match(actions, /complete/);
   for (const route of [personalRoute, itemRoute, deadlineRoute, cancelRoute, completeRoute]) {
@@ -47,4 +49,14 @@ test("Phase 4 migration is additive and service-role only", () => {
   assert.match(migration, /audit_logs/);
   assert.match(migration, /from public,anon,authenticated/);
   assert.match(migration, /to service_role/);
+});
+
+test("personal recurrence and admin full edit are server-authorized and audited", () => {
+  const migration = read("../../supabase/migrations/20260820133000_personal_recurrence_admin_task_edit.sql");
+  const adminForm = read("../components/AdminTaskEditForm.tsx");
+  assert.match(migration, /api_create_personal_task_v2/);
+  assert.match(migration, /r\.code='admin'/);
+  assert.match(migration, /audit_logs/);
+  assert.match(migration, /task_deadline_history/);
+  assert.match(adminForm, /Lý do chỉnh sửa/);
 });

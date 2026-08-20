@@ -166,9 +166,11 @@ export type PersonalTaskInput = {
   startDate: string;
   dueDate: string;
   evaluationCriteria: string | null;
+  recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
+  recurrenceEndsOn: string | null;
 };
 
-export type PersonalTaskEditInput = Omit<PersonalTaskInput, "dueDate">;
+export type PersonalTaskEditInput = Omit<PersonalTaskInput, "dueDate" | "recurrenceFrequency" | "recurrenceEndsOn">;
 
 export type QualitativeEvaluationInput = {
   evaluationText: string;
@@ -212,6 +214,7 @@ export interface TaskRepository {
   completePersonal(
     actorId: string, taskId: string,
   ): Promise<RepositoryResult<{ id: string }>>;
+  adminEditTask(actorId: string, taskId: string, input: { title: string; description: string; startDate: string; dueDate: string; dueTime: string | null; priority: string; status: string; evaluationCriteria: string | null; reason: string }): Promise<RepositoryResult<unknown>>;
   submitStructuredProgress(actorId: string, taskId: string, input: { reportedOn: string; reportStatus: string; progressText: string; blockers: string | null }): Promise<RepositoryResult<unknown>>;
   submitQualitativeEvaluation(actorId: string, taskId: string, input: QualitativeEvaluationInput): Promise<RepositoryResult<TaskQualitativeEvaluationDto>>;
   submitAssignedCompletion(actorId: string, taskId: string): Promise<RepositoryResult<unknown>>;

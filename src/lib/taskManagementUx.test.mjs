@@ -18,10 +18,11 @@ test("Etask UX status groups are separate from backward-compatible raw statuses"
   assert.equal(legacy.statusGroup, null);
 });
 
-test("Task Center has unified creation menu and requested Vietnamese filters", () => {
+test("Task Center has direct personal creation and requested Vietnamese filters", () => {
   const shell = read("../components/TaskCenterShell.tsx");
   assert.match(shell, /\+ Tạo công việc/);
-  assert.match(shell, /\+ Tạo nhiệm vụ cá nhân/);
+  assert.match(shell, /href="\/tasks\/personal\/new"/);
+  assert.doesNotMatch(shell, /href="\/tasks\/assign"/);
   assert.match(shell, /Công việc được giao/);
   assert.match(shell, /Nhiệm vụ cá nhân/);
   assert.match(shell, /name="state"/);
@@ -51,17 +52,18 @@ test("task repository filters canonical and legacy task natures compatibly", () 
 test("progress workflow exposes explicit cancel and reschedule labels", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   const page = read("../app/tasks/[id]/page.tsx");
-  assert.match(detail, /Báo cáo tiến triển & vướng mắc/);
+  assert.match(detail, /Tiến độ/);
   assert.match(detail, /Hủy nhiệm vụ/);
   assert.match(detail, /Đổi ngày/);
   assert.match(page, /personalDeadline/);
 });
 
-test("personal tasks use explicit start and end dates without plan periods", () => {
+test("personal tasks use explicit dates and daily weekly monthly recurrence", () => {
   const form = read("../components/PersonalTaskForm.tsx");
   const navigation = read("../components/appNavState.ts");
   assert.match(form, /startDate/);
   assert.match(form, /dueDate/);
-  assert.doesNotMatch(form, /planPeriod|daily|weekly|monthly/);
+  assert.doesNotMatch(form, /planPeriod/);
+  for (const frequency of ["daily", "weekly", "monthly"]) assert.match(form, new RegExp(frequency));
   assert.doesNotMatch(navigation, /label:\s*["']Kế hoạch["']/);
 });

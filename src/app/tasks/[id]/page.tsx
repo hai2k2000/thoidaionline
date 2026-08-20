@@ -50,5 +50,6 @@ export default async function TaskDetailPage({ params }: Props) {
     personalCancel: action("personal_cancel"),
     personalDeadline: action("personal_deadline"),
     assignedCancel: action("assigned_cancel"),
+    adminEdit: action("admin_edit"),
   }} />;
 }
