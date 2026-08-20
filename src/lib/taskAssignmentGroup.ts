@@ -1,4 +1,4 @@
-export type AssignmentSelectionPerson = { id: string; departmentId: string | null; canReview: boolean };
+export type AssignmentSelectionPerson = { id: string; departmentId: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
 export type AssignmentSelectionInput = {
   broad: boolean;
   actorDepartmentId: string | null;
@@ -16,7 +16,7 @@ export type AssignmentSelectionInput = {
 export function resolveAssignmentSelection(input: AssignmentSelectionInput) {
   if (!input.department || input.department.id !== input.departmentId || !input.department.managerId) return { ok: false as const };
   if (!input.broad && input.actorDepartmentId !== input.departmentId) return { ok: false as const };
-  const allowedPeople = input.broad ? input.people : input.people.filter((person) => person.departmentId === input.actorDepartmentId);
+  const allowedPeople = input.broad ? input.people : input.people.filter((person) => person.departmentId === input.actorDepartmentId || person.canReviewOutsideDepartment);
   const visible = new Map(allowedPeople.map((person) => [person.id, person]));
   const members = allowedPeople.filter((person) => person.departmentId === input.departmentId);
   const memberIds = new Set(members.map((person) => person.id));
@@ -24,7 +24,8 @@ export function resolveAssignmentSelection(input: AssignmentSelectionInput) {
   const reviewer = visible.get(input.reviewerId);
   if (!visible.has(input.department.managerId) || !assignee
     || assignee.departmentId !== input.departmentId || !reviewer
-    || reviewer.departmentId !== input.departmentId || !reviewer.canReview) return { ok: false as const };
+    || !reviewer.canReview
+    || (!reviewer.canReviewOutsideDepartment && reviewer.departmentId !== input.departmentId)) return { ok: false as const };
   if (input.groupDepartmentId !== null && input.groupDepartmentId !== input.departmentId) return { ok: false as const };
   if (input.groupDepartmentId === null && input.excludedMemberIds.length) return { ok: false as const };
   if (input.collaboratorIds.some((id) => !memberIds.has(id))) return { ok: false as const };

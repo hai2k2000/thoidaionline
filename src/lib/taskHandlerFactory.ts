@@ -42,7 +42,7 @@ type Dependencies = {
     input: Record<string, unknown>,
   ) => Omit<LegacyEvaluationInput, "employeeId">;
   newUuid: () => string;
-  uploadPrivateAttachment: (path: string, file: File) => Promise<{ ok: true } | { ok: false; error: { code?: string | null } }>;
+  uploadPrivateAttachment: (path: string, data: ArrayBuffer, mimeType: string) => Promise<{ ok: true } | { ok: false; error: { code?: string | null } }>;
   removePrivateAttachment: (path: string) => Promise<void>;
   signPrivateAttachment: (path: string) => Promise<{ ok: true; url: string } | { ok: false; error: { code?: string | null } }>;
 };
@@ -284,10 +284,8 @@ export function createTaskApplication(deps: Dependencies) {
       if (!(file instanceof File) || file.size < 1 || file.size > 10485760 || !mimeType) {
         return deps.error("invalid_request", 400);
       }
-      const safeName = file.name.normalize("NFC").replace(/[^\p{L}\p{N}._-]+/gu, "-").slice(-180) || "attachment";
-      const storagePath = `${taskId}/${deps.newUuid()}-${safeName}`;
-      const uploadFile = file.type === mimeType ? file : new File([file], file.name, { type: mimeType });
-      const upload = await deps.uploadPrivateAttachment(storagePath, uploadFile);
+      const storagePath = `${taskId}/${deps.newUuid()}.${extension}`;
+      const upload = await deps.uploadPrivateAttachment(storagePath, await file.arrayBuffer(), mimeType);
       if (!upload.ok) return deps.rpcFailure(upload.error);
       const result = await deps.repository.addAttachmentMetadata(guard.actor.id, taskId, {
         storagePath, fileName: file.name.slice(0, 500), mimeType, sizeBytes: file.size,

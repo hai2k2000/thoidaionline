@@ -1,4 +1,5 @@
 import type { PermissionSet } from "./permissions";
+import { isLeadershipAssignmentReviewer } from "./taskReviewerPolicy.mjs";
 
 export type AuthorizationActor = {
   id: string;
@@ -126,7 +127,7 @@ export function canTaskAction(
   }
 
   if (actor.roleCode === "tbt_read_only") return false;
-  if (actor.roleCode === "tong_bien_tap" && action !== "comment" && action !== "leader_evaluate") {
+  if (actor.roleCode === "tong_bien_tap" && !["comment", "leader_evaluate", "review"].includes(action)) {
     return false;
   }
 
@@ -137,7 +138,7 @@ export function canTaskAction(
       return actor.roleCode === "admin"
         || task.createdBy === actor.id
         || (
-          actor.permissions.can_assign_task
+          (actor.permissions.can_assign_task || isLeadershipAssignmentReviewer(actor.roleCode))
           && sameDepartment(actor, task)
         );
     case "assigned_cancel":

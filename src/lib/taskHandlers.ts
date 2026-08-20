@@ -35,10 +35,10 @@ export const taskHandlers = createTaskApplication({
   canTaskAction,
   normalizeLegacyEvaluationInput,
   newUuid: randomUUID,
-  uploadPrivateAttachment: async (path, file) => {
-    const { error } = await privateAttachments.upload(path, file, {
+  uploadPrivateAttachment: async (path, data, mimeType) => {
+    const { error } = await privateAttachments.upload(path, data, {
       cacheControl: "3600",
-      contentType: file.type,
+      contentType: mimeType,
       upsert: false,
     });
     return error

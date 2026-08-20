@@ -3,22 +3,20 @@ import "server-only";
 import type { AuthorizationActor } from "@/lib/authorization";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { resolveAssignmentSelection } from "@/lib/taskAssignmentGroup";
+import { isEligibleAssignmentReviewer, isLeadershipAssignmentReviewer } from "@/lib/taskReviewerPolicy.mjs";
 
 export type AssignmentDepartment = { id: string; name: string; managerId: string | null; hasManager: boolean };
-export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; canReview: boolean };
-
-const REVIEWER_JOB_TITLES = ["truong_phong", "pho_truong_phong"];
+export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
 
 export const taskAssignmentRepository = {
   async options(actor: AuthorizationActor) {
     const broad = actor.roleCode === "admin" || actor.roleCode === "pho_tong_bien_tap";
     let departmentsQuery = serverSupabase.from("departments")
       .select("id,name,manager_id").eq("active", true).order("name");
-    let peopleQuery = serverSupabase.from("staff_users")
-      .select("id,full_name,department_id,job_titles(code)").eq("active", true).order("full_name");
+    const peopleQuery = serverSupabase.from("staff_users")
+      .select("id,full_name,department_id,job_titles(code),roles(code)").eq("active", true).order("full_name");
     if (!broad && actor.departmentId) {
       departmentsQuery = departmentsQuery.eq("id", actor.departmentId);
-      peopleQuery = peopleQuery.eq("department_id", actor.departmentId);
     }
     const [departments, people] = await Promise.all([departmentsQuery, peopleQuery]);
     if (departments.error || people.error) return { ok: false as const };
@@ -31,13 +29,18 @@ export const taskAssignmentRepository = {
         managerId: row.manager_id as string | null,
         hasManager: row.manager_id !== null,
       })),
-      people: (people.data ?? []).map((row) => ({
+      people: (people.data ?? []).filter((row) => broad || row.department_id === actor.departmentId || isLeadershipAssignmentReviewer(
+        (row.roles as unknown as { code?: string } | null)?.code,
+      )).map((row) => ({
         id: row.id as string,
         fullName: row.full_name as string,
         departmentId: row.department_id as string | null,
-        canReview: managerIds.has(row.id) || REVIEWER_JOB_TITLES.includes(
-          (row.job_titles as unknown as { code?: string } | null)?.code ?? "",
-        ),
+        canReview: isEligibleAssignmentReviewer({
+          roleCode: (row.roles as unknown as { code?: string } | null)?.code,
+          jobTitleCode: (row.job_titles as unknown as { code?: string } | null)?.code,
+          isDepartmentManager: managerIds.has(row.id),
+        }),
+        canReviewOutsideDepartment: isLeadershipAssignmentReviewer((row.roles as unknown as { code?: string } | null)?.code),
       })),
     };
   },
@@ -47,9 +50,8 @@ export const taskAssignmentRepository = {
     groupDepartmentId: string | null; excludedMemberIds: string[];
   }) {
     const broad = actor.roleCode === "admin" || actor.roleCode === "pho_tong_bien_tap";
-    let peopleQuery = serverSupabase.from("staff_users")
-      .select("id,department_id,job_titles(code)").eq("active", true).order("id");
-    if (!broad && actor.departmentId) peopleQuery = peopleQuery.eq("department_id", actor.departmentId);
+    const peopleQuery = serverSupabase.from("staff_users")
+      .select("id,department_id,job_titles(code),roles(code)").eq("active", true).order("id");
     const [department, people] = await Promise.all([
       serverSupabase.from("departments").select("id,manager_id").eq("id", input.departmentId).eq("active", true).maybeSingle(),
       peopleQuery,
@@ -62,9 +64,12 @@ export const taskAssignmentRepository = {
       people: (people.data ?? []).map((row) => ({
         id: row.id as string,
         departmentId: row.department_id as string | null,
-        canReview: row.id === department.data?.manager_id || REVIEWER_JOB_TITLES.includes(
-          (row.job_titles as unknown as { code?: string } | null)?.code ?? "",
-        ),
+        canReview: isEligibleAssignmentReviewer({
+          roleCode: (row.roles as unknown as { code?: string } | null)?.code,
+          jobTitleCode: (row.job_titles as unknown as { code?: string } | null)?.code,
+          isDepartmentManager: row.id === department.data?.manager_id,
+        }),
+        canReviewOutsideDepartment: isLeadershipAssignmentReviewer((row.roles as unknown as { code?: string } | null)?.code),
       })),
       ...input,
     });

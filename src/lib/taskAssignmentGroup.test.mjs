@@ -4,11 +4,12 @@ import { resolveAssignmentSelection } from "./taskAssignmentGroup.ts";
 
 const department = { id: "dep-a", managerId: "manager" };
 const people = [
-  { id: "manager", departmentId: "dep-a", canReview: true },
-  { id: "owner", departmentId: "dep-a", canReview: false },
-  { id: "member", departmentId: "dep-a", canReview: false },
-  { id: "reviewer", departmentId: "dep-a", canReview: true },
-  { id: "outside", departmentId: "dep-b", canReview: true },
+  { id: "manager", departmentId: "dep-a", canReview: true, canReviewOutsideDepartment: false },
+  { id: "owner", departmentId: "dep-a", canReview: false, canReviewOutsideDepartment: false },
+  { id: "member", departmentId: "dep-a", canReview: false, canReviewOutsideDepartment: false },
+  { id: "reviewer", departmentId: "dep-a", canReview: true, canReviewOutsideDepartment: false },
+  { id: "outside", departmentId: "dep-b", canReview: true, canReviewOutsideDepartment: false },
+  { id: "leader", departmentId: "dep-b", canReview: true, canReviewOutsideDepartment: true },
 ];
 const base = { broad: false, actorDepartmentId: "dep-a", department, people, departmentId: "dep-a", assigneeId: "owner", reviewerId: "reviewer", collaboratorIds: [], watcherIds: [], groupDepartmentId: "dep-a", excludedMemberIds: [] };
 
@@ -23,6 +24,11 @@ test("broad leaders may select visible cross-department watchers while scoped ma
   assert.equal(resolveAssignmentSelection({ ...base, watcherIds: ["outside"] }).ok, false);
   const broad = resolveAssignmentSelection({ ...base, broad: true, watcherIds: ["outside"] });
   assert.deepEqual(broad.ok && broad.watcherIds, ["outside"]);
+});
+
+test("canonical leaders may review across departments but ordinary outsiders cannot", () => {
+  assert.equal(resolveAssignmentSelection({ ...base, reviewerId: "leader" }).ok, true);
+  assert.equal(resolveAssignmentSelection({ ...base, reviewerId: "outside" }).ok, false);
 });
 
 test("group exclusions are validated and primary cannot be excluded", () => {

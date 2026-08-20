@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
@@ -106,7 +105,7 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
           </div> : null}
           <Field label="Nội dung" wide><textarea name="description" required maxLength={10000} rows={3} className={controlClass} /></Field>
           <Field label="Người chịu trách nhiệm chính"><select name="assigneeId" required value={assigneeId} className={controlClass} onChange={(event) => { setAssigneeId(event.target.value); setExcludedMemberIds((current) => current.filter((id) => id !== event.target.value)); setCollaboratorIds((current) => current.filter((id) => id !== event.target.value)); setWatcherIds((current) => current.filter((id) => id !== event.target.value)); }}><option value="">Chọn người thực hiện</option>{scopedPeople.map(personOption)}</select></Field>
-          <Field label="Người duyệt (Trưởng/Phó phòng)"><select name="reviewerId" required className={controlClass}><option value="">Chọn người duyệt</option>{scopedPeople.filter((person) => person.canReview).map(personOption)}</select></Field>
+          <Field label="Người duyệt (TBT, Phó TBT, Trưởng/Phó phòng)"><select name="reviewerId" required className={controlClass}><option value="">Chọn người duyệt</option>{people.filter((person) => person.canReview && (person.canReviewOutsideDepartment || person.departmentId === departmentId)).map(personOption)}</select></Field>
           <Field label="Hạn hoàn thành"><div className="grid grid-cols-[minmax(0,1fr)_120px] gap-2"><input name="dueDate" aria-label="Ngày hoàn thành" type="date" required className={controlClass} /><input name="dueTime" aria-label="Giờ hoàn thành" type="time" required defaultValue="17:00" step="60" className={controlClass} /></div></Field>
           <Field label="Lặp lại"><select name="recurrenceFrequency" value={recurrenceFrequency} onChange={(e) => setRecurrenceFrequency(e.target.value)} className={controlClass}><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></Field>
           {recurrenceFrequency ? <Field label="Ngày kết thúc lặp"><input name="recurrenceEndsOn" type="date" className={controlClass} /></Field> : <input name="recurrenceEndsOn" type="hidden" value="" />}
