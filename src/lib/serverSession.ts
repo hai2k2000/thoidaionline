@@ -18,6 +18,7 @@ export type ServerAuthUser = {
   id: string;
   full_name: string;
   email: string | null;
+  phone: string | null;
   username: string | null;
   department_id: string | null;
   role_code: string;
@@ -51,7 +52,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   const { data, error } = await serverSupabase
     .from("staff_users")
     .select(
-      "id,full_name,email,username,department_id,job_title_id,active,session_version," +
+      "id,full_name,email,phone,username,department_id,job_title_id,active,session_version," +
       `roles(code,name,level${roleLifecycleEnabled ? ",active" : ""},role_permissions(` +
       "can_manage_users,can_manage_permissions,can_create_task," +
       "can_edit_all_tasks,can_comment,can_assign_task," +
@@ -67,6 +68,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     id: string;
     full_name: string;
     email: string | null;
+    phone: string | null;
     username: string | null;
     department_id: string | null;
     job_titles: { code: string } | null;
@@ -88,6 +90,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     id: row.id,
     full_name: row.full_name,
     email: row.email,
+    phone: row.phone,
     username: row.username,
     department_id: row.department_id,
     role_code: row.roles.code,
