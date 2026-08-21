@@ -253,11 +253,15 @@ export const evaluationRepository = {
     const cycleResult = await serverSupabase.from("performance_cycles").select("id,code,name,cycle_type,start_date,end_date,status").eq("id", cycleId).single();
     if (cycleResult.error || !cycleResult.data) return { ok: false };
     const reviewsResult = await serverSupabase.from("performance_reviews")
-      .select("id,status,workflow_type,reviewer_score,final_score,rank,rubric_snapshot,staff_users!performance_reviews_employee_id_fkey(full_name,departments(name))")
+      .select("id,employee_id,status,workflow_type,reviewer_score,final_score,rank,rubric_snapshot")
       .eq("cycle_id", cycleId).order("created_at", { ascending: true });
     if (reviewsResult.error) return { ok: false };
     const reviewRows = reviewsResult.data ?? [];
     const reviewIds = reviewRows.map((row) => row.id);
+    const employeeIds = [...new Set(reviewRows.map((row) => row.employee_id))];
+    const staffResult = employeeIds.length ? await serverSupabase.from("staff_users").select("id,full_name,departments!staff_users_department_id_fkey(name)").in("id", employeeIds) : { data: [], error: null };
+    if (staffResult.error) return { ok: false };
+    const staffById = new Map((staffResult.data ?? []).map((staff) => [staff.id, staff as { id: string; full_name?: string; departments?: { name?: string } | null }]));
     const scoreResult = reviewIds.length ? await serverSupabase.from("performance_review_scores").select("review_id,stage,factor_code,score,comment").in("review_id", reviewIds).order("created_at", { ascending: true }) : { data: [], error: null };
     if (scoreResult.error) return { ok: false };
     const scoresByReview = new Map<string, EvaluationCycleScoreDetail[]>();
@@ -266,11 +270,11 @@ export const evaluationRepository = {
       list.push({ stage: score.stage as EvaluationCycleScoreDetail["stage"], factorCode: score.factor_code, score: Number(score.score), comment: score.comment });
       scoresByReview.set(score.review_id, list);
     }
-    type ReviewRow = typeof reviewRows[number] & { staff_users: { full_name?: string; departments?: { name?: string } | null } | null; rubric_snapshot: { factors?: RubricFactor[] } | null };
+    type ReviewRow = typeof reviewRows[number] & { employee_id: string; rubric_snapshot: { factors?: RubricFactor[] } | null };
     const cycle = cycleResult.data;
     return { ok: true, data: {
       id: cycle.id, code: cycle.code, name: cycle.name, cycleType: cycle.cycle_type as "weekly" | "monthly", startDate: cycle.start_date, endDate: cycle.end_date, status: cycle.status,
-      reviews: (reviewRows as unknown as ReviewRow[]).map((row) => ({ id: row.id, employeeName: row.staff_users?.full_name ?? "—", departmentName: row.staff_users?.departments?.name ?? "—", status: row.status, workflowType: row.workflow_type ?? "employee", managerScore: row.reviewer_score === null ? null : Number(row.reviewer_score), finalScore: row.final_score === null ? null : Number(row.final_score), rank: row.rank, factors: row.rubric_snapshot?.factors ?? [], scores: scoresByReview.get(row.id) ?? [] })),
+      reviews: (reviewRows as unknown as ReviewRow[]).map((row) => ({ id: row.id, employeeName: staffById.get(row.employee_id)?.full_name ?? "—", departmentName: staffById.get(row.employee_id)?.departments?.name ?? "—", status: row.status, workflowType: row.workflow_type ?? "employee", managerScore: row.reviewer_score === null ? null : Number(row.reviewer_score), finalScore: row.final_score === null ? null : Number(row.final_score), rank: row.rank, factors: row.rubric_snapshot?.factors ?? [], scores: scoresByReview.get(row.id) ?? [] })),
     } };
   },
 
