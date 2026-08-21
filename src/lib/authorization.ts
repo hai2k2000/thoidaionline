@@ -156,10 +156,12 @@ export function canTaskAction(
         || isParticipant(actor, task, false);
     case "review":
       return actor.roleCode === "admin"
-        || task.createdBy === actor.id
         || (
           task.reviewerId === actor.id
-          && actor.permissions.can_assign_task
+          && (
+            isLeadershipAssignmentReviewer(actor.roleCode)
+            || task.departmentManagerId === actor.id
+          )
         );
     case "comment":
       return actor.permissions.can_comment

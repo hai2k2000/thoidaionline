@@ -153,8 +153,11 @@ test("assign, report, review, update and comment require explicit permission plu
   assert.equal(canTaskAction(manager, task(), "update"), true);
   assert.equal(canTaskAction(actor({ id: "assignee" }), task(), "report"), true);
   assert.equal(canTaskAction(actor({ id: "watcher" }), task(), "report"), false);
-  assert.equal(canTaskAction(manager, task({ reviewerId: "manager" }), "review"), true);
-  assert.equal(canTaskAction(manager, task({ reviewerId: "other" }), "review"), false);
+  assert.equal(canTaskAction(manager, task({ reviewerId: "manager", departmentManagerId: "manager" }), "review"), true);
+  assert.equal(canTaskAction(manager, task({ reviewerId: "other", departmentManagerId: "manager" }), "review"), false);
+  assert.equal(canTaskAction(actor({ id: "tbt", roleCode: "tong_bien_tap" }), task({ reviewerId: "tbt" }), "review"), true);
+  assert.equal(canTaskAction(actor({ id: "deputy", roleCode: "pho_truong_phong" }), task({ reviewerId: "deputy" }), "review"), true);
+  assert.equal(canTaskAction(actor({ id: "creator" }), task({ createdBy: "creator", reviewerId: "other" }), "review"), false);
   assert.equal(canTaskAction(actor({ id: "watcher" }), task(), "comment"), true);
   assert.equal(canTaskAction(actor({ id: "other" }), task(), "comment"), false);
 });
