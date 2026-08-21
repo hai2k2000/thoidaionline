@@ -93,20 +93,6 @@ export default function TaskCenterShell(props: Props) {
           <>
               <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
                 <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
                 {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"],["cancelled","Đã hủy"]].map(([scope,label]) => (
                   <Link key={scope} href={taskListHref(query, { scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
                 ))}
