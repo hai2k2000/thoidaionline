@@ -3,10 +3,10 @@ import { serverSupabase } from "@/lib/serverSupabase";
 
 export const dutyTaskRepository = {
   async options() {
-    const result = await serverSupabase.from("staff_users").select("id,full_name,department_id").eq("active", true).order("full_name");
+    const result = await serverSupabase.from("staff_users").select("id,full_name,department_id,job_titles(code)").eq("active", true).order("full_name");
     const departments = await serverSupabase.from("departments").select("id,name,manager_id").eq("active", true).order("name");
     if (result.error || departments.error) return { ok: false as const };
-    return { ok: true as const, people: result.data ?? [], departments: departments.data ?? [] };
+    return { ok: true as const, people: (result.data ?? []).map((person) => ({ ...person, job_title_code: (person.job_titles as { code?: string } | null)?.code ?? null })), departments: departments.data ?? [] };
   },
   async create(actorId: string, input: { title: string; description: string; departmentId: string; assigneeId: string; reviewerId: string; dueDate: string; dueTime: string; dutyMonth: string; dutyPosition: string }) {
     const { data, error } = await serverSupabase.rpc("api_create_duty_task", {
