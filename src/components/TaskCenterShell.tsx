@@ -92,7 +92,7 @@ export default function TaskCenterShell(props: Props) {
 
           <>
               <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
+                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực sản xuất</Link>
                 {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"],["cancelled","Đã hủy"]].map(([scope,label]) => (
                   <Link key={scope} href={taskListHref(query, { scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
                 ))}
@@ -120,7 +120,7 @@ export default function TaskCenterShell(props: Props) {
                         return <tr key={task.id} role="link" tabIndex={0} onClick={() => router.push(`/tasks/${task.id}`)} onKeyDown={(event) => { if (event.key === "Enter") router.push(`/tasks/${task.id}`); }} className="cursor-pointer border-b hover:bg-slate-50 focus:bg-slate-50">
                           <td className="p-2 font-semibold">{task.title}{task.legacy_read_only ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs">Legacy chỉ đọc</span> : null}</td>
                           <td className="p-2">{task.task_assignees.find((row) => row.assignment_role !== "watcher")?.staff_users?.full_name ?? "—"}</td>
-                          <td className="p-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2">{deadlineLabel(task)}</td><td className="p-2">{task.departments?.name ?? "—"}</td><td className="p-2">{task.task_category === "duty" ? "Trực" : task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : task.compatibility_task_type === "assigned" ? "Công việc được giao" : "Legacy"}</td><td className="p-2">{task.start_date ?? "—"}</td>
+                          <td className="p-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2">{deadlineLabel(task)}</td><td className="p-2">{task.departments?.name ?? "—"}</td><td className="p-2">{task.task_category === "duty" ? "Trực sản xuất" : task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : task.compatibility_task_type === "assigned" ? "Công việc được giao" : "Legacy"}</td><td className="p-2">{task.start_date ?? "—"}</td>
                           <td className="p-2"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /></td>
                         </tr>;
                       })}</tbody>
