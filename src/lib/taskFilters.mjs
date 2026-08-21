@@ -74,6 +74,7 @@ export function taskListHref(query, patch) {
   if (next.category) params.set("category", next.category);
   if (next.category) params.set("category", next.category);
   if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
   if (next.status) params.set("status", next.status);
   if (next.fromDate) params.set("from", next.fromDate);
   if (next.statusGroup) params.set("state", next.statusGroup);
