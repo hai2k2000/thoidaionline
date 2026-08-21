@@ -6,7 +6,7 @@ import { resolvePersonnelEvaluationAction } from "@/lib/personnelEvaluationAcces
 
 export type RubricFactor = { position: number; factor_code: string; label: string; description: string; max_score: number; band_definitions: unknown };
 export type RubricVersion = { id: string; version_no: number; status: "draft" | "published" | "retired"; effective_from: string | null; published_at: string | null; evaluation_rubric_factors: RubricFactor[] };
-export type PerformanceCycleHistory = { id: string; code: string; name: string; start_date: string; end_date: string; status: string; rubric_versions: string; total_reviews: number; self_draft_count: number; awaiting_manager_count: number; awaiting_tbt_count: number; published_count: number; other_count: number };
+export type PerformanceCycleHistory = { id: string; code: string; name: string; cycle_type: "weekly" | "monthly"; start_date: string; end_date: string; status: string; rubric_versions: string; total_reviews: number; self_draft_count: number; awaiting_manager_count: number; awaiting_tbt_count: number; published_count: number; other_count: number };
 export type EvaluationEvidence = { id: string; title: string; status: string; due_date: string | null };
 export type EvaluationItem = {
   id: string; employeeId: string; employeeName: string; departmentId: string | null; departmentName: string;

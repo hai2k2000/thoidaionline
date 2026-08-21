@@ -29,6 +29,12 @@ const mutation = async (request: Request) => {
     case "open_cycle":
       if (actor.role_code !== "admin") return apiError("forbidden", 403);
       rpc = "api_open_performance_cycle"; args = { p_actor: actorId, p_code: body.code, p_name: body.name, p_start: body.startDate, p_end: body.endDate }; break;
+    case "open_week":
+      if (actor.role_code !== "admin") return apiError("forbidden", 403);
+      rpc = "api_ensure_current_weekly_performance_cycle"; args = { p_actor: actorId }; break;
+    case "open_month":
+      if (actor.role_code !== "admin") return apiError("forbidden", 403);
+      rpc = "api_ensure_current_performance_cycle"; args = { p_actor: actorId }; break;
     default: return apiError("invalid_request", 400);
   }
   if (Object.values(args).some((value) => value === null)) return apiError("invalid_request", 400);
