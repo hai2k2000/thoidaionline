@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPhase2Navigation, type Phase2Navigation } from "@/components/phase2Navigation";
 import { useAuth } from "@/lib/auth";
+import NotificationBell from "@/components/NotificationBell";
 
 type AppNavProps = {
   currentPath: string;
@@ -173,7 +174,10 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
   }, [mobileOpen, restoreMenuFocus]);
 
   return (
-    <aside className="w-full lg:w-[232px] lg:shrink-0">
+    <aside className="relative w-full lg:w-[232px] lg:shrink-0">
+      <div className="absolute right-3 top-1 z-[60] lg:top-3">
+        <NotificationBell />
+      </div>
       <button
         ref={menuButtonRef}
         type="button"
