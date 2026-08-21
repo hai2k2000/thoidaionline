@@ -20,7 +20,7 @@ const labels = {
   users: "Qu\u1ea3n l\u00fd nh\u00e2n vi\u00ean",
   departments: "Ph\u00f2ng ban",
   permissions: "Ph\u00e2n quy\u1ec1n",
-  "evaluation-rubrics": "B\u1ed9 ti\u00eau ch\u00ed \u0111\u00e1nh gi\u00e1 chung",
+  "evaluation-rubrics": "Tiêu chí & kỳ đánh giá",
 } as const;
 
 const linkClass = (active: boolean) =>
