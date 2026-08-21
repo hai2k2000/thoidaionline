@@ -36,6 +36,7 @@ export type TaskAction =
   | "admin_edit"
   | "claim"
   | "report"
+  | "complete_assigned"
   | "review"
   | "comment"
   | "attachment"
@@ -154,6 +155,10 @@ export function canTaskAction(
         || task.ownerId === actor.id
         || task.assigneeId === actor.id
         || isParticipant(actor, task, false);
+    case "complete_assigned":
+      return task.taskType === "assigned"
+        && task.assigneeId === actor.id
+        && !["pending_review", "done", "cancelled"].includes(task.status);
     case "review":
       return actor.roleCode === "admin"
         || (

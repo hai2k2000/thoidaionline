@@ -11,7 +11,7 @@ import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type Capabilities = {
-  report: boolean; review: boolean; update: boolean; comment: boolean;
+  report: boolean; completeAssigned: boolean; review: boolean; update: boolean; comment: boolean;
   attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
 };
 const statusLabel: Record<string, string> = {
@@ -71,7 +71,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
     const reason = window.prompt("Lý do trả lại:");
     if (!reason?.trim()) return setMessage("Vui lòng nhập lý do."), undefined;
     const response = await jsonPost(`/api/tasks/${task.id}/review-completion`, { decision: "return", reason });
-    if (response) {
+    if (response && capabilities.update) {
       const dueDate = window.prompt("Hạn mới cho bản sửa (YYYY-MM-DD, có thể bỏ trống):", task.due_date ?? "");
       if (dueDate) await jsonPost(`/api/tasks/${task.id}/deadline-assigned`, { dueDate, reason: "Điều chỉnh hạn sau khi trả lại" });
     }
@@ -108,7 +108,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   };
   const personal = task.task_type === "personal";
   const deadlineState = classifyTaskDeadline(task);
-  const canComplete = personal ? capabilities.personalComplete : capabilities.report && !["pending_review", "done", "cancelled"].includes(task.status);
+  const canComplete = personal ? capabilities.personalComplete : capabilities.completeAssigned;
   const completePath = personal ? "complete" : "submit-completion";
   const latestProgress = task.progress_reports[0] ?? null;
   const returnReason = task.status_events.find((event) => event.to_status === "rejected" && event.reason)?.reason;
