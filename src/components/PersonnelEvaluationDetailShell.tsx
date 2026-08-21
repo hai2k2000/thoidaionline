@@ -17,10 +17,6 @@ const reviewLabels: Record<string, string> = {
   published: "Đã công bố",
 };
 
-const difficultyLabels: Record<string, string> = {
-  low: "Dễ", medium: "Trung bình", high: "Khó",
-  easy: "Dễ", normal: "Trung bình", hard: "Khó",
-};
 const completionLabels: Record<string, string> = {
   completed: "Hoàn thành", unfinished: "Chưa hoàn thành",
 };
@@ -114,8 +110,8 @@ function Detail({ detail }: { detail: PersonnelEvaluationDetail }) {
         </div>
       <div className="mt-2 max-h-[360px] overflow-auto">
         <table className="w-full min-w-[780px] border-collapse text-sm">
-          <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Tên công việc</th><th className="p-2">Người phụ trách</th><th className="p-2">Độ khó</th><th className="p-2">Trạng thái hoàn thành</th><th className="p-2">Thời hạn</th></tr></thead>
-          <tbody>{visibleTasks.map((task, index) => <tr key={task.id} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><button type="button" onClick={() => setSelectedTask(task)} className="text-left text-orange-700 underline">{task.title}</button></td><td className="p-2">{task.assignee_name ?? "—"}</td><td className="p-2">{difficultyLabels[task.difficulty] ?? task.difficulty}</td><td className="p-2">{completionLabels[task.completion_status] ?? task.completion_status}</td><td className="p-2">{deadlineLabels[task.deadline_outcome] ?? task.deadline_outcome}</td></tr>)}</tbody>
+          <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Tên công việc</th><th className="p-2">Người phụ trách</th><th className="p-2">Trạng thái hoàn thành</th><th className="p-2">Thời hạn</th></tr></thead>
+          <tbody>{visibleTasks.map((task, index) => <tr key={task.id} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><button type="button" onClick={() => setSelectedTask(task)} className="text-left text-orange-700 underline">{task.title}</button></td><td className="p-2">{task.assignee_name ?? "—"}</td><td className="p-2">{completionLabels[task.completion_status] ?? task.completion_status}</td><td className="p-2">{deadlineLabels[task.deadline_outcome] ?? task.deadline_outcome}</td></tr>)}</tbody>
         </table>
         {!detail.tasks.length ? <p className="p-5 text-center text-slate-500">Không có công việc trong khoảng ngày đã chọn.</p> : null}
       </div>

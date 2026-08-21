@@ -52,14 +52,9 @@ function NavContent({
 }) {
   return (
     <div className="flex h-full flex-col p-3">
-      <div className="border-b border-orange-100 pb-3">
-        <div className="flex items-center gap-3">
-          <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-base font-black text-white shadow-sm">TD</span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-extrabold tracking-wide text-slate-950">THỜI ĐẠI WORK</p>
-            <p className="mt-0.5 text-xs text-slate-500">Quản trị công việc nội bộ</p>
-          </div>
-        </div>
+      <div className="border-b border-orange-100 pb-3 text-center">
+        <span aria-hidden="true" className="mx-auto flex h-12 w-36 items-center justify-center overflow-hidden rounded-lg bg-white px-1"><img src="/thoidai-logo.png" alt="Logo Thời Đại" className="h-auto w-full object-contain" /></span>
+        <p className="mt-2 text-xs font-semibold text-slate-600">Quản trị công việc nội bộ</p>
       </div>
 
       <nav aria-label="Menu chính" className="mt-3 space-y-0.5">

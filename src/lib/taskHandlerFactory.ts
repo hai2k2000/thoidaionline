@@ -465,6 +465,10 @@ export function createTaskApplication(deps: Dependencies) {
       const dueDate = dateValue(body?.dueDate);
       const dueTime = timeValue(body?.dueTime);
       const evaluationCriteria = cleanText(body?.evaluationCriteria, 10000) || null;
+      const assignmentPriorities = ["low", "normal", "high", "urgent"] as const;
+      const assignmentPriority = body?.priority === undefined
+        ? "normal"
+        : assignmentPriorities.find((value) => value === body.priority);
       const recurrenceFrequency = body?.recurrenceFrequency === "daily"
         || body?.recurrenceFrequency === "weekly"
         || body?.recurrenceFrequency === "monthly"
@@ -481,7 +485,7 @@ export function createTaskApplication(deps: Dependencies) {
         ? null : deps.asUuid(body.groupDepartmentId);
       const excludedMemberIds = body?.excludedMemberIds === undefined ? [] : ids(body.excludedMemberIds);
       if (!title || !description || !departmentId || !assigneeId || !reviewerId
-        || !dueDate || !dueTime || !collaboratorIds || !watcherIds || !excludedMemberIds
+        || !dueDate || !dueTime || !assignmentPriority || !collaboratorIds || !watcherIds || !excludedMemberIds
         || (body?.groupDepartmentId !== undefined && body?.groupDepartmentId !== null && !groupDepartmentId)
         || recurrenceFrequency === undefined
         || (body?.recurrenceEndsOn !== null && !recurrenceEndsOn)
@@ -500,6 +504,7 @@ export function createTaskApplication(deps: Dependencies) {
       const input: AssignedTaskInput = {
         title, description, departmentId, assigneeId, reviewerId, dueDate, dueTime,
         evaluationCriteria,
+        priority: assignmentPriority,
         collaboratorIds: resolved.collaboratorIds,
         watcherIds: resolved.watcherIds,
         recurrenceFrequency,
@@ -518,17 +523,21 @@ export function createTaskApplication(deps: Dependencies) {
       const statuses = ["new", "in_progress"] as const;
       const status = statuses.find((value) => value === body?.status);
       const dueDate = body?.dueDate === null ? null : dateValue(body?.dueDate);
+      const priorities = ["low", "normal", "high", "urgent"] as const;
+      const priority = priorities.find((value) => value === body?.priority);
       if (
         !body
         || (body.status !== undefined && !status)
         || (body.dueDate !== undefined && body.dueDate !== null && !dueDate)
-        || (body.status === undefined && body.dueDate === undefined)
+        || (body.priority !== undefined && !priority)
+        || (body.status === undefined && body.dueDate === undefined && body.priority === undefined)
       ) return deps.error("invalid_request", 400);
       const taskId = await authorizeMutation(actor, taskIdValue, "update");
       if (taskId instanceof Response) return taskId;
       const result = await deps.repository.update(actor.id, taskId, {
         ...(status ? { status } : {}),
         ...(body.dueDate !== undefined ? { dueDate } : {}),
+        ...(priority ? { priority } : {}),
       });
       return result.ok
         ? deps.json({ task: result.data })

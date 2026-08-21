@@ -11,7 +11,7 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "history", label: "Lịch sử" },
 ];
 const completionLabels: Record<string,string> = { completed: "Hoàn thành", unfinished: "Chưa hoàn thành" };
-const difficultyLabels: Record<string,string> = { low: "Dễ", medium: "Trung bình", high: "Khó", easy: "Dễ", normal: "Trung bình", hard: "Khó", urgent: "Rất khó" };
+const difficultyLabels: Record<string,string> = { low: "Dễ", normal: "Trung bình", high: "Khó", urgent: "Rất khó" };
 const deadlineLabels: Record<string,string> = { on_time: "Đúng hạn", overdue: "Quá hạn", in_time: "Trong hạn", no_deadline: "Không có thời hạn" };
 const dateText = (value: string | null) => value ? new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "medium", timeStyle: value.includes("T") ? "short" : undefined }).format(value.includes("T") ? new Date(value) : new Date(`${value}T12:00:00+07:00`)) : "—";
 
@@ -41,7 +41,7 @@ export default function TaskDetailModal({ task, onClose }: { task: PersonnelEval
       <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
         <aside className="mb-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg bg-slate-50 p-3"><b>Loại</b><p>{task.task_type === "personal" ? "Nhiệm vụ cá nhân" : "Công việc được giao"}</p></div>
-          <div className="rounded-lg bg-slate-50 p-3"><b>Mức độ khó</b><p>{difficultyLabels[task.difficulty] ?? task.difficulty}</p></div>
+          <div className="rounded-lg bg-slate-50 p-3"><b>Độ khó</b><p>{difficultyLabels[task.difficulty] ?? task.difficulty}</p></div>
           <div className="rounded-lg bg-slate-50 p-3"><b>Phụ trách</b><p>{task.assignee_name ?? task.owner_name ?? "—"}</p></div>
           <div className="rounded-lg bg-slate-50 p-3"><b>Người duyệt</b><p>{task.reviewer_name ?? "—"}</p></div>
           <div className="rounded-lg bg-slate-50 p-3"><b>Phòng ban</b><p>{task.department_name ?? "—"}</p></div>

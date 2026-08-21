@@ -323,6 +323,7 @@ export const taskRepository: TaskRepository = {
       p_due_date: input.dueDate,
       p_due_time: input.dueTime,
       p_evaluation_criteria: input.evaluationCriteria,
+      p_priority: input.priority,
       p_collaborator_ids: input.collaboratorIds,
       p_watcher_ids: input.watcherIds,
       p_recurrence_frequency: input.recurrenceFrequency,
@@ -419,6 +420,8 @@ export const taskRepository: TaskRepository = {
       p_status: input.status ?? null,
       p_due_date: input.dueDate ?? null,
       p_update_due_date: input.dueDate !== undefined,
+      p_priority: input.priority ?? null,
+      p_update_priority: input.priority !== undefined,
     },
   ),
 

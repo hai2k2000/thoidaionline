@@ -138,6 +138,7 @@ export type AssignedTaskInput = {
   dueDate: string;
   dueTime: string;
   evaluationCriteria: string | null;
+  priority: "low" | "normal" | "high" | "urgent";
   collaboratorIds: string[];
   watcherIds: string[];
   recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
@@ -147,6 +148,7 @@ export type AssignedTaskInput = {
 export type LegacyUpdateTaskInput = {
   status?: "new" | "in_progress";
   dueDate?: string | null;
+  priority?: "low" | "normal" | "high" | "urgent";
 };
 
 export type LegacyEvaluationInput = {
