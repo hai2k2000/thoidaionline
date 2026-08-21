@@ -174,8 +174,8 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
   }, [mobileOpen, restoreMenuFocus]);
 
   return (
-    <aside className="relative w-full lg:w-[232px] lg:shrink-0">
-      <div className="absolute right-3 top-1 z-[60] lg:top-3">
+    <aside className="w-full lg:w-[232px] lg:shrink-0">
+      <div className="fixed right-4 top-4 z-[60]">
         <NotificationBell />
       </div>
       <button
