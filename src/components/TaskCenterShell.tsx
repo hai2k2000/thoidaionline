@@ -74,7 +74,7 @@ export default function TaskCenterShell(props: Props) {
   const { logout } = useAuth();
   const onLogout = () => { logout(); router.replace("/login"); };
   const totalPages = Math.max(1, Math.ceil(tasks.total / tasks.pageSize));
-  const activeFilters = [query.search, query.taskType, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.status, query.statusGroup, query.deadlineState, query.fromDate, query.toDate, query.departmentId].filter(Boolean).length;
+  const activeFilters = [query.search, query.taskType, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.status, query.statusGroup, query.deadlineState, query.fromDate, query.toDate, query.departmentId].filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
@@ -92,6 +92,8 @@ export default function TaskCenterShell(props: Props) {
 
           <>
               <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
+                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
+                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
                 <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
                 <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>
                 <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực</Link>

@@ -52,6 +52,10 @@ const TASK_LIST_FIELDS = [
   "duty_month",
   "task_category",
   "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
   "start_date",
   "completion_submitted_at",
   "completed_at",
@@ -193,6 +197,8 @@ export const taskRepository: TaskRepository = {
     } else if (query.scope === "cancelled") {
       dbQuery = dbQuery.eq("status", "cancelled");
     }
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
     if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
     if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
     if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
