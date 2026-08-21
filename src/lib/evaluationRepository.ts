@@ -3,6 +3,7 @@ import "server-only";
 import type { AuthorizationActor } from "@/lib/authorization";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { resolvePersonnelEvaluationAction } from "@/lib/personnelEvaluationAccess";
+import { sortStaffRows } from "@/lib/staffOrdering";
 
 export type RubricFactor = { position: number; factor_code: string; label: string; description: string; max_score: number; band_definitions: unknown };
 export type RubricVersion = { id: string; version_no: number; status: "draft" | "published" | "retired"; effective_from: string | null; published_at: string | null; evaluation_rubric_factors: RubricFactor[] };
@@ -259,9 +260,11 @@ export const evaluationRepository = {
     const reviewRows = reviewsResult.data ?? [];
     const reviewIds = reviewRows.map((row) => row.id);
     const employeeIds = [...new Set(reviewRows.map((row) => row.employee_id))];
-    const staffResult = employeeIds.length ? await serverSupabase.from("staff_users").select("id,full_name,departments!staff_users_department_id_fkey(name)").in("id", employeeIds) : { data: [], error: null };
+    const staffResult = employeeIds.length ? await serverSupabase.from("staff_users").select("id,full_name,list_order,roles(code,level),job_titles(code,display_order),departments!staff_users_department_id_fkey(code,name)").in("id", employeeIds) : { data: [], error: null };
     if (staffResult.error) return { ok: false };
-    const staffById = new Map((staffResult.data ?? []).map((staff) => [staff.id, staff as { id: string; full_name?: string; departments?: { name?: string } | null }]));
+    const orderedStaff = sortStaffRows(staffResult.data ?? []);
+    const staffOrder = new Map(orderedStaff.map((staff, index) => [staff.id, index]));
+    const staffById = new Map(orderedStaff.map((staff) => [staff.id, staff as { id: string; full_name?: string; departments?: { name?: string } | null }]));
     const scoreResult = reviewIds.length ? await serverSupabase.from("performance_review_scores").select("review_id,stage,factor_code,score,comment").in("review_id", reviewIds).order("created_at", { ascending: true }) : { data: [], error: null };
     if (scoreResult.error) return { ok: false };
     const scoresByReview = new Map<string, EvaluationCycleScoreDetail[]>();
@@ -274,7 +277,9 @@ export const evaluationRepository = {
     const cycle = cycleResult.data;
     return { ok: true, data: {
       id: cycle.id, code: cycle.code, name: cycle.name, cycleType: cycle.cycle_type as "weekly" | "monthly", startDate: cycle.start_date, endDate: cycle.end_date, status: cycle.status,
-      reviews: (reviewRows as unknown as ReviewRow[]).map((row) => ({ id: row.id, employeeName: staffById.get(row.employee_id)?.full_name ?? "—", departmentName: staffById.get(row.employee_id)?.departments?.name ?? "—", status: row.status, workflowType: row.workflow_type ?? "employee", managerScore: row.reviewer_score === null ? null : Number(row.reviewer_score), finalScore: row.final_score === null ? null : Number(row.final_score), rank: row.rank, factors: row.rubric_snapshot?.factors ?? [], scores: scoresByReview.get(row.id) ?? [] })),
+      reviews: (reviewRows as unknown as ReviewRow[])
+        .sort((a, b) => (staffOrder.get(a.employee_id) ?? Number.MAX_SAFE_INTEGER) - (staffOrder.get(b.employee_id) ?? Number.MAX_SAFE_INTEGER))
+        .map((row) => ({ id: row.id, employeeName: staffById.get(row.employee_id)?.full_name ?? "—", departmentName: staffById.get(row.employee_id)?.departments?.name ?? "—", status: row.status, workflowType: row.workflow_type ?? "employee", managerScore: row.reviewer_score === null ? null : Number(row.reviewer_score), finalScore: row.final_score === null ? null : Number(row.final_score), rank: row.rank, factors: row.rubric_snapshot?.factors ?? [], scores: scoresByReview.get(row.id) ?? [] })),
     } };
   },
 
