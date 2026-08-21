@@ -24,9 +24,10 @@ type Props = {
 
 const taskStatusLabel = (status: string) =>
   status === "done" ? "Đã hoàn thành"
-    : status === "rejected" ? "Trả lại"
-      : status === "cancelled" ? "Đã hủy"
-        : "Chưa hoàn thành";
+    : status === "pending_review" ? "Chờ duyệt"
+      : status === "rejected" ? "Trả lại"
+        : status === "cancelled" ? "Đã hủy"
+          : "Chưa hoàn thành";
 const statusClass = (status: string) => status === "done" ? "bg-emerald-100 text-emerald-800" : status === "rejected" ? "bg-red-100 text-red-800" : status === "cancelled" ? "bg-slate-200 text-slate-600" : "bg-amber-100 text-amber-800";
 
 const tabClass = (active: boolean) => `rounded-full border px-3.5 py-2 text-sm font-semibold transition-colors ${
