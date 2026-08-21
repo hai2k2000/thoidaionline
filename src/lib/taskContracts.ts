@@ -17,6 +17,8 @@ export type TaskListItemDto = {
   created_at: string;
   status: CanonicalTaskStatus;
   task_type: CanonicalTaskType | null;
+  task_category: "regular" | "duty";
+  duty_month: string | null;
   compatibility_task_type: CanonicalTaskType | null;
   legacy_read_only: boolean;
   start_date: string | null;
@@ -101,6 +103,7 @@ export type TaskListQuery = {
   search: string | null;
   scope: "all" | "assigned" | "personal" | "watching" | "cancelled";
   taskType: CanonicalTaskType | null;
+  category?: "duty" | null;
   status: CanonicalTaskStatus | null;
   statusGroup: "completed" | "unfinished" | "returned" | "cancelled" | null;
   fromDate: string | null;

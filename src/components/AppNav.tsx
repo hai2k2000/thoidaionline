@@ -14,6 +14,7 @@ type AppNavProps = {
 
 const labels = {
   assign: "Giao vi\u1ec7c",
+  duty: "Lịch trực",
   tasks: "Qu\u1ea3n l\u00fd c\u00f4ng vi\u1ec7c",
   evaluations: "\u0110\u00e1nh gi\u00e1 nh\u00e2n vi\u00ean",
   account: "T\u00e0i kho\u1ea3n",

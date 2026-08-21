@@ -28,6 +28,30 @@ const TASK_LIST_FIELDS = [
   "created_at",
   "status",
   "task_type",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
+  "task_category",
+  "duty_month",
   "start_date",
   "completion_submitted_at",
   "completed_at",
@@ -169,6 +193,18 @@ export const taskRepository: TaskRepository = {
     } else if (query.scope === "cancelled") {
       dbQuery = dbQuery.eq("status", "cancelled");
     }
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
     if (query.taskType === "personal") {
       dbQuery = dbQuery.or(
         "task_type.eq.personal,and(task_type.is.null,plan_period.in.(daily,weekly,monthly))",

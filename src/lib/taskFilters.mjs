@@ -30,10 +30,13 @@ export function parseTaskListSearchParams(params) {
   const pageSize = Number(params.get("pageSize") ?? "25");
   const search = params.get("q")?.normalize("NFC").trim() ?? "";
   const departmentId = params.get("department");
+  const category = params.get("category") === "duty" ? "duty" : null;
   return {
     search: search && [...search].length <= 200 ? search : null,
     scope: member(TASK_SCOPES, params.get("scope")) ?? "all",
     taskType: member(TASK_TYPES, params.get("type")) ?? null,
+    category,
+    ...(category ? { category } : {}),
     status: member(TASK_STATUSES, params.get("status")) ?? null,
     statusGroup: member(TASK_STATUS_GROUPS, params.get("state"))
       ?? (params.get("status") === "active" ? "unfinished" : null),
@@ -58,6 +61,18 @@ export function taskListHref(query, patch) {
   if (next.search) params.set("q", next.search);
   if (next.scope !== "all") params.set("scope", next.scope);
   if (next.taskType) params.set("type", next.taskType);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
+  if (next.category) params.set("category", next.category);
   if (next.status) params.set("status", next.status);
   if (next.fromDate) params.set("from", next.fromDate);
   if (next.statusGroup) params.set("state", next.statusGroup);

@@ -10,7 +10,7 @@ export type Phase2NavigationAccess = {
 };
 
 export type Phase2NavigationItem = {
-  id: "assign" | "tasks" | "evaluations" | "account" | "users" | "departments"
+  id: "assign" | "duty" | "tasks" | "evaluations" | "account" | "users" | "departments"
     | "permissions" | "evaluation-rubrics" | "evaluation-cycles";
   href: string;
 };
@@ -28,7 +28,10 @@ export function getPhase2Navigation(
   return {
     primary: [
       ...(access.canAssignTask
-        ? [{ id: "assign", href: "/tasks/assign" } as const]
+        ? [
+            { id: "assign", href: "/tasks/assign" } as const,
+            ...(access.roleCode === "admin" ? [{ id: "duty", href: "/tasks/duty" } as const] : []),
+          ]
         : []),
       { id: "tasks", href: "/tasks" },
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
