@@ -1,0 +1,11 @@
+[Unit]
+Description=Open Thoidai weekly performance evaluation on Monday
+
+[Timer]
+OnCalendar=Mon *-*-* 00:10:00 Asia/Ho_Chi_Minh
+Persistent=true
+RandomizedDelaySec=120
+Unit=thoidai-weekly-evaluation.service
+
+[Install]
+WantedBy=timers.target
