@@ -11,7 +11,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "permissions" | "evaluation-rubrics";
+    | "permissions" | "evaluation-rubrics" | "evaluation-cycles";
   href: string;
 };
 
@@ -53,6 +53,10 @@ export function getPhase2Navigation(
         ? [{
             id: "evaluation-rubrics",
             href: "/configuration/evaluation-rubrics",
+          } as const,
+          {
+            id: "evaluation-cycles",
+            href: "/configuration/evaluation-cycles",
           } as const]
         : []),
     ],

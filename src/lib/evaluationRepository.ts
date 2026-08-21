@@ -241,6 +241,11 @@ export const evaluationRepository = {
     };
   },
 
+  async cycles(actorId: string) {
+    const cycles = await serverSupabase.rpc("api_list_performance_cycle_history", { p_actor: actorId });
+    return { cycles: (cycles.data ?? []) as PerformanceCycleHistory[], failed: Boolean(cycles.error) };
+  },
+
   async rubrics(actorId: string) {
     await serverSupabase.rpc("api_ensure_current_performance_cycle", { p_actor: actorId });
     const [rubrics, cycles] = await Promise.all([
