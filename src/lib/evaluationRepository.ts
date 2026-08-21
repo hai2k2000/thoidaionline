@@ -7,6 +7,9 @@ import { resolvePersonnelEvaluationAction } from "@/lib/personnelEvaluationAcces
 export type RubricFactor = { position: number; factor_code: string; label: string; description: string; max_score: number; band_definitions: unknown };
 export type RubricVersion = { id: string; version_no: number; status: "draft" | "published" | "retired"; effective_from: string | null; published_at: string | null; evaluation_rubric_factors: RubricFactor[] };
 export type PerformanceCycleHistory = { id: string; code: string; name: string; cycle_type: "weekly" | "monthly"; start_date: string; end_date: string; status: string; rubric_versions: string; total_reviews: number; self_draft_count: number; awaiting_manager_count: number; awaiting_tbt_count: number; published_count: number; other_count: number };
+export type EvaluationCycleScoreDetail = { stage: "self" | "manager" | "tbt"; factorCode: string; score: number; comment: string | null };
+export type EvaluationCycleReviewDetail = { id: string; employeeName: string; departmentName: string; status: string; workflowType: string; managerScore: number | null; finalScore: number | null; rank: string | null; factors: RubricFactor[]; scores: EvaluationCycleScoreDetail[] };
+export type EvaluationCycleDetail = { id: string; code: string; name: string; cycleType: "weekly" | "monthly"; startDate: string; endDate: string; status: string; reviews: EvaluationCycleReviewDetail[] };
 export type EvaluationEvidence = { id: string; title: string; status: string; due_date: string | null };
 export type EvaluationItem = {
   id: string; employeeId: string; employeeName: string; departmentId: string | null; departmentName: string;
@@ -244,6 +247,31 @@ export const evaluationRepository = {
   async cycles(actorId: string) {
     const cycles = await serverSupabase.rpc("api_list_performance_cycle_history", { p_actor: actorId });
     return { cycles: (cycles.data ?? []) as PerformanceCycleHistory[], failed: Boolean(cycles.error) };
+  },
+
+  async cycleDetail(cycleId: string): Promise<{ ok: true; data: EvaluationCycleDetail } | { ok: false }> {
+    const cycleResult = await serverSupabase.from("performance_cycles").select("id,code,name,cycle_type,start_date,end_date,status").eq("id", cycleId).single();
+    if (cycleResult.error || !cycleResult.data) return { ok: false };
+    const reviewsResult = await serverSupabase.from("performance_reviews")
+      .select("id,status,workflow_type,reviewer_score,final_score,rank,rubric_snapshot,staff_users!performance_reviews_employee_id_fkey(full_name,departments(name))")
+      .eq("cycle_id", cycleId).order("created_at", { ascending: true });
+    if (reviewsResult.error) return { ok: false };
+    const reviewRows = reviewsResult.data ?? [];
+    const reviewIds = reviewRows.map((row) => row.id);
+    const scoreResult = reviewIds.length ? await serverSupabase.from("performance_review_scores").select("review_id,stage,factor_code,score,comment").in("review_id", reviewIds).order("created_at", { ascending: true }) : { data: [], error: null };
+    if (scoreResult.error) return { ok: false };
+    const scoresByReview = new Map<string, EvaluationCycleScoreDetail[]>();
+    for (const score of scoreResult.data ?? []) {
+      const list = scoresByReview.get(score.review_id) ?? [];
+      list.push({ stage: score.stage as EvaluationCycleScoreDetail["stage"], factorCode: score.factor_code, score: Number(score.score), comment: score.comment });
+      scoresByReview.set(score.review_id, list);
+    }
+    type ReviewRow = typeof reviewRows[number] & { staff_users: { full_name?: string; departments?: { name?: string } | null } | null; rubric_snapshot: { factors?: RubricFactor[] } | null };
+    const cycle = cycleResult.data;
+    return { ok: true, data: {
+      id: cycle.id, code: cycle.code, name: cycle.name, cycleType: cycle.cycle_type as "weekly" | "monthly", startDate: cycle.start_date, endDate: cycle.end_date, status: cycle.status,
+      reviews: (reviewRows as unknown as ReviewRow[]).map((row) => ({ id: row.id, employeeName: row.staff_users?.full_name ?? "—", departmentName: row.staff_users?.departments?.name ?? "—", status: row.status, workflowType: row.workflow_type ?? "employee", managerScore: row.reviewer_score === null ? null : Number(row.reviewer_score), finalScore: row.final_score === null ? null : Number(row.final_score), rank: row.rank, factors: row.rubric_snapshot?.factors ?? [], scores: scoresByReview.get(row.id) ?? [] })),
+    } };
   },
 
   async rubrics(actorId: string) {
