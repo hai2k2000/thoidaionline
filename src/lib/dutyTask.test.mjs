@@ -37,3 +37,17 @@ test("forward-only duty roster migration enforces atomic security and cancelled 
   assert.match(sql, /revoke all on function public\.api_save_monthly_duty_roster/);
   assert.match(sql, /grant execute on function public\.api_save_monthly_duty_roster/);
 });
+
+test("publication duty position allows organization-wide editors while reporters remain department-scoped", () => {
+  const sql = readFileSync("supabase/migrations/20260822074500_duty_exclude_general.sql", "utf8");
+  assert.match(sql, /v_position='Biên tập và xuất bản'/);
+  assert.match(sql, /v_assignee_department is distinct from p_department_id/);
+  assert.match(sql, /v_position<>'Biên tập và xuất bản'/);
+});
+
+test("general department is fail-closed for monthly roster", () => {
+  const sql = readFileSync("supabase/migrations/20260822074500_duty_exclude_general.sql", "utf8");
+  assert.match(sql, /code <> 'general'/);
+  assert.match(sql, /selected duty department is excluded/);
+  assert.match(sql, /assignee department is excluded/);
+});

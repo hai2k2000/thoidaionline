@@ -5,7 +5,7 @@ export const dutyTaskRepository = {
   async options() {
     const [people, departments] = await Promise.all([
       serverSupabase.from("staff_users").select("id,full_name,department_id,job_titles(code),roles(code)").eq("active", true).order("full_name"),
-      serverSupabase.from("departments").select("id,name,manager_id").eq("active", true).order("name"),
+      serverSupabase.from("departments").select("id,code,name,manager_id").eq("active", true).neq("code", "general").order("name"),
     ]);
     if (people.error || departments.error) return { ok: false as const };
     const managerIds = new Set((departments.data ?? []).map((row) => row.manager_id).filter(Boolean));
