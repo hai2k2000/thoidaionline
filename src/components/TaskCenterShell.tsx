@@ -20,6 +20,9 @@ type Props = {
   tasks: TaskListResult;
   userLabel: string;
   view: TaskCenterView;
+  basePath?: string;
+  heading?: string;
+  taskMode?: boolean;
 };
 
 const taskStatusLabel = (status: string) =>
@@ -43,10 +46,11 @@ const deadlineLabel = (task: TaskListResult["items"][number]) => {
 const dueText = (dueDate: string | null, dueTime: string | null) =>
   dueDate ? `${dueDate}${dueTime ? ` ${dueTime.slice(0, 5)}` : ""}` : "—";
 
-function FilterFields({ query, departments }: Pick<Props, "query" | "departments">) {
+function FilterFields({ query, departments, basePath = "/tasks" }: Pick<Props, "query" | "departments" | "basePath">) {
   return (
     <>
       {query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
+      {query.category ? <input type="hidden" name="category" value={query.category} /> : null}
       <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm theo tên công việc" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
       <select name="state" defaultValue={query.statusGroup ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
         <option value="">Trạng thái</option><option value="completed">Đã hoàn thành</option><option value="unfinished">Chưa hoàn thành</option><option value="returned">Trả lại</option><option value="cancelled">Đã hủy</option>
@@ -63,48 +67,49 @@ function FilterFields({ query, departments }: Pick<Props, "query" | "departments
       ) : null}
       <div className="flex items-stretch gap-2 sm:col-span-2 lg:col-span-1">
         <button className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white">Lọc</button>
-        <Link href="/tasks" className="rounded-lg border px-4 py-2 font-semibold">Đặt lại</Link>
+        <Link href={basePath} className="rounded-lg border px-4 py-2 font-semibold">Đặt lại</Link>
       </div>
     </>
   );
 }
 
 export default function TaskCenterShell(props: Props) {
-  const { canClaimTasks, currentUserId, departments, listError, query, tasks, userLabel } = props;
+  const { canClaimTasks, currentUserId, departments, listError, query, tasks, userLabel, basePath = "/tasks", heading = "QUẢN LÝ CÔNG VIỆC", taskMode = false } = props;
   const router = useRouter();
   const { logout } = useAuth();
   const onLogout = () => { logout(); router.replace("/login"); };
   const totalPages = Math.max(1, Math.ceil(tasks.total / tasks.pageSize));
   const activeFilters = [query.search, query.taskType, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.status, query.statusGroup, query.deadlineState, query.fromDate, query.toDate, query.departmentId].filter(Boolean).length;
+  const listHref = (patch: Partial<TaskListQuery>) => taskListHref(query, patch).replace(/^\/tasks/, basePath);
 
   return (
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
-        <AppNav currentPath="/tasks" userLabel={userLabel} onLogout={onLogout} />
+        <AppNav currentPath={basePath} userLabel={userLabel} onLogout={onLogout} />
         <main className="min-w-0 flex-1">
           <header className="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-              <div><h1 className="text-2xl font-bold sm:text-3xl">QUẢN LÝ CÔNG VIỆC</h1></div>
-              <Link href="/tasks/personal/new" className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">+ Tạo công việc</Link>
+              <div><h1 className="text-2xl font-bold sm:text-3xl">{heading}</h1></div>
+              {!taskMode ? <Link href="/tasks/personal/new" className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">+ Tạo công việc</Link> : null}
             </div>
             <nav aria-label="Task Center" className="mt-4 flex flex-wrap gap-2">
             </nav>
           </header>
 
           <>
-              <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
+              {!taskMode ? <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
                 {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"]].map(([scope,label]) => (
-                  <Link key={scope} href={taskListHref(query, { scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
+                  <Link key={scope} href={listHref({ scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
                 ))}
-                <Link href={taskListHref(query, { scope: "cancelled", page: 1 })} className={tabClass(query.scope === "cancelled")}>Đã hủy</Link>
-              </nav>
+                <Link href={listHref({ scope: "cancelled", page: 1 })} className={tabClass(query.scope === "cancelled")}>Đã hủy</Link>
+              </nav> : null}
 
               <details className="mt-3 rounded-xl border bg-white p-3 shadow-sm md:hidden">
                 <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>
-                <form action="/tasks" className="mt-3 grid gap-3"><FilterFields query={query} departments={departments} /></form>
+                <form action={basePath} className="mt-3 grid gap-3"><FilterFields query={query} departments={departments} basePath={basePath} /></form>
               </details>
-              <form action="/tasks" className="mt-3 hidden gap-2.5 rounded-xl border bg-white p-3 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                <FilterFields query={query} departments={departments} />
+              <form action={basePath} className="mt-3 hidden gap-2.5 rounded-xl border bg-white p-3 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <FilterFields query={query} departments={departments} basePath={basePath} />
               </form>
 
               <section className="mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
@@ -134,7 +139,7 @@ export default function TaskCenterShell(props: Props) {
                     })}</div>
                   </>
                 ) : null}
-                <nav aria-label="Phân trang" className="mt-4 flex items-center justify-between border-t pt-4 text-sm"><span>Trang {tasks.page}/{totalPages} · {tasks.total} công việc</span><div className="flex gap-2">{tasks.page > 1 ? <Link className="rounded border px-3 py-2" href={taskListHref(query, { page: tasks.page - 1 })}>Trước</Link> : null}{tasks.page < totalPages ? <Link className="rounded border px-3 py-2" href={taskListHref(query, { page: tasks.page + 1 })}>Sau</Link> : null}</div></nav>
+                <nav aria-label="Phân trang" className="mt-4 flex items-center justify-between border-t pt-4 text-sm"><span>Trang {tasks.page}/{totalPages} · {tasks.total} công việc</span><div className="flex gap-2">{tasks.page > 1 ? <Link className="rounded border px-3 py-2" href={listHref({ page: tasks.page - 1 })}>Trước</Link> : null}{tasks.page < totalPages ? <Link className="rounded border px-3 py-2" href={listHref({ page: tasks.page + 1 })}>Sau</Link> : null}</div></nav>
               </section>
           </>
         </main>

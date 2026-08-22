@@ -8,7 +8,8 @@ test("personal duty schedule is separate from the organization schedule", () => 
   const page = readFileSync("src/app/my-duty-schedule/page.tsx", "utf8");
   assert.match(nav, /my-duty-schedule/);
   assert.match(route, /mine \? guard\.actor\.id/);
-  assert.match(page, /personal/);
+  assert.match(page, /category: "duty"/);
+  assert.match(page, /taskMode/);
 });
 
 test("each duty day requires four mandatory positions", () => { const positions = readFileSync("src/lib/dutyRoster.mjs", "utf8"); for (const position of ["Biên tập và xuất bản","Biên tập bước 2","Biên tập bước 1","Phóng viên"]) assert.match(positions, new RegExp(position)); assert.match(readFileSync("supabase/migrations/20260822070000_monthly_duty_roster.sql", "utf8"), /each duty day requires four positions/); });
