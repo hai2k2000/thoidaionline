@@ -51,3 +51,9 @@ test("general department is fail-closed for monthly roster", () => {
   assert.match(sql, /selected duty department is excluded/);
   assert.match(sql, /assignee department is excluded/);
 });
+
+test("roster month end uses valid PostgreSQL interval arithmetic", () => {
+  const sql = readFileSync("supabase/migrations/20260822080000_duty_interval_fix.sql", "utf8");
+  assert.match(sql, /interval '1 month' - interval '1 day'/);
+  assert.doesNotMatch(sql, /interval '1 month-1 day'/);
+});
