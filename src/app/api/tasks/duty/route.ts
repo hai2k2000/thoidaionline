@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     const day = value as Record<string, unknown>;
     const date = typeof day.date === "string" ? day.date : "";
     const assignments = Array.isArray(day.assignments) ? day.assignments : [];
-    if (!date.startsWith(`${month}-`) || dates.has(date) || assignments.length !== 4) return apiError("invalid_request", 400);
+    if (!date.startsWith(`${month}-`) || dates.has(date) || assignments.length < 1 || assignments.length > 4) return apiError("invalid_request", 400);
     dates.add(date);
     const seen = new Set<string>();
     for (const value of assignments) {

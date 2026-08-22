@@ -11,7 +11,7 @@ export function monthDays(month) {
 }
 
 export function completeRows(days, positions = DUTY_POSITIONS) {
-  return days.filter((day) => positions.every((position) => day.assignments?.[position])).map((day) => ({
+  return days.filter((day) => positions.some((position) => day.assignments?.[position])).map((day) => ({
     date: day.date,
     assignments: Object.fromEntries(positions.map((position) => [position, day.assignments[position]])),
   }));

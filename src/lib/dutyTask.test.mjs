@@ -13,7 +13,7 @@ test("monthly roster generates every calendar day without persisting blanks", as
   const days = monthDays("2026-08");
   days[0].assignments = { a: "1", b: "2", c: "3", d: "4" };
   days[1].assignments = { a: "1", b: "", c: "3", d: "4" };
-  assert.deepEqual(completeRows(days, ["a", "b", "c", "d"]).map((day) => day.date), ["2026-08-01"]);
+  assert.deepEqual(completeRows(days, ["a", "b", "c", "d"]).map((day) => day.date), ["2026-08-01", "2026-08-02"]);
 });
 
 test("duty endpoint supports admin GET and one transactional batch RPC", () => {
