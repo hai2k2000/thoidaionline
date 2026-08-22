@@ -111,7 +111,7 @@ export default function OnlineWorkViewer({ userLabel }: { userLabel: string }) {
               {cards.map(([date, assignments]) => (
                 <article
                   key={date}
-                  className={`rounded-lg border p-3 ${[0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()) ? "border-orange-400 bg-orange-50 ring-1 ring-orange-200" : "bg-white"}`}
+                  className={`rounded-lg border p-3 ${new Date(`${date}T12:00:00Z`).getUTCDay() === 6 ? "border-blue-400 bg-blue-50 ring-1 ring-blue-200" : new Date(`${date}T12:00:00Z`).getUTCDay() === 0 ? "border-orange-400 bg-orange-50 ring-1 ring-orange-200" : "bg-white"}`}
                 >
                   <h2 className="font-bold">
                     {fmt(date)} ·{" "}
