@@ -90,6 +90,33 @@ export default function DutyScheduleViewer({
     }
     return result;
   }, [byDate, range.from, range.to]);
+  const density =
+    view === "month"
+      ? {
+          grid: "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6",
+          card: "rounded-lg border p-2",
+          heading: "truncate text-xs font-bold",
+          rows: "mt-1 space-y-1",
+          row: "text-[11px] leading-tight",
+          meta: "text-[10px] leading-tight",
+        }
+      : view === "week"
+        ? {
+            grid: "sm:grid-cols-2 lg:grid-cols-3",
+            card: "rounded-xl border p-3",
+            heading: "text-sm font-bold",
+            rows: "mt-2 space-y-2",
+            row: "text-sm leading-snug",
+            meta: "text-xs leading-snug",
+          }
+        : {
+            grid: "max-w-3xl",
+            card: "rounded-2xl border p-5",
+            heading: "text-lg font-bold",
+            rows: "mt-3 space-y-3",
+            row: "text-base leading-normal",
+            meta: "text-sm leading-normal",
+          };
   return (
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
       <div className="flex w-full flex-col gap-4 lg:flex-row">
@@ -150,18 +177,18 @@ export default function DutyScheduleViewer({
                 ))}
               </div>
             </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
+            <div className={`mt-3 grid w-full gap-2 ${density.grid}`}>
               {dayCards.map(([date, items]) => (
                 <article
                   key={date}
-                  className={`rounded-lg border p-2 ${[0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()) ? "bg-orange-50" : "bg-white"}`}
+                  className={`${density.card} ${[0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()) ? "bg-orange-50" : "bg-white"}`}
                 >
-                  <h2 className="truncate text-xs font-bold" title={date}>
+                  <h2 className={density.heading} title={date}>
                     {formatDateVi(date)} ·{" "}
                     {labels[new Date(`${date}T12:00:00Z`).getUTCDay()]}{" "}
                     {date === today ? "· Hôm nay" : ""}
                   </h2>
-                  <div className="mt-1 space-y-1">
+                  <div className={density.rows}>
                     {positions.map((position) => {
                       const row = items.find(
                         (item) => item.duty_position === position,
@@ -169,7 +196,7 @@ export default function DutyScheduleViewer({
                       return (
                         <div
                           key={position}
-                          className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-1 border-t pt-1 text-[11px] leading-tight"
+                          className={`grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-1 border-t pt-1 ${density.row}`}
                         >
                           <span className="truncate" title={position}>
                             {positionShort[position] ?? position}
@@ -177,7 +204,9 @@ export default function DutyScheduleViewer({
                           <span className="text-right font-semibold">
                             {row?.assignee?.full_name ?? "Chưa phân công"}
                             <br />
-                            <small className="font-normal text-[10px] leading-tight text-slate-500">
+                            <small
+                              className={`font-normal ${density.meta} text-slate-500`}
+                            >
                               {row?.departments?.name ?? "—"}
                               {row
                                 ? ` · ${statusLabel(row.status)} · Duyệt: ${row.reviewer?.full_name ?? "—"}`
