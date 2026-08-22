@@ -49,7 +49,7 @@ const dueText = (dueDate: string | null, dueTime: string | null) =>
 function FilterFields({ query, departments, basePath = "/tasks" }: Pick<Props, "query" | "departments" | "basePath">) {
   return (
     <>
-      {query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
+      {basePath === "/duty-schedule" ? <input type="hidden" name="scope" value="personal" /> : query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
       {query.category ? <input type="hidden" name="category" value={query.category} /> : null}
       <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm theo tên công việc" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
       <select name="state" defaultValue={query.statusGroup ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
@@ -67,7 +67,7 @@ function FilterFields({ query, departments, basePath = "/tasks" }: Pick<Props, "
       ) : null}
       <div className="flex items-stretch gap-2 sm:col-span-2 lg:col-span-1">
         <button className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white">Lọc</button>
-        <Link href={basePath} className="rounded-lg border px-4 py-2 font-semibold">Đặt lại</Link>
+        <Link href={basePath === "/duty-schedule" ? "/duty-schedule?scope=personal" : basePath} className="rounded-lg border px-4 py-2 font-semibold">Đặt lại</Link>
       </div>
     </>
   );
@@ -80,7 +80,7 @@ export default function TaskCenterShell(props: Props) {
   const onLogout = () => { logout(); router.replace("/login"); };
   const totalPages = Math.max(1, Math.ceil(tasks.total / tasks.pageSize));
   const activeFilters = [query.search, query.taskType, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.status, query.statusGroup, query.deadlineState, query.fromDate, query.toDate, query.departmentId].filter(Boolean).length;
-  const listHref = (patch: Partial<TaskListQuery>) => taskListHref(query, patch).replace(/^\/tasks/, basePath);
+  const listHref = (patch: Partial<TaskListQuery>) => { const href = taskListHref(query, patch).replace(/^\/tasks/, basePath); if (!taskMode) return href; const url = new URL(href, "http://local"); url.searchParams.set("scope", "personal"); return `${url.pathname}?${url.searchParams.toString()}`; };
 
   return (
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
@@ -97,12 +97,12 @@ export default function TaskCenterShell(props: Props) {
           </header>
 
           <>
-              {!taskMode ? <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
+              {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
                 {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"]].map(([scope,label]) => (
                   <Link key={scope} href={listHref({ scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
                 ))}
                 <Link href={listHref({ scope: "cancelled", page: 1 })} className={tabClass(query.scope === "cancelled")}>Đã hủy</Link>
-              </nav> : null}
+              </nav>}
 
               <details className="mt-3 rounded-xl border bg-white p-3 shadow-sm md:hidden">
                 <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>

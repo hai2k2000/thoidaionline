@@ -2,13 +2,16 @@ import assert from "node:assert/strict"; import { readFileSync } from "node:fs";
 const migration = readFileSync("supabase/migrations/20260821150000_monthly_duty_tasks.sql", "utf8"); const repo = readFileSync("src/lib/taskRepository.ts", "utf8"); const filters = readFileSync("src/lib/taskFilters.mjs", "utf8"); const shell = readFileSync("src/components/TaskCenterShell.tsx", "utf8");
 test("duty tasks are evaluation-visible and categorized", () => { assert.match(migration, /task_category/); assert.match(migration, /api_create_duty_task/); assert.match(repo, /task_category/); }); test("task center excludes duty tasks from the general list", () => { assert.match(filters, /category/); assert.match(repo, /neq\("task_category", "duty"\)/); assert.doesNotMatch(shell, />Trực sản xuất</); });
 
-test("personal duty schedule is separate from the organization schedule", () => {
+test("personal and organization duty schedules share one viewer filter", () => {
   const nav = readFileSync("src/components/phase2Navigation.ts", "utf8");
   const route = readFileSync("src/app/api/duty-schedule/route.ts", "utf8");
-  const page = readFileSync("src/app/my-duty-schedule/page.tsx", "utf8");
-  assert.match(nav, /my-duty-schedule/);
+  const viewer = readFileSync("src/components/DutyScheduleViewer.tsx", "utf8");
+  const page = readFileSync("src/app/duty-schedule/page.tsx", "utf8");
+  assert.doesNotMatch(nav, /my-duty-schedule/);
   assert.match(route, /mine \? guard\.actor\.id/);
-  assert.match(page, /category: "duty"/);
+  assert.match(viewer, /Toàn cơ quan/);
+  assert.match(viewer, />Cá nhân/);
+  assert.match(page, /scope !== "personal"/);
   assert.match(page, /taskMode/);
 });
 

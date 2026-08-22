@@ -10,7 +10,7 @@ export type Phase2NavigationAccess = {
 };
 
 export type Phase2NavigationItem = {
-  id: "assign" | "duty-schedule" | "my-duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
+  id: "assign" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
     | "permissions" | "evaluation-rubrics" | "evaluation-cycles";
   href: string;
 };
@@ -33,7 +33,6 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
-      { id: "my-duty-schedule", href: "/my-duty-schedule" },
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
       ...((access.canEvaluateStep1 && access.isDepartmentManager)

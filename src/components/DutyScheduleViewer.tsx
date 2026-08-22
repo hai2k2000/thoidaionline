@@ -4,6 +4,7 @@ import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { scheduleRange } from "@/lib/dutyScheduleRange.mjs";
+import Link from "next/link";
 type Row = {
   id: string;
   due_date: string;
@@ -35,11 +36,9 @@ const positionShort: Record<string, string> = {
 export default function DutyScheduleViewer({
   userLabel,
   initialView,
-  personal = false,
 }: {
   userLabel: string;
   initialView: "day" | "week" | "month";
-  personal?: boolean;
 }) {
   const router = useRouter();
   const { logout } = useAuth();
@@ -54,11 +53,11 @@ export default function DutyScheduleViewer({
   const [rows, setRows] = useState<Row[]>([]);
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);
   useEffect(() => {
-    fetch(`/api/duty-schedule?from=${range.from}&to=${range.to}${personal ? "&mine=1" : ""}`)
+    fetch(`/api/duty-schedule?from=${range.from}&to=${range.to}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then((body) => setRows(body.rows ?? []))
       .catch(() => setRows([]));
-  }, [personal, range.from, range.to]);
+  }, [range.from, range.to]);
   const byDate = useMemo(
     () =>
       new Map(
@@ -119,7 +118,7 @@ export default function DutyScheduleViewer({
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
       <div className="flex w-full flex-col gap-4 lg:flex-row">
         <AppNav
-          currentPath={personal ? "/my-duty-schedule" : "/duty-schedule"}
+          currentPath="/duty-schedule"
           userLabel={userLabel}
           onLogout={() => {
             logout();
@@ -128,13 +127,17 @@ export default function DutyScheduleViewer({
         />
         <main className="min-w-0 flex-1">
           <header className="rounded-xl border bg-white p-4 shadow-sm">
-            <h1 className="text-2xl font-bold">{personal ? "LỊCH TRỰC CÁ NHÂN" : "LỊCH TRỰC TOÀN CƠ QUAN"}</h1>
+            <h1 className="text-2xl font-bold">LỊCH TRỰC</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Lịch trực toàn cơ quan.
+              Xem lịch trực cá nhân hoặc lịch trực toàn cơ quan.
             </p>
           </header>
           <section className="mt-4 rounded-xl border bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
+              <div className="mr-2 flex rounded-lg border border-orange-200 bg-white p-1" aria-label="Phạm vi lịch trực">
+                <span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Toàn cơ quan</span>
+                <Link href="/duty-schedule?scope=personal" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Cá nhân</Link>
+              </div>
               <button
                 className="rounded border px-3 py-2"
                 onClick={() => shift(-1)}
