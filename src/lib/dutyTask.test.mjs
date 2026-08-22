@@ -84,3 +84,5 @@ test("organization schedule GET is authenticated, bounded and read-only", () => 
   assert.match(repository, /neq\("status", "cancelled"\)/);
   assert.match(repository, /assignee:staff_users/);
 });
+
+test("duty roster RPC enforces 22:00 deadline with service-role-only ACL", () => { const sql = readFileSync("supabase/migrations/20260822090000_duty_deadline_2200.sql", "utf8"); assert.match(sql, /22:00/); assert.doesNotMatch(sql, /17:00/); assert.match(sql, /due_time=time .22:00./); assert.match(sql, /revoke all on function public\.api_save_monthly_duty_roster/); assert.match(sql, /grant execute on function public\.api_save_monthly_duty_roster.*service_role/); });
