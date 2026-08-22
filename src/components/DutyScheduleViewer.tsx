@@ -36,9 +36,11 @@ const positionShort: Record<string, string> = {
 export default function DutyScheduleViewer({
   userLabel,
   initialView,
+  initialScope = "organization",
 }: {
   userLabel: string;
   initialView: "day" | "week" | "month";
+  initialScope?: "organization" | "personal";
 }) {
   const router = useRouter();
   const { logout } = useAuth();
@@ -51,13 +53,14 @@ export default function DutyScheduleViewer({
   const [view, setView] = useState<"day" | "week" | "month">(initialView);
   const [anchor, setAnchor] = useState(new Date().toISOString().slice(0, 10));
   const [rows, setRows] = useState<Row[]>([]);
+  const scope = initialScope;
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);
   useEffect(() => {
-    fetch(`/api/duty-schedule?from=${range.from}&to=${range.to}`)
+    fetch(`/api/duty-schedule?from=${range.from}&to=${range.to}${scope === "personal" ? "&mine=1" : ""}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then((body) => setRows(body.rows ?? []))
       .catch(() => setRows([]));
-  }, [range.from, range.to]);
+  }, [range.from, range.to, scope]);
   const byDate = useMemo(
     () =>
       new Map(
@@ -135,8 +138,8 @@ export default function DutyScheduleViewer({
           <section className="mt-4 rounded-xl border bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
               <div className="mr-2 flex rounded-lg border border-orange-200 bg-white p-1" aria-label="Phạm vi lịch trực">
-                <span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Toàn cơ quan</span>
-                <Link href="/duty-schedule?scope=personal" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Cá nhân</Link>
+                <Link href="/duty-schedule" className={`rounded-md px-3 py-1.5 text-sm font-semibold ${scope === "organization" ? "bg-orange-500 text-white" : "text-slate-600"}`}>Toàn cơ quan</Link>
+                <Link href="/duty-schedule?scope=personal" className={`rounded-md px-3 py-1.5 text-sm font-semibold ${scope === "personal" ? "bg-orange-500 text-white" : "text-slate-600"}`}>Cá nhân</Link>
               </div>
               <button
                 className="rounded border px-3 py-2"
