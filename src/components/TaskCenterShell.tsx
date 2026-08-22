@@ -96,7 +96,6 @@ export default function TaskCenterShell(props: Props) {
                 {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"]].map(([scope,label]) => (
                   <Link key={scope} href={taskListHref(query, { scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
                 ))}
-                <Link href={taskListHref(query, { category: query.category === "duty" ? null : "duty", page: 1 })} className={tabClass(query.category === "duty")}>Trực sản xuất</Link>
                 <Link href={taskListHref(query, { scope: "cancelled", page: 1 })} className={tabClass(query.scope === "cancelled")}>Đã hủy</Link>
               </nav>
 

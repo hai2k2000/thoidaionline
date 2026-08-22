@@ -1,6 +1,15 @@
 import assert from "node:assert/strict"; import { readFileSync } from "node:fs"; import test from "node:test";
 const migration = readFileSync("supabase/migrations/20260821150000_monthly_duty_tasks.sql", "utf8"); const repo = readFileSync("src/lib/taskRepository.ts", "utf8"); const filters = readFileSync("src/lib/taskFilters.mjs", "utf8"); const shell = readFileSync("src/components/TaskCenterShell.tsx", "utf8");
-test("duty tasks are evaluation-visible and categorized", () => { assert.match(migration, /task_category/); assert.match(migration, /api_create_duty_task/); assert.match(repo, /task_category/); }); test("task center supports duty filter", () => { assert.match(filters, /category/); assert.match(repo, /query.category/); assert.match(shell, />Trực sản xuất</); });
+test("duty tasks are evaluation-visible and categorized", () => { assert.match(migration, /task_category/); assert.match(migration, /api_create_duty_task/); assert.match(repo, /task_category/); }); test("task center excludes duty tasks from the general list", () => { assert.match(filters, /category/); assert.match(repo, /neq\("task_category", "duty"\)/); assert.doesNotMatch(shell, />Trực sản xuất</); });
+
+test("personal duty schedule is separate from the organization schedule", () => {
+  const nav = readFileSync("src/components/phase2Navigation.ts", "utf8");
+  const route = readFileSync("src/app/api/duty-schedule/route.ts", "utf8");
+  const page = readFileSync("src/app/my-duty-schedule/page.tsx", "utf8");
+  assert.match(nav, /my-duty-schedule/);
+  assert.match(route, /mine \? guard\.actor\.id/);
+  assert.match(page, /personal/);
+});
 
 test("each duty day requires four mandatory positions", () => { const positions = readFileSync("src/lib/dutyRoster.mjs", "utf8"); for (const position of ["Biên tập và xuất bản","Biên tập bước 2","Biên tập bước 1","Phóng viên"]) assert.match(positions, new RegExp(position)); assert.match(readFileSync("supabase/migrations/20260822070000_monthly_duty_roster.sql", "utf8"), /each duty day requires four positions/); });
 

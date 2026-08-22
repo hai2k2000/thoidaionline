@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const from = params.get("from") ?? "";
   const to = params.get("to") ?? "";
+  const mine = params.get("mine") === "1";
   if (!pattern.test(from) || !pattern.test(to))
     return apiError("invalid_request", 400);
   const start = new Date(`${from}T12:00:00Z`);
@@ -20,6 +21,6 @@ export async function GET(request: Request) {
   const days = Math.round((end.valueOf() - start.valueOf()) / 86400000) + 1;
   if (!Number.isFinite(days) || days < 1 || days > MAX_RANGE_DAYS)
     return apiError("invalid_request", 400);
-  const result = await dutyTaskRepository.schedule(from, to);
+  const result = await dutyTaskRepository.schedule(from, to, mine ? guard.actor.id : undefined);
   return result.ok ? apiJson({ rows: result.rows }) : rpcFailure(result.error);
 }

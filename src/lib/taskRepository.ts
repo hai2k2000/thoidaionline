@@ -172,6 +172,7 @@ export const taskRepository: TaskRepository = {
       dbQuery = dbQuery.eq("status", "cancelled");
     }
     if (query.category === "duty") dbQuery = dbQuery.eq("task_category", "duty");
+    else dbQuery = dbQuery.neq("task_category", "duty");
     if (query.taskType === "personal") {
       dbQuery = dbQuery.or(
         "task_type.eq.personal,and(task_type.is.null,plan_period.in.(daily,weekly,monthly))",

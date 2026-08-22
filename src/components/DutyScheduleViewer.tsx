@@ -35,9 +35,11 @@ const positionShort: Record<string, string> = {
 export default function DutyScheduleViewer({
   userLabel,
   initialView,
+  personal = false,
 }: {
   userLabel: string;
   initialView: "day" | "week" | "month";
+  personal?: boolean;
 }) {
   const router = useRouter();
   const { logout } = useAuth();
@@ -52,11 +54,11 @@ export default function DutyScheduleViewer({
   const [rows, setRows] = useState<Row[]>([]);
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);
   useEffect(() => {
-    fetch(`/api/duty-schedule?from=${range.from}&to=${range.to}`)
+    fetch(`/api/duty-schedule?from=${range.from}&to=${range.to}${personal ? "&mine=1" : ""}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then((body) => setRows(body.rows ?? []))
       .catch(() => setRows([]));
-  }, [range.from, range.to]);
+  }, [personal, range.from, range.to]);
   const byDate = useMemo(
     () =>
       new Map(
@@ -117,7 +119,7 @@ export default function DutyScheduleViewer({
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
       <div className="flex w-full flex-col gap-4 lg:flex-row">
         <AppNav
-          currentPath="/duty-schedule"
+          currentPath={personal ? "/my-duty-schedule" : "/duty-schedule"}
           userLabel={userLabel}
           onLogout={() => {
             logout();
@@ -126,7 +128,7 @@ export default function DutyScheduleViewer({
         />
         <main className="min-w-0 flex-1">
           <header className="rounded-xl border bg-white p-4 shadow-sm">
-            <h1 className="text-2xl font-bold">LỊCH TRỰC</h1>
+            <h1 className="text-2xl font-bold">{personal ? "LỊCH TRỰC CÁ NHÂN" : "LỊCH TRỰC TOÀN CƠ QUAN"}</h1>
             <p className="mt-1 text-sm text-slate-600">
               Lịch trực toàn cơ quan.
             </p>
