@@ -26,6 +26,12 @@ const positions = [
   "Phóng viên",
 ];
 const labels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const formatDateVi = (iso: string) => {
+  const [year, month, day] = iso.split("-");
+  return year && month && day
+    ? day + String.fromCharCode(47) + month + String.fromCharCode(47) + year
+    : iso;
+};
 const positionShort: Record<string, string> = {
   "Biên tập và xuất bản": "BT xuất bản",
   "Biên tập bước 2": "BT bước 2",
@@ -151,7 +157,8 @@ export default function DutyScheduleViewer({
                   className={`rounded-lg border p-2 ${[0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()) ? "bg-orange-50" : "bg-white"}`}
                 >
                   <h2 className="truncate text-xs font-bold" title={date}>
-                    {date} · {labels[new Date(`${date}T12:00:00Z`).getUTCDay()]}{" "}
+                    {formatDateVi(date)} ·{" "}
+                    {labels[new Date(`${date}T12:00:00Z`).getUTCDay()]}{" "}
                     {date === today ? "· Hôm nay" : ""}
                   </h2>
                   <div className="mt-1 space-y-1">
