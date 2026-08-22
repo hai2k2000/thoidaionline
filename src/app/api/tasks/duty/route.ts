@@ -1,42 +1,50 @@
-import { apiError, apiJson, readJsonObject, requireMutationActor, rpcFailure } from "@/lib/serverApi";
+import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
 import { dutyTaskRepository } from "@/lib/dutyTaskRepository";
 
-const dutyPositions = new Set([
-  "Biên tập và xuất bản",
-  "Biên tập bước 2",
-  "Biên tập bước 1",
-  "Phóng viên",
-]);
+const positions = ["Biên tập và xuất bản", "Biên tập bước 2", "Biên tập bước 1", "Phóng viên"];
+const positionSet = new Set(positions);
+const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export async function GET(request: Request) {
+  const guard = await requireReadActor();
+  if (!guard.ok) return guard.response;
+  if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
+  const params = new URL(request.url).searchParams;
+  const month = params.get("month") ?? "";
+  const departmentId = params.get("departmentId") ?? undefined;
+  if (!monthPattern.test(month)) return apiError("invalid_request", 400);
+  const result = await dutyTaskRepository.month(month, departmentId);
+  return result.ok ? apiJson({ rows: result.rows }) : rpcFailure(result.error);
+}
 
 export async function POST(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
   if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
   const body = await readJsonObject(request);
-  const rows = Array.isArray(body?.rows) ? body.rows : [];
-  if (!rows.length || rows.length > 1000 || rows.length % 4 !== 0) return apiError("invalid_request", 400);
-  const uniqueAssignments = new Set<string>();
-  for (const row of rows) {
-    if (!row || typeof row !== "object") return apiError("invalid_request", 400);
-    const input = row as Record<string, unknown>;
-    const values = ["title", "description", "departmentId", "assigneeId", "reviewerId", "dueDate", "dueTime", "dutyMonth", "dutyPosition"];
-    if (values.some((key) => typeof input[key] !== "string" || !(input[key] as string).trim())) return apiError("invalid_request", 400);
-    if (!dutyPositions.has(input.dutyPosition as string)) return apiError("invalid_request", 400);
-    if (!/^\d{4}-\d{2}$/.test(input.dutyMonth as string) || !(input.dueDate as string).startsWith(`${input.dutyMonth}-`)) return apiError("invalid_request", 400);
-    const assignmentKey = `${input.dueDate}:${input.dutyPosition}`;
-    if (uniqueAssignments.has(assignmentKey)) return apiError("invalid_request", 409);
-    uniqueAssignments.add(assignmentKey);
+  const month = typeof body?.month === "string" ? body.month : "";
+  const departmentId = typeof body?.departmentId === "string" ? body.departmentId : "";
+  const reviewerId = typeof body?.reviewerId === "string" ? body.reviewerId : "";
+  const days = Array.isArray(body?.days) ? body.days : null;
+  if (!monthPattern.test(month) || !departmentId || !reviewerId || !days || days.length > 31) return apiError("invalid_request", 400);
+  const dates = new Set<string>();
+  for (const value of days) {
+    if (!value || typeof value !== "object") return apiError("invalid_request", 400);
+    const day = value as Record<string, unknown>;
+    const date = typeof day.date === "string" ? day.date : "";
+    const assignments = Array.isArray(day.assignments) ? day.assignments : [];
+    if (!date.startsWith(`${month}-`) || dates.has(date) || assignments.length !== 4) return apiError("invalid_request", 400);
+    dates.add(date);
+    const seen = new Set<string>();
+    for (const value of assignments) {
+      if (!value || typeof value !== "object") return apiError("invalid_request", 400);
+      const assignment = value as Record<string, unknown>;
+      const position = typeof assignment.position === "string" ? assignment.position : "";
+      const assigneeId = typeof assignment.assigneeId === "string" ? assignment.assigneeId : "";
+      if (!positionSet.has(position) || !assigneeId || seen.has(position)) return apiError("invalid_request", 400);
+      seen.add(position);
+    }
   }
-  const dates = new Set(rows.map((row) => (row as Record<string, unknown>).dueDate as string));
-  for (const date of dates) {
-    const positions = new Set(rows.filter((row) => (row as Record<string, unknown>).dueDate === date).map((row) => (row as Record<string, unknown>).dutyPosition));
-    if (positions.size !== dutyPositions.size) return apiError("invalid_request", 400);
-  }
-  const created: string[] = [];
-  for (const row of rows) {
-    const result = await dutyTaskRepository.create(guard.actor.id, row as never);
-    if (!result.ok) return rpcFailure(result.error);
-    created.push(result.id);
-  }
-  return apiJson({ created }, 201);
+  const result = await dutyTaskRepository.save(guard.actor.id, { month, departmentId, reviewerId, days: days as never });
+  return result.ok ? apiJson({ summary: result.summary }) : rpcFailure(result.error);
 }
