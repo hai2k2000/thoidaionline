@@ -26,6 +26,13 @@ export const dutyTaskRepository = {
     const { data, error } = await query;
     return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
   },
+  async schedule(from: string, to: string) {
+    const { data, error } = await serverSupabase.from("tasks")
+      .select("id,due_date,due_time,duty_position,assignee_id,reviewer_id,status,departments(name),assignee:staff_users!tasks_assignee_id_fkey(full_name),reviewer:staff_users!tasks_reviewer_id_fkey(full_name)")
+      .eq("task_category", "duty").neq("status", "cancelled")
+      .gte("due_date", from).lte("due_date", to).order("due_date").order("duty_position");
+    return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
+  },
   async save(actorId: string, input: { month: string; departmentId: string; reviewerId: string; days: { date: string; assignments: { position: string; assigneeId: string }[] }[] }) {
     const { data, error } = await serverSupabase.rpc("api_save_monthly_duty_roster", {
       p_actor: actorId, p_duty_month: `${input.month}-01`, p_department_id: input.departmentId,

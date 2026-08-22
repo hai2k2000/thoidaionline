@@ -57,3 +57,30 @@ test("roster month end uses valid PostgreSQL interval arithmetic", () => {
   assert.match(sql, /interval '1 month' - interval '1 day'/);
   assert.doesNotMatch(sql, /interval '1 month-1 day'/);
 });
+
+test("duty IA separates admin configuration from organization viewer", () => {
+  const nav = readFileSync("src/components/phase2Navigation.ts", "utf8");
+  const legacy = readFileSync("src/app/tasks/duty/page.tsx", "utf8");
+  const admin = readFileSync("src/app/configuration/duty-roster/page.tsx", "utf8");
+  assert.match(nav, /duty-schedule/);
+  assert.match(nav, /duty-roster/);
+  assert.match(legacy, /redirect\("\/configuration\/duty-roster"\)/);
+  assert.match(admin, /role_code !== "admin"/);
+});
+
+test("viewer ranges are day week month bounded and use local calendar dates", async () => {
+  const { scheduleRange } = await import("./dutyScheduleRange.mjs");
+  assert.deepEqual(scheduleRange("day", "2026-08-22"), { from: "2026-08-22", to: "2026-08-22" });
+  assert.deepEqual(scheduleRange("week", "2026-08-22"), { from: "2026-08-17", to: "2026-08-23" });
+  assert.deepEqual(scheduleRange("month", "2028-02-10"), { from: "2028-02-01", to: "2028-02-29" });
+});
+
+test("organization schedule GET is authenticated, bounded and read-only", () => {
+  const route = readFileSync("src/app/api/duty-schedule/route.ts", "utf8");
+  const repository = readFileSync("src/lib/dutyTaskRepository.ts", "utf8");
+  assert.match(route, /requireReadActor/);
+  assert.match(route, /MAX_RANGE_DAYS/);
+  assert.doesNotMatch(route, /export async function POST/);
+  assert.match(repository, /neq\("status", "cancelled"\)/);
+  assert.match(repository, /assignee:staff_users/);
+});

@@ -10,7 +10,7 @@ export type Phase2NavigationAccess = {
 };
 
 export type Phase2NavigationItem = {
-  id: "assign" | "duty" | "tasks" | "evaluations" | "account" | "users" | "departments"
+  id: "assign" | "duty-schedule" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
     | "permissions" | "evaluation-rubrics" | "evaluation-cycles";
   href: string;
 };
@@ -30,10 +30,10 @@ export function getPhase2Navigation(
       ...(access.canAssignTask
         ? [
             { id: "assign", href: "/tasks/assign" } as const,
-            ...(access.roleCode === "admin" ? [{ id: "duty", href: "/tasks/duty" } as const] : []),
           ]
         : []),
       { id: "tasks", href: "/tasks" },
+      { id: "duty-schedule", href: "/duty-schedule" },
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
         || (access.roleCode === "tong_bien_tap" && access.canEvaluateStep2)
         ? [{ id: "evaluations", href: "/evaluations" } as const]
@@ -41,6 +41,7 @@ export function getPhase2Navigation(
     ],
     account: [{ id: "account", href: "/account" }],
     configuration: [
+      ...(access.roleCode === "admin" ? [{ id: "duty-roster", href: "/configuration/duty-roster" } as const] : []),
       ...(access.roleCode === "admin" && access.canManageUsers
         ? [
             { id: "users", href: "/users" } as const,
