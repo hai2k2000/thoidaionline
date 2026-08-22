@@ -11,6 +11,7 @@ import {
   normalizePermissions,
   type PermissionSet,
 } from "@/lib/permissions";
+import { normalizeAccountPreferences, type AccountPreferences } from "@/lib/accountPreferences";
 
 export const SESSION_COOKIE = "thoidai_work_session";
 
@@ -27,6 +28,8 @@ export type ServerAuthUser = {
   active: boolean;
   is_department_manager: boolean;
   permissions: PermissionSet;
+  avatar_url: string | null;
+  preferences: AccountPreferences;
 };
 
 function secret() {
@@ -52,7 +55,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   const { data, error } = await serverSupabase
     .from("staff_users")
     .select(
-      "id,full_name,email,phone,username,department_id,job_title_id,active,session_version," +
+      "id,full_name,email,phone,username,department_id,job_title_id,active,session_version,avatar_path,preferences," +
       `roles(code,name,level${roleLifecycleEnabled ? ",active" : ""},role_permissions(` +
       "can_manage_users,can_manage_permissions,can_create_task," +
       "can_edit_all_tasks,can_comment,can_assign_task," +
@@ -74,6 +77,8 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     job_titles: { code: string } | null;
     active: boolean;
     session_version: number;
+    avatar_path: string | null;
+    preferences: unknown;
     roles: {
       code: string;
       name: string;
@@ -85,6 +90,9 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   if (session.sessionVersion !== row.session_version) return null;
   if (!row.roles || (roleLifecycleEnabled && row.roles.active !== true)) return null;
   const isDepartmentManager = row.job_titles?.code === "truong_phong";
+  const avatarResult = row.avatar_path
+    ? await serverSupabase.storage.from("profile-avatars").createSignedUrl(row.avatar_path, 3600)
+    : null;
 
   return {
     id: row.id,
@@ -99,6 +107,8 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     active: row.active,
     is_department_manager: isDepartmentManager,
     permissions: normalizePermissions(row.roles.role_permissions),
+    avatar_url: avatarResult?.data?.signedUrl ?? null,
+    preferences: normalizeAccountPreferences(row.preferences),
   };
 }
 

@@ -15,10 +15,10 @@ const fmt = (iso: string) => {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 };
-export default function OnlineWorkViewer({ userLabel }: { userLabel: string }) {
+export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel: string; initialView: "day" | "week" | "month" }) {
   const router = useRouter();
   const { logout } = useAuth();
-  const [view, setView] = useState<"day" | "week" | "month">("month");
+  const [view, setView] = useState<"day" | "week" | "month">(initialView);
   const [anchor, setAnchor] = useState(new Date().toISOString().slice(0, 10));
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);
   const [rows, setRows] = useState<Row[]>([]);

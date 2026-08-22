@@ -34,8 +34,10 @@ const positionShort: Record<string, string> = {
 };
 export default function DutyScheduleViewer({
   userLabel,
+  initialView,
 }: {
   userLabel: string;
+  initialView: "day" | "week" | "month";
 }) {
   const router = useRouter();
   const { logout } = useAuth();
@@ -45,7 +47,7 @@ export default function DutyScheduleViewer({
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-  const [view, setView] = useState<"day" | "week" | "month">("month");
+  const [view, setView] = useState<"day" | "week" | "month">(initialView);
   const [anchor, setAnchor] = useState(new Date().toISOString().slice(0, 10));
   const [rows, setRows] = useState<Row[]>([]);
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);

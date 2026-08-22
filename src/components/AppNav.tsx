@@ -10,6 +10,7 @@ import HelpBot from "@/components/HelpBot";
 type AppNavProps = {
   currentPath: string;
   userLabel?: string;
+  avatarUrl?: string | null;
   onLogout: () => void;
 };
 
@@ -50,12 +51,14 @@ function NavContent({
   onNavigate,
   onLogout,
   userLabel,
+  avatarUrl,
 }: {
   currentPath: string;
   navigation: Phase2Navigation;
   onNavigate: () => void;
   onLogout: () => void;
   userLabel?: string;
+  avatarUrl?: string | null;
 }) {
   return (
     <div className="flex h-full flex-col p-3">
@@ -98,9 +101,11 @@ function NavContent({
       ) : null}
 
       <div className="mt-auto border-t border-slate-200 pt-4">
-        <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2">
+        <div className="mb-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-orange-100 text-xs font-bold text-orange-700">{avatarUrl ? <img src={avatarUrl} alt="Ảnh đại diện" className="h-full w-full object-cover" /> : (userLabel?.trim().charAt(0).toUpperCase() ?? "?")}</span><div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Đang đăng nhập</p>
           <p className="mt-0.5 truncate text-sm font-semibold text-slate-700">{userLabel ?? "-"}</p>
+          </div>
         </div>
         {navigation.account.map((item) => (
           <Link
@@ -203,6 +208,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
           onNavigate={() => undefined}
           onLogout={onLogout}
           userLabel={userLabel}
+          avatarUrl={user?.avatar_url}
         />
       </div>
 
@@ -228,6 +234,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
               onNavigate={restoreMenuFocus}
               onLogout={onLogout}
               userLabel={userLabel}
+              avatarUrl={user?.avatar_url}
             />
           </div>
         </>

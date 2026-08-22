@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRoleAccessPolicy } from "@/components/appNavState";
 import type { PermissionKey, PermissionSet } from "@/lib/permissions";
+import type { AccountPreferences } from "@/lib/accountPreferences";
 
 type AuthUser = {
   id: string;
@@ -14,6 +15,8 @@ type AuthUser = {
   active: boolean;
   is_department_manager: boolean;
   permissions: PermissionSet;
+  avatar_url: string | null;
+  preferences: AccountPreferences;
 };
 
 type ModuleKey = "hr" | "assets" | "documents" | "performance";
@@ -27,6 +30,7 @@ type AuthContextType = {
   canAccessModule: (module: ModuleKey) => boolean;
   isReadOnly: () => boolean;
   canViewAllWorkHr: () => boolean;
+  refreshSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -62,6 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 0);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("compact-mode", user?.preferences.compactMode === true);
+    document.documentElement.classList.toggle("reduce-motion", user?.preferences.reduceMotion === true);
+  }, [user?.preferences]);
 
   const login = async (identifier: string, password: string) => {
     const response = await fetch("/api/auth/login", {
@@ -155,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         canAccessModule,
         isReadOnly,
         canViewAllWorkHr,
+        refreshSession: loadSession,
       }}
     >
       {children}

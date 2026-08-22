@@ -62,6 +62,10 @@ table {
   border-collapse: collapse;
 }
 
+.compact-mode main :where(section, header) { padding: 0.75rem !important; }
+.compact-mode main { gap: 0.75rem !important; }
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+
 /* Fresh blue theme for tables */
 .table-soft-red thead {
   background: linear-gradient(180deg, var(--fresh-blue-50) 0%, #e0f2fe 100%);
