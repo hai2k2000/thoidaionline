@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { completeRows, monthDays, DUTY_POSITIONS } from "@/lib/dutyRoster.mjs";
+import { isForeignReporter, reporterRoleLabel } from "@/lib/onlineWorkLanguage.mjs";
 type Person = { id: string; username: string; full_name: string; department_id: string | null; job_title_code: string | null; role_code?: string | null; is_department_manager?: boolean };
 type Department = { id: string; code?: string; name: string; manager_id: string | null };
 type Day = ReturnType<typeof monthDays>[number];
@@ -24,9 +25,9 @@ export default function DutyTaskShell({ userLabel, people, departments }: { user
   const eligible = (position: string) => {
     if (position === "Biên tập và xuất bản") return people.filter((p) => ["tong_bien_tap", "pho_tong_bien_tap"].includes(p.job_title_code ?? ""));
     if (["Biên tập bước 2", "Biên tập bước 1"].includes(position)) return people.filter((p) => ["leson", "triduong", "thihung"].includes(p.username.toLowerCase()));
-    return scopedPeople.filter((p) => ["phong_vien", "truong_phong"].includes(p.job_title_code ?? ""));
+    return scopedPeople.filter((p) => ["phong_vien", "truong_phong"].includes(p.job_title_code ?? "") && (p.job_title_code !== "phong_vien" || !isForeignReporter(p.username)));
   };
-  const personLabel = (person: Person) => person.username + " (" + person.full_name + ")";
+  const personLabel = (person: Person) => person.username + " (" + person.full_name + ")" + (person.job_title_code === "phong_vien" ? " · " + reporterRoleLabel(person.username) : "");
   const update = (index: number, position: string, value: string) => setDays((current) => current.map((day, i) => i === index ? { ...day, assignments: { ...day.assignments, [position]: value } } : day));
   const complete = useMemo(() => completeRows(days, DUTY_POSITIONS), [days]);
   const save = async () => { if (!departmentId || !reviewerId) return notify("error", "Hãy chọn phòng ban và người duyệt."); setBusy(true); try { const response = await fetch("/api/tasks/duty", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ month, departmentId, reviewerId, days: complete.map((day: Day) => ({ date: day.date, assignments: DUTY_POSITIONS.map((position) => ({ position, assigneeId: day.assignments[position] })) })) }) }); if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể lưu lịch trực.")); setBaseline(JSON.stringify(days)); notify("success", `Đã lưu ${complete.length} ngày trực nguyên tử.`); router.refresh(); } catch (e) { notify("error", errorMessage(e, "Không thể lưu lịch trực.")); } finally { setBusy(false); } };
