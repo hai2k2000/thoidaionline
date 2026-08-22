@@ -22,10 +22,10 @@ export async function POST(request: Request) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (!format.signature.every((value, index) => bytes[index] === value) || (file.type === "image/webp" && String.fromCharCode(...bytes.slice(8, 12)) !== "WEBP")) return json({ error: "Nội dung tệp không đúng định dạng ảnh." }, 400);
   const path = `${actor.id}/avatar.${format.extension}`;
-  const { error: uploadError } = await bucket.upload(path, bytes, { contentType: file.type, upsert: true, cacheControl: "3600" });
-  if (uploadError) return json({ error: "Không thể tải ảnh đại diện lên." }, 500);
+  const { error: uploadError } = await bucket.upload(path, Buffer.from(bytes), { contentType: file.type, upsert: true, cacheControl: "3600" });
+  if (uploadError) { console.error("[account/avatar] storage upload failed", { status: uploadError.status, code: uploadError.statusCode }); return json({ error: "Không thể lưu ảnh vào kho lưu trữ. Vui lòng thử lại." }, 500); }
   const { error: updateError } = await serverSupabase.from("staff_users").update({ avatar_path: path }).eq("id", actor.id).eq("active", true);
-  if (updateError) { await bucket.remove([path]); return json({ error: "Không thể lưu ảnh đại diện." }, 500); }
+  if (updateError) { console.error("[account/avatar] profile update failed", { code: updateError.code }); await bucket.remove([path]); return json({ error: "Ảnh đã tải lên nhưng chưa thể lưu vào hồ sơ. Vui lòng thử lại." }, 500); }
   await bucket.remove(["jpg", "png", "webp"].filter((item) => item !== format.extension).map((item) => `${actor.id}/avatar.${item}`));
   const signed = await bucket.createSignedUrl(path, 3600);
   return json({ ok: true, avatarUrl: signed.data?.signedUrl ?? null, message: "Đã cập nhật ảnh đại diện." });
