@@ -13,12 +13,6 @@ type Row = {
   assignee: { full_name: string | null } | null;
   reviewer: { full_name: string | null } | null;
 };
-const statusLabel = (status: string) =>
-  status === "done"
-    ? "Đã hoàn thành"
-    : status === "pending_review"
-      ? "Chờ duyệt"
-      : "Đang hiệu lực";
 const positions = [
   "Biên tập và xuất bản",
   "Biên tập bước 2",
@@ -132,7 +126,7 @@ export default function DutyScheduleViewer({
           <header className="rounded-xl border bg-white p-4 shadow-sm">
             <h1 className="text-2xl font-bold">LỊCH TRỰC</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Lịch trực toàn cơ quan · Chỉ hiển thị phân công đang hiệu lực.
+              Lịch trực toàn cơ quan.
             </p>
           </header>
           <section className="mt-4 rounded-xl border bg-white p-4 shadow-sm">
@@ -208,9 +202,6 @@ export default function DutyScheduleViewer({
                               className={`font-normal ${density.meta} text-slate-500`}
                             >
                               {row?.departments?.name ?? "—"}
-                              {row
-                                ? ` · ${statusLabel(row.status)} · Duyệt: ${row.reviewer?.full_name ?? "—"}`
-                                : ""}
                             </small>
                           </span>
                         </div>
