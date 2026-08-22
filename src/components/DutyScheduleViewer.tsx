@@ -175,7 +175,7 @@ export default function DutyScheduleViewer({
               {dayCards.map(([date, items]) => (
                 <article
                   key={date}
-                  className={`${density.card} ${[0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()) ? "bg-orange-50" : "bg-white"}`}
+                  className={`${density.card} ${[0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()) ? "border-orange-400 bg-orange-50 ring-1 ring-orange-200" : "bg-white"}`}
                 >
                   <h2 className={density.heading} title={date}>
                     {formatDateVi(date)} ·{" "}
