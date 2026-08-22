@@ -65,10 +65,11 @@ Nếu danh sách trống, hãy bấm Đặt lại rồi kiểm tra lại phạm 
     keywords: ["lịch trực", "trực", "ca trực", "biên tập", "xuất bản"],
     text: `Cách dùng lịch trực:
 • Mọi người: vào Lịch trực và xem theo Ngày, Tuần hoặc Tháng.
-• Admin: vào Cấu hình → Quản trị lịch trực, chọn tháng và phân công từng vị trí.
 • Vị trí Phóng viên chỉ có phóng viên tiếng Việt.
 • Hạn nhiệm vụ trực là 22:00 ngày trực.
-• Có thể để trống vị trí chưa xác định, bổ sung sau rồi bấm Lưu.`,
+• Dùng nút Hôm nay hoặc mũi tên để chuyển nhanh đến khoảng thời gian cần xem.
+
+Nếu cần sửa hoặc phân công lịch, vui lòng liên hệ Admin.`,
   },
   {
     title: "Lịch làm online",
@@ -81,11 +82,12 @@ Nếu danh sách trống, hãy bấm Đặt lại rồi kiểm tra lại phạm 
       "tiếng nga",
     ],
     text: `Cách dùng lịch online ngoại ngữ:
-• Mọi người xem tại Lịch làm online theo Ngày, Tuần hoặc Tháng.
-• Admin vào Cấu hình → Quản trị lịch online và chọn tháng.
-• Mỗi ngày mặc định có một ô chọn người.
-• Chọn người đầu tiên rồi bấm + Thêm người nếu cần nhiều người.
-• Không thể chọn trùng; bấm × để bỏ người được thêm rồi Lưu.`,
+• Mở Lịch làm online (ngoại ngữ).
+• Chọn chế độ Ngày, Tuần hoặc Tháng.
+• Dùng nút Hôm nay, mũi tên hoặc ô ngày để chuyển thời gian.
+• Mỗi ngày hiển thị thời gian và toàn bộ phóng viên ngoại ngữ làm online.
+
+Nếu cần thêm, xóa hoặc đổi người trong lịch, vui lòng liên hệ Admin.`,
   },
   {
     title: "Đánh giá nhân viên",
@@ -107,8 +109,7 @@ Nếu không thấy menu, admin cần kiểm tra role và quyền đánh giá c�
 2. Nhập mật khẩu hiện tại, mật khẩu mới và xác nhận.
 3. Bấm Đổi mật khẩu.
 
-Nếu quên: bấm Quên mật khẩu? ở màn hình đăng nhập.
-Admin có thể vào Quản lý nhân viên để đặt mật khẩu mới. Nếu mật khẩu đúng nhưng vẫn không vào được, kiểm tra tài khoản, role quyền và chức vụ có đang hoạt động hay không.`,
+Nếu quên: bấm Quên mật khẩu? ở màn hình đăng nhập. Nếu mật khẩu đúng nhưng vẫn không vào được, hãy liên hệ Admin để kiểm tra tài khoản.`,
   },
   {
     title: "Bình luận và theo dõi",
@@ -136,6 +137,32 @@ const norm = (v: string) =>
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+const adminKeywords = [
+  "admin",
+  "quản trị",
+  "quản lý nhân viên",
+  "quản lý phòng ban",
+  "phân quyền",
+  "role",
+  "tạo user",
+  "tạo tài khoản",
+  "đặt lại mật khẩu cho",
+  "cấu hình hệ thống",
+];
+const isAdminQuestion = (question: string) =>
+  adminKeywords.some((keyword) => norm(question).includes(norm(keyword)));
+const outOfScopeKeywords = [
+  "thời tiết",
+  "bóng đá",
+  "chứng khoán",
+  "nấu ăn",
+  "phim",
+  "tin tức",
+  "tình yêu",
+  "du lịch",
+];
+const isOutOfScope = (question: string) =>
+  outOfScopeKeywords.some((keyword) => norm(question).includes(norm(keyword)));
 const find = (q: string) => {
   const n = norm(q);
   const s = answers
@@ -163,12 +190,18 @@ export default function HelpBot() {
   const ask = (value = question) => {
     const text = value.trim();
     if (!text) return;
-    const answer = find(text);
+    const answer = isAdminQuestion(text) ? null : find(text);
+    const response = isAdminQuestion(text)
+      ? "Nội dung này thuộc công việc của Admin (quản trị nhân sự, phân quyền hoặc cấu hình hệ thống). Vui lòng liên hệ Admin để được xử lý. Tôi có thể hướng dẫn bạn các thao tác sử dụng công việc, tiến độ, lịch xem, đánh giá hoặc tài khoản cá nhân."
+      : isOutOfScope(text)
+        ? "Xin lỗi, tôi chỉ hỗ trợ hướng dẫn sử dụng phần mềm Thời Đại Work. Tôi không có thông tin đáng tin cậy về chủ đề này. Bạn có thể hỏi về giao việc, báo cáo tiến độ, lịch trực, lịch online, đánh giá hoặc tài khoản."
+        : (answer?.text ??
+          `Tôi chưa xác định đúng nội dung. Hãy hỏi cụ thể hơn, ví dụ:\n• Cách giao công việc\n• Cách báo cáo vướng mắc\n• Cách thêm người làm online\n• Vì sao không đăng nhập được`);
     setMessages((cur) => [...cur, { from: "user", text }]);
     setQuestion("");
     setTyping(true);
     setTimeout(() => {
-      setMessages((cur) => [...cur, { from: "bot", text: answer?.text ?? `Tôi chưa xác định đúng nội dung. Hãy hỏi cụ thể hơn, ví dụ:\n• Cách giao công việc\n• Cách báo cáo vướng mắc\n• Cách thêm người làm online\n• Vì sao không đăng nhập được` }]);
+      setMessages((cur) => [...cur, { from: "bot", text: response }]);
       setTyping(false);
       setTimeout(() => end.current?.scrollIntoView({ behavior: "smooth" }), 0);
     }, 650);
@@ -205,7 +238,20 @@ export default function HelpBot() {
                 {m.text}
               </div>
             ))}
-            {typing ? <div role="status" aria-live="polite" className="flex w-fit items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-slate-600"><span>Đang trả lời</span><span aria-hidden="true" className="flex gap-1"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-500 [animation-delay:-0.3s]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-500 [animation-delay:-0.15s]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-500" /></span></div> : null}
+            {typing ? (
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex w-fit items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-slate-600"
+              >
+                <span>Đang trả lời</span>
+                <span aria-hidden="true" className="flex gap-1">
+                  <i className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-500 [animation-delay:-0.3s]" />
+                  <i className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-500 [animation-delay:-0.15s]" />
+                  <i className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-500" />
+                </span>
+              </div>
+            ) : null}
             <div ref={end} />
           </div>
           <div className="flex max-h-24 flex-wrap gap-1 overflow-y-auto border-t px-3 py-2">
@@ -213,7 +259,8 @@ export default function HelpBot() {
               <button
                 key={s.title}
                 type="button"
-                onClick={() => ask(s.title)} disabled={typing}
+                onClick={() => ask(s.title)}
+                disabled={typing}
                 className="rounded-full border px-2 py-1 text-xs text-orange-700"
               >
                 {s.title}
@@ -227,7 +274,8 @@ export default function HelpBot() {
             }}
             className="flex gap-2 border-t p-3"
           >
-            <textarea disabled={typing}
+            <textarea
+              disabled={typing}
               rows={2}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
@@ -235,7 +283,10 @@ export default function HelpBot() {
               aria-label="Câu hỏi cho trợ lý"
               className="min-w-0 flex-1 resize-none rounded-lg border px-3 py-2 text-sm"
             />
-            <button disabled={typing} className="self-end rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            <button
+              disabled={typing}
+              className="self-end rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
               {typing ? "Đợi…" : "Gửi"}
             </button>
           </form>
