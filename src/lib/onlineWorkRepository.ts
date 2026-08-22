@@ -21,7 +21,7 @@ export const onlineWorkRepository = {
       .eq("status", "active").gte("work_date", from).lte("work_date", to).order("work_date");
     return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
   },
-  async save(actorId: string, month: string, days: { date: string; staffId: string }[]) {
+  async save(actorId: string, month: string, days: { date: string; staffIds: string[] }[]) {
     const { data, error } = await serverSupabase.rpc("api_save_monthly_online_work_schedule", {
       p_actor: actorId, p_work_month: `${month}-01`, p_days: days,
     });
