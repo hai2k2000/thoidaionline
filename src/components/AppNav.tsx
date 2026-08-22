@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getPhase2Navigation, type Phase2Navigation } from "@/components/phase2Navigation";
 import { useAuth } from "@/lib/auth";
 import NotificationBell from "@/components/NotificationBell";
+import HelpBot from "@/components/HelpBot";
 
 type AppNavProps = {
   currentPath: string;
@@ -183,6 +184,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
       <div className="fixed right-4 top-4 z-[60]">
         <NotificationBell />
       </div>
+      <HelpBot />
       <button
         ref={menuButtonRef}
         type="button"
