@@ -4,13 +4,13 @@ import { serverSupabase } from "@/lib/serverSupabase";
 export const dutyTaskRepository = {
   async options() {
     const [people, departments] = await Promise.all([
-      serverSupabase.from("staff_users").select("id,full_name,department_id,job_titles(code),roles(code)").eq("active", true).order("full_name"),
+      serverSupabase.from("staff_users").select("id,username,full_name,department_id,job_titles(code),roles(code)").eq("active", true).order("full_name"),
       serverSupabase.from("departments").select("id,code,name,manager_id").eq("active", true).neq("code", "general").order("name"),
     ]);
     if (people.error || departments.error) return { ok: false as const };
     const managerIds = new Set((departments.data ?? []).map((row) => row.manager_id).filter(Boolean));
     return { ok: true as const, people: (people.data ?? []).map((person) => ({
-      id: person.id as string, full_name: person.full_name as string,
+      id: person.id as string, username: person.username as string, full_name: person.full_name as string,
       department_id: person.department_id as string | null,
       job_title_code: (person.job_titles as { code?: string } | null)?.code ?? null,
       role_code: (person.roles as { code?: string } | null)?.code ?? null,
