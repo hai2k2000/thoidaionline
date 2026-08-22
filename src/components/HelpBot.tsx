@@ -279,6 +279,12 @@ export default function HelpBot() {
               rows={2}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!typing) ask();
+                }
+              }}
               placeholder="Ví dụ: Báo cáo tiến độ thế nào?"
               aria-label="Câu hỏi cho trợ lý"
               className="min-w-0 flex-1 resize-none rounded-lg border px-3 py-2 text-sm"
