@@ -130,7 +130,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
             <section aria-label="Tổng quan" className="space-y-2.5">
               <Section title="Tổng quan"><p className="whitespace-pre-wrap leading-7">{task.description || "—"}</p></Section>
               {task.status === "rejected" ? <section className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-900"><h2 className="font-bold">Lý do trả lại</h2><p className="mt-2 whitespace-pre-wrap text-sm">{returnReason || "Chưa ghi nhận lý do."}</p></section> : null}
-              <Section title={`Đính kèm · File (${task.attachments.length})`}>
+              <Section title={`Đính kèm · Tệp (${task.attachments.length})`}>
                 {capabilities.attachment ? <form onSubmit={upload} className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"><input name="file" type="file" required accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className="min-w-0 rounded border bg-white p-2 text-sm" /><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Tải lên</button></form> : null}
                 <Timeline empty="Chưa có tệp.">{task.attachments.map((row) => <li key={row.id} className="break-words"><span>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB</span><button onClick={() => download(row.id)} className="mt-1 block text-orange-700 underline">Tải xuống</button></li>)}</Timeline>
               </Section>

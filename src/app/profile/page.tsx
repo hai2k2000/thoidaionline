@@ -130,7 +130,7 @@ export default function ProfilePage() {
           <div className="mt-2 grid gap-2 text-sm md:grid-cols-2">
             <p><b>Họ tên:</b> {user?.full_name ?? "-"}</p>
             <p><b>Vai trò:</b> {user?.role_name ?? "-"}</p>
-            <p><b>Email:</b> {user?.email ?? "-"}</p>
+            <p><b>Thư điện tử:</b> {user?.email ?? "-"}</p>
             <p><b>Mã quyền:</b> {user?.role_code ?? "-"}</p>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
@@ -160,7 +160,7 @@ export default function ProfilePage() {
                 <th className="px-2 py-2">Phòng ban</th>
                 <th className="px-2 py-2">Trạng thái</th>
                 <th className="px-2 py-2">Tiến độ</th>
-                <th className="px-2 py-2">Deadline</th>
+                <th className="px-2 py-2">Hạn hoàn thành</th>
               </tr>
             </thead>
             <tbody>
@@ -188,7 +188,7 @@ export default function ProfilePage() {
                 <th className="px-2 py-2">Tiêu đề</th>
                 <th className="px-2 py-2">Người phụ trách</th>
                 <th className="px-2 py-2">Trạng thái</th>
-                <th className="px-2 py-2">Deadline</th>
+                <th className="px-2 py-2">Hạn hoàn thành</th>
               </tr>
             </thead>
             <tbody>

@@ -129,7 +129,7 @@ export default function DocumentDetailPage() {
             <thead>
               <tr>
                 <th className="px-2 py-2">Người xử lý</th>
-                <th className="px-2 py-2">Username</th>
+                <th className="px-2 py-2">Tên đăng nhập</th>
                 <th className="px-2 py-2">Hạn</th>
                 <th className="px-2 py-2">Trạng thái</th>
               </tr>

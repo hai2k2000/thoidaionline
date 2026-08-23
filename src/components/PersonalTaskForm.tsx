@@ -91,7 +91,7 @@ export default function PersonalTaskForm({ initialTask }: Props) {
           <input id="startDate" name="startDate" type="date" required defaultValue={initialTask?.startDate} className="mt-1 w-full rounded-lg border px-3 py-2" />
         </div>
         <div>
-          <label htmlFor="dueDate" className="text-sm font-semibold">Deadline</label>
+          <label htmlFor="dueDate" className="text-sm font-semibold">Hạn hoàn thành</label>
           <input id="dueDate" name="dueDate" type="date" required defaultValue={initialTask?.dueDate} className="mt-1 w-full rounded-lg border px-3 py-2" />
         </div>
       </div>

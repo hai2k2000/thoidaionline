@@ -74,12 +74,12 @@ export default function UserDetailPage() {
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
       <div className="mx-auto max-w-5xl">
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Chi tiết user</h1>
+          <h1 className="text-2xl font-bold">Chi tiết tài khoản</h1>
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-orange-50 hover:text-orange-800">Công việc</Link>
-            <Link href="/users" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-orange-50 hover:text-orange-800">User</Link>
+            <Link href="/users" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-orange-50 hover:text-orange-800">Tài khoản</Link>
             <Link href="/permissions" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-orange-50 hover:text-orange-800">Phân quyền</Link>
-            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-orange-50 hover:text-orange-800">Theo user</Link>
+            <Link href="/my-tasks" className="rounded bg-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-orange-50 hover:text-orange-800">Theo tài khoản</Link>
             <span className="text-xs text-slate-600">{authUser?.full_name} ({authUser?.role_name})</span>
             <button onClick={logout} className="rounded bg-orange-500 px-3 py-2 text-sm font-semibold text-white">Đăng xuất</button>
           </div>
@@ -92,9 +92,9 @@ export default function UserDetailPage() {
             <section className="rounded-xl border bg-white p-4">
               <h2 className="text-xl font-semibold">{user.full_name}</h2>
               <div className="mt-2 grid gap-2 text-sm md:grid-cols-2">
-                <p><b>Email:</b> {user.email ?? "-"}</p>
+                <p><b>Thư điện tử:</b> {user.email ?? "-"}</p>
                 <p><b>SĐT:</b> {user.phone ?? "-"}</p>
-                <p><b>Role:</b> {user.roles?.name ?? "-"}</p>
+                <p><b>Vai trò:</b> {user.roles?.name ?? "-"}</p>
                 <p><b>Phòng ban:</b> {user.departments?.name ?? "-"}</p>
                 <p><b>Trạng thái:</b> {user.active ? "Đang hoạt động" : "Đã khóa"}</p>
               </div>
@@ -114,7 +114,7 @@ export default function UserDetailPage() {
                       <td className="px-2 py-2"><Link href={`/tasks/${t.id}`} className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-xs font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">Mở</Link></td>
                     </tr>
                   ))}
-                  {tasks.length === 0 ? <tr><td colSpan={5} className="px-2 py-6 text-center text-slate-500">User chưa có task.</td></tr> : null}
+                  {tasks.length === 0 ? <tr><td colSpan={5} className="px-2 py-6 text-center text-slate-500">Tài khoản chưa có công việc.</td></tr> : null}
                 </tbody>
               </table>
             </section>

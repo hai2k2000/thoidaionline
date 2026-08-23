@@ -230,11 +230,11 @@ export default function AttendancePage() {
                 <p className="text-xl font-bold">{stats.total}</p>
               </div>
               <div className="rounded border bg-emerald-50 p-3">
-                <p className="text-xs text-emerald-700">Đã check-in</p>
+                <p className="text-xs text-emerald-700">Đã chấm vào</p>
                 <p className="text-xl font-bold text-emerald-700">{stats.checkedIn}</p>
               </div>
               <div className="rounded border bg-sky-50 p-3">
-                <p className="text-xs text-sky-700">Đã check-out</p>
+                <p className="text-xs text-sky-700">Đã chấm ra</p>
                 <p className="text-xl font-bold text-sky-700">{stats.checkedOut}</p>
               </div>
             </div>

@@ -37,7 +37,7 @@ export default function LoginPage() {
         <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="mt-4 space-y-3">
           <input
             className="w-full rounded border px-3 py-3 text-base"
-            placeholder="Username, email hoặc số điện thoại"
+            placeholder="Tên đăng nhập, thư điện tử hoặc số điện thoại"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
           />

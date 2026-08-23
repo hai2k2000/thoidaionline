@@ -62,9 +62,9 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
         />
         <main className="min-w-0 flex-1">
           <header className="rounded-xl border bg-white p-4 shadow-sm">
-            <h1 className="text-2xl font-bold">LỊCH LÀM ONLINE (NGOẠI NGỮ)</h1>
+            <h1 className="text-2xl font-bold">LỊCH LÀM TRỰC TUYẾN (NGOẠI NGỮ)</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Thời gian và người làm online.
+              Thời gian và người làm trực tuyến.
             </p>
           </header>
           <section className="mt-4 rounded-xl border bg-white p-4 shadow-sm">
@@ -122,7 +122,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
                     {assignments.length ? "Cả ngày" : "—"}
                   </p>
                   <div className="text-sm">
-                    <span className="text-slate-500">Người làm online:</span>
+                    <span className="text-slate-500">Người làm trực tuyến:</span>
                     {assignments.length ? (
                       <ul className="mt-1 list-disc space-y-1 pl-5">
                         {assignments.map(

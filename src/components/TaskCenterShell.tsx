@@ -40,7 +40,7 @@ const tabClass = (active: boolean) => `rounded-full border px-3.5 py-2 text-sm f
 const deadlineLabel = (task: TaskListResult["items"][number]) => {
   if (task.status === "cancelled") return "Đã hủy";
   const state = classifyTaskDeadline(task);
-  return state === "no_deadline" ? "Không deadline" : state === "overdue" ? "Quá hạn" : state === "due_soon" ? "Sắp đến hạn" : "Đúng hạn";
+  return state === "no_deadline" ? "Không có hạn" : state === "overdue" ? "Quá hạn" : state === "due_soon" ? "Sắp đến hạn" : "Đúng hạn";
 };
 
 const dueText = (dueDate: string | null, dueTime: string | null) =>
@@ -119,14 +119,14 @@ export default function TaskCenterShell(props: Props) {
                   <>
                     <div className="hidden overflow-x-auto lg:block">
                     <table className="w-full min-w-[980px] border-collapse text-sm">
-                      <thead><tr className="border-b text-left text-slate-600"><th className="p-2">Công việc</th><th className="p-2">Người phụ trách</th><th className="p-2">Trạng thái</th><th className="p-2">Deadline</th><th className="p-2">Thời hạn</th><th className="p-2">Phòng</th><th className="p-2">Tính chất</th><th className="p-2">Bắt đầu</th><th className="p-2">Thao tác</th></tr></thead>
+                      <thead><tr className="border-b text-left text-slate-600"><th className="p-2">Công việc</th><th className="p-2">Người phụ trách</th><th className="p-2">Trạng thái</th><th className="p-2">Hạn hoàn thành</th><th className="p-2">Thời hạn</th><th className="p-2">Phòng</th><th className="p-2">Tính chất</th><th className="p-2">Bắt đầu</th><th className="p-2">Thao tác</th></tr></thead>
                       <tbody>{tasks.items.map((task) => {
                         const canEdit = task.compatibility_task_type === "personal" && !task.legacy_read_only && task.owner_id === currentUserId;
                         const canClaim = canClaimTasks && task.self_claimable && task.status === "new" && task.assignee_id === null;
                         return <tr key={task.id} role="link" tabIndex={0} onClick={() => router.push(`/tasks/${task.id}`)} onKeyDown={(event) => { if (event.key === "Enter") router.push(`/tasks/${task.id}`); }} className="cursor-pointer border-b hover:bg-slate-50 focus:bg-slate-50">
-                          <td className="p-2 font-semibold">{task.title}{task.legacy_read_only ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs">Legacy chỉ đọc</span> : null}</td>
+                          <td className="p-2 font-semibold">{task.title}{task.legacy_read_only ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs">Dữ liệu cũ · chỉ đọc</span> : null}</td>
                           <td className="p-2">{task.task_assignees.find((row) => row.assignment_role !== "watcher")?.staff_users?.full_name ?? "—"}</td>
-                          <td className="p-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2">{deadlineLabel(task)}</td><td className="p-2">{task.departments?.name ?? "—"}</td><td className="p-2">{task.task_category === "duty" ? "Trực sản xuất" : task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : task.compatibility_task_type === "assigned" ? "Công việc được giao" : "Legacy"}</td><td className="p-2">{task.start_date ?? "—"}</td>
+                          <td className="p-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2">{deadlineLabel(task)}</td><td className="p-2">{task.departments?.name ?? "—"}</td><td className="p-2">{task.task_category === "duty" ? "Trực sản xuất" : task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : task.compatibility_task_type === "assigned" ? "Công việc được giao" : "Dữ liệu cũ"}</td><td className="p-2">{task.start_date ?? "—"}</td>
                           <td className="p-2"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /></td>
                         </tr>;
                       })}</tbody>
@@ -135,7 +135,7 @@ export default function TaskCenterShell(props: Props) {
                     <div className="space-y-3 lg:hidden">{tasks.items.map((task) => {
                       const canEdit = task.compatibility_task_type === "personal" && !task.legacy_read_only && task.owner_id === currentUserId;
                       const canClaim = canClaimTasks && task.self_claimable && task.status === "new" && task.assignee_id === null;
-                      return <article key={task.id} className="rounded-xl border p-4"><Link href={`/tasks/${task.id}`} className="font-bold">{task.title}</Link><dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div><dt className="text-slate-500">Tính chất</dt><dd>{task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : "Công việc được giao"}</dd></div><div><dt className="text-slate-500">Trạng thái</dt><dd><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></dd></div><div><dt className="text-slate-500">Deadline</dt><dd>{dueText(task.due_date, task.due_time)}</dd></div><div><dt className="text-slate-500">Thời hạn</dt><dd>{deadlineLabel(task)}</dd></div></dl><div className="mt-3"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /></div></article>;
+                      return <article key={task.id} className="rounded-xl border p-4"><Link href={`/tasks/${task.id}`} className="font-bold">{task.title}</Link><dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div><dt className="text-slate-500">Tính chất</dt><dd>{task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : "Công việc được giao"}</dd></div><div><dt className="text-slate-500">Trạng thái</dt><dd><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></dd></div><div><dt className="text-slate-500">Hạn hoàn thành</dt><dd>{dueText(task.due_date, task.due_time)}</dd></div><div><dt className="text-slate-500">Thời hạn</dt><dd>{deadlineLabel(task)}</dd></div></dl><div className="mt-3"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /></div></article>;
                     })}</div>
                   </>
                 ) : null}

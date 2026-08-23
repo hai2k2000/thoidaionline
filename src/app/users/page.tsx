@@ -282,7 +282,7 @@ export default function UsersPage() {
     if (selected.id === user?.id)
       return notify(
         "error",
-        "Hãy dùng chức năng quên mật khẩu cho tài khoản Admin đang đăng nhập.",
+        "Hãy dùng chức năng quên mật khẩu cho tài khoản quản trị viên đang đăng nhập.",
       );
     if (!selected.active)
       return notify("error", "Không thể đặt mật khẩu cho tài khoản đã khóa.");
@@ -385,7 +385,7 @@ export default function UsersPage() {
                 />
                 <input
                   className="rounded border px-3 py-2"
-                  placeholder="Username"
+                  placeholder="Tên đăng nhập"
                   value={newUser.username}
                   onChange={(e) =>
                     setNewUser({ ...newUser, username: e.target.value })
@@ -414,7 +414,7 @@ export default function UsersPage() {
                     setNewUser({ ...newUser, role_id: e.target.value })
                   }
                 >
-                  <option value="">Role quyền</option>
+                  <option value="">Vai trò</option>
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
@@ -492,9 +492,9 @@ export default function UsersPage() {
                 <thead>
                   <tr>
                     <th className="px-2 py-2">Họ tên</th>
-                    <th className="px-2 py-2">Username</th>
+                    <th className="px-2 py-2">Tên đăng nhập</th>
                     <th className="px-2 py-2">Chức vụ</th>
-                    <th className="px-2 py-2">Role quyền</th>
+                    <th className="px-2 py-2">Vai trò</th>
                     <th className="px-2 py-2">Phòng ban</th>
                     <th className="px-2 py-2">Trạng thái</th>
                     {isAdmin ? <th className="px-2 py-2">Thao tác</th> : null}
@@ -572,10 +572,10 @@ export default function UsersPage() {
                     />
                   </label>
                   <p className="text-sm">
-                    <b>Username:</b> {selected.username ?? "-"}
+                    <b>Tên đăng nhập:</b> {selected.username ?? "-"}
                   </p>
                   <label className="block text-sm">
-                    Email
+                    Thư điện tử
                     <input type="email" maxLength={254} disabled={!isAdmin || savingUser} className="mt-1 w-full rounded border px-3 py-2 disabled:bg-slate-100" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
                   </label>
                   <label className="block text-sm">
@@ -606,7 +606,7 @@ export default function UsersPage() {
                     </select>
                   </label>
                   <label className="block text-sm">
-                    Role quyền
+                    Vai trò
                     <select
                       disabled={!isAdmin}
                       className="mt-1 w-full rounded border px-3 py-2 disabled:bg-slate-100"
@@ -713,7 +713,7 @@ export default function UsersPage() {
                 </div>
                 {!isAdmin ? (
                   <p className="mt-3 text-xs text-slate-500">
-                    TBT chỉ được xem thông tin; chỉ Admin mới được lưu.
+                    Tổng Biên tập chỉ được xem thông tin; chỉ quản trị viên mới được lưu.
                   </p>
                 ) : null}
                 {resetState === "confirming" ? (

@@ -17,7 +17,7 @@ type AppNavProps = {
 const labels = {
   assign: "Giao vi\u1ec7c",
   "duty-schedule": "Lịch trực",
-  "online-work": "Lịch làm online (ngoại ngữ)",
+  "online-work": "Lịch làm trực tuyến (ngoại ngữ)",
   "online-work-admin": "Quản trị lịch online",
   "duty-roster": "Quản trị lịch trực",
   tasks: "Qu\u1ea3n l\u00fd c\u00f4ng vi\u1ec7c",

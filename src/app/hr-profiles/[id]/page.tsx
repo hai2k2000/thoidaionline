@@ -65,7 +65,7 @@ export default function HrProfileDetailPage() {
         fd.append("userId", params.id);
         const upRes = await fetch("/api/hr/upload", { method: "POST", body: fd });
         const upJson = await upRes.json();
-        if (!upRes.ok) throw new Error(upJson?.error || "Upload file lỗi");
+        if (!upRes.ok) throw new Error(upJson?.error || "Tải tệp lên thất bại");
         payload = { ...payload, profile_file_url: upJson.url };
       }
 
@@ -118,8 +118,8 @@ export default function HrProfileDetailPage() {
 
           <div className="grid gap-3 md:grid-cols-2">
             <div><b>Họ tên:</b> {staff?.full_name ?? "-"}</div>
-            <div><b>Username:</b> {staff?.username ?? "-"}</div>
-            <div><b>Email:</b> {staff?.email ?? "-"}</div>
+            <div><b>Tên đăng nhập:</b> {staff?.username ?? "-"}</div>
+            <div><b>Thư điện tử:</b> {staff?.email ?? "-"}</div>
             <div><b>Phòng ban:</b> {staff?.departments?.name ?? "-"}</div>
             <div><b>Chức vụ:</b> {staff?.job_titles?.name ?? "-"}</div>
 
@@ -170,7 +170,7 @@ export default function HrProfileDetailPage() {
               <label className="mb-1 block text-xs font-semibold text-slate-600">Tệp hợp đồng lao động</label>
               <input className="rounded border px-3 py-2" type="file" onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)} />
               <div className="mt-2 text-sm">
-                <b>File hiện tại:</b>{" "}
+                <b>Tệp hiện tại:</b>{" "}
                 {profile?.profile_file_url ? (
                   <a href={profile.profile_file_url} target="_blank" rel="noreferrer" className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">
                     Xem file đã upload

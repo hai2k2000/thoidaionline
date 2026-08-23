@@ -18,11 +18,11 @@ const RATE_LIMIT = 5;
 const messages = {
   invalid_origin: "Nguồn yêu cầu không hợp lệ.",
   unauthenticated: "Phiên đăng nhập không hợp lệ.",
-  forbidden: "Chỉ Admin được đặt mật khẩu nhân viên.",
+  forbidden: "Chỉ quản trị viên được đặt mật khẩu nhân viên.",
   invalid_request: "Yêu cầu không hợp lệ.",
   password_mismatch: "Mật khẩu xác nhận không khớp.",
   weak_password: "Mật khẩu không đáp ứng chính sách bảo mật.",
-  self_reset_forbidden: "Admin phải dùng luồng quên mật khẩu cho chính mình.",
+  self_reset_forbidden: "Quản trị viên phải dùng luồng quên mật khẩu cho chính mình.",
   user_not_found: "Không tìm thấy nhân viên.",
   user_inactive: "Không thể đặt mật khẩu cho tài khoản đã khóa.",
   rate_limited: "Thao tác quá nhiều lần. Vui lòng thử lại sau.",

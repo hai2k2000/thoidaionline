@@ -69,10 +69,10 @@ Nếu danh sách trống, hãy bấm Đặt lại rồi kiểm tra lại phạm 
 • Hạn nhiệm vụ trực là 22:00 ngày trực.
 • Dùng nút Hôm nay hoặc mũi tên để chuyển nhanh đến khoảng thời gian cần xem.
 
-Nếu cần sửa hoặc phân công lịch, vui lòng liên hệ Admin.`,
+Nếu cần sửa hoặc phân công lịch, vui lòng liên hệ quản trị viên.`,
   },
   {
-    title: "Lịch làm online",
+    title: "Lịch làm trực tuyến",
     keywords: [
       "online",
       "ngoại ngữ",
@@ -81,13 +81,13 @@ Nếu cần sửa hoặc phân công lịch, vui lòng liên hệ Admin.`,
       "khmer",
       "tiếng nga",
     ],
-    text: `Cách dùng lịch online ngoại ngữ:
-• Mở Lịch làm online (ngoại ngữ).
+    text: `Cách dùng lịch trực tuyến ngoại ngữ:
+• Mở Lịch làm trực tuyến (ngoại ngữ).
 • Chọn chế độ Ngày, Tuần hoặc Tháng.
 • Dùng nút Hôm nay, mũi tên hoặc ô ngày để chuyển thời gian.
-• Mỗi ngày hiển thị thời gian và toàn bộ phóng viên ngoại ngữ làm online.
+• Mỗi ngày hiển thị thời gian và toàn bộ phóng viên ngoại ngữ làm trực tuyến.
 
-Nếu cần thêm, xóa hoặc đổi người trong lịch, vui lòng liên hệ Admin.`,
+Nếu cần thêm, xóa hoặc đổi người trong lịch, vui lòng liên hệ quản trị viên.`,
   },
   {
     title: "Đánh giá nhân viên",
@@ -109,7 +109,7 @@ Nếu không thấy menu, admin cần kiểm tra role và quyền đánh giá c�
 2. Nhập mật khẩu hiện tại, mật khẩu mới và xác nhận.
 3. Bấm Đổi mật khẩu.
 
-Nếu quên: bấm Quên mật khẩu? ở màn hình đăng nhập. Nếu mật khẩu đúng nhưng vẫn không vào được, hãy liên hệ Admin để kiểm tra tài khoản.`,
+Nếu quên: bấm Quên mật khẩu? ở màn hình đăng nhập. Nếu mật khẩu đúng nhưng vẫn không vào được, hãy liên hệ quản trị viên để kiểm tra tài khoản.`,
   },
   {
     title: "Bình luận và theo dõi",
@@ -192,11 +192,11 @@ export default function HelpBot() {
     if (!text) return;
     const answer = isAdminQuestion(text) ? null : find(text);
     const response = isAdminQuestion(text)
-      ? "Nội dung này thuộc công việc của Admin (quản trị nhân sự, phân quyền hoặc cấu hình hệ thống). Vui lòng liên hệ Admin để được xử lý. Tôi có thể hướng dẫn bạn các thao tác sử dụng công việc, tiến độ, lịch xem, đánh giá hoặc tài khoản cá nhân."
+      ? "Nội dung này thuộc công việc của quản trị viên (quản trị nhân sự, phân quyền hoặc cấu hình hệ thống). Vui lòng liên hệ quản trị viên để được xử lý. Tôi có thể hướng dẫn bạn các thao tác sử dụng công việc, tiến độ, lịch xem, đánh giá hoặc tài khoản cá nhân."
       : isOutOfScope(text)
-        ? "Xin lỗi, tôi chỉ hỗ trợ hướng dẫn sử dụng phần mềm Thời Đại Work. Tôi không có thông tin đáng tin cậy về chủ đề này. Bạn có thể hỏi về giao việc, báo cáo tiến độ, lịch trực, lịch online, đánh giá hoặc tài khoản."
+        ? "Xin lỗi, tôi chỉ hỗ trợ hướng dẫn sử dụng phần mềm Thời Đại Work. Tôi không có thông tin đáng tin cậy về chủ đề này. Bạn có thể hỏi về giao việc, báo cáo tiến độ, lịch trực, lịch trực tuyến, đánh giá hoặc tài khoản."
         : (answer?.text ??
-          `Tôi chưa xác định đúng nội dung. Hãy hỏi cụ thể hơn, ví dụ:\n• Cách giao công việc\n• Cách báo cáo vướng mắc\n• Cách thêm người làm online\n• Vì sao không đăng nhập được`);
+          `Tôi chưa xác định đúng nội dung. Hãy hỏi cụ thể hơn, ví dụ:\n• Cách giao công việc\n• Cách báo cáo vướng mắc\n• Cách thêm người làm trực tuyến\n• Vì sao không đăng nhập được`);
     setMessages((cur) => [...cur, { from: "user", text }]);
     setQuestion("");
     setTyping(true);

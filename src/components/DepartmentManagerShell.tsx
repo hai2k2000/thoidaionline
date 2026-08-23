@@ -59,7 +59,7 @@ export default function DepartmentManagerShell({
             <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">Cấu hình</p>
             <h1 className="mt-2 text-2xl font-bold">Trưởng phòng chính</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Admin phải chọn rõ một nhân sự đang hoạt động trong chính phòng ban đó.
+              Quản trị viên phải chọn rõ một nhân sự đang hoạt động trong chính phòng ban đó.
             </p>
           </header>
 

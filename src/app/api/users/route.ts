@@ -122,7 +122,7 @@ async function mutate(request: Request, mode: "create" | "update") {
   }
   if (body && Object.prototype.hasOwnProperty.call(body, "role_id")) {
     const roleId = text(body.role_id);
-    if (!roleId) return json({ error: "Role quyền không hợp lệ." }, { status: 400 });
+    if (!roleId) return json({ error: "Vai trò không hợp lệ." }, { status: 400 });
     if (roleLifecycleEnabled) {
       const { data: role, error: roleError } = await serverSupabase.from("roles").select("id,active").eq("id", roleId).maybeSingle();
       if (roleError) return json({ error: "Không thể kiểm tra vai trò." }, { status: 500 });

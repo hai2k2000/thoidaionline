@@ -119,7 +119,7 @@ export default function AssetDetailPage() {
               <input className="w-full rounded border px-3 py-2" value={asset?.category ?? ""} onChange={(e) => setAsset((p) => ({ ...(p ?? { asset_name: "", category: "" }), category: e.target.value }))} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Serial</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Số sê-ri</label>
               <input className="w-full rounded border px-3 py-2" value={asset?.serial_number ?? ""} onChange={(e) => setAsset((p) => ({ ...(p ?? { asset_name: "", category: "" }), serial_number: e.target.value || null }))} />
             </div>
             <div>

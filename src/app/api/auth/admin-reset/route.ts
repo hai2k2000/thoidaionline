@@ -11,7 +11,7 @@ const messages = {
   invalid_request: "Yêu cầu không hợp lệ.",
   unauthenticated: "Phiên đăng nhập không hợp lệ.",
   invalid_origin: "Nguồn yêu cầu không hợp lệ.",
-  forbidden: "Chỉ Admin được đặt lại mật khẩu nhân viên.",
+  forbidden: "Chỉ quản trị viên được đặt lại mật khẩu nhân viên.",
   user_not_found: "Không tìm thấy nhân viên.",
   user_inactive: "Không thể đặt lại mật khẩu cho tài khoản đã khóa.",
   email_missing: "Nhân viên chưa có email đăng ký.",

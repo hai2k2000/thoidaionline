@@ -116,7 +116,7 @@ export default function AssetCreatePage() {
               <input className="rounded border px-3 py-2" placeholder="Mã tài sản (bỏ trống để tự sinh)" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} />
               <input className="rounded border px-3 py-2" placeholder="Tên tài sản" value={assetName} onChange={(e) => setAssetName(e.target.value)} />
               <input className="rounded border px-3 py-2" placeholder="Nhóm tài sản" value={category} onChange={(e) => setCategory(e.target.value)} />
-              <input className="rounded border px-3 py-2" placeholder="Số serial" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+              <input className="rounded border px-3 py-2" placeholder="Số sê-ri" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
               <select className="rounded border px-3 py-2" value={status} onChange={(e) => setStatus(e.target.value as AssetStatus)}>
                 <option value="in_use">Đang sử dụng</option>
                 <option value="maintenance">Bảo trì</option>
