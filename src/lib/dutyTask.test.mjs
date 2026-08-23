@@ -15,6 +15,19 @@ test("personal and organization duty schedules share one viewer filter", () => {
   assert.match(page, /initialScope/);
 });
 
+test("admin opens one day and reviews every duty participant independently", () => {
+  const viewer = readFileSync("src/components/DutyScheduleViewer.tsx", "utf8");
+  const page = readFileSync("src/app/duty-schedule/[date]/page.tsx", "utf8");
+  const route = readFileSync("src/app/api/tasks/duty/review/route.ts", "utf8");
+  const migration = readFileSync("supabase/migrations/20260823170000_duty_reviews.sql", "utf8");
+  assert.match(viewer, /duty-schedule\/\$\{date\}/);
+  assert.match(page, /DutyReviewCard/);
+  assert.match(route, /role_code !== "admin"/);
+  assert.match(route, /task_category.*duty/);
+  assert.match(migration, /task_id uuid primary key/);
+  assert.match(migration, /evidence_path/);
+});
+
 test("each duty day requires four mandatory positions", () => { const positions = readFileSync("src/lib/dutyRoster.mjs", "utf8"); for (const position of ["Biên tập và xuất bản","Biên tập bước 2","Biên tập bước 1","Phóng viên"]) assert.match(positions, new RegExp(position)); assert.match(readFileSync("supabase/migrations/20260822070000_monthly_duty_roster.sql", "utf8"), /each duty day requires four positions/); });
 
 test("monthly roster generates every calendar day without persisting blanks", async () => {

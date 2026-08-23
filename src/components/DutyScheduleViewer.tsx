@@ -43,7 +43,7 @@ export default function DutyScheduleViewer({
   initialScope?: "organization" | "personal";
 }) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Ho_Chi_Minh",
     year: "numeric",
@@ -185,7 +185,11 @@ export default function DutyScheduleViewer({
               {dayCards.map(([date, items]) => (
                 <article
                   key={date}
-                  className={`${density.card} ${new Date(`${date}T12:00:00Z`).getUTCDay() === 6 ? "border-blue-400 bg-blue-50 ring-1 ring-blue-200" : new Date(`${date}T12:00:00Z`).getUTCDay() === 0 ? "border-orange-400 bg-orange-50 ring-1 ring-orange-200" : "bg-white"}`}
+                  role={scope === "organization" && user?.role_code === "admin" && items.length ? "link" : undefined}
+                  tabIndex={scope === "organization" && user?.role_code === "admin" && items.length ? 0 : undefined}
+                  onClick={() => { if (scope === "organization" && user?.role_code === "admin" && items.length) router.push(`/duty-schedule/${date}`); }}
+                  onKeyDown={(event) => { if (event.key === "Enter" && scope === "organization" && user?.role_code === "admin" && items.length) router.push(`/duty-schedule/${date}`); }}
+                  className={`${density.card} ${scope === "organization" && user?.role_code === "admin" && items.length ? "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400" : ""} ${new Date(`${date}T12:00:00Z`).getUTCDay() === 6 ? "border-blue-400 bg-blue-50 ring-1 ring-blue-200" : new Date(`${date}T12:00:00Z`).getUTCDay() === 0 ? "border-orange-400 bg-orange-50 ring-1 ring-orange-200" : "bg-white"}`}
                 >
                   <h2 className={density.heading} title={date}>
                     {formatDateVi(date)} ·{" "}
@@ -218,6 +222,7 @@ export default function DutyScheduleViewer({
                       );
                     })}
                   </div>
+                  {scope === "organization" && user?.role_code === "admin" && items.length ? <p className="mt-2 border-t pt-1 text-right text-[10px] font-bold text-orange-700">Mở đánh giá ngày →</p> : null}
                 </article>
               ))}
               {!dayCards.length ? (

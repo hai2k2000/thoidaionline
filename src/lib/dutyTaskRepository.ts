@@ -19,7 +19,7 @@ export const dutyTaskRepository = {
   },
   async month(month: string, departmentId?: string) {
     let query = serverSupabase.from("tasks")
-      .select("id,due_date,duty_position,assignee_id,department_id,reviewer_id,status")
+      .select("id,due_date,due_time,duty_position,assignee_id,department_id,reviewer_id,status,assignee:staff_users!tasks_assignee_id_fkey(full_name),duty_task_reviews(result,on_time,issue_notes,evidence_name,reviewed_at)")
       .eq("task_category", "duty").eq("duty_month", `${month}-01`).neq("status", "cancelled")
       .order("due_date").order("duty_position");
     if (departmentId) query = query.eq("department_id", departmentId);
@@ -34,6 +34,12 @@ export const dutyTaskRepository = {
     if (assigneeId) query = query.eq("assignee_id", assigneeId);
     const { data, error } = await query;
     return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
+  },
+  async reviewDay(date: string) {
+    const { data, error } = await serverSupabase.from("tasks")
+      .select("id,due_date,due_time,duty_position,status,assignee:staff_users!tasks_assignee_id_fkey(full_name),departments(name),duty_task_reviews(result,on_time,issue_notes,evidence_name,reviewed_at)")
+      .eq("task_category", "duty").eq("due_date", date).neq("status", "cancelled").order("duty_position");
+    return error ? { ok:false as const,error } : { ok:true as const,rows:data??[] };
   },
   async save(actorId: string, input: { month: string; departmentId: string; reviewerId: string; days: { date: string; assignments: { position: string; assigneeId: string }[] }[] }) {
     const { data, error } = await serverSupabase.rpc("api_save_monthly_duty_roster", {

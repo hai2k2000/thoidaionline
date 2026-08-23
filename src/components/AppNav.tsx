@@ -11,7 +11,7 @@ type AppNavProps = {
   currentPath: string;
   userLabel?: string;
   avatarUrl?: string | null;
-  onLogout: () => void;
+  onLogout?: () => void;
 };
 
 const labels = {
