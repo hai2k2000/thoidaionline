@@ -35,6 +35,22 @@ export const dutyTaskRepository = {
     const { data, error } = await query;
     return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
   },
+  async summary(from: string, to: string) {
+    const { data, error } = await serverSupabase.from("tasks").select("id,duty_position,assignee_id,departments(name),assignee:staff_users!tasks_assignee_id_fkey(full_name),duty_task_reviews(result,on_time,reviewed_at)").eq("task_category", "duty").neq("status", "cancelled").gte("due_date", from).lte("due_date", to).order("due_date");
+    if (error) return { ok: false as const, error };
+    type SummaryRow = { employeeId:string; fullName:string; department:string; positions:Set<string>; total:number; reviewed:number; completed:number; issues:number; notCompleted:number; onTime:number; late:number };
+    const grouped = new Map<string, SummaryRow>();
+    type SourceRow = { assignee_id:string|null; duty_position:string|null; departments:{name:string|null}|null; assignee:{full_name:string|null}|null; duty_task_reviews:{result:string;on_time:boolean}[]|{result:string;on_time:boolean}|null };
+    for (const source of (data ?? []) as unknown as SourceRow[]) {
+      const employeeId=source.assignee_id ?? "unassigned";
+      const row=grouped.get(employeeId) ?? {employeeId,fullName:source.assignee?.full_name ?? "Chưa phân công",department:source.departments?.name ?? "—",positions:new Set<string>(),total:0,reviewed:0,completed:0,issues:0,notCompleted:0,onTime:0,late:0};
+      row.total+=1; if(source.duty_position)row.positions.add(source.duty_position);
+      const review=Array.isArray(source.duty_task_reviews)?source.duty_task_reviews[0]:source.duty_task_reviews;
+      if(review){row.reviewed+=1;if(review.result==="completed")row.completed+=1;if(review.result==="issues")row.issues+=1;if(review.result==="not_completed")row.notCompleted+=1;if(review.on_time)row.onTime+=1;else row.late+=1;}
+      grouped.set(employeeId,row);
+    }
+    return {ok:true as const,rows:[...grouped.values()].map(({positions,...row})=>({...row,positions:[...positions].sort()})).sort((a,b)=>a.fullName.localeCompare(b.fullName,"vi"))};
+  },
   async reviewDay(date: string) {
     const { data, error } = await serverSupabase.from("tasks")
       .select("id,due_date,due_time,duty_position,status,assignee:staff_users!tasks_assignee_id_fkey(full_name),departments(name),duty_task_reviews(result,on_time,issue_notes,evidence_name,reviewed_at)")

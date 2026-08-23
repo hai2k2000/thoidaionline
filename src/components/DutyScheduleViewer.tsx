@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { scheduleRange } from "@/lib/dutyScheduleRange.mjs";
 import Link from "next/link";
+import DutySummaryTable from "@/components/DutySummaryTable";
 type Row = {
   id: string;
   due_date: string;
@@ -181,6 +182,7 @@ export default function DutyScheduleViewer({
                 ))}
               </div>
             </div>
+            {scope === "organization" ? <DutySummaryTable from={range.from} to={range.to} /> : null}
             <div className={`mt-3 grid w-full gap-2 ${density.grid}`}>
               {dayCards.map(([date, items]) => (
                 <article
