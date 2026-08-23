@@ -75,7 +75,7 @@ function NavContent({
       </div>
 
       <div className="mt-4 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
-      <div className="mb-2 flex items-center justify-between px-1.5 pt-0.5"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Công việc</p><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200">{navigation.primary.length}</span></div>
+      <div className="mb-2.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-orange-100 to-amber-50 px-2.5 py-2 ring-1 ring-orange-200"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-orange-900">Công việc</p></div><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200">{navigation.primary.length}</span></div>
       <nav aria-label="Menu chính" className="space-y-1">
         {navigation.primary.map((item) => (
           <Link
@@ -92,7 +92,7 @@ function NavContent({
 
       {navigation.configuration.length > 0 ? (
         <div className="mt-3 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
-          <div className="mb-2 flex items-center justify-between px-1.5 pt-0.5"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Cấu hình</p><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200">{navigation.configuration.length}</span></div>
+          <div className="mb-2.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-slate-200 to-slate-50 px-2.5 py-2 ring-1 ring-slate-300"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-600 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></svg></span><p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-800">Cấu hình</p></div><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-300">{navigation.configuration.length}</span></div>
           <nav aria-label="Cấu hình" className="space-y-1">
             {navigation.configuration.map((item) => (
               <Link
@@ -110,6 +110,7 @@ function NavContent({
 
       <div className="mt-auto pt-3">
         <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-orange-50 p-2 ring-1 ring-slate-200 shadow-sm">
+        <div className="mb-2 flex items-center gap-2 px-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]"/><p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500">Tài khoản</p></div>
         <div className="mb-2 flex items-center gap-2.5 rounded-xl bg-white/80 px-2.5 py-2.5 ring-1 ring-white">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-orange-100 text-sm font-bold text-orange-700 ring-2 ring-white shadow-sm">{avatarUrl ? <img src={avatarUrl} alt="Ảnh đại diện" className="h-full w-full object-cover" /> : (userLabel?.trim().charAt(0).toUpperCase() ?? "?")}</span><div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Đang đăng nhập</p>
