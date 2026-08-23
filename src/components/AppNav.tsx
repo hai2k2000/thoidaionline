@@ -142,11 +142,18 @@ function NavContent({
   );
 }
 
-export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps) {
+export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const performLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    await logout();
+    window.location.assign("/login");
+  };
 
   const navigation = getPhase2Navigation({
     roleCode: user?.role_code ?? "",
@@ -216,7 +223,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
           currentPath={currentPath}
           navigation={navigation}
           onNavigate={() => undefined}
-          onLogout={onLogout}
+          onLogout={performLogout}
           userLabel={userLabel}
           avatarUrl={user?.avatar_url}
         />
@@ -242,7 +249,7 @@ export default function AppNav({ currentPath, userLabel, onLogout }: AppNavProps
               currentPath={currentPath}
               navigation={navigation}
               onNavigate={restoreMenuFocus}
-              onLogout={onLogout}
+              onLogout={performLogout}
               userLabel={userLabel}
               avatarUrl={user?.avatar_url}
             />

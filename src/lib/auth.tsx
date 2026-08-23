@@ -25,7 +25,7 @@ type AuthContextType = {
   loading: boolean;
   user: AuthUser | null;
   login: (identifier: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   hasPermission: (key: PermissionKey) => boolean;
   canAccessModule: (module: ModuleKey) => boolean;
   isReadOnly: () => boolean;
@@ -93,10 +93,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { ok: true };
   };
 
-  const logout = () => {
-    void fetch("/api/auth/logout", { method: "POST" });
-    localStorage.removeItem(SESSION_KEY);
-    setUser(null);
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", cache: "no-store", credentials: "same-origin" });
+    } finally {
+      localStorage.removeItem(SESSION_KEY);
+      setUser(null);
+    }
   };
 
   const hasPermission = (key: PermissionKey) => {
