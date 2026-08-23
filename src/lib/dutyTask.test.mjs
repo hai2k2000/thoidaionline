@@ -28,10 +28,9 @@ test("admin opens one day and reviews every duty participant independently", () 
   assert.match(migration, /evidence_path/);
 });
 
-test("all authenticated staff can view the duty review summary without private evidence", () => {
-  const viewer=readFileSync("src/components/DutyScheduleViewer.tsx","utf8");const route=readFileSync("src/app/api/duty-schedule/summary/route.ts","utf8");const repository=readFileSync("src/lib/dutyTaskRepository.ts","utf8");
-  assert.match(viewer,/DutySummaryTable/);assert.match(route,/requireReadActor/);assert.doesNotMatch(route,/role_code.*admin/);
-  const summary=repository.slice(repository.indexOf("async summary"),repository.indexOf("async reviewDay"));assert.doesNotMatch(summary,/issue_notes|evidence_path|evidence_name/);
+test("duty review summary is a separate participant-only page", () => {
+  const viewer=readFileSync("src/components/DutyScheduleViewer.tsx","utf8");const route=readFileSync("src/app/api/duty-schedule/summary/route.ts","utf8");const page=readFileSync("src/app/duty-schedule/summary/page.tsx","utf8");const repository=readFileSync("src/lib/dutyTaskRepository.ts","utf8");
+  assert.match(viewer,/duty-schedule\/summary/);assert.match(page,/DutySummaryTable/);assert.match(page,/isParticipant/);assert.match(page,/summary=restricted/);assert.match(route,/isParticipant/);assert.match(repository,/async isParticipant/);assert.match(route,/apiError\("forbidden",403\)/);assert.doesNotMatch(route,/issue_notes|evidence_path|evidence_name/);
 });
 
 test("each duty day requires four mandatory positions", () => { const positions = readFileSync("src/lib/dutyRoster.mjs", "utf8"); for (const position of ["Biên tập và xuất bản","Biên tập bước 2","Biên tập bước 1","Phóng viên"]) assert.match(positions, new RegExp(position)); assert.match(readFileSync("supabase/migrations/20260822070000_monthly_duty_roster.sql", "utf8"), /each duty day requires four positions/); });
