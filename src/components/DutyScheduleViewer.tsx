@@ -140,6 +140,7 @@ export default function DutyScheduleViewer({
               <div className="mr-2 flex rounded-lg border border-orange-200 bg-white p-1" aria-label="Phạm vi lịch trực">
                 <Link href="/duty-schedule" className={`rounded-md px-3 py-1.5 text-sm font-semibold ${scope === "organization" ? "bg-orange-500 text-white" : "text-slate-600"}`}>Toàn cơ quan</Link>
                 <Link href="/duty-schedule?scope=personal" className={`rounded-md px-3 py-1.5 text-sm font-semibold ${scope === "personal" ? "bg-orange-500 text-white" : "text-slate-600"}`}>Cá nhân</Link>
+                <Link href={"/duty-schedule/summary?view="+view+"&date="+anchor} className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Tổng kết đánh giá</Link>
               </div>
               <button
                 className="rounded border px-3 py-2"
@@ -181,7 +182,6 @@ export default function DutyScheduleViewer({
                 ))}
               </div>
             </div>
-            {scope === "organization" ? <Link href={"/duty-schedule/summary?view="+view+"&date="+anchor} className="mt-4 inline-flex rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800 hover:bg-orange-100">Xem tổng kết đánh giá</Link> : null}
             <div className={`mt-3 grid w-full gap-2 ${density.grid}`}>
               {dayCards.map(([date, items]) => (
                 <article

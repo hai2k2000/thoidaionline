@@ -57,6 +57,13 @@ export const dutyTaskRepository = {
     }
     return {ok:true as const,rows:[...grouped.values()].map(({positions,...row})=>({...row,positions:[...positions].sort()})).sort((a,b)=>a.fullName.localeCompare(b.fullName,"vi"))};
   },
+  async participantReviews(from: string, to: string, assigneeId: string) {
+    const { data, error } = await serverSupabase.from("tasks")
+      .select("id,due_date,due_time,duty_position,status,departments(name),assignee:staff_users!tasks_assignee_id_fkey(full_name),duty_task_reviews(result,on_time,reviewed_at)")
+      .eq("task_category", "duty").neq("status", "cancelled").eq("assignee_id", assigneeId)
+      .gte("due_date", from).lte("due_date", to).order("due_date");
+    return error ? { ok:false as const,error } : { ok:true as const,rows:data??[] };
+  },
   async reviewDay(date: string) {
     const { data, error } = await serverSupabase.from("tasks")
       .select("id,due_date,due_time,duty_position,status,assignee:staff_users!tasks_assignee_id_fkey(full_name),departments(name),duty_task_reviews(result,on_time,issue_notes,evidence_name,reviewed_at)")
