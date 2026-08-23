@@ -33,8 +33,10 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   const guard = await requireReadActor(); if (!guard.ok) return guard.response;
-  if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
   const taskId = asUuid(new URL(request.url).searchParams.get("taskId")); if (!taskId) return apiError("invalid_request", 400);
+  const task = await serverSupabase.from("tasks").select("assignee_id").eq("id", taskId).eq("task_category", "duty").maybeSingle();
+  if (task.error || !task.data) return apiError("not_found", 404);
+  if (guard.actor.role_code !== "admin" && task.data.assignee_id !== guard.actor.id) return apiError("forbidden", 403);
   const row = await serverSupabase.from("duty_task_reviews").select("evidence_path").eq("task_id", taskId).maybeSingle();
   if (row.error || !row.data?.evidence_path) return apiError("not_found", 404);
   const signed = await storage.createSignedUrl(row.data.evidence_path, 60);

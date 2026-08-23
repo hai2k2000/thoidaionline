@@ -59,7 +59,7 @@ export const dutyTaskRepository = {
   },
   async participantReviews(from: string, to: string, assigneeId: string) {
     const { data, error } = await serverSupabase.from("tasks")
-      .select("id,due_date,due_time,duty_position,status,departments(name),assignee:staff_users!tasks_assignee_id_fkey(full_name),duty_task_reviews(result,on_time,reviewed_at)")
+      .select("id,due_date,due_time,duty_position,status,departments(name),assignee:staff_users!tasks_assignee_id_fkey(full_name),duty_task_reviews(result,on_time,reviewed_at,evidence_name)")
       .eq("task_category", "duty").neq("status", "cancelled").eq("assignee_id", assigneeId)
       .gte("due_date", from).lte("due_date", to).order("due_date");
     return error ? { ok:false as const,error } : { ok:true as const,rows:data??[] };
