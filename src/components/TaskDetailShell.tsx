@@ -119,7 +119,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
     <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
       <AppNav currentPath={`/tasks/${task.id}`} userLabel={userLabel} onLogout={logout} />
       <main className="min-w-0 flex-1 space-y-2.5">
-        <header className="sticky top-3 z-30 rounded-2xl border bg-white/95 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
+        <header className="sticky top-3 z-30 rounded-2xl bg-white/95 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0"><h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span><span>{deadlineState}</span></div></div>
             <div className="flex max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto pb-1 sm:justify-end">
