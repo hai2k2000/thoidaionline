@@ -33,6 +33,7 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
     () => people.filter((person) => person.departmentId === departmentId),
     [departmentId, people],
   );
+  const isEditorialBoard = selectedDepartment?.code === "leadership";
   const managerLabel = selectedDepartment?.managerId
     ? people.find((person) => person.id === selectedDepartment.managerId)?.fullName ?? "Trưởng phòng chính"
     : null;
@@ -101,7 +102,8 @@ export default function TaskAssignShell({ departments, people, userLabel }: {
           <div className="grid gap-3 lg:col-span-2 lg:grid-cols-3">
             <Field label="Tên công việc"><input name="title" required maxLength={500} className={controlClass} /></Field>
             <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); setCollaboratorIds([]); setWatcherIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
-            <Field label="Cách chọn người"><select value={assignmentMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); setCollaboratorIds([]); }} className={controlClass}><option value="individual">Cá nhân</option><option value="department_group">Nhóm phòng ban</option></select></Field>
+            {isEditorialBoard ? <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 lg:col-span-2">Ban Biên tập mặc định: Tổng biên tập là trưởng phòng; thành viên gồm Phó Tổng biên tập và các Trưởng phòng.</p> : null}
+          <Field label="Cách chọn người"><select value={assignmentMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); setCollaboratorIds([]); }} className={controlClass}><option value="individual">Cá nhân</option><option value="department_group">Nhóm phòng ban</option></select></Field>
           </div>
           {departmentId ? <div role={managerLabel ? "status" : "alert"} className={`rounded-lg border px-3 py-2 text-sm lg:col-span-2 ${managerLabel ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
             {managerLabel
