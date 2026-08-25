@@ -65,6 +65,7 @@ export const taskAssignmentRepository = {
       people: (people.data ?? []).map((row) => ({
         id: row.id as string,
         departmentId: row.department_id as string | null,
+        roleCode: (row.roles as unknown as { code?: string } | null)?.code ?? null,
         canReview: isEligibleAssignmentReviewer({
           roleCode: (row.roles as unknown as { code?: string } | null)?.code,
           jobTitleCode: (row.job_titles as unknown as { code?: string } | null)?.code,
