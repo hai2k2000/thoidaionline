@@ -98,7 +98,7 @@ test("related actors and scoped managers can view; unrelated staff cannot", () =
   }), task(), "view"), false);
 });
 
-test("TBT can view and comment organization-wide but cannot use other task mutations", () => {
+test("TBT can view, comment and assign organization-wide but cannot use unrelated task mutations", () => {
   const tbt = actor({
     roleCode: "tong_bien_tap",
     roleLevel: 4,
@@ -115,7 +115,7 @@ test("TBT can view and comment organization-wide but cannot use other task mutat
     permissions: normalizePermissions({ can_evaluate_step2: true }),
   }), task({ departmentId: "dep-z" }), "comment"), false);
   for (const action of [
-    "assign", "update", "claim", "report",
+    "update", "claim", "report",
     "review", "legacy_evaluate",
   ]) {
     assert.equal(canTaskAction(tbt, task(), action), false, action);

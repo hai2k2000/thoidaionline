@@ -30,7 +30,7 @@ test("employee navigation exposes only Task Center and account", () => {
   assert.deepEqual(navigation.configuration, []);
 });
 
-test("manager sees assignment and step-one evaluation while TBT cannot assign", () => {
+test("manager and TBT see assignment while read-only TBT does not", () => {
   const manager = getPhase2Navigation({
     ...employee,
     roleCode: "truong_phong",
