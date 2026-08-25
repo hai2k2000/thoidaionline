@@ -53,7 +53,7 @@ export const taskAssignmentRepository = {
     collaboratorIds: string[]; watcherIds: string[];
     groupDepartmentId: string | null; excludedMemberIds: string[];
   }) {
-    const broad = actor.roleCode === "admin" || actor.roleCode === "pho_tong_bien_tap";
+    const broad = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode);
     const peopleQuery = serverSupabase.from("staff_users")
       .select("id,department_id,job_titles(code),roles(code)").eq("active", true).order("id");
     const [department, people, leadership] = await Promise.all([
