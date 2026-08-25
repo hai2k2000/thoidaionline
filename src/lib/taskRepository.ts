@@ -250,7 +250,7 @@ export const taskRepository: TaskRepository = {
   async detail(taskId) {
     const [taskResult, commentResult, legacyProgressResult, evaluationResult,
       progressResult, qualitativeEvaluationResult, deadlineResult, statusResult,
-      attachmentResult] = await Promise.all([
+      attachmentResult, completionScoreResult] = await Promise.all([
       serverSupabase.from("tasks").select(TASK_DETAIL_FIELDS).eq("id", taskId).maybeSingle(),
       serverSupabase.from("task_comments")
         .select("id,content,created_at,user_id,staff_users(full_name)")
@@ -276,18 +276,21 @@ export const taskRepository: TaskRepository = {
       serverSupabase.from("task_attachments")
         .select("id,file_name,mime_type,size_bytes,created_at,uploaded_by")
         .eq("task_id", taskId).order("created_at", { ascending: false }),
+      serverSupabase.from("task_completion_scores")
+        .select("id,requirement_results,requirement_score,collaboration_score,initiative_score,total_score,note,created_at,reviewer:staff_users!task_completion_scores_reviewer_id_fkey(full_name)")
+        .eq("task_id", taskId).maybeSingle(),
     ]);
     const error = taskResult.error ?? commentResult.error ?? legacyProgressResult.error
       ?? evaluationResult.error ?? progressResult.error ?? qualitativeEvaluationResult.error
       ?? deadlineResult.error
-      ?? statusResult.error ?? attachmentResult.error;
+      ?? statusResult.error ?? attachmentResult.error ?? completionScoreResult.error;
     if (error) return fail(error);
     if (!taskResult.data) return ok(null);
     return ok({
       ...(taskResult.data as unknown as Omit<TaskDetailDto,
         "comments" | "progress_logs" | "legacy_evaluations" | "progress_reports"
         | "qualitative_evaluations"
-        | "deadline_history" | "status_events" | "attachments">),
+        | "deadline_history" | "status_events" | "attachments" | "completion_score">),
       ...resolveTaskCompatibility(taskResult.data as unknown as TaskListItemDto),
       comments: (commentResult.data ?? []) as unknown as TaskDetailDto["comments"],
       progress_logs: (legacyProgressResult.data ?? []) as unknown as TaskDetailDto["progress_logs"],
@@ -297,6 +300,7 @@ export const taskRepository: TaskRepository = {
       deadline_history: (deadlineResult.data ?? []) as unknown as TaskDetailDto["deadline_history"],
       status_events: (statusResult.data ?? []) as unknown as TaskDetailDto["status_events"],
       attachments: (attachmentResult.data ?? []) as unknown as TaskDetailDto["attachments"],
+      completion_score: completionScoreResult.data as unknown as TaskDetailDto["completion_score"],
     });
   },
 
@@ -392,6 +396,10 @@ export const taskRepository: TaskRepository = {
   ),
   submitAssignedCompletion: (actorId, taskId) => mutation(
     "api_submit_assigned_task_completion", { p_actor_id: actorId, p_task_id: taskId },
+  ),
+  scoreTaskCompletion: (actorId, taskId, requirementResults, collaborationScore, initiativeScore, note) => mutation(
+    "api_score_task_completion",
+    { p_actor_id: actorId, p_task_id: taskId, p_requirement_results: requirementResults, p_collaboration_score: collaborationScore, p_initiative_score: initiativeScore, p_note: note },
   ),
   reviewAssignedCompletion: (actorId, taskId, decision, reason) => mutation(
     "api_review_assigned_task_completion",

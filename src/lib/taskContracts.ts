@@ -81,6 +81,7 @@ export type TaskQualitativeEvaluationDto = { id: string; evaluation_text: string
 export type TaskDeadlineHistoryDto = { id: string; old_due_date: string | null; new_due_date: string | null; reason: string; changed_at: string; };
 export type TaskStatusEventDto = { id: string; from_status: string | null; to_status: string; reason: string | null; created_at: string; };
 export type TaskAttachmentDto = { id: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; uploaded_by: string; };
+export type TaskCompletionScoreDto = { id: string; requirement_results: Array<{ index: number; achieved: boolean }>; requirement_score: number; collaboration_score: number; initiative_score: number; total_score: number; note: string | null; created_at: string; reviewer: { full_name: string | null } | null; };
 
 export type TaskDetailDto = TaskListItemDto & {
   description: string | null;
@@ -97,6 +98,7 @@ export type TaskDetailDto = TaskListItemDto & {
   deadline_history: TaskDeadlineHistoryDto[];
   status_events: TaskStatusEventDto[];
   attachments: TaskAttachmentDto[];
+  completion_score: TaskCompletionScoreDto | null;
 };
 
 export type TaskListQuery = {
@@ -135,6 +137,7 @@ export type LegacyCreateTaskInput = {
 export type AssignedTaskInput = {
   title: string;
   description: string;
+  requirements: string[];
   departmentId: string;
   assigneeId: string;
   reviewerId: string;
@@ -224,6 +227,7 @@ export interface TaskRepository {
   submitQualitativeEvaluation(actorId: string, taskId: string, input: QualitativeEvaluationInput): Promise<RepositoryResult<TaskQualitativeEvaluationDto>>;
   submitAssignedCompletion(actorId: string, taskId: string): Promise<RepositoryResult<unknown>>;
   reviewAssignedCompletion(actorId: string, taskId: string, decision: "approve" | "return", reason: string | null): Promise<RepositoryResult<unknown>>;
+  scoreTaskCompletion(actorId: string, taskId: string, requirementResults: unknown[], collaborationScore: number, initiativeScore: number, note: string | null): Promise<RepositoryResult<unknown>>;
   cancelAssigned(actorId: string, taskId: string, reason: string): Promise<RepositoryResult<unknown>>;
   changeAssignedDeadline(actorId: string, taskId: string, dueDate: string, reason: string): Promise<RepositoryResult<unknown>>;
   addAttachmentMetadata(actorId: string, taskId: string, input: { storagePath: string; fileName: string; mimeType: string; sizeBytes: number }): Promise<RepositoryResult<TaskAttachmentDto>>;

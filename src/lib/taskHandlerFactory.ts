@@ -232,6 +232,15 @@ export function createTaskApplication(deps: Dependencies) {
       const { actor, body } = guarded;
       const taskId = await authorizeMutation(actor, taskIdValue, "review");
       if (taskId instanceof Response) return taskId;
+      if (Array.isArray(body.requirementResults)) {
+        const collaborationScore = Number(body.collaborationScore);
+        const initiativeScore = Number(body.initiativeScore);
+        if (!Number.isFinite(collaborationScore) || !Number.isFinite(initiativeScore)) return deps.error("invalid_request", 400);
+        const results = body.requirementResults.filter((item) => item && typeof item === "object" && typeof (item as Record<string, unknown>).achieved === "boolean");
+        if (results.length !== body.requirementResults.length) return deps.error("invalid_request", 400);
+        const result = await deps.repository.scoreTaskCompletion(actor.id, taskId, results, collaborationScore, initiativeScore, cleanText(body.note, 2000) || null);
+        return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+      }
       const decision = body.decision === "approve" || body.decision === "return" ? body.decision : null;
       const reason = cleanText(body.reason, 2000) || null;
       if (!decision || (decision === "return" && !reason)) return deps.error("invalid_request", 400);
@@ -458,13 +467,14 @@ export function createTaskApplication(deps: Dependencies) {
       const actor = toActor(guard.actor);
       const body = await bodyObject(request);
       const title = cleanText(body?.title, 500);
-      const description = cleanText(body?.description, 10000);
+      const requirements = Array.isArray(body?.requirements) ? body.requirements.map((value) => cleanText(value, 2000)).filter(Boolean) : [];
+      const description = requirements.map((value) => `- ${value}`).join("\n");
       const departmentId = deps.asUuid(body?.departmentId);
       const assigneeId = deps.asUuid(body?.assigneeId);
-      const reviewerId = deps.asUuid(body?.reviewerId);
+      const reviewerId = actor.id;
       const dueDate = dateValue(body?.dueDate);
       const dueTime = timeValue(body?.dueTime);
-      const evaluationCriteria = cleanText(body?.evaluationCriteria, 10000) || null;
+      const evaluationCriteria = JSON.stringify(requirements);
       const assignmentPriorities = ["low", "normal", "high", "urgent"] as const;
       const assignmentPriority = body?.priority === undefined
         ? "normal"
@@ -484,7 +494,7 @@ export function createTaskApplication(deps: Dependencies) {
       const groupDepartmentId = body?.groupDepartmentId === undefined || body?.groupDepartmentId === null
         ? null : deps.asUuid(body.groupDepartmentId);
       const excludedMemberIds = body?.excludedMemberIds === undefined ? [] : ids(body.excludedMemberIds);
-      if (!title || !description || !departmentId || !assigneeId || !reviewerId
+      if (!title || requirements.length < 1 || requirements.length > 50 || !departmentId || !assigneeId || !reviewerId
         || !dueDate || !dueTime || !assignmentPriority || !collaboratorIds || !watcherIds || !excludedMemberIds
         || (body?.groupDepartmentId !== undefined && body?.groupDepartmentId !== null && !groupDepartmentId)
         || recurrenceFrequency === undefined
@@ -502,7 +512,7 @@ export function createTaskApplication(deps: Dependencies) {
       });
       if (!resolved.ok) return deps.error("invalid_request", 400);
       const input: AssignedTaskInput = {
-        title, description, departmentId, assigneeId, reviewerId, dueDate, dueTime,
+        title, description, requirements, departmentId, assigneeId, reviewerId, dueDate, dueTime,
         evaluationCriteria,
         priority: assignmentPriority,
         collaboratorIds: resolved.collaboratorIds,
