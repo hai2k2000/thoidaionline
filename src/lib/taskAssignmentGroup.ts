@@ -1,6 +1,7 @@
-export type AssignmentSelectionPerson = { id: string; departmentId: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
+export type AssignmentSelectionPerson = { id: string; departmentId: string | null; roleCode?: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
 export type AssignmentSelectionInput = {
   broad: boolean;
+  actorRoleCode?: string;
   actorDepartmentId: string | null;
   department: { id: string; managerId: string | null } | null;
   people: AssignmentSelectionPerson[];
@@ -26,6 +27,7 @@ export function resolveAssignmentSelection(input: AssignmentSelectionInput) {
     || assignee.departmentId !== input.departmentId || !reviewer
     || !reviewer.canReview
     || (!reviewer.canReviewOutsideDepartment && reviewer.departmentId !== input.departmentId)) return { ok: false as const };
+  if (input.actorRoleCode === "pho_tong_bien_tap" && assignee.roleCode === "tong_bien_tap") return { ok: false as const };
   if (input.groupDepartmentId !== null && input.groupDepartmentId !== input.departmentId) return { ok: false as const };
   if (input.groupDepartmentId === null && input.excludedMemberIds.length) return { ok: false as const };
   if (input.collaboratorIds.some((id) => !memberIds.has(id))) return { ok: false as const };

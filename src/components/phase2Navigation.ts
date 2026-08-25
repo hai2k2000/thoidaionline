@@ -27,7 +27,7 @@ export function getPhase2Navigation(
 ): Phase2Navigation {
   return {
     primary: [
-      ...(access.canAssignTask
+      ...(access.canAssignTask || ["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
         ? [
             { id: "assign", href: "/tasks/assign" } as const,
           ]

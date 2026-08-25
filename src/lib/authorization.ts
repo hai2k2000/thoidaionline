@@ -103,8 +103,10 @@ export function canAssignToDepartment(
   departmentId: string | null,
 ): boolean {
   if (TASK_READ_ONLY_ROLES.has(actor.roleCode)) return false;
-  if (!actor.permissions.can_assign_task) return false;
+  if (!actor.permissions.can_assign_task
+    && !["tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode)) return false;
   return actor.roleCode === "admin"
+    || actor.roleCode === "tong_bien_tap"
     || actor.roleCode === "pho_tong_bien_tap"
     || (
       actor.departmentId !== null
@@ -128,7 +130,7 @@ export function canTaskAction(
   }
 
   if (actor.roleCode === "tbt_read_only") return false;
-  if (actor.roleCode === "tong_bien_tap" && !["comment", "leader_evaluate", "review"].includes(action)) {
+  if (actor.roleCode === "tong_bien_tap" && !["assign", "comment", "leader_evaluate", "review"].includes(action)) {
     return false;
   }
 

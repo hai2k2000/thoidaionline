@@ -6,11 +6,11 @@ import { resolveAssignmentSelection } from "@/lib/taskAssignmentGroup";
 import { isEligibleAssignmentReviewer, isLeadershipAssignmentReviewer } from "@/lib/taskReviewerPolicy.mjs";
 
 export type AssignmentDepartment = { id: string; name: string; managerId: string | null; hasManager: boolean };
-export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
+export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; roleCode: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
 
 export const taskAssignmentRepository = {
   async options(actor: AuthorizationActor) {
-    const broad = actor.roleCode === "admin" || actor.roleCode === "pho_tong_bien_tap";
+    const broad = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode);
     let departmentsQuery = serverSupabase.from("departments")
       .select("id,name,manager_id").eq("active", true).order("name");
     const peopleQuery = serverSupabase.from("staff_users")
@@ -29,12 +29,13 @@ export const taskAssignmentRepository = {
         managerId: row.manager_id as string | null,
         hasManager: row.manager_id !== null,
       })),
-      people: (people.data ?? []).filter((row) => broad || row.department_id === actor.departmentId || isLeadershipAssignmentReviewer(
+      people: (people.data ?? []).filter((row) => (actor.roleCode !== "pho_tong_bien_tap" || (row.roles as unknown as { code?: string } | null)?.code !== "tong_bien_tap") && (broad || row.department_id === actor.departmentId || isLeadershipAssignmentReviewer(
         (row.roles as unknown as { code?: string } | null)?.code,
-      )).map((row) => ({
+      ))).map((row) => ({
         id: row.id as string,
         fullName: row.full_name as string,
         departmentId: row.department_id as string | null,
+        roleCode: (row.roles as unknown as { code?: string } | null)?.code ?? null,
         canReview: isEligibleAssignmentReviewer({
           roleCode: (row.roles as unknown as { code?: string } | null)?.code,
           jobTitleCode: (row.job_titles as unknown as { code?: string } | null)?.code,
@@ -71,6 +72,7 @@ export const taskAssignmentRepository = {
         }),
         canReviewOutsideDepartment: isLeadershipAssignmentReviewer((row.roles as unknown as { code?: string } | null)?.code),
       })),
+      actorRoleCode: actor.roleCode,
       ...input,
     });
   },

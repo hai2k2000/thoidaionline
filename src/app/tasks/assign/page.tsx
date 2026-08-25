@@ -7,7 +7,7 @@ import { taskAssignmentRepository } from "@/lib/taskAssignmentRepository";
 export default async function TaskAssignPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (!canAccessTaskAssignment({ can_assign_task: user.permissions.can_assign_task })) {
+  if (!canAccessTaskAssignment({ can_assign_task: user.permissions.can_assign_task, role_code: user.role_code })) {
     redirect("/tasks");
   }
   const options = await taskAssignmentRepository.options({
