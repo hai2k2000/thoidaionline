@@ -57,10 +57,7 @@ export type EvaluationDecision =
     }
   | { action: "manage_rubrics" };
 
-const TASK_READ_ONLY_ROLES = new Set([
-  "tong_bien_tap",
-  "tbt_read_only",
-]);
+const TASK_READ_ONLY_ROLES = new Set(["tbt_read_only"]);
 const ORGANIZATION_VIEW_ROLES = new Set([
   "admin",
   "tong_bien_tap",
