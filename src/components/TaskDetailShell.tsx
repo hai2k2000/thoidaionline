@@ -46,8 +46,6 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const [progressText, setProgressText] = useState("");
   const [blockers, setBlockers] = useState("");
   const [comment, setComment] = useState("");
-  const [evaluationText, setEvaluationText] = useState("");
-  const [leaderEvaluationText, setLeaderEvaluationText] = useState("");
   const [evaluationDeadline, setEvaluationDeadline] = useState(task.due_date ?? today());
   const requirements = (() => { try { const value = JSON.parse(task.evaluation_criteria ?? "[]"); return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []; } catch { return []; } })();
   const [requirementResults, setRequirementResults] = useState(requirements.map(() => false));
@@ -93,16 +91,6 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   const submitComment = async (event: FormEvent) => {
     event.preventDefault(); if (!comment.trim()) return;
     await jsonPost(`/api/tasks/${task.id}/comments`, { content: comment }); setComment("");
-  };
-  const submitEvaluation = async (event: FormEvent) => {
-    event.preventDefault();
-    const response = await jsonPost(`/api/tasks/${task.id}/evaluations`, { evaluationText, evaluationDeadline, evaluationSource: "chatgpt" });
-    if (response) setEvaluationText("");
-  };
-  const submitLeaderEvaluation = async (event: FormEvent) => {
-    event.preventDefault();
-    const response = await jsonPost(`/api/tasks/${task.id}/evaluations`, { evaluationText: leaderEvaluationText, evaluationDeadline, evaluationSource: "leader" });
-    if (response) setLeaderEvaluationText("");
   };
   const upload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -159,14 +147,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
               <Section title="Trao đổi">{capabilities.comment ? <form onSubmit={submitComment} className="mb-5 flex flex-col gap-2 sm:flex-row"><input value={comment} onChange={(event) => setComment(event.target.value)} required maxLength={5000} placeholder="Viết bình luận" className="min-w-0 flex-1 rounded border p-2" /><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white">Gửi</button></form> : null}{task.comments.length ? <ul aria-label="Danh sách trao đổi, mới nhất trước" className="max-h-64 space-y-3 overflow-y-auto border-l-2 border-orange-100 pl-4 pr-2 text-sm">{task.comments.map((row) => <li key={row.id} className="border-b border-slate-100 pb-3 last:border-0"><b>{row.staff_users?.full_name ?? "Người dùng"}</b> · {dateText(row.created_at)}<p className="mt-1 whitespace-pre-wrap break-words">{row.content}</p></li>)}</ul> : <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Chưa có trao đổi.</p>}</Section>
               {capabilities.review && requirements.length ? <Section title="Chấm điểm hoàn thành"><p className="mb-3 text-sm text-slate-600">Cơ cấu điểm: đáp ứng yêu cầu 60 điểm · thái độ và phối hợp 20 điểm · chủ động và trách nhiệm 20 điểm.</p>{task.status === "pending_review" ? <form id="task-scoring-form" onSubmit={submitScoreAndApprove} className="grid gap-4"><fieldset className="grid gap-2"><legend className="font-semibold">1. Mức độ đáp ứng yêu cầu · tối đa 60 điểm</legend>{requirements.map((item, index) => <label key={index} className="flex items-start gap-2 rounded-lg border p-3"><input type="checkbox" checked={requirementResults[index]} onChange={(event) => setRequirementResults((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.checked : value))} className="mt-1" /><span>{item}</span></label>)}</fieldset><ScoreField label="2. Thái độ chuyên nghiệp và năng lực phối hợp" value={collaborationScore} onChange={setCollaborationScore} /><ScoreField label="3. Tinh thần chủ động, tiên phong và trách nhiệm" value={initiativeScore} onChange={setInitiativeScore} /><label className="grid gap-1 text-sm font-semibold">Nhận xét<textarea value={scoreNote} onChange={(event) => setScoreNote(event.target.value)} maxLength={2000} className="min-h-20 rounded border p-2 font-normal" /></label><p className="font-bold text-emerald-800">Tổng điểm dự kiến: {(requirementResults.filter(Boolean).length * 60 / requirements.length + collaborationScore + initiativeScore).toFixed(2)}/100</p><button disabled={busy} className="rounded bg-emerald-700 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu điểm và duyệt hoàn thành</button></form> : <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Chấm điểm sẽ mở khi người thực hiện gửi công việc để duyệt.</p>}</Section> : null}
               {task.completion_score ? <Section title="Kết quả chấm điểm"><div className="grid gap-2 sm:grid-cols-4"><Item label="Đáp ứng yêu cầu" value={`${task.completion_score.requirement_score}/60`} /><Item label="Thái độ & phối hợp" value={`${task.completion_score.collaboration_score}/20`} /><Item label="Chủ động & trách nhiệm" value={`${task.completion_score.initiative_score}/20`} /><Item label="Tổng điểm" value={`${task.completion_score.total_score}/100`} /></div>{task.completion_score.note ? <p className="mt-3 whitespace-pre-wrap text-sm">{task.completion_score.note}</p> : null}</Section> : null}
-              <section id="task-evaluation-workspace" tabIndex={-1} aria-label="Đánh giá công việc" className="scroll-mt-4 focus:outline-none">
-                <Section title="Đánh giá công việc">
-                  {capabilities.evaluate ? <form onSubmit={submitEvaluation} className="mb-5 grid gap-3"><label className="grid gap-1 text-sm font-semibold">Thời hạn đánh giá<input aria-label="Thời hạn đánh giá" type="date" value={evaluationDeadline} onChange={(event) => setEvaluationDeadline(event.target.value)} required className="rounded border p-2 font-normal" /></label><details className="rounded-lg border border-dashed bg-slate-50 p-3" open><summary className="cursor-pointer text-sm font-semibold">Dán đánh giá từ ChatGPT</summary><textarea id="task-ai-evaluation" aria-label="Nội dung đánh giá từ ChatGPT" value={evaluationText} onChange={(event) => setEvaluationText(event.target.value)} required maxLength={10000} placeholder="Dán nội dung đánh giá đã được ChatGPT soạn sẵn" className="mt-3 min-h-28 w-full rounded border p-2" /><p className="mt-1 text-xs text-slate-500">Kiểm tra nội dung trước khi lưu. Nội dung sẽ được lưu như đánh giá định tính của bạn.</p></details><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu đánh giá</button></form> : null}
-                  {capabilities.leaderEvaluate ? <form onSubmit={submitLeaderEvaluation} className="mb-5 grid gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3"><label className="grid gap-1 text-sm font-semibold">Đánh giá của lãnh đạo (Trưởng phòng/Tổng Biên Tập)<textarea aria-label="Đánh giá của lãnh đạo" value={leaderEvaluationText} onChange={(event) => setLeaderEvaluationText(event.target.value)} required maxLength={10000} placeholder="Nhập nhận xét của lãnh đạo về công việc" className="min-h-28 rounded border bg-white p-2 font-normal" /></label><button disabled={busy} className="rounded bg-emerald-700 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu đánh giá lãnh đạo</button></form> : null}
-                  <Timeline empty="Chưa có đánh giá.">{task.qualitative_evaluations.map((row) => <li key={row.id}><b>{dateText(row.evaluation_deadline)} · {row.evaluation_source === "leader" ? "Lãnh đạo" : "ChatGPT"} · {row.evaluator?.full_name ?? "Người đánh giá"}</b><p className="whitespace-pre-wrap">{row.evaluation_text}</p></li>)}</Timeline>
-                  {task.legacy_evaluations.length ? <details className="mt-5 rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Đánh giá trước đây ({task.legacy_evaluations.length})</summary><p className="my-2 text-sm text-slate-500">Dữ liệu lịch sử được giữ nguyên và chỉ hiển thị nhận xét.</p><Timeline empty="Chưa có nhận xét cũ.">{task.legacy_evaluations.map((row) => <li key={row.id}><b>Ngày đánh giá: {row.checkpoint_date}</b><p className="whitespace-pre-wrap">{row.opinion || "Không có nhận xét."}</p></li>)}</Timeline></details> : null}
-                </Section>
-              </section>
+
             </section>
 
           </div>
