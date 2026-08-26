@@ -106,7 +106,8 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
   };
   const personal = task.task_type === "personal";
   const deadlineState = classifyTaskDeadline(task);
-  const canComplete = personal ? capabilities.personalComplete : capabilities.completeAssigned;
+  const canAccept = !personal && capabilities.acceptAssigned && task.status === "new";
+  const canComplete = personal ? capabilities.personalComplete : capabilities.completeAssigned && task.status !== "new";
   const completePath = personal ? "complete" : "submit-completion";
   const latestProgress = task.progress_reports[0] ?? null;
   const returnReason = task.status_events.find((event) => event.to_status === "rejected" && event.reason)?.reason;
@@ -122,6 +123,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
             <div className="min-w-0"><h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span><span>{deadlineState}</span></div></div>
             <div className="flex max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto pb-1 sm:justify-end">
               <span className="shrink-0 rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-800">{statusLabel[task.status] ?? task.status}</span>
+              {canAccept ? <button disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/accept`)} className="shrink-0 whitespace-nowrap rounded-lg bg-blue-700 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Nhận việc</button> : null}
               {canComplete ? <button data-testid="task-completion-action" disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/${completePath}`)} className="shrink-0 whitespace-nowrap rounded-lg bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Hoàn thành</button> : null}
               {hasTaskActions ? <>
                 {capabilities.adminEdit ? <Link href={`/tasks/${task.id}/admin-edit`} className="shrink-0 whitespace-nowrap rounded bg-slate-900 px-2 py-1.5 text-xs font-semibold text-white">Sửa</Link> : null}

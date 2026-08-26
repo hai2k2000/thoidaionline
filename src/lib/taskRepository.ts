@@ -401,6 +401,7 @@ export const taskRepository: TaskRepository = {
   submitAssignedCompletion: (actorId, taskId) => mutation(
     "api_submit_assigned_task_completion", { p_actor_id: actorId, p_task_id: taskId },
   ),
+  acceptAssignedTask: (actorId, taskId) => mutation("api_accept_assigned_task", { p_actor_id: actorId, p_task_id: taskId }),
   scoreTaskCompletion: (actorId, taskId, requirementResults, requirementScore, collaborationScore, initiativeScore, note) => mutation(
     "api_score_task_completion",
     { p_actor_id: actorId, p_task_id: taskId, p_requirement_results: requirementResults, p_requirement_score: requirementScore, p_collaboration_score: collaborationScore, p_initiative_score: initiativeScore, p_note: note },

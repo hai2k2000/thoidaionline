@@ -40,6 +40,7 @@ export default async function TaskDetailPage({ params }: Props) {
   return <TaskDetailShell task={task} userLabel={user.full_name} capabilities={{
     report: action("report"),
     completeAssigned: action("complete_assigned"),
+    acceptAssigned: action("accept_assigned"),
     review: action("review"),
     update: action("update"),
     comment: action("comment"),

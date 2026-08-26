@@ -225,6 +225,14 @@ export function createTaskApplication(deps: Dependencies) {
       const result = await deps.repository.submitAssignedCompletion(guard.actor.id, taskId);
       return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
     },
+    async acceptAssignedTask(_request: Request, taskIdValue: unknown) {
+      const guard = await deps.mutationActor();
+      if (!guard.ok) return guard.response;
+      const taskId = await authorizeMutation(guard.actor, taskIdValue, "accept_assigned");
+      if (taskId instanceof Response) return taskId;
+      const result = await deps.repository.acceptAssignedTask(guard.actor.id, taskId);
+      return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
 
     async reviewAssignedCompletion(request: Request, taskIdValue: unknown) {
       const guarded = await guardedBody(request);
