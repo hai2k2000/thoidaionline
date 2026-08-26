@@ -11,7 +11,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-admin";
+    | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin";
   href: string;
 };
 
@@ -34,6 +34,8 @@ export function getPhase2Navigation(
         : []),
       { id: "tasks", href: "/tasks" },
       { id: "work-schedule", href: "/work-schedule" },
+      { id: "work-schedule-leader", href: "/work-schedule/leadership" },
+      { id: "work-schedule-staff", href: "/work-schedule/staff" },
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
