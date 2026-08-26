@@ -79,7 +79,7 @@ function NavContent({
     <div className="flex h-full flex-col p-3.5">
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 via-white to-amber-50 px-3 py-3.5 text-center ring-1 ring-orange-100 before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-orange-500 before:via-red-500 before:to-amber-400">
         <span aria-hidden="true" className="mx-auto flex h-12 w-36 items-center justify-center overflow-hidden px-1"><img src="/thoidai-logo.png" alt="Logo Thời Đại" className="h-auto w-full object-contain" /></span>
-        <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.13em] text-slate-500">Quản trị công việc nội bộ</p>
+        <p className="mt-1.5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Quản trị công việc nội bộ</p>
       </div>
 
       <div className="mt-4 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
