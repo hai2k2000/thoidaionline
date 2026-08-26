@@ -43,8 +43,11 @@ const deadlineLabel = (task: TaskListResult["items"][number]) => {
   return state === "no_deadline" ? "Không có hạn" : state === "overdue" ? "Quá hạn" : state === "due_soon" ? "Sắp đến hạn" : "Đúng hạn";
 };
 
-const dueText = (dueDate: string | null, dueTime: string | null) =>
-  dueDate ? `${dueDate}${dueTime ? ` ${dueTime.slice(0, 5)}` : ""}` : "—";
+const dueText = (dueDate: string | null, dueTime: string | null) => {
+  if (!dueDate) return "—";
+  const [year, month, day] = dueDate.split("-");
+  return `${day}/${month}/${year.slice(-2)}${dueTime ? ` ${dueTime.slice(0, 5)}` : ""}`;
+};
 
 const participantNames = (task: TaskListResult["items"][number], role: "assignee" | "watcher") =>
   task.task_assignees.filter((row) => row.assignment_role === role).map((row) => row.staff_users?.full_name).filter(Boolean).join(", ") || "—";
