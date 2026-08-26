@@ -12,6 +12,7 @@ import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type Capabilities = {
   report: boolean; completeAssigned: boolean; review: boolean; update: boolean; comment: boolean;
+  acceptAssigned: boolean;
   attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
 };
 const statusLabel: Record<string, string> = {
