@@ -123,12 +123,7 @@ export default function TaskCenterShell(props: Props) {
           </header>
 
           <>
-              {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : <nav aria-label="Phạm vi công việc" className="mt-3 flex flex-wrap gap-2">
-                {[["all","Tất cả"],["assigned","Được giao cho tôi"],["personal","Nhiệm vụ cá nhân"],["watching","Tôi theo dõi"]].map(([scope,label]) => (
-                  <Link key={scope} href={listHref({ scope: scope as TaskListQuery["scope"], page: 1 })} className={tabClass(query.scope === scope)}>{label}</Link>
-                ))}
-                <Link href={listHref({ scope: "cancelled", page: 1 })} className={tabClass(query.scope === "cancelled")}>Đã hủy</Link>
-              </nav>}
+              {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : <div className="mt-3 rounded-xl border bg-white p-3"><label className="flex items-center gap-2 text-sm font-semibold">Phạm vi công việc<select value={query.scope ?? "all"} onChange={(e)=>{window.location.href=listHref({scope:e.target.value as TaskListQuery["scope"],page:1});}} className="rounded border px-3 py-2 font-normal"><option value="all">Tất cả</option><option value="assigned">Được giao cho tôi</option><option value="personal">Nhiệm vụ cá nhân</option><option value="watching">Tôi theo dõi</option><option value="cancelled">Đã hủy</option></select></label></div>}
 
               <details className="mt-3 rounded-xl border bg-white p-3 shadow-sm md:hidden">
                 <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>
