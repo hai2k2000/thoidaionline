@@ -22,6 +22,7 @@ const labels = {
   "duty-roster": "Quản trị lịch trực",
   tasks: "Qu\u1ea3n l\u00fd c\u00f4ng vi\u1ec7c",
   evaluations: "\u0110\u00e1nh gi\u00e1 nh\u00e2n vi\u00ean",
+  "evaluation-summary": "Bảng đánh giá toàn cơ quan",
   account: "T\u00e0i kho\u1ea3n",
   users: "Qu\u1ea3n l\u00fd nh\u00e2n vi\u00ean",
   departments: "Ph\u00f2ng ban",
