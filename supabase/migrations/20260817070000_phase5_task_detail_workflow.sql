@@ -178,7 +178,7 @@ begin
   if p_storage_path not like p_task_id::text || '/%'
      or nullif(btrim(p_file_name),'') is null or length(p_file_name)>500
      or p_mime_type not in ('application/pdf','image/png','image/jpeg','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-     or p_size_bytes<=0 or p_size_bytes>10485760 then
+     or p_size_bytes<=0 or p_size_bytes>2147483648 then
     raise exception 'Invalid private attachment metadata.' using errcode='22023';
   end if;
   insert into public.task_attachments(task_id,storage_path,file_name,mime_type,size_bytes,uploaded_by)

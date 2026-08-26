@@ -292,7 +292,7 @@ export function createTaskApplication(deps: Dependencies) {
       };
       const extension = file instanceof File ? file.name.split(".").pop()?.toLowerCase() ?? "" : "";
       const mimeType = file instanceof File && allowed.has(file.type) ? file.type : extensionMime[extension];
-      if (!(file instanceof File) || file.size < 1 || file.size > 10485760 || !mimeType) {
+      if (!(file instanceof File) || file.size < 1 || file.size > 2147483648 || !mimeType) {
         return deps.error("invalid_request", 400);
       }
       const storagePath = `${taskId}/${deps.newUuid()}.${extension}`;
