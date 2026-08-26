@@ -230,7 +230,6 @@ export interface TaskRepository {
   submitStructuredProgress(actorId: string, taskId: string, input: { reportedOn: string; reportStatus: string; progressText: string; blockers: string | null }): Promise<RepositoryResult<unknown>>;
   submitQualitativeEvaluation(actorId: string, taskId: string, input: QualitativeEvaluationInput): Promise<RepositoryResult<TaskQualitativeEvaluationDto>>;
   submitAssignedCompletion(actorId: string, taskId: string): Promise<RepositoryResult<unknown>>;
-  acceptAssignedTask(actorId: string, taskId: string): Promise<RepositoryResult<unknown>>;
   reviewAssignedCompletion(actorId: string, taskId: string, decision: "approve" | "return", reason: string | null): Promise<RepositoryResult<unknown>>;
   scoreTaskCompletion(actorId: string, taskId: string, requirementResults: unknown[], requirementScore: number, collaborationScore: number, initiativeScore: number, note: string | null): Promise<RepositoryResult<unknown>>;
   cancelAssigned(actorId: string, taskId: string, reason: string): Promise<RepositoryResult<unknown>>;

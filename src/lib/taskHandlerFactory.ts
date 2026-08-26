@@ -225,10 +225,6 @@ export function createTaskApplication(deps: Dependencies) {
       const result = await deps.repository.submitAssignedCompletion(guard.actor.id, taskId);
       return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
     },
-    async acceptAssignedTask(_request: Request, taskIdValue: unknown) {
-      return deps.error("not_found", 404);
-    },
-
     async reviewAssignedCompletion(request: Request, taskIdValue: unknown) {
       const guarded = await guardedBody(request);
       if (guarded instanceof Response) return guarded;
