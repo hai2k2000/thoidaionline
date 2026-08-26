@@ -12,4 +12,15 @@ begin
  insert into public.task_assignees(task_id,user_id,assignment_role,status) values(p_task_id,p_actor_id,'owner','todo') on conflict(task_id,user_id) do update set assignment_role='owner',status='todo';
  return v_task;
 end;
-$function$;
+$function$;create or replace function public.api_approve_task_claim(p_actor_id uuid,p_task_id uuid,p_decision text,p_reason text default null) returns public.tasks language plpgsql security definer set search_path=public
+as $
+declare v public.tasks; allowed boolean;
+begin select * into v from public.tasks where id=p_task_id for update; if not found then raise exception 'Không tìm thấy công việc.' using errcode='P0002'; end if;
+ select (p_actor_id=v.reviewer_id or exists(select 1 from staff_users u join roles r on r.id=u.role_id where u.id=p_actor_id and r.code='admin')) into allowed;
+ if not allowed then raise exception 'Không có quyền duyệt nhận việc.' using errcode='42501'; end if;
+ if v.status<>'waiting' then raise exception 'Công việc không ở trạng thái chờ duyệt nhận việc.' using errcode='22023'; end if;
+ if p_decision not in ('approve','reject') or (p_decision='reject' and nullif(btrim(p_reason),'') is null) then raise exception 'Quyết định hoặc lý do không hợp lệ.' using errcode='22023'; end if;
+ update tasks set status=case when p_decision='approve' then 'in_progress' else 'rejected' end,updated_at=now() where id=p_task_id returning * into v;
+ insert into task_status_events(task_id,from_status,to_status,reason,actor_id) values(p_task_id,'waiting',v.status,p_reason,p_actor_id); return v;
+end;
+$;
