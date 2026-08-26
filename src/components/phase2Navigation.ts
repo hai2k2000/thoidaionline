@@ -11,7 +11,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule";
+    | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-admin";
   href: string;
 };
 
@@ -43,7 +43,7 @@ export function getPhase2Navigation(
     ],
     account: [{ id: "account", href: "/account" }],
     configuration: [
-      ...(access.roleCode === "admin" ? [{ id: "duty-roster", href: "/configuration/duty-roster" } as const, { id: "online-work-admin", href: "/configuration/online-work" } as const, { id: "work-schedule", href: "/configuration/work-schedule" } as const] : []),
+      ...(access.roleCode === "admin" ? [{ id: "duty-roster", href: "/configuration/duty-roster" } as const, { id: "online-work-admin", href: "/configuration/online-work" } as const, { id: "work-schedule-admin", href: "/configuration/work-schedule" } as const] : []),
       ...(access.roleCode === "admin" && access.canManageUsers
         ? [
             { id: "users", href: "/users" } as const,
