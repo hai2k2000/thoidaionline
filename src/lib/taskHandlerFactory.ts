@@ -233,12 +233,14 @@ export function createTaskApplication(deps: Dependencies) {
       const taskId = await authorizeMutation(actor, taskIdValue, "review");
       if (taskId instanceof Response) return taskId;
       if (Array.isArray(body.requirementResults)) {
+        const requirementScore = Number(body.requirementScore);
         const collaborationScore = Number(body.collaborationScore);
         const initiativeScore = Number(body.initiativeScore);
-        if (!Number.isFinite(collaborationScore) || !Number.isFinite(initiativeScore)) return deps.error("invalid_request", 400);
+        const allowedScore = (score: number) => [5, 10, 15, 20].includes(score);
+        if (!Number.isFinite(requirementScore) || requirementScore < 0 || requirementScore > 60 || !allowedScore(collaborationScore) || !allowedScore(initiativeScore)) return deps.error("invalid_request", 400);
         const results = body.requirementResults.filter((item) => item && typeof item === "object" && typeof (item as Record<string, unknown>).achieved === "boolean");
         if (results.length !== body.requirementResults.length) return deps.error("invalid_request", 400);
-        const result = await deps.repository.scoreTaskCompletion(actor.id, taskId, results, collaborationScore, initiativeScore, cleanText(body.note, 2000) || null);
+        const result = await deps.repository.scoreTaskCompletion(actor.id, taskId, results, requirementScore, collaborationScore, initiativeScore, cleanText(body.note, 2000) || null);
         return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
       }
       const decision = body.decision === "approve" || body.decision === "return" ? body.decision : null;

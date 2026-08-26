@@ -227,7 +227,7 @@ export interface TaskRepository {
   submitQualitativeEvaluation(actorId: string, taskId: string, input: QualitativeEvaluationInput): Promise<RepositoryResult<TaskQualitativeEvaluationDto>>;
   submitAssignedCompletion(actorId: string, taskId: string): Promise<RepositoryResult<unknown>>;
   reviewAssignedCompletion(actorId: string, taskId: string, decision: "approve" | "return", reason: string | null): Promise<RepositoryResult<unknown>>;
-  scoreTaskCompletion(actorId: string, taskId: string, requirementResults: unknown[], collaborationScore: number, initiativeScore: number, note: string | null): Promise<RepositoryResult<unknown>>;
+  scoreTaskCompletion(actorId: string, taskId: string, requirementResults: unknown[], requirementScore: number, collaborationScore: number, initiativeScore: number, note: string | null): Promise<RepositoryResult<unknown>>;
   cancelAssigned(actorId: string, taskId: string, reason: string): Promise<RepositoryResult<unknown>>;
   changeAssignedDeadline(actorId: string, taskId: string, dueDate: string, reason: string): Promise<RepositoryResult<unknown>>;
   addAttachmentMetadata(actorId: string, taskId: string, input: { storagePath: string; fileName: string; mimeType: string; sizeBytes: number }): Promise<RepositoryResult<TaskAttachmentDto>>;
