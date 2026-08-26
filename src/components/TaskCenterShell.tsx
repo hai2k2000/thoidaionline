@@ -122,13 +122,10 @@ export default function TaskCenterShell(props: Props) {
                   <>
                     <div className="hidden overflow-x-auto lg:block">
                     <table className="w-full min-w-[980px] border-collapse text-sm">
-                      <thead><tr className="border-b text-left text-slate-600"><th className="p-2">Tên công việc</th><th className="p-2">Người nhận việc</th><th className="p-2">Người giao</th><th className="p-2">Người theo dõi</th><th className="p-2">Hạn hoàn thành</th><th className="p-2">Điểm</th><th className="p-2">Trạng thái</th><th className="p-2">Thao tác</th></tr></thead>
+                      <thead><tr className="border-b text-left text-slate-600"><th className="p-2">Tên công việc</th><th className="p-2">Người nhận việc</th><th className="p-2">Người giao</th><th className="p-2">Người theo dõi</th><th className="p-2">Hạn hoàn thành</th><th className="p-2">Điểm</th><th className="p-2">Trạng thái</th></tr></thead>
                       <tbody>{tasks.items.map((task) => {
-                        const canEdit = task.compatibility_task_type === "personal" && !task.legacy_read_only && task.owner_id === currentUserId;
-                        const canClaim = canClaimTasks && task.self_claimable && task.status === "new" && task.assignee_id === null;
                         return <tr key={task.id} role="link" tabIndex={0} onClick={() => router.push(`/tasks/${task.id}`)} onKeyDown={(event) => { if (event.key === "Enter") router.push(`/tasks/${task.id}`); }} className="cursor-pointer border-b hover:bg-slate-50 focus:bg-slate-50">
                           <td className="p-2 font-semibold">{task.title}{task.legacy_read_only ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs">Dữ liệu cũ · chỉ đọc</span> : null}</td><td className="p-2">{participantNames(task, "assignee")}</td><td className="p-2">{task.created_by_user?.full_name ?? "—"}</td><td className="p-2">{participantNames(task, "watcher")}</td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2 font-semibold">{task.completion_score?.total_score ?? "—"}</td><td className="p-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status)}</span></td>
-                          <td className="p-2"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /></td>
                         </tr>;
                       })}</tbody>
                     </table>
