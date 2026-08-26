@@ -14,7 +14,7 @@ begin
 end;
 $function$;
 create or replace function public.api_approve_task_claim(p_actor_id uuid,p_task_id uuid,p_decision text,p_reason text default null) returns public.tasks language plpgsql security definer set search_path=public
-as $
+as $function$
 declare v public.tasks; allowed boolean;
 begin select * into v from public.tasks where id=p_task_id for update; if not found then raise exception 'Không tìm thấy công việc.' using errcode='P0002'; end if;
  select (p_actor_id=v.reviewer_id or exists(select 1 from staff_users u join roles r on r.id=u.role_id where u.id=p_actor_id and r.code='admin')) into allowed;
@@ -24,4 +24,4 @@ begin select * into v from public.tasks where id=p_task_id for update; if not fo
  update tasks set status=case when p_decision='approve' then 'in_progress' else 'rejected' end,updated_at=now() where id=p_task_id returning * into v;
  insert into task_status_events(task_id,from_status,to_status,reason,actor_id) values(p_task_id,'waiting',v.status,p_reason,p_actor_id); return v;
 end;
-$;
+$function$;
