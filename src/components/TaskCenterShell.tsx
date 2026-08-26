@@ -129,7 +129,7 @@ export default function TaskCenterShell(props: Props) {
                 <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>
                 <form action={basePath} className="mt-3 grid gap-3"><FilterFields query={query} departments={departments} basePath={basePath} /></form>
               </details>
-              <form action={basePath} className="mt-3 hidden gap-2.5 rounded-xl border bg-white p-3 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <form action={basePath} className="mt-3 hidden gap-2.5 rounded-xl border bg-white p-3 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-7">
                 <FilterFields query={query} departments={departments} basePath={basePath} />
               </form>
 
