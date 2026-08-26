@@ -46,10 +46,12 @@ const TASK_LIST_FIELDS = [
   "assignment_mode",
   "plan_period",
   "self_claimable",
+  "description",
+  "evaluation_criteria",
   "departments(name)",
   "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
   "created_by_user:staff_users!tasks_created_by_fkey(full_name)",
-  "completion_score:task_completion_scores(total_score)",
+  "completion_score:task_completion_scores(requirement_score,collaboration_score,initiative_score,total_score,note)",
 ].join(",");
 
 const TASK_DETAIL_FIELDS = [

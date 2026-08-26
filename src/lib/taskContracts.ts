@@ -40,7 +40,9 @@ export type TaskListItemDto = {
   departments: { name: string } | null;
   task_assignees: TaskParticipantDto[];
   created_by_user: { full_name: string | null } | null;
-  completion_score: { total_score: number } | null;
+  description: string | null;
+  evaluation_criteria: string | null;
+  completion_score: { requirement_score: number; collaboration_score: number; initiative_score: number; total_score: number; note: string | null } | null;
 };
 
 export type TaskCommentDto = {
