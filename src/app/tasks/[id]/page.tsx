@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import TaskDetailShell from "@/components/TaskDetailShell";
 import { canTaskAction, type AuthorizationActor } from "@/lib/authorization";
 import { asUuid } from "@/lib/serverApi";
@@ -11,14 +11,13 @@ export default async function TaskDetailPage({ params }: Props) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   const taskId = asUuid((await params).id);
-  if (!taskId) notFound();
+  if (!taskId) redirect("/tasks");
 
   const [accessResult, detailResult] = await Promise.all([
     taskRepository.access(taskId),
     taskRepository.detail(taskId),
   ]);
-  if (!accessResult.ok || !detailResult.ok) throw new Error("Không thể tải chi tiết công việc.");
-  if (!accessResult.data || !detailResult.data) notFound();
+  if (!accessResult.ok || !detailResult.ok || !accessResult.data || !detailResult.data) redirect("/tasks");
 
   const actor: AuthorizationActor = {
     id: user.id,
@@ -27,7 +26,7 @@ export default async function TaskDetailPage({ params }: Props) {
     roleLevel: user.role_level,
     permissions: user.permissions,
   };
-  if (!canTaskAction(actor, accessResult.data, "view")) notFound();
+  if (!canTaskAction(actor, accessResult.data, "view")) redirect("/tasks");
 
   const action = (name: Parameters<typeof canTaskAction>[2]) =>
     canTaskAction(actor, accessResult.data!, name);
