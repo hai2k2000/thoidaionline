@@ -1,4 +1,4 @@
-﻿create or replace function public.claim_task_plan(p_actor_id uuid, p_task_id uuid)
+create or replace function public.claim_task_plan(p_actor_id uuid, p_task_id uuid)
 returns public.tasks language plpgsql security definer set search_path=public
 as $function$
 declare v_task public.tasks; v_reviewer uuid; v_role text;
@@ -12,7 +12,8 @@ begin
  insert into public.task_assignees(task_id,user_id,assignment_role,status) values(p_task_id,p_actor_id,'owner','todo') on conflict(task_id,user_id) do update set assignment_role='owner',status='todo';
  return v_task;
 end;
-$function$;create or replace function public.api_approve_task_claim(p_actor_id uuid,p_task_id uuid,p_decision text,p_reason text default null) returns public.tasks language plpgsql security definer set search_path=public
+$function$;
+create or replace function public.api_approve_task_claim(p_actor_id uuid,p_task_id uuid,p_decision text,p_reason text default null) returns public.tasks language plpgsql security definer set search_path=public
 as $
 declare v public.tasks; allowed boolean;
 begin select * into v from public.tasks where id=p_task_id for update; if not found then raise exception 'Không tìm thấy công việc.' using errcode='P0002'; end if;
