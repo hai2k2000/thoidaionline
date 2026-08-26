@@ -11,7 +11,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin";
+    | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin";
   href: string;
 };
 
@@ -42,6 +42,7 @@ export function getPhase2Navigation(
         || (access.roleCode === "tong_bien_tap" && access.canEvaluateStep2)
         ? [{ id: "evaluations", href: "/evaluations" } as const]
         : []),
+      { id: "evaluation-summary", href: "/evaluation-summary" },
     ],
     account: [{ id: "account", href: "/account" }],
     configuration: [
