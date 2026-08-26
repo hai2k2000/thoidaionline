@@ -15,7 +15,7 @@ type Capabilities = {
   attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
 };
 const statusLabel: Record<string, string> = {
-  new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc", waiting: "Chờ phối hợp",
+  new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc", waiting: "Đang chờ duyệt",
   pending_review: "Chờ duyệt", rejected: "Trả lại", done: "Hoàn thành", cancelled: "Đã hủy",
 };
 const difficultyLabel: Record<string, string> = { low: "Dễ", normal: "Trung bình", high: "Khó", urgent: "Rất khó" };

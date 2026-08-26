@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 
 import { serverSupabase } from "@/lib/serverSupabase";
 
@@ -31,7 +31,7 @@ const statusLabels: Record<string, string> = {
   new: "Mới",
   in_progress: "Đang làm",
   blocked: "Có vướng mắc",
-  waiting: "Chờ phối hợp",
+  waiting: "Đang chờ duyệt",
   pending_review: "Chờ duyệt",
   rejected: "Trả lại",
   done: "Hoàn thành",
