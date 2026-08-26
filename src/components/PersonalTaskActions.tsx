@@ -38,7 +38,7 @@ export default function PersonalTaskActions({ taskId, canEdit, canClaim, termina
       body: JSON.stringify({ taskId }),
     });
     if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể bắt đầu nhiệm vụ."));
-    notify("success", "Đã bắt đầu nhiệm vụ.");
+    notify("success", "Đã gửi yêu cầu nhận việc. Chờ duyệt.");
     router.refresh();
     } catch (error) { const text = errorMessage(error, "Không thể bắt đầu nhiệm vụ."); setError(text); notify("error", text); }
     finally { setBusy(false); }
@@ -48,7 +48,7 @@ export default function PersonalTaskActions({ taskId, canEdit, canClaim, termina
   if (canClaim && !canEdit) return (
     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
       <button disabled={busy} onClick={() => void claim()} className="rounded bg-orange-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
-        Thực hiện
+        Đăng ký nhận việc
       </button>
       {error ? <span role="alert" className="text-xs text-red-700">{error}</span> : null}
     </div>
