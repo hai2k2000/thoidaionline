@@ -422,7 +422,14 @@ export function createTaskApplication(deps: Dependencies) {
     async create(request: Request) {
       const guard = await deps.mutationActor();
       if (!guard.ok) return guard.response;
-      const actor = toActor(guard.actor);
+      // Legacy task creation accepted a client-selected reviewer and bypassed
+      // the hardened assignment workflow. Keep the endpoint explicit until
+      // all clients use /api/tasks/assign.
+      return new Response(JSON.stringify({ error: "legacy_task_create_disabled", message: "Hãy sử dụng luồng giao việc mới." }), {
+        status: 410,
+        headers: { "content-type": "application/json" },
+      });
+      /* const actor = toActor(guard.actor);
       const body = await bodyObject(request);
       const title = cleanText(body?.title, 500);
       const description = cleanText(body?.description, 10000);
@@ -461,6 +468,7 @@ export function createTaskApplication(deps: Dependencies) {
       return result.ok
         ? deps.json({ task: result.data }, 201)
         : deps.rpcFailure(result.error);
+      */
     },
 
     async assign(request: Request) {
