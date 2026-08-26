@@ -28,6 +28,7 @@ const labels = {
   permissions: "Ph\u00e2n quy\u1ec1n",
   "evaluation-rubrics": "Bộ tiêu chí đánh giá",
   "evaluation-cycles": "Quản trị kỳ đánh giá",
+  "work-schedule": "Quản trị lịch công tác",
 } as const;
 
 function NavIcon({ id, active }: { id: keyof typeof labels; active: boolean }) {
