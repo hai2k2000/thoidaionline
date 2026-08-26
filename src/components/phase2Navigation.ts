@@ -33,6 +33,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
+      { id: "work-schedule", href: "/work-schedule" },
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
