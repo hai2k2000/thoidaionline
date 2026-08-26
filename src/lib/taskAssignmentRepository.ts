@@ -3,6 +3,7 @@ import "server-only";
 import type { AuthorizationActor } from "@/lib/authorization";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { resolveAssignmentSelection } from "@/lib/taskAssignmentGroup";
+import { sortStaffRows } from "@/lib/staffOrdering";
 import { isEligibleAssignmentReviewer, isLeadershipAssignmentReviewer } from "@/lib/taskReviewerPolicy.mjs";
 
 export type AssignmentDepartment = { id: string; code?: string | null; name: string; managerId: string | null; hasManager: boolean };
@@ -32,7 +33,7 @@ export const taskAssignmentRepository = {
         managerId: row.manager_id as string | null,
         hasManager: row.manager_id !== null,
       })),
-      people: (people.data ?? []).filter((row) => (actor.roleCode !== "pho_tong_bien_tap" || (row.roles as unknown as { code?: string } | null)?.code !== "tong_bien_tap") && (broad || row.department_id === actor.departmentId || isLeadershipAssignmentReviewer(
+      people: sortStaffRows(people.data ?? []).filter((row) => (actor.roleCode !== "pho_tong_bien_tap" || (row.roles as unknown as { code?: string } | null)?.code !== "tong_bien_tap") && (broad || row.department_id === actor.departmentId || isLeadershipAssignmentReviewer(
         (row.roles as unknown as { code?: string } | null)?.code,
       ))).map((row) => ({
         id: row.id as string,

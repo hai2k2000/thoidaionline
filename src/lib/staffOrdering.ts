@@ -21,22 +21,11 @@ export type StaffOrderingRecord = {
   departments?: { code?: string | null } | Array<{ code?: string | null }> | null;
 };
 
-const LEADERSHIP_ROLE_CODES = new Set([
-  "admin",
-  "tong_bien_tap",
-  "tbt_read_only",
-]);
+const TBT_ROLE_CODES = new Set(["tong_bien_tap", "tbt_read_only"]);
 
-const LEADERSHIP_TITLE_CODES = new Set([
-  "admin",
-  "tong_bien_tap",
-  "tbt_read_only",
-  "ban_lanh_dao",
-  "lanh_dao",
-]);
-
-const MANAGER_ROLE_CODES = new Set(["pho_tong_bien_tap"]);
-const MANAGER_TITLE_CODES = new Set(["pho_tong_bien_tap"]);
+const TBT_TITLE_CODES = new Set(["tong_bien_tap", "tbt_read_only"]);
+const DEPUTY_ROLE_CODES = new Set(["pho_tong_bien_tap"]);
+const DEPUTY_TITLE_CODES = new Set(["pho_tong_bien_tap"]);
 
 function code(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -63,21 +52,15 @@ export function getStaffTier(row: StaffOrderingRecord) {
   const role = roleCode(row);
   const title = jobTitleCode(row);
 
-  if (LEADERSHIP_ROLE_CODES.has(role) || LEADERSHIP_TITLE_CODES.has(title)) return 1;
+  if (TBT_ROLE_CODES.has(role) || TBT_TITLE_CODES.has(title)) return 1;
+  if (DEPUTY_ROLE_CODES.has(role) || DEPUTY_TITLE_CODES.has(title)) return 2;
   if (
-    MANAGER_ROLE_CODES.has(role) ||
-    MANAGER_TITLE_CODES.has(title) ||
-    role.startsWith("phu_trach_phong_") ||
-    title.startsWith("phu_trach_phong_") ||
-    role.startsWith("truong_phong_") ||
-    title.startsWith("truong_phong_")
-  ) return 2;
-
-  // A future leadership role may be represented only by its department code.
-  // Apply this fallback after manager checks so a Phó TBT assigned to the
-  // leadership department remains in the manager tier.
-  if (departmentCode(row) === "leadership") return 1;
-  return 3;
+    role === "truong_phong" || title === "truong_phong" ||
+    role.startsWith("phu_trach_phong_") || title.startsWith("phu_trach_phong_") ||
+    role.startsWith("truong_phong_") || title.startsWith("truong_phong_")
+  ) return 3;
+  if (departmentCode(row) === "leadership") return 4;
+  return 4;
 }
 
 function level(row: StaffOrderingRecord) {
