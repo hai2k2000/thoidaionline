@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,7 +32,7 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [scoreFilter, setScoreFilter] = useState("");
-  const [visibleLimit, setVisibleLimit] = useState(5);
+  const [visibleLimit, setVisibleLimit] = useState(isLeader ? 4 : 5);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scopedSubjects = data.subjects.filter((person) =>
     (!isLeader || showAdditional || person.isDepartmentManager)
@@ -77,7 +77,7 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
               <select value={roleFilter} onChange={(event) => { setRoleFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc vai trò" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Vai trò</option><option value="manager">Lãnh đạo trực tiếp</option><option value="employee">Nhân viên</option></select>
               <select value={scoreFilter} onChange={(event) => { setScoreFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc trạng thái điểm" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Trạng thái điểm</option><option value="unscored">Chưa chấm</option><option value="manager">QL đã chấm</option><option value="complete">Đã chấm đủ</option></select>
               <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setVisibleLimit(5); }} aria-label="Lọc trạng thái đánh giá" className="rounded-lg border bg-white px-2 py-2 text-sm"><option value="">Trạng thái</option>{Object.keys(reviewLabels).map((value) => <option key={value} value={value}>{reviewLabel(value)}</option>)}</select>
-              {isLeader ? <button type="button" onClick={showAdditional ? () => { setShowAdditional(false); setVisibleLimit(5); } : expandTbt} className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold">{showAdditional ? "Chỉ lãnh đạo trực tiếp" : `Đánh giá thêm nhân viên (${data.subjects.length})`}</button> : null}
+              
             </div>
           </header>
 
@@ -99,7 +99,7 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
                 const canScoreDirectly = isLeader && person.reviewStatus != null && directTbtStatuses.has(person.reviewStatus);
                 return <tr key={person.employeeId} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><Link className="text-orange-700 underline" target="_blank" rel="noopener noreferrer" href={detailHref}>{person.employeeName}</Link></td><td className="p-2">{person.departmentName}</td><td className="p-2">{person.isDepartmentManager ? "Lãnh đạo trực tiếp" : "Nhân viên"}</td><td className="p-2">{reviewLabel(person.reviewStatus)}</td><td className="p-2 font-semibold">{person.finalScore ?? person.managerScore ?? "—"}</td><td className="p-2"><Link className={canScoreDirectly ? "inline-flex rounded-lg bg-orange-600 px-3 py-2 font-semibold text-white" : "inline-flex rounded-lg border px-3 py-2 font-semibold text-slate-700"} target="_blank" rel="noopener noreferrer" href={detailHref}>{canScoreDirectly ? "Chấm trực tiếp" : "Xem chi tiết"}</Link></td></tr>;
               })}</tbody>
-            </table>{visibleLimit < filteredSubjects.length ? <div className="sticky bottom-0 flex justify-center bg-white/95 p-2"><button type="button" onClick={() => setVisibleLimit((value) => Math.min(value + 5, filteredSubjects.length))} className="rounded border px-3 py-2 text-sm font-semibold">Xem thêm 5 nhân viên</button></div> : null}</div>
+            </table>{isLeader && !showAdditional ? <div className="flex justify-center border-t bg-white p-3"><button type="button" onClick={expandTbt} className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Xem thêm nhân viên</button></div> : visibleLimit < filteredSubjects.length ? <div className="sticky bottom-0 flex justify-center bg-white/95 p-2"><button type="button" onClick={() => setVisibleLimit((value) => Math.min(value + 5, filteredSubjects.length))} className="rounded border px-3 py-2 text-sm font-semibold">Xem thêm 5 nhân viên</button></div> : null}</div>
             {!filteredSubjects.length && !invalidFilters && !loadFailed ? <p className="p-6 text-center text-slate-500">Không có nhân viên phù hợp bộ lọc.</p> : null}
           </section>
         </main>
