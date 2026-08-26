@@ -65,7 +65,7 @@ const periodRange = (period: "day" | "week" | "month") => {
 const participantNames = (task: TaskListResult["items"][number], role: "assignee" | "watcher") =>
   task.task_assignees.filter((row) => row.assignment_role === role).map((row) => row.staff_users?.full_name).filter(Boolean).join(", ") || "—";
 
-`r`nconst assigneeDisplay = (task: TaskListResult["items"][number]) => { const owner = task.task_assignees.find((row) => row.assignment_role === "owner")?.staff_users?.full_name; const assignees = task.task_assignees.filter((row) => row.assignment_role === "assignee").map((row) => row.staff_users?.full_name).filter(Boolean); return <>{owner ? <><strong>{owner}</strong>{assignees.length ? ", " : ""}</> : null}{assignees.join(", ") || (!owner ? "—" : "")}</>; };`r`nfunction FilterFields({ query, departments, basePath = "/tasks" }: Pick<Props, "query" | "departments" | "basePath">) {
+const assigneeDisplay = (task: TaskListResult["items"][number]) => { const owner = task.task_assignees.find((row) => row.assignment_role === "owner")?.staff_users?.full_name; const assignees = task.task_assignees.filter((row) => row.assignment_role === "assignee").map((row) => row.staff_users?.full_name).filter(Boolean); return <>{owner ? <><strong>{owner}</strong>{assignees.length ? ", " : ""}</> : null}{assignees.join(", ") || (!owner ? "—" : "")}</>; };function FilterFields({ query, departments, basePath = "/tasks" }: Pick<Props, "query" | "departments" | "basePath">) {
   return (
     <>
       {basePath === "/duty-schedule" ? <input type="hidden" name="scope" value="personal" /> : query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
