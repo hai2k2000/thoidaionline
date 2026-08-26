@@ -16,10 +16,10 @@ export async function GET(request: Request) {
   let taskQuery = serverSupabase.from("tasks").select("id,title,status,due_date,due_time,assignee_id,completion_score:task_completion_scores(total_score)").eq("task_category", "regular").neq("status", "cancelled");
   if (from && to) taskQuery = taskQuery.gte("due_date", from).lte("due_date", to);
   const [{ data: people, error: pe }, { data: tasks, error: te }] = await Promise.all([
-    serverSupabase.from("staff_users").select("id,full_name,roles(code,level),job_titles(code,display_order),departments!staff_users_department_id_fkey(name)").eq("active", true).order("full_name"), taskQuery,
+    serverSupabase.from("staff_users").select("id,username,full_name,roles(code,level),job_titles(code,display_order),departments!staff_users_department_id_fkey(name)").eq("active", true).order("full_name"), taskQuery,
   ]);
   if (pe || te) return apiError("operation_failed", 500);
-  const rows = sortStaffRows((people ?? []).filter((p: any) => !["admin", "tong_bien_tap", "tbt_read_only"].includes(Array.isArray(p.roles) ? p.roles[0]?.code : p.roles?.code)) as any).map((p: any) => {
+  const rows = sortStaffRows((people ?? []).filter((p: any) => !((p.username ?? "").toLowerCase() === "admin") && !["tong_bien_tap", "tbt_read_only"].includes(Array.isArray(p.roles) ? p.roles[0]?.code : p.roles?.code)) as any).map((p: any) => {
     const own = (tasks ?? []).filter((t: any) => t.assignee_id === p.id); const done = own.filter((t: any) => t.status === "done");
     const returned = own.filter((t: any) => t.status === "rejected"); const inProgress = own.filter((t: any) => ["in_progress", "blocked"].includes(t.status)); const waiting = own.filter((t: any) => t.status === "pending_review");
     const overdue = own.filter((t: any) => t.status !== "done" && t.due_date && t.due_date < new Date().toISOString().slice(0, 10));

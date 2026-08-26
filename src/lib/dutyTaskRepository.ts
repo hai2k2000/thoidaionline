@@ -1,6 +1,6 @@
 import "server-only";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { sortStaffRows } from "@/lib/staffOrdering";
+import { isSystemAdminStaff, sortStaffRows } from "@/lib/staffOrdering";
 
 export const dutyTaskRepository = {
   async options() {
@@ -10,7 +10,7 @@ export const dutyTaskRepository = {
     ]);
     if (people.error || departments.error) return { ok: false as const };
     const managerIds = new Set((departments.data ?? []).map((row) => row.manager_id).filter(Boolean));
-    return { ok: true as const, people: sortStaffRows(people.data ?? []).map((person) => ({
+    return { ok: true as const, people: sortStaffRows(people.data ?? []).filter((person) => !isSystemAdminStaff(person)).map((person) => ({
       id: person.id as string, username: person.username as string, full_name: person.full_name as string,
       department_id: person.department_id as string | null,
       job_title_code: (person.job_titles as { code?: string } | null)?.code ?? null,

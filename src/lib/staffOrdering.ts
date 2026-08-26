@@ -9,6 +9,7 @@
 export type StaffOrderingRecord = {
   id?: string | null;
   full_name?: string | null;
+  username?: string | null;
   /** 0 keeps the current hierarchy; a positive value pins the row to bottom. */
   list_order?: number | null;
   role_code?: string | null;
@@ -78,6 +79,20 @@ function listOrder(row: StaffOrderingRecord) {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+const PRIORITY_STAFF = new Map([
+  ["đoàn thanh hải", 1],
+  ["vũ mai anh", 2],
+  ["hoàng quỳnh trang", 3],
+]);
+
+export function isSystemAdminStaff(row: StaffOrderingRecord) {
+  return code(row.username) === "admin" || code(row.full_name) === "admin";
+}
+
+function namedPriority(row: StaffOrderingRecord) {
+  return PRIORITY_STAFF.get(code(row.full_name)) ?? Number.POSITIVE_INFINITY;
+}
+
 const viCollator = new Intl.Collator("vi", { sensitivity: "base", numeric: false });
 
 /**
@@ -98,6 +113,9 @@ export function sortStaffRows<T extends StaffOrderingRecord>(rows: readonly T[])
 
     const tierDifference = getStaffTier(a) - getStaffTier(b);
     if (tierDifference) return tierDifference;
+
+    const namedDifference = namedPriority(a) - namedPriority(b);
+    if (Number.isFinite(namedDifference) && namedDifference) return namedDifference;
 
     const levelDifference = level(b) - level(a);
     if (levelDifference) return levelDifference;
