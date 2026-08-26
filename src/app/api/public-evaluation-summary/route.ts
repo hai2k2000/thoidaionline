@@ -4,11 +4,15 @@ import { sortStaffRows } from "@/lib/staffOrdering";
 
 export async function GET(request: Request) {
   const g = await requireReadActor(); if (!g.ok) return g.response;
-  const period = new URL(request.url).searchParams.get("period") ?? "all";
+  const params = new URL(request.url).searchParams;
+  const period = params.get("period") ?? "all";
+  const cycleId = params.get("cycle") ?? "all";
   const now = new Date(); let from: string | null = null; let to: string | null = null;
   if (period === "month") { from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10); to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10); }
   if (period === "quarter") { const q = Math.floor(now.getMonth() / 3) * 3; from = new Date(now.getFullYear(), q, 1).toISOString().slice(0, 10); to = new Date(now.getFullYear(), q + 3, 0).toISOString().slice(0, 10); }
   if (period === "year") { from = `${now.getFullYear()}-01-01`; to = `${now.getFullYear()}-12-31`; }
+  const { data: cycles } = await serverSupabase.from("performance_cycles").select("id,name,start_date,end_date,status").order("start_date", { ascending: false });
+  if (cycleId !== "all") { const cycle = (cycles ?? []).find((item: any) => item.id === cycleId); if (cycle) { from = cycle.start_date; to = cycle.end_date; } }
   let taskQuery = serverSupabase.from("tasks").select("id,title,status,due_date,due_time,assignee_id,completion_score:task_completion_scores(total_score)").eq("task_category", "regular").neq("status", "cancelled");
   if (from && to) taskQuery = taskQuery.gte("due_date", from).lte("due_date", to);
   const [{ data: people, error: pe }, { data: tasks, error: te }] = await Promise.all([
@@ -22,5 +26,5 @@ export async function GET(request: Request) {
     const scores = own.map((t: any) => Array.isArray(t.completion_score) ? t.completion_score[0]?.total_score : null).filter((v: any) => v != null);
     return { id: p.id, name: p.full_name, department: p.departments?.name ?? "—", total: own.length, done: done.length, returned: returned.length, inProgress: inProgress.length, waiting: waiting.length, overdue: overdue.length, completionRate: own.length ? Math.round(done.length * 1000 / own.length) / 10 : 0, score: scores.length ? scores.reduce((a: number, b: number) => a + b, 0) : null, tasks: own.map((t: any) => ({ id: t.id, title: t.title, status: t.status, dueDate: t.due_date, score: Array.isArray(t.completion_score) ? t.completion_score[0]?.total_score : null })) };
   });
-  return apiJson({ period, rows });
+  return apiJson({ period, cycle: cycleId, cycles: cycles ?? [], rows });
 }
