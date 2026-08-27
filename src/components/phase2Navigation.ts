@@ -33,16 +33,16 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
-      { id: "work-schedule", href: "/work-schedule" },
-      { id: "work-schedule-leader", href: "/work-schedule/leadership" },
-      { id: "work-schedule-staff", href: "/work-schedule/staff" },
-      { id: "duty-schedule", href: "/duty-schedule" },
-      { id: "online-work", href: "/online-work" },
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
         || (access.roleCode === "tong_bien_tap" && access.canEvaluateStep2)
         ? [{ id: "evaluations", href: "/evaluations" } as const]
         : []),
       { id: "evaluation-summary", href: "/evaluation-summary" },
+      { id: "work-schedule", href: "/work-schedule" },
+      { id: "work-schedule-leader", href: "/work-schedule/leadership" },
+      { id: "work-schedule-staff", href: "/work-schedule/staff" },
+      { id: "duty-schedule", href: "/duty-schedule" },
+      { id: "online-work", href: "/online-work" },
     ],
     account: [{ id: "account", href: "/account" }],
     configuration: [

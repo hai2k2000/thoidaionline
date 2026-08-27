@@ -29,15 +29,15 @@ const labels = {
   permissions: "Ph\u00e2n quy\u1ec1n",
   "evaluation-rubrics": "Bộ tiêu chí đánh giá",
   "evaluation-cycles": "Quản trị kỳ đánh giá",
-  "work-schedule": "Lịch công tác",
+  "work-schedule": "Lịch cơ quan",
   "work-schedule-leader": "Lịch công tác lãnh đạo",
   "work-schedule-staff": "Lịch hoạt động nhân viên",
   "work-schedule-admin": "Quản trị lịch công tác",
 } as const;
 
 function NavIcon({ id, active }: { id: keyof typeof labels; active: boolean }) {
-  const calendar = id.includes("duty") || id.includes("online");
-  const people = id === "users" || id === "departments" || id === "evaluations";
+  const calendar = id.includes("duty") || id.includes("online") || id.includes("work-schedule");
+  const people = id === "users" || id === "departments" || id === "evaluations" || id === "evaluation-summary";
   const settings = id === "permissions" || id.includes("evaluation-");
   return <span aria-hidden="true" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${active ? "bg-orange-500 text-white shadow-sm" : "bg-white text-slate-500 ring-1 ring-slate-200 group-hover:bg-orange-100 group-hover:text-orange-700 group-hover:ring-orange-200"}`}><svg viewBox="0 0 24 24" className="h-[18px] w-[18px] fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{calendar ? <><path d="M6 3v3M18 3v3M4 9h16"/><rect x="3" y="5" width="18" height="16" rx="2"/><path d="m9 15 2 2 4-5"/></> : people ? <><circle cx="9" cy="8" r="3"/><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M16 5.5a3 3 0 0 1 0 5.5M18 14a5 5 0 0 1 2.5 4.3V20"/></> : settings ? <><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></> : id === "account" ? <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></> : id === "assign" ? <><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="10"/></> : <><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>}</svg></span>;
 }
@@ -77,7 +77,7 @@ function NavContent({
   const accountActive = navigation.account.some((item) =>
     isNavigationActive(currentPath, item.href));
   const [configurationOpen, setConfigurationOpen] = useState(configurationActive);
-  const [accountOpen, setAccountOpen] = useState(accountActive);
+  const [accountOpen, setAccountOpen] = useState(true);
 
   return (
     <div className="flex h-full flex-col p-3.5">
@@ -89,8 +89,8 @@ function NavContent({
       <div className="mt-4 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
       <div className="mb-2.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-orange-100 to-amber-50 px-2.5 py-2 ring-1 ring-orange-200"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-orange-900">Công việc</p></div><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200">{navigation.primary.length}</span></div>
       <nav aria-label="Menu chính" className="space-y-1">
-            {navigation.primary.filter((item) => item.id !== "work-schedule-leader" && item.id !== "work-schedule-staff").map((item) => (
-              item.id === "work-schedule" ? <details key={item.id} open className="group"><summary className={linkClass(isNavigationActive(currentPath, item.href))}><NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span className="leading-snug">{labels[item.id]}</span><span className="ml-auto text-xs">▼</span></summary><div className="ml-8 mt-1 space-y-1 border-l border-orange-200 pl-2">{navigation.primary.filter((child) => child.id === "work-schedule-leader" || child.id === "work-schedule-staff").map((child) => <Link key={child.id} href={child.href} onClick={onNavigate} className={linkClass(isNavigationActive(currentPath, child.href))}><span className="leading-snug">{labels[child.id]}</span></Link>)}</div></details> : (
+            {navigation.primary.filter((item) => !["work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"].includes(item.id)).map((item) => (
+              item.id === "work-schedule" ? <details key={item.id} open className="group"><summary className={linkClass(isNavigationActive(currentPath, item.href))}><NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span className="leading-snug">{labels[item.id]}</span><span className="ml-auto text-xs">▼</span></summary><div className="ml-8 mt-1 space-y-1 border-l border-orange-200 pl-2">{navigation.primary.filter((child) => ["work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"].includes(child.id)).map((child) => <Link key={child.id} href={child.href} onClick={onNavigate} className={linkClass(isNavigationActive(currentPath, child.href))}><span className="leading-snug">{labels[child.id]}</span></Link>)}</div></details> : (
               <Link
             key={item.id}
             href={item.href}
