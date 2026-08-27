@@ -74,8 +74,6 @@ function NavContent({
 }) {
   const configurationActive = navigation.configuration.some((item) =>
     isNavigationActive(currentPath, item.href));
-  const accountActive = navigation.account.some((item) =>
-    isNavigationActive(currentPath, item.href));
   const [configurationOpen, setConfigurationOpen] = useState(configurationActive);
   const [accountOpen, setAccountOpen] = useState(true);
 
