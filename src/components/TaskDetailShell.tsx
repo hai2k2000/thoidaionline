@@ -15,8 +15,8 @@ type Capabilities = {
   attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
 };
 const statusLabel: Record<string, string> = {
-  new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc", waiting: "Đang chờ duyệt",
-  pending_review: "Chờ duyệt", rejected: "Trả lại", done: "Hoàn thành", cancelled: "Đã hủy",
+  new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc", waiting: "Chờ duyệt nhận việc",
+  pending_review: "Chờ chấm điểm", rejected: "Trả lại", done: "Hoàn thành", cancelled: "Đã hủy",
 };
 const difficultyLabel: Record<string, string> = { low: "Dễ", normal: "Trung bình", high: "Khó", urgent: "Rất khó" };
 const reportLabel: Record<string, string> = {
@@ -84,6 +84,14 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
       if (dueDate) await jsonPost(`/api/tasks/${task.id}/deadline-assigned`, { dueDate, reason: "Điều chỉnh hạn sau khi trả lại" });
     }
   };
+  const reviewClaim = async (decision: "approve" | "reject") => {
+    let reason: string | null = null;
+    if (decision === "reject") {
+      reason = window.prompt("Lý do trả lại yêu cầu nhận việc:");
+      if (!reason?.trim()) { setMessage("Vui lòng nhập lý do."); return; }
+    }
+    await jsonPost("/api/tasks/claim/review", { taskId: task.id, decision, reason });
+  };
   const submitProgress = async (event: FormEvent) => {
     event.preventDefault();
     await jsonPost(`/api/tasks/${task.id}/progress-reports`, { reportedOn, reportStatus, progressText, blockers });
@@ -122,10 +130,11 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
             <div className="min-w-0"><h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span><span>{deadlineState}</span></div></div>
             <div className="flex max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto pb-1 sm:justify-end">
               <span className="shrink-0 rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-800">{statusLabel[task.status] ?? task.status}</span>
-              {canComplete ? <button data-testid="task-completion-action" disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/${completePath}`)} className="shrink-0 whitespace-nowrap rounded-lg bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Hoàn thành</button> : null}
+              {canComplete ? <button data-testid="task-completion-action" disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/${completePath}`)} className="shrink-0 whitespace-nowrap rounded-lg bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{personal ? "Hoàn thành" : "Gửi kết quả hoàn thành"}</button> : null}
               {hasTaskActions ? <>
                 {capabilities.adminEdit ? <Link href={`/tasks/${task.id}/admin-edit`} className="shrink-0 whitespace-nowrap rounded bg-slate-900 px-2 py-1.5 text-xs font-semibold text-white">Sửa</Link> : null}
                 {!personal && capabilities.review && task.status === "pending_review" ? <><button disabled={busy} onClick={() => document.getElementById("task-scoring-form")?.scrollIntoView({ behavior: "smooth" })} className="shrink-0 whitespace-nowrap rounded bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white">Chấm điểm</button><button disabled={busy} onClick={returnWithDeadline} className="shrink-0 whitespace-nowrap rounded bg-amber-600 px-2 py-1.5 text-xs font-semibold text-white">Trả lại</button></> : null}
+                {!personal && capabilities.review && task.self_claimable && task.status === "waiting" ? <><button disabled={busy} onClick={() => reviewClaim("approve")} className="shrink-0 whitespace-nowrap rounded bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white">Duyệt nhận việc</button><button disabled={busy} onClick={() => reviewClaim("reject")} className="shrink-0 whitespace-nowrap rounded bg-amber-600 px-2 py-1.5 text-xs font-semibold text-white">Trả lại</button></> : null}
                 {personal && capabilities.personalDeadline ? <Link href={`/tasks/personal/${task.id}/edit`} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</Link> : null}
                 {((personal && capabilities.personalCancel) || (!personal && capabilities.assignedCancel && !["done", "cancelled"].includes(task.status))) ? <button disabled={busy} onClick={() => reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy nhiệm vụ")} className="shrink-0 whitespace-nowrap rounded bg-red-700 px-2 py-1.5 text-xs text-white">Hủy</button> : null}
                 {!personal && capabilities.update && !["done", "cancelled"].includes(task.status) ? <button disabled={busy} onClick={async () => { const dueDate = window.prompt("Ngày kết thúc mới (YYYY-MM-DD):", task.due_date ?? ""); if (dueDate) await reasonAction(`/api/tasks/${task.id}/deadline-assigned`, "Đổi ngày", { dueDate }); }} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</button> : null}

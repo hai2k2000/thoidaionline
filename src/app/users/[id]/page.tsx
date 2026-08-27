@@ -21,7 +21,7 @@ type Task = { id: string; title: string; status: string; progress_percent: numbe
 const taskStatusLabel: Record<string, string> = {
   new: "Mới",
   in_progress: "Đang làm",
-  pending_review: "Chờ duyệt",
+  pending_review: "Chờ chấm điểm",
   done: "Hoàn thành",
   rejected: "Trả lại",
 };

@@ -33,7 +33,7 @@ type AssetAssignRow = {
 const statusLabel: Record<TaskRow["status"], string> = {
   new: "Mới",
   in_progress: "Đang làm",
-  pending_review: "Chờ duyệt",
+  pending_review: "Chờ chấm điểm",
   done: "Hoàn thành",
   rejected: "Trả lại",
 };

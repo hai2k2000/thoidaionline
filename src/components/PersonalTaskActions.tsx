@@ -38,7 +38,7 @@ export default function PersonalTaskActions({ taskId, canEdit, canClaim, termina
       body: JSON.stringify({ taskId }),
     });
     if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể bắt đầu nhiệm vụ."));
-    notify("success", "Đã gửi yêu cầu nhận việc. Chờ duyệt.");
+    notify("success", "Đã gửi yêu cầu nhận việc. Chờ duyệt nhận việc.");
     router.refresh();
     } catch (error) { const text = errorMessage(error, "Không thể bắt đầu nhiệm vụ."); setError(text); notify("error", text); }
     finally { setBusy(false); }
