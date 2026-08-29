@@ -10,7 +10,10 @@ type Review={result:string;on_time:boolean;reviewed_at:string;evidence_name:stri
 export default async function DutyParticipantReviewPage({params,searchParams}:Props){
  const user=await getSessionUser();if(!user)redirect("/login");const {employeeId}=await params;const raw=await searchParams;const from=typeof raw.from==="string"?raw.from:"";const to=typeof raw.to==="string"?raw.to:"";
  if(!uuidPattern.test(employeeId)||!datePattern.test(from)||!datePattern.test(to))notFound();
- if(user.role_code!=="admin"){const access=await dutyTaskRepository.isParticipant(from,to,user.id);if(!access.ok||!access.value)redirect("/duty-schedule?summary=restricted");}
+ if(user.role_code!=="admin"){
+  if(employeeId!==user.id)redirect("/duty-schedule?summary=restricted");
+  const access=await dutyTaskRepository.isParticipant(from,to,user.id);if(!access.ok||!access.value)redirect("/duty-schedule?summary=restricted");
+ }
  const result=await dutyTaskRepository.participantReviews(from,to,employeeId);if(!result.ok)throw new Error("Không tải được đánh giá lịch trực.");if(!result.rows.length)notFound();
  const rows=result.rows as unknown as DetailRow[];const name=rows[0]?.assignee?.full_name??"Nhân sự";const canViewEvidence=user.role_code==="admin"||user.id===employeeId;
  return <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6"><div className="flex w-full flex-col gap-4 lg:flex-row"><AppNav currentPath="/duty-schedule" userLabel={user.full_name}/><main className="min-w-0 flex-1">
