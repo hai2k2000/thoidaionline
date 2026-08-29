@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 
 type AttendanceRow = {
   id: string;
@@ -14,15 +13,6 @@ type AttendanceRow = {
   note: string | null;
   status: string | null;
   staff_users?: { full_name: string } | null;
-};
-
-type StaffDemoRow = { id: string; full_name: string; active: boolean; roles?: { code?: string | null } | null };
-
-type MonthlySummaryRow = {
-  name: string;
-  daysPresent: number;
-  totalHours: number;
-  workUnits: number;
 };
 
 const attendanceStatusLabel: Record<string, string> = {
@@ -48,39 +38,6 @@ const workedHours = (checkIn?: string | null, checkOut?: string | null) => {
   return (outMin - inMin) / 60;
 };
 
-const monthStartOf = (dateText: string) => {
-  const d = new Date(dateText);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-};
-
-const generateDemoDayRows = (users: StaffDemoRow[], date: string) => {
-  const toTime = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}:00`;
-  return users.map((u, idx) => ({
-    id: `demo-${u.id}-${date}`,
-    work_date: date,
-    check_in: toTime(8 * 60 + 2 + (idx % 35)),
-    check_out: toTime(17 * 60 + 8 + (idx % 40)),
-    note: "[DEMO] Chấm công mẫu",
-    status: "Có mặt",
-    staff_users: { full_name: u.full_name },
-  })) as AttendanceRow[];
-};
-
-const generateDemoRangeRows = (users: StaffDemoRow[], fromDate: string, toDate: string) => {
-  const from = new Date(fromDate);
-  const to = new Date(toDate);
-  const all: AttendanceRow[] = [];
-
-  for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-    const day = d.getDay();
-    if (day === 0) continue; // Chủ nhật nghỉ demo
-    const text = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    all.push(...generateDemoDayRows(users, text));
-  }
-
-  return all;
-};
-
 export default function AttendancePage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -92,78 +49,27 @@ export default function AttendancePage() {
   const [message, setMessage] = useState("Đang tải dữ liệu chấm công...");
   const isOrganizationView = pathname === "/attendance" && user?.role_code === "admin";
 
-  const loadAttendance = async () => {
-    const startMonth = monthStartOf(selectedDate);
-
-    let dayQuery = supabase
-      .from("attendance_logs")
-      .select("id,work_date,check_in,check_out,note,status,staff_users(full_name)")
-      .eq("work_date", selectedDate)
-      .order("check_in", { ascending: true, nullsFirst: false })
-      .limit(500);
-
-    let monthQuery = supabase
-      .from("attendance_logs")
-      .select("id,work_date,check_in,check_out,note,status,staff_users(full_name)")
-      .gte("work_date", startMonth)
-      .lte("work_date", selectedDate)
-      .order("work_date", { ascending: true })
-      .limit(10000);
-
-    if (!isOrganizationView && user?.id) {
-      dayQuery = dayQuery.eq("user_id", user.id);
-      monthQuery = monthQuery.eq("user_id", user.id);
-    }
-
-    const [dayRes, monthRes] = await Promise.all([dayQuery, monthQuery]);
-
-    const missingTable =
-      !!dayRes.error &&
-      (dayRes.error.message.includes("schema cache") || dayRes.error.message.includes("Could not find the table"));
-
-    if (missingTable) {
-      const usersRes = await supabase
-        .from("staff_users")
-        .select("id,full_name,active,roles(code)")
-        .eq("active", true)
-        .order("full_name", { ascending: true });
-
-      if (usersRes.error) {
-        setRows([]);
-        setMonthlyRows([]);
-        setMessage(`⚠️ Chưa tải được dữ liệu chấm công: ${usersRes.error.message}`);
-        return;
-      }
-
-      let users = ((usersRes.data ?? []) as unknown as StaffDemoRow[])
-        .filter((u) => (u.roles?.code ?? "") !== "tong_bien_tap");
-
-      if (!isOrganizationView && user?.id) {
-        users = users.filter((u) => u.id === user.id);
-      }
-
-      const demoDay = generateDemoDayRows(users, selectedDate);
-      const demoMonth = generateDemoRangeRows(users, startMonth, selectedDate);
-
-      setRows(demoDay);
-      setMonthlyRows(demoMonth);
-      setMessage(`✅ Đã nạp dữ liệu DEMO chấm công cho ${users.length} nhân sự (trừ Tổng biên tập).`);
-      return;
-    }
-
-    if (dayRes.error || monthRes.error) {
+  const loadAttendance = useCallback(async () => {
+    const scope = isOrganizationView ? "organization" : "personal";
+    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&scope=${scope}`, {
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => null) as {
+      rows?: AttendanceRow[];
+      monthlyRows?: AttendanceRow[];
+      message?: string;
+    } | null;
+    if (!response.ok || !payload) {
       setRows([]);
       setMonthlyRows([]);
-      setMessage(`⚠️ Chưa tải được dữ liệu chấm công: ${dayRes.error?.message || monthRes.error?.message}`);
+      setMessage("⚠️ Chưa tải được dữ liệu chấm công.");
       return;
     }
-
-    const dayList = (dayRes.data ?? []) as unknown as AttendanceRow[];
-    const monthList = (monthRes.data ?? []) as unknown as AttendanceRow[];
+    const dayList = payload.rows ?? [];
     setRows(dayList);
-    setMonthlyRows(monthList);
-    setMessage(`✅ Đã tải ${dayList.length} bản ghi ngày ${selectedDate}.`);
-  };
+    setMonthlyRows(payload.monthlyRows ?? []);
+    setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi ngày ${selectedDate}.`}`);
+  }, [isOrganizationView, selectedDate]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -174,7 +80,7 @@ export default function AttendancePage() {
       void loadAttendance();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView]);
+  }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView, loadAttendance]);
 
   const stats = useMemo(() => {
     const total = rows.length;
