@@ -17,6 +17,7 @@ Validation:
 - Workflow download regression test and direct/encoded-path smoke tests: PASS (unauthenticated requests do not receive document bytes).
 - Fresh-score workflow regression test: PASS.
 - Production migration `20260829100000_require_fresh_task_score`: PASS on internal Supabase DB.
+- Strict fresh-score correction `20260829110000_strict_fresh_task_score`: PASS; legacy pending-review rows without a submission timestamp cannot be approved with historical scores.
 
 Blockers:
 - none
@@ -26,4 +27,4 @@ Follow Up:
 - Legacy seeded assigned tasks may remain in `new` status; they are outside the new assignment flow and should be triaged separately if users report them.
 
 Next:
-- Close this workflow-risk review after source/deployment validation and continue only on a new user-requested workflow issue.
+- Commit/push the strict fresh-score correction, then close this workflow-risk review.
