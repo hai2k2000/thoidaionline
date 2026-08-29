@@ -16,6 +16,7 @@ type AppNavProps = {
 
 const labels = {
   assign: "Giao vi\u1ec7c",
+  attendance: "Chấm công",
   "duty-schedule": "Lịch trực",
   "online-work": "Lịch làm trực tuyến (ngoại ngữ)",
   "online-work-admin": "Quản trị lịch online",
@@ -36,7 +37,7 @@ const labels = {
 } as const;
 
 function NavIcon({ id, active }: { id: keyof typeof labels; active: boolean }) {
-  const calendar = id.includes("duty") || id.includes("online") || id.includes("work-schedule");
+  const calendar = id === "attendance" || id.includes("duty") || id.includes("online") || id.includes("work-schedule");
   const people = id === "users" || id === "departments" || id === "evaluations" || id === "evaluation-summary";
   const settings = id === "permissions" || id.includes("evaluation-");
   return <span aria-hidden="true" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${active ? "bg-orange-500 text-white shadow-sm" : "bg-white text-slate-500 ring-1 ring-slate-200 group-hover:bg-orange-100 group-hover:text-orange-700 group-hover:ring-orange-200"}`}><svg viewBox="0 0 24 24" className="h-[18px] w-[18px] fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{calendar ? <><path d="M6 3v3M18 3v3M4 9h16"/><rect x="3" y="5" width="18" height="16" rx="2"/><path d="m9 15 2 2 4-5"/></> : people ? <><circle cx="9" cy="8" r="3"/><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M16 5.5a3 3 0 0 1 0 5.5M18 14a5 5 0 0 1 2.5 4.3V20"/></> : settings ? <><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></> : id === "account" ? <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></> : id === "assign" ? <><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="10"/></> : <><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>}</svg></span>;
