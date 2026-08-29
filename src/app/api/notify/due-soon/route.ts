@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 
 type TaskRow = {
   title: string;
@@ -11,6 +12,10 @@ type TaskRow = {
 
 export async function POST(req: Request) {
   try {
+    if (!(await isSameOriginRequest())) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+    const actor = await getSessionUser();
+    if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (actor.role_code !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const url = new URL(req.url);
     const days = Math.max(1, Math.min(14, Number(url.searchParams.get("days") || 3)));
 

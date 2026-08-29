@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 
 type DocRow = {
   doc_code: string;
@@ -18,6 +19,10 @@ const urgencyEmoji: Record<string, string> = {
 
 export async function POST() {
   try {
+    if (!(await isSameOriginRequest())) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+    const actor = await getSessionUser();
+    if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (actor.role_code !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!supabaseUrl || !supabaseAnonKey) {

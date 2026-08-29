@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getSessionUser } from "@/lib/serverSession";
 
 const csv = (rows: Array<Record<string, string | number | null>>) => {
   if (!rows.length) return "module,metric,value\n";
@@ -11,6 +12,9 @@ const csv = (rows: Array<Record<string, string | number | null>>) => {
 };
 
 export async function GET() {
+  const actor = await getSessionUser();
+  if (!actor) return new Response("Unauthorized", { status: 401 });
+  if (actor.role_code !== "admin") return new Response("Forbidden", { status: 403 });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) {
