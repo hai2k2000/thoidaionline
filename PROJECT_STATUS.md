@@ -1,5 +1,5 @@
 Current Phase: Workflow access hardening
-Current Task: Protect the workflow document download
+Current Task: Require fresh scoring for each assigned-task completion attempt
 
 Completed:
 - Organization evaluation summary remains readable by every signed-in employee.
@@ -7,6 +7,7 @@ Completed:
 - Organization-wide attendance is available only to admin accounts.
 - `/attendance` and `/my-attendance` enforce authentication server-side.
 - Workflow document downloads require a signed-in employee and read from private runtime storage.
+- Assigned-task approval requires a completion score from the current submission attempt; returning a task clears the previous score.
 
 Validation:
 - Attendance, duty, workflow hardening regression tests: PASS.
@@ -14,12 +15,15 @@ Validation:
 - Production build: PASS.
 - Production smoke tests: unauthenticated attendance API returns 401; unauthenticated attendance pages redirect to `/login`.
 - Workflow download regression test and direct/encoded-path smoke tests: PASS (unauthenticated requests do not receive document bytes).
+- Fresh-score workflow regression test: PASS.
+- Production migration `20260829100000_require_fresh_task_score`: PASS on internal Supabase DB.
 
 Blockers:
 - none
 
 Follow Up:
 - The production database does not currently contain `attendance_logs`; the UI keeps the existing server-generated DEMO fallback until the attendance migration is provisioned.
+- Legacy seeded assigned tasks may remain in `new` status; they are outside the new assignment flow and should be triaged separately if users report them.
 
 Next:
-- Continue the next workflow-risk review after this task is closed.
+- Close this workflow-risk review after source/deployment validation and continue only on a new user-requested workflow issue.
