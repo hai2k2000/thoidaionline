@@ -7,7 +7,7 @@ test("assignment stores priority atomically in the creation RPC", () => {
   const handler = read("./taskHandlerFactory.ts");
   const repository = read("./taskRepository.ts");
   const migration = read("../../supabase/migrations/20260821100000_atomic_task_assignment_priority.sql");
-  assert.match(form, /priority:\s*String\(form\.get\("priority"\)/);
+  assert.match(form, /priority:\s*"normal"/);
   assert.doesNotMatch(form, /priorityResponse|JSON\.stringify\(\{ priority: payload\.priority \}\)/);
   assert.match(handler, /body\?\.priority === undefined[\s\S]*\? "normal"/);
   assert.match(handler, /priority: assignmentPriority/);

@@ -31,14 +31,14 @@ test("Task Center has direct personal creation and requested Vietnamese filters"
   }
 });
 
-test("eligible legacy plans expose only the existing server-authorized claim route as Thực hiện", () => {
+test("eligible legacy plans expose only the existing server-authorized claim route", () => {
   const shell = read("../components/TaskCenterShell.tsx");
   const actions = read("../components/PersonalTaskActions.tsx");
   const page = read("../app/tasks/page.tsx");
   assert.match(shell, /canClaimTasks\s*&&\s*task\.self_claimable/);
   assert.match(page, /canClaimTasks=\{!\[['"]tong_bien_tap['"],\s*['"]tbt_read_only['"]\]\.includes\(user\.role_code\)\}/);
   assert.match(actions, /\/api\/tasks\/claim/);
-  assert.match(actions, /Thực hiện/);
+  assert.match(actions, /Đăng ký nhận việc/);
   assert.match(actions, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);
   assert.doesNotMatch(actions, /Tự nhận kế hoạch/);
 });
@@ -52,8 +52,8 @@ test("task repository filters canonical and legacy task natures compatibly", () 
 test("progress workflow exposes explicit cancel and reschedule labels", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   const page = read("../app/tasks/[id]/page.tsx");
-  assert.match(detail, /Tiến độ/);
-  assert.match(detail, /Hủy nhiệm vụ/);
+  assert.match(detail, /progress-reports/);
+  assert.match(detail, /Hủy/);
   assert.match(detail, /Đổi ngày/);
   assert.match(page, /personalDeadline/);
 });

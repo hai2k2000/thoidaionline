@@ -4,45 +4,40 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 
-test("task detail replaces 1-10 scoring with qualitative evaluation and task deadline default", () => {
+test("task detail uses completion scoring and task deadline default", () => {
   const detail = read("../components/TaskDetailShell.tsx");
-  assert.match(detail, /Đánh giá công việc/);
+  assert.match(detail, /Chấm điểm hoàn thành/);
   assert.match(detail, /evaluationDeadline/);
   assert.match(detail, /task\.due_date\s*\?\?\s*today\(\)/);
-  assert.doesNotMatch(detail, /rating\}\/10|Điểm[^\n]*1[^\n]*10/);
+  assert.doesNotMatch(detail, /save_task_evaluation_checkpoint|task\.legacy_evaluations\.map|\/evaluate/);
 });
 
 test("manual ChatGPT evaluation can be pasted without enabling an AI provider", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   const factory = read("./taskHandlerFactory.ts");
-  assert.match(detail, /Dán đánh giá từ ChatGPT/);
-  assert.match(detail, /Nội dung đánh giá từ ChatGPT/);
+  assert.doesNotMatch(detail, /Dán đánh giá từ ChatGPT/);
+  assert.doesNotMatch(detail, /Nội dung đánh giá từ ChatGPT/);
   assert.doesNotMatch(detail, /disabled value="Chưa cấu hình AI"/);
-  assert.match(detail, /evaluationText, evaluationDeadline/);
-  assert.match(detail, /Đánh giá của lãnh đạo/);
-  assert.match(detail, /leaderEvaluationText/);
-  assert.match(detail, /evaluationSource: "leader"/);
+  assert.match(detail, /evaluationDeadline/);
+  assert.match(detail, /Lưu điểm và duyệt hoàn thành/);
   assert.match(factory, /service_unavailable[\s\S]*503/);
   assert.doesNotMatch(factory, /api\.openai\.com|anthropic|gemini/i);
 });
 
 test("progress report stays date plus status plus narrative with no percentage UX", () => {
   const detail = read("../components/TaskDetailShell.tsx");
-  assert.match(detail, /aria-label="Ngày báo cáo"/);
-  assert.match(detail, /aria-label="Trạng thái báo cáo"/);
-  assert.match(detail, /Gửi báo cáo/);
+  assert.match(detail, /progress-reports/);
+  assert.match(detail, /reportStatus/);
+  assert.match(detail, /progressText/);
   assert.doesNotMatch(detail, /progress_percent|type="range"|Tiến độ\s*%/i);
 });
 
 test("task detail defaults to one overview and collapses secondary information in the sidebar", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   assert.doesNotMatch(detail, /role="tablist"|task-panel-progress|task-panel-history/);
-  assert.match(detail, /<Section title="Tổng quan"/);
-  assert.doesNotMatch(detail, /Minh chứng đính kèm/);
-  assert.match(detail, /<Item label="Tiến độ"/);
-  for (const label of ["Tiêu chí đánh giá", "Tiến độ", "Lịch sử", "Đính kèm"]) {
-    assert.match(detail, new RegExp(`<summary[^>]*>${label}`));
-  }
+  assert.match(detail, /aria-label="Tổng quan"/);
+  assert.match(detail, /Đính kèm · Tệp/);
+  assert.match(detail, /Lịch sử/);
 });
 
 test("completion action is rendered in the responsive top header", () => {

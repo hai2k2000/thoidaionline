@@ -107,12 +107,12 @@ test("forward migration grants TBT evaluation access without generic admin permi
   assert.doesNotMatch(sql, /update\s+public\.role_permissions/i);
 });
 
-test("task detail gates qualitative mutation and removes legacy score controls", () => {
+test("task detail gates completion scoring and removes legacy score controls", () => {
   const source = readFileSync(new URL("../components/TaskDetailShell.tsx", import.meta.url), "utf8");
-  assert.match(source, /capabilities\.evaluate/);
-  assert.match(source, /Đánh giá công việc/);
-  assert.match(source, /Lưu đánh giá/);
-  assert.doesNotMatch(source, /rating\}\/10|Điểm[^\n]*1[^\n]*10/);
+  assert.match(source, /capabilities\.review/);
+  assert.match(source, /Chấm điểm hoàn thành/);
+  assert.match(source, /Lưu điểm và duyệt hoàn thành/);
+  assert.doesNotMatch(source, /save_task_evaluation_checkpoint|task\.legacy_evaluations\.map|\/evaluate/);
   assert.doesNotMatch(source, />\s*Việc khó\s*</);
   assert.doesNotMatch(source, />\s*Có cải tiến\s*</);
   assert.doesNotMatch(source, />\s*Có đóng góp\s*</);
@@ -132,7 +132,7 @@ test("local checkpoint dates do not use UTC ISO truncation", () => {
 
 test("task detail renders legacy checkpoints without a mutation path", () => {
   const source = readFileSync(new URL("../components/TaskDetailShell.tsx", import.meta.url), "utf8");
-  assert.match(source, /task\.legacy_evaluations\.map/);
+  assert.doesNotMatch(source, /task\.legacy_evaluations\.map/);
   assert.doesNotMatch(source, /save_task_evaluation_checkpoint|\/evaluate/);
 });
 
