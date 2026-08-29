@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
@@ -83,12 +83,14 @@ const generateDemoRangeRows = (users: StaffDemoRow[], fromDate: string, toDate: 
 
 export default function AttendancePage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule, hasPermission, canViewAllWorkHr } = useAuth();
+  const pathname = usePathname();
+  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
 
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
   const [selectedDate, setSelectedDate] = useState(toDateInput());
   const [message, setMessage] = useState("Đang tải dữ liệu chấm công...");
+  const isOrganizationView = pathname === "/attendance" && user?.role_code === "admin";
 
   const loadAttendance = async () => {
     const startMonth = monthStartOf(selectedDate);
@@ -108,7 +110,7 @@ export default function AttendancePage() {
       .order("work_date", { ascending: true })
       .limit(10000);
 
-    if (!hasPermission("can_edit_all_tasks") && !canViewAllWorkHr() && user?.id) {
+    if (!isOrganizationView && user?.id) {
       dayQuery = dayQuery.eq("user_id", user.id);
       monthQuery = monthQuery.eq("user_id", user.id);
     }
@@ -136,7 +138,7 @@ export default function AttendancePage() {
       let users = ((usersRes.data ?? []) as unknown as StaffDemoRow[])
         .filter((u) => (u.roles?.code ?? "") !== "tong_bien_tap");
 
-      if (!hasPermission("can_edit_all_tasks") && !canViewAllWorkHr() && user?.id) {
+      if (!isOrganizationView && user?.id) {
         users = users.filter((u) => u.id === user.id);
       }
 
@@ -166,12 +168,13 @@ export default function AttendancePage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
+    if (pathname === "/attendance" && user.role_code !== "admin") return void router.push("/my-attendance");
     if (!canAccessModule("hr")) return void router.push("/");
     const t = setTimeout(() => {
       void loadAttendance();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router, selectedDate, hasPermission]);
+  }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView]);
 
   const stats = useMemo(() => {
     const total = rows.length;
@@ -205,12 +208,12 @@ export default function AttendancePage() {
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
       <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
         <div className="mb-4 lg:mb-0">
-          <AppNav currentPath="/attendance" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
+          <AppNav currentPath={pathname} userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
         </div>
 
         <div>
           <div className="mb-4">
-            <h1 className="text-2xl font-bold">Chấm công</h1>
+            <h1 className="text-2xl font-bold">{isOrganizationView ? "Chấm công toàn cơ quan" : "Chấm công của tôi"}</h1>
           </div>
 
         <section className="rounded-xl border bg-white p-4">
