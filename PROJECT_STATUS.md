@@ -1,5 +1,5 @@
 Current Phase: Workflow access hardening
-Current Task: Require fresh scoring for each assigned-task completion attempt
+Current Task: COMPLETE — require fresh scoring for each assigned-task completion attempt
 
 Completed:
 - Organization evaluation summary remains readable by every signed-in employee.
@@ -27,4 +27,4 @@ Follow Up:
 - Legacy seeded assigned tasks may remain in `new` status; they are outside the new assignment flow and should be triaged separately if users report them.
 
 Next:
-- Commit/push the strict fresh-score correction, then close this workflow-risk review.
+- Await the next user-requested workflow task.
