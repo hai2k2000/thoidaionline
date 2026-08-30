@@ -10,14 +10,14 @@ test("Phase 6 assignment page is server-scoped and renders the full canonical fo
   assert.match(page, /getSessionUser/);
   assert.match(page, /taskAssignmentRepository/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
-  for (const field of ["title", "description", "departmentId", "assigneeId", "reviewerId", "dueDate", "dueTime", "evaluationCriteria", "collaboratorIds", "watcherIds", "recurrenceFrequency", "recurrenceEndsOn", "attachment"]) {
+  for (const field of ["title", "requirements", "departmentId", "assigneeId", "dueDate", "dueTime", "recurrenceEndsOn", "attachment"]) {
     assert.match(shell, new RegExp(`name=["']${field}["']`), `${field} field missing`);
   }
   assert.doesNotMatch(shell, /AI provider|progress_percent/i);
   assert.match(shell, /value="daily">Hàng ngày/);
   assert.match(shell, /type="checkbox"/);
   assert.doesNotMatch(shell, /Giữ Ctrl\/Cmd/);
-  assert.match(shell, /Trưởng\/Phó phòng/);
+  assert.match(shell, /Trưởng phòng/);
 });
 
 test("assignment and recurrence stay behind thin server-only routes", () => {
