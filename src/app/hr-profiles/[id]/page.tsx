@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 import { upsertEmployeeProfile, type EmployeeProfile } from "@/lib/services";
 import { errorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
@@ -35,21 +34,18 @@ export default function HrProfileDetailPage() {
   const [profileFile, setProfileFile] = useState<File | null>(null);
 
   const load = async (id: string) => {
-    const [staffResponse, pRes] = await Promise.all([
+    const [staffResponse, profileResponse] = await Promise.all([
       fetch(`/api/hr/staff?user_id=${encodeURIComponent(id)}`, { cache: "no-store" }),
-      supabase.from("employee_profiles").select("*").eq("user_id", id).maybeSingle(),
+      fetch(`/api/hr/profiles?user_id=${encodeURIComponent(id)}`, { cache: "no-store" }),
     ]);
 
     const staffPayload = await staffResponse.json().catch(() => null) as StaffResponse | null;
+    const profilePayload = await profileResponse.json().catch(() => null) as { error?: string; profiles?: EmployeeProfile[] } | null;
     if (!staffResponse.ok) return setMessage(`❌ ${staffPayload?.error || "Không thể tải dữ liệu nhân sự."}`);
-    if (pRes.error) return setMessage(`❌ ${pRes.error.message}`);
+    if (!profileResponse.ok) return setMessage(`❌ ${profilePayload?.error || "Không thể tải hồ sơ nhân sự."}`);
 
     setStaff(staffPayload?.users?.[0] ?? null);
-    setProfile(
-      ((pRes.data ?? { user_id: id }) as EmployeeProfile) || {
-        user_id: id,
-      }
-    );
+    setProfile(profilePayload?.profiles?.[0] ?? { user_id: id });
     setMessage("✅ Đã tải hồ sơ.");
   };
 
@@ -93,7 +89,7 @@ export default function HrProfileDetailPage() {
       void load(params.id);
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, params?.id, router, hasPermission]);
+  }, [authLoading, user, canAccessModule, params?.id, router, hasPermission, canViewAllWorkHr]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
@@ -109,39 +105,39 @@ export default function HrProfileDetailPage() {
 
         <p className="mb-3 text-sm text-slate-600">{message}</p>
 
-        <section className="rounded-xl border bg-white p-4">
+        <section className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-3">
-            <Link href="/hr-profiles" className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 text-sm font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200">
+            <Link href="/hr-profiles" className="inline-flex min-h-10 items-center rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800 hover:bg-orange-100">
               ← Quay lại danh sách hồ sơ nhân sự
             </Link>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div><b>Họ tên:</b> {staff?.full_name ?? "-"}</div>
-            <div><b>Tên đăng nhập:</b> {staff?.username ?? "-"}</div>
-            <div><b>Thư điện tử:</b> {staff?.email ?? "-"}</div>
-            <div><b>Phòng ban:</b> {staff?.departments?.name ?? "-"}</div>
-            <div><b>Chức vụ:</b> {staff?.job_titles?.name ?? "-"}</div>
+            <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Họ tên</p><p className="mt-1 font-semibold">{staff?.full_name ?? "-"}</p></div>
+            <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tên đăng nhập</p><p className="mt-1 font-mono text-sm">{staff?.username ?? "-"}</p></div>
+            <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Thư điện tử</p><p className="mt-1">{staff?.email ?? "-"}</p></div>
+            <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Phòng ban</p><p className="mt-1">{staff?.departments?.name ?? "-"}</p></div>
+            <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chức vụ</p><p className="mt-1">{staff?.job_titles?.name ?? "-"}</p></div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Ngày sinh</label>
-              <input className="w-full rounded border px-3 py-2" type="date" value={profile?.date_of_birth ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), date_of_birth: e.target.value || null }))} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ngày sinh</label>
+              <input className="min-h-11 w-full rounded-lg border px-3 py-2" type="date" value={profile?.date_of_birth ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), date_of_birth: e.target.value || null }))} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">SĐT</label>
-              <input className="w-full rounded border px-3 py-2" value={profile?.emergency_contact_phone ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), emergency_contact_phone: e.target.value || null }))} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">SĐT</label>
+              <input className="min-h-11 w-full rounded-lg border px-3 py-2" value={profile?.emergency_contact_phone ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), emergency_contact_phone: e.target.value || null }))} />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Địa chỉ</label>
-              <input className="w-full rounded border px-3 py-2" value={profile?.address ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), address: e.target.value || null }))} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Địa chỉ</label>
+              <input className="min-h-11 w-full rounded-lg border px-3 py-2" value={profile?.address ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), address: e.target.value || null }))} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Số giấy tờ</label>
-              <input className="w-full rounded border px-3 py-2" value={profile?.id_number ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), id_number: e.target.value || null }))} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Số giấy tờ</label>
+              <input className="min-h-11 w-full rounded-lg border px-3 py-2" value={profile?.id_number ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), id_number: e.target.value || null }))} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Loại hợp đồng</label>
-              <select className="w-full rounded border px-3 py-2" value={profile?.contract_type ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), contract_type: (e.target.value || null) as EmployeeProfile["contract_type"] }))}>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Loại hợp đồng</label>
+              <select className="min-h-11 w-full rounded-lg border px-3 py-2" value={profile?.contract_type ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), contract_type: (e.target.value || null) as EmployeeProfile["contract_type"] }))}>
                 <option value="">-</option>
                 <option value="intern">Thực tập</option>
                 <option value="probation">Thử việc</option>
@@ -150,25 +146,25 @@ export default function HrProfileDetailPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Ngày vào làm</label>
-              <input className="w-full rounded border px-3 py-2" type="date" value={profile?.join_date ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), join_date: e.target.value || null }))} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ngày vào làm</label>
+              <input className="min-h-11 w-full rounded-lg border px-3 py-2" type="date" value={profile?.join_date ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), join_date: e.target.value || null }))} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Bắt đầu HĐ</label>
-              <input className="w-full rounded border px-3 py-2" type="date" value={profile?.contract_start ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), contract_start: e.target.value || null }))} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Bắt đầu HĐ</label>
+              <input className="min-h-11 w-full rounded-lg border px-3 py-2" type="date" value={profile?.contract_start ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), contract_start: e.target.value || null }))} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Kết thúc HĐ</label>
-              <input className="w-full rounded border px-3 py-2" type="date" value={profile?.contract_end ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), contract_end: e.target.value || null }))} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kết thúc HĐ</label>
+              <input className="min-h-11 w-full rounded-lg border px-3 py-2" type="date" value={profile?.contract_end ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), contract_end: e.target.value || null }))} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Người liên hệ khẩn</label>
-              <input className="w-full rounded border px-3 py-2" value={profile?.emergency_contact_name ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), emergency_contact_name: e.target.value || null }))} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Người liên hệ khẩn</label>
+              <input className="min-h-11 w-full rounded-lg border px-3 py-2" value={profile?.emergency_contact_name ?? ""} onChange={(e) => setProfile((p) => ({ ...(p ?? { user_id: params?.id ?? "" }), emergency_contact_name: e.target.value || null }))} />
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Tệp hợp đồng lao động</label>
-              <input className="rounded border px-3 py-2" type="file" onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)} />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tệp hợp đồng lao động</label>
+              <input className="min-h-11 rounded-lg border px-3 py-2" type="file" onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)} />
               <div className="mt-2 text-sm">
                 <b>Tệp hiện tại:</b>{" "}
                 {profile?.profile_file_url ? (
@@ -184,7 +180,7 @@ export default function HrProfileDetailPage() {
 
           {!isReadOnly() ? (
           <div className="mt-4">
-            <button onClick={save} disabled={saving} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">
               {saving ? "Đang lưu..." : "Lưu cập nhật"}
             </button>
           </div>

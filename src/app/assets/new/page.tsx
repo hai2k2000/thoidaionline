@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 import { assignAsset, createAsset } from "@/lib/services";
 import { errorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
@@ -37,18 +36,14 @@ export default function AssetCreatePage() {
     if (!canAccessModule("assets")) return void router.push("/");
 
     const t = setTimeout(async () => {
-      const [usersRes, depsRes] = await Promise.all([
-        supabase.from("staff_users").select("id,full_name,username,active").eq("active", true).order("full_name"),
-        supabase.from("departments").select("id,name,active").eq("active", true).order("name"),
-      ]);
-
-      if (usersRes.error || depsRes.error) {
-        setMessage(`⚠️ ${usersRes.error?.message || depsRes.error?.message}`);
+      const response = await fetch("/api/assets?options=1", { cache: "no-store" });
+      const payload = await response.json().catch(() => null) as { error?: string; users?: StaffUser[]; departments?: Department[] } | null;
+      if (!response.ok) {
+        setMessage(`⚠️ ${payload?.error || "Không thể tải danh mục."}`);
         return;
       }
-
-      setUsers((usersRes.data ?? []) as StaffUser[]);
-      setDepartments((depsRes.data ?? []) as Department[]);
+      setUsers(payload?.users ?? []);
+      setDepartments(payload?.departments ?? []);
     }, 0);
 
     return () => clearTimeout(t);
@@ -110,39 +105,40 @@ export default function AssetCreatePage() {
             <h1 className="text-2xl font-bold">Thêm tài sản</h1>
           </div>
 
-          <section className="rounded-xl border bg-white p-4">
-            <h2 className="mb-2 text-lg font-semibold">Tạo tài sản mới</h2>
-            <div className="grid gap-2 md:grid-cols-2">
-              <input className="rounded border px-3 py-2" placeholder="Mã tài sản (bỏ trống để tự sinh)" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} />
-              <input className="rounded border px-3 py-2" placeholder="Tên tài sản" value={assetName} onChange={(e) => setAssetName(e.target.value)} />
-              <input className="rounded border px-3 py-2" placeholder="Nhóm tài sản" value={category} onChange={(e) => setCategory(e.target.value)} />
-              <input className="rounded border px-3 py-2" placeholder="Số sê-ri" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
-              <select className="rounded border px-3 py-2" value={status} onChange={(e) => setStatus(e.target.value as AssetStatus)}>
+          <section className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-lg font-semibold">Tạo tài sản mới</h2>
+            <p className="mt-1 text-sm text-slate-500">Nhập thông tin nhận diện và tình trạng hiện tại của tài sản.</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="grid gap-1.5 text-sm font-semibold">Mã tài sản <span className="font-normal text-slate-500">(bỏ trống để tự sinh)</span><input aria-label="Mã tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} /></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Tên tài sản<input aria-label="Tên tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={assetName} onChange={(e) => setAssetName(e.target.value)} /></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Nhóm tài sản<input aria-label="Nhóm tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={category} onChange={(e) => setCategory(e.target.value)} /></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Số sê-ri<input aria-label="Số sê-ri" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} /></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Tình trạng<select aria-label="Tình trạng tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={status} onChange={(e) => setStatus(e.target.value as AssetStatus)}>
                 <option value="in_use">Đang sử dụng</option>
                 <option value="maintenance">Bảo trì</option>
                 <option value="broken">Hỏng</option>
                 <option value="liquidated">Thanh lý</option>
-              </select>
-              <input className="rounded border px-3 py-2" placeholder="Ghi chú" value={note} onChange={(e) => setNote(e.target.value)} />
+              </select></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Ghi chú<input aria-label="Ghi chú tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={note} onChange={(e) => setNote(e.target.value)} /></label>
 
-              <select className="rounded border px-3 py-2" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <label className="grid gap-1.5 text-sm font-semibold">Giao cho nhân viên<select aria-label="Giao tài sản cho nhân viên" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
                 <option value="">Giao cho ai (không bắt buộc)</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>{u.full_name}{u.username ? ` (${u.username})` : ""}</option>
                 ))}
-              </select>
+              </select></label>
 
-              <select className="rounded border px-3 py-2" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+              <label className="grid gap-1.5 text-sm font-semibold">Hoặc giao cho phòng ban<select aria-label="Giao tài sản cho phòng ban" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
                 <option value="">Hoặc giao cho phòng ban (không bắt buộc)</option>
                 {departments.map((d) => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
-              </select>
+              </select></label>
             </div>
 
-            <p className="mt-2 text-xs text-slate-500">Có thể chọn giao cho nhân viên hoặc phòng ban ngay khi thêm tài sản.</p>
+            <p className="mt-4 text-sm text-slate-500">Có thể chọn giao cho nhân viên hoặc phòng ban ngay khi thêm tài sản.</p>
             <div className="mt-3">
-              <button disabled={busy} onClick={onCreate} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Đang thêm..." : "Thêm tài sản"}</button>
+              <button disabled={busy} onClick={onCreate} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{busy ? "Đang thêm..." : "Thêm tài sản"}</button>
             </div>
             <p className="mt-2 text-sm text-slate-600">{message}</p>
           </section>

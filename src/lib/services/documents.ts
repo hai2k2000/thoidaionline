@@ -1,5 +1,4 @@
-import { logAudit } from "./audit";
-import { db, fail, ok, ServiceResult, withError } from "./common";
+import { fail, ok, ServiceResult, withError } from "./common";
 
 export type DocumentDirection = "incoming" | "outgoing" | "contract" | "common";
 
@@ -18,32 +17,17 @@ export type OfficialDocument = {
   note?: string | null;
 };
 
-const nextDocCode = async (direction: DocumentDirection): Promise<string> => {
-  const year = new Date().getFullYear();
-  const headMap: Record<DocumentDirection, string> = {
-    incoming: "CV-DEN",
-    outgoing: "CV-DI",
-    contract: "HD",
-    common: "TL-CHUNG",
-  };
-  const head = headMap[direction];
-  const prefix = `${head}-${year}-`;
-  const { data } = await db.from("official_documents").select("doc_code").ilike("doc_code", `${prefix}%`).order("doc_code", { ascending: false }).limit(1).maybeSingle();
-  const current = data?.doc_code ?? `${prefix}0000`;
-  const matched = current.match(/(\d+)$/);
-  const n = Number(matched?.[1] ?? "0") + 1;
-  return `${prefix}${String(n).padStart(4, "0")}`;
+const parse = async <T>(response: Response, fallback: string): Promise<ServiceResult<T>> => {
+  const body = await response.json().catch(() => null) as { error?: string; document?: T; documents?: T[]; users?: unknown[] } | null;
+  if (!response.ok) return fail(body?.error || fallback);
+  return ok(body as T);
 };
 
 export async function listDocuments(): Promise<ServiceResult<OfficialDocument[]>> {
   try {
-    const { data, error } = await db
-      .from("official_documents")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) return fail(error.message);
-    return ok((data ?? []) as OfficialDocument[]);
+    const response = await fetch("/api/documents", { cache: "no-store" });
+    const result = await parse<{ documents?: OfficialDocument[] }>(response, "Không tải được công văn.");
+    return result.ok ? ok(result.data.documents ?? []) : result;
   } catch (error) {
     return fail(withError(error, "Không tải được công văn."));
   }
@@ -55,25 +39,9 @@ export async function createDocument(input: OfficialDocument, actorId?: string):
   }
 
   try {
-    const code = input.doc_code?.trim().toUpperCase() || (await nextDocCode(input.direction));
-    const { data, error } = await db
-      .from("official_documents")
-      .insert({
-        ...input,
-        doc_code: code,
-        title: input.title.trim(),
-        urgency: input.urgency ?? "normal",
-        confidentiality: input.confidentiality ?? "normal",
-        status: input.status ?? "new",
-        created_by: actorId ?? null,
-      })
-      .select("*")
-      .single();
-
-    if (error) return fail(error.message);
-
-    await logAudit({ actorId, module: "documents", entityType: "official_documents", entityId: data.id, action: "create", newData: data });
-    return ok(data as OfficialDocument);
+    const response = await fetch("/api/documents", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, actorId }) });
+    const result = await parse<{ document?: OfficialDocument }>(response, "Không tạo được công văn.");
+    return result.ok && result.data.document ? ok(result.data.document) : result.ok ? fail("Không tạo được công văn.") : result;
   } catch (error) {
     return fail(withError(error, "Không tạo được công văn."));
   }
@@ -88,28 +56,9 @@ export async function assignDocument(
   if (!documentId || !assigneeId) return fail("Thiếu documentId hoặc assigneeId.");
 
   try {
-    const { error } = await db.from("document_assignments").insert({
-      document_id: documentId,
-      assignee_id: assigneeId,
-      assigned_by: actorId ?? null,
-      due_date: dueDate ?? null,
-      status: "todo",
-    });
-
-    if (error) return fail(error.message);
-
-    await db.from("official_documents").update({ status: "in_progress", updated_at: new Date().toISOString() }).eq("id", documentId);
-
-    await logAudit({
-      actorId,
-      module: "documents",
-      entityType: "document_assignments",
-      entityId: documentId,
-      action: "assign",
-      newData: { documentId, assigneeId, dueDate },
-    });
-
-    return ok(true);
+    const response = await fetch("/api/documents", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "assign", document_id: documentId, assignee_id: assigneeId, due_date: dueDate ?? null, actorId }) });
+    const result = await parse<{ assignment?: unknown }>(response, "Không giao xử lý được công văn.");
+    return result.ok ? ok(true) : result;
   } catch (error) {
     return fail(withError(error, "Không giao xử lý được công văn."));
   }

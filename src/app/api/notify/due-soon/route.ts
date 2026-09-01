@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
+import { serverSupabase } from "@/lib/serverSupabase";
 
 type TaskRow = {
   title: string;
@@ -19,21 +19,13 @@ export async function POST(req: Request) {
     const url = new URL(req.url);
     const days = Math.max(1, Math.min(14, Number(url.searchParams.get("days") || 3)));
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json({ error: "Thiếu NEXT_PUBLIC_SUPABASE_URL hoặc NEXT_PUBLIC_SUPABASE_ANON_KEY" }, { status: 500 });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
     const today = new Date();
     const from = today.toISOString().slice(0, 10);
     const toDate = new Date();
     toDate.setDate(today.getDate() + days);
     const to = toDate.toISOString().slice(0, 10);
 
-    const { data, error } = await supabase
+    const { data, error } = await serverSupabase
       .from("tasks")
       .select("title, due_date, status, departments(name), staff_users!tasks_assignee_id_fkey(full_name)")
       .neq("status", "done")
@@ -43,7 +35,10 @@ export async function POST(req: Request) {
       .order("due_date", { ascending: true })
       .limit(50);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[notify/due-soon] query failed", { code: error.code });
+      return NextResponse.json({ error: "Không thể tải danh sách công việc." }, { status: 500 });
+    }
 
     const tasks = (data ?? []) as unknown as TaskRow[];
     const lines = tasks.map((t, i) => {
@@ -89,7 +84,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, count: tasks.length, days, channels });
-  } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Không thể gửi thông báo." }, { status: 500 });
   }
 }

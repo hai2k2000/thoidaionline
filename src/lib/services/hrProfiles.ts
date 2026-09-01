@@ -1,5 +1,4 @@
-import { logAudit } from "./audit";
-import { db, fail, ok, ServiceResult, withError } from "./common";
+import { fail, ok, ServiceResult, withError } from "./common";
 
 export type EmployeeProfile = {
   user_id: string;
@@ -22,18 +21,12 @@ const validateProfile = (input: EmployeeProfile): string | null => {
   return null;
 };
 
-const nextEmployeeCode = async (): Promise<string> => {
-  const { data } = await db.from("employee_profiles").select("employee_code").order("employee_code", { ascending: false }).limit(1).maybeSingle();
-  const current = data?.employee_code ?? "NS-0000";
-  const n = Number((current.split("-")[1] ?? "0").replace(/\D/g, "")) + 1;
-  return `NS-${String(n).padStart(4, "0")}`;
-};
-
 export async function listEmployeeProfiles(): Promise<ServiceResult<EmployeeProfile[]>> {
   try {
-    const { data, error } = await db.from("employee_profiles").select("*").order("employee_code");
-    if (error) return fail(error.message);
-    return ok((data ?? []) as EmployeeProfile[]);
+    const response = await fetch("/api/hr/profiles", { cache: "no-store" });
+    const body = await response.json().catch(() => null) as { profiles?: EmployeeProfile[]; error?: string } | null;
+    if (!response.ok) return fail(body?.error || "Không tải được hồ sơ nhân sự.");
+    return ok(body?.profiles ?? []);
   } catch (error) {
     return fail(withError(error, "Không tải được hồ sơ nhân sự."));
   }
@@ -47,25 +40,10 @@ export async function upsertEmployeeProfile(
   if (invalid) return fail(invalid);
 
   try {
-    const code = input.employee_code?.trim().toUpperCase() || (await nextEmployeeCode());
-    const { data, error } = await db
-      .from("employee_profiles")
-      .upsert({ ...input, employee_code: code, updated_at: new Date().toISOString() })
-      .select("*")
-      .single();
-
-    if (error) return fail(error.message);
-
-    await logAudit({
-      actorId,
-      module: "hr",
-      entityType: "employee_profiles",
-      entityId: data.user_id,
-      action: "update",
-      newData: data,
-    });
-
-    return ok(data as EmployeeProfile);
+    const response = await fetch("/api/hr/profiles", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, actorId }) });
+    const body = await response.json().catch(() => null) as { profile?: EmployeeProfile; error?: string } | null;
+    if (!response.ok) return fail(body?.error || "Không lưu được hồ sơ nhân sự.");
+    return body?.profile ? ok(body.profile) : fail("Không lưu được hồ sơ nhân sự.");
   } catch (error) {
     return fail(withError(error, "Không lưu được hồ sơ nhân sự."));
   }

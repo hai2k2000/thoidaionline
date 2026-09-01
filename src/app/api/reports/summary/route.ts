@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { getSessionUser } from "@/lib/serverSession";
+import { serverSupabase } from "@/lib/serverSupabase";
 
 const csv = (rows: Array<Record<string, string | number | null>>) => {
   if (!rows.length) return "module,metric,value\n";
@@ -15,23 +15,18 @@ export async function GET() {
   const actor = await getSessionUser();
   if (!actor) return new Response("Unauthorized", { status: 401 });
   if (actor.role_code !== "admin") return new Response("Forbidden", { status: 403 });
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return new Response("Missing Supabase env", { status: 500 });
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
   const today = new Date().toISOString().slice(0, 10);
 
   const [hrRes, assetInUseRes, docOverdueRes, reviewPendingRes, taskTotalRes, taskDoneRes] = await Promise.all([
-    supabase.from("employee_profiles").select("*", { count: "exact", head: true }),
-    supabase.from("assets").select("*", { count: "exact", head: true }).eq("status", "in_use"),
-    supabase.from("official_documents").select("*", { count: "exact", head: true }).lte("processing_deadline", today).neq("status", "done"),
-    supabase.from("performance_reviews").select("*", { count: "exact", head: true }).in("status", ["submitted", "reviewed"]),
-    supabase.from("tasks").select("*", { count: "exact", head: true }),
-    supabase.from("tasks").select("*", { count: "exact", head: true }).eq("status", "done"),
+    serverSupabase.from("employee_profiles").select("*", { count: "exact", head: true }),
+    serverSupabase.from("assets").select("*", { count: "exact", head: true }).eq("status", "in_use"),
+    serverSupabase.from("official_documents").select("*", { count: "exact", head: true }).lte("processing_deadline", today).neq("status", "done"),
+    serverSupabase.from("performance_reviews").select("*", { count: "exact", head: true }).in("status", ["submitted", "reviewed"]),
+    serverSupabase.from("tasks").select("*", { count: "exact", head: true }),
+    serverSupabase.from("tasks").select("*", { count: "exact", head: true }).eq("status", "done"),
   ]);
+  const queryError = [hrRes, assetInUseRes, docOverdueRes, reviewPendingRes, taskTotalRes, taskDoneRes].find((result) => result.error);
+  if (queryError) return new Response("Không thể tạo báo cáo.", { status: 500 });
 
   const rows = [
     { module: "hr", metric: "employee_profiles", value: hrRes.count ?? 0 },

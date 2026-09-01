@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
+import { serverSupabase } from "@/lib/serverSupabase";
 
 type DocRow = {
   doc_code: string;
@@ -23,16 +23,9 @@ export async function POST() {
     const actor = await getSessionUser();
     if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (actor.role_code !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json({ error: "Thiếu NEXT_PUBLIC_SUPABASE_URL hoặc NEXT_PUBLIC_SUPABASE_ANON_KEY" }, { status: 500 });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
     const today = new Date().toISOString().slice(0, 10);
 
-    const { data, error } = await supabase
+    const { data, error } = await serverSupabase
       .from("official_documents")
       .select("doc_code,title,processing_deadline,urgency,status,owner_user:staff_users!official_documents_owner_user_id_fkey(full_name)")
       .not("processing_deadline", "is", null)
@@ -42,7 +35,10 @@ export async function POST() {
       .order("processing_deadline", { ascending: true })
       .limit(50);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[notify/doc-overdue] query failed", { code: error.code });
+      return NextResponse.json({ error: "Không thể tải danh sách công văn." }, { status: 500 });
+    }
 
     const docs = (data ?? []) as unknown as DocRow[];
     const lines = docs.map((d, i) => {
@@ -88,7 +84,7 @@ export async function POST() {
     }
 
     return NextResponse.json({ ok: true, count: docs.length, channels });
-  } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Không thể gửi thông báo." }, { status: 500 });
   }
 }

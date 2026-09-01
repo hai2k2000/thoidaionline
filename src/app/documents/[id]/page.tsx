@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 import type { OfficialDocument } from "@/lib/services";
 
 const urgencyLabel: Record<string, string> = {
@@ -68,21 +67,13 @@ export default function DocumentDetailPage() {
     if (!id) return;
 
     const load = async () => {
-      const [docRes, assignRes] = await Promise.all([
-        supabase.from("official_documents").select("*").eq("id", id).maybeSingle(),
-        supabase
-          .from("document_assignments")
-          .select("id,assignee_id,due_date,status,staff_users!document_assignments_assignee_id_fkey(full_name,username)")
-          .eq("document_id", id)
-          .order("assigned_at", { ascending: false }),
-      ]);
+      const response = await fetch(`/api/documents/${encodeURIComponent(id)}`, { cache: "no-store" });
+      const payload = await response.json().catch(() => null) as { error?: string; document?: OfficialDocument; assignments?: Assignment[] } | null;
+      if (!response.ok) return setMessage(`❌ ${payload?.error || "Không thể tải chi tiết công văn."}`);
+      if (!payload?.document) return setMessage("❌ Không tìm thấy công văn.");
 
-      if (docRes.error) return setMessage(`❌ ${docRes.error.message}`);
-      if (!docRes.data) return setMessage("❌ Không tìm thấy công văn.");
-      if (assignRes.error) return setMessage(`❌ ${assignRes.error.message}`);
-
-      setDoc(docRes.data as OfficialDocument);
-      setAssignments((assignRes.data ?? []) as Assignment[]);
+      setDoc(payload.document);
+      setAssignments(payload.assignments ?? []);
       setMessage("✅ Đã tải chi tiết công văn.");
     };
 
@@ -123,24 +114,25 @@ export default function DocumentDetailPage() {
           </div>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
+        <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Danh sách đã giao xử lý</h2>
-          <table className="table-soft-red min-w-full text-left text-sm">
+          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách đã giao xử lý, cuộn ngang để xem thêm">
+          <table className="table-soft-red data-table min-w-[760px] text-left text-sm">
             <thead>
               <tr>
-                <th className="px-2 py-2">Người xử lý</th>
-                <th className="px-2 py-2">Tên đăng nhập</th>
-                <th className="px-2 py-2">Hạn</th>
-                <th className="px-2 py-2">Trạng thái</th>
+                <th scope="col" className="px-3 py-2">Người xử lý</th>
+                <th scope="col" className="px-3 py-2">Tên đăng nhập</th>
+                <th scope="col" className="px-3 py-2">Hạn</th>
+                <th scope="col" className="px-3 py-2">Trạng thái</th>
               </tr>
             </thead>
             <tbody>
               {assignments.map((a) => (
                 <tr key={a.id}>
-                  <td className="px-2 py-2">{a.staff_users?.full_name ?? "-"}</td>
-                  <td className="px-2 py-2">{a.staff_users?.username ?? "-"}</td>
-                  <td className="px-2 py-2">{a.due_date ? new Date(a.due_date).toLocaleDateString("vi-VN") : "-"}</td>
-                  <td className="px-2 py-2">{assignmentStatusLabel[a.status ?? "todo"] ?? (a.status ?? "-")}</td>
+                  <td className="px-3 py-2 font-semibold">{a.staff_users?.full_name ?? "-"}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{a.staff_users?.username ?? "-"}</td>
+                  <td className="whitespace-nowrap px-3 py-2">{a.due_date ? new Date(a.due_date).toLocaleDateString("vi-VN") : "-"}</td>
+                  <td className="px-3 py-2"><span className={`table-status ${a.status === "done" ? "table-status-success" : a.status === "overdue" ? "table-status-danger" : a.status === "in_progress" ? "table-status-warning" : "table-status-neutral"}`}>{assignmentStatusLabel[a.status ?? "todo"] ?? (a.status ?? "-")}</span></td>
                 </tr>
               ))}
               {assignments.length === 0 ? (
@@ -148,6 +140,7 @@ export default function DocumentDetailPage() {
               ) : null}
             </tbody>
           </table>
+          </div>
         </section>
         </div>
       </div>
