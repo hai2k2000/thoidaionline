@@ -21,6 +21,8 @@ Validation:
 - Backend security hardening tests: PASS (5/5).
 - Targeted lint: PASS (0 errors, 1 warning before dependency fix; PASS after dependency fix).
 - Migration `20260901095000_backend_security_hardening`: PASS with database backup and anon probes returning 401/42501.
+- Runtime dependency audit: PASS (`npm audit --omit=dev --audit-level=high`, 0 vulnerabilities) after upgrading Next.js to 16.3.4 and Supabase JS to 2.112.4.
+- Production dependency/build smoke: PASS (Next.js 16.3.4, service active, protected APIs return 401, security headers present).
 
 Blockers:
 - none
@@ -33,6 +35,7 @@ Follow Up:
 - Legacy seeded assigned tasks may remain in `new` status; they are outside the new assignment flow and should be triaged separately if users report them.
 - Four seeded assigned tasks remain `pending_review` without a completion score and require triage or a fresh assignee submission before approval.
 - Update the stale Phase 6 UI contract test to assert `requirements` instead of `description`.
+- Full audit still reports four high dev-tooling vulnerabilities (`brace-expansion`, `flatted`, `js-yaml`, `picomatch`) and one low advisory; remediate in a separate dependency-maintenance task.
 
 Next:
-- Monitor production smoke checks after service restart; then handle non-blocking dependency/lint/test follow-ups.
+- Handle non-blocking dev-tooling audit findings and stale UI/contract tests in separate tasks; plan service non-root and atomic release follow-ups.
