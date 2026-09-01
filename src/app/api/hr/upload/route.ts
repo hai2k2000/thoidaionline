@@ -35,7 +35,8 @@ const canEditStaff = (roleCode: string) => roleCode !== "tbt_read_only" && roleC
 export async function POST(req: Request) {
   if (!(await isSameOriginRequest())) return json({ error: "Yêu cầu không hợp lệ." }, 403);
   const actor = await getSessionUser();
-  if (!actor || !canEditStaff(actor.role_code)) return json({ error: "Không có quyền cập nhật hồ sơ." }, 403);
+  if (!actor) return json({ error: "Phiên đăng nhập không hợp lệ." }, 401);
+  if (!canEditStaff(actor.role_code)) return json({ error: "Không có quyền cập nhật hồ sơ." }, 403);
   try {
     const form = await req.formData();
     const file = form.get("file");
