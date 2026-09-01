@@ -6,10 +6,12 @@ import { logServerAudit } from "@/lib/serverAudit";
 const NO_STORE = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
 const json = (body: unknown, init?: ResponseInit) => NextResponse.json(body, { ...init, headers: NO_STORE });
 const canManage = (actor: { role_code: string; permissions: { can_edit_all_tasks: boolean } }) => actor.role_code === "admin" || actor.permissions.can_edit_all_tasks;
+const canAccess = (roleCode: string) => roleCode !== "tbt_read_only" && roleCode !== "tong_bien_tap";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const actor = await getSessionUser();
   if (!actor) return json({ error: "unauthenticated" }, { status: 401 });
+  if (!canAccess(actor.role_code)) return json({ error: "forbidden" }, { status: 403 });
   const id = (await context.params).id;
   const [{ data: asset, error }, { data: assignment, error: assignmentError }] = await Promise.all([
     serverSupabase.from("assets").select("*").eq("id", id).maybeSingle(),

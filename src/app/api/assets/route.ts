@@ -11,10 +11,12 @@ const json = (body: unknown, init?: ResponseInit) => NextResponse.json(body, { .
 const canManage = (actor: { role_code: string; permissions: { can_edit_all_tasks: boolean } }) =>
   actor.role_code !== "tbt_read_only" && actor.role_code !== "tong_bien_tap"
     && (actor.role_code === "admin" || actor.permissions.can_edit_all_tasks);
+const canAccess = (roleCode: string) => roleCode !== "tbt_read_only" && roleCode !== "tong_bien_tap";
 
 export async function GET(request: Request) {
   const actor = await getSessionUser();
   if (!actor) return json({ error: "unauthenticated" }, { status: 401 });
+  if (!canAccess(actor.role_code)) return json({ error: "forbidden" }, { status: 403 });
   const options = new URL(request.url).searchParams.get("options") === "1";
   const [assets, assignments, users, departments] = await Promise.all([
     serverSupabase.from("assets").select("*").order("created_at", { ascending: false }),

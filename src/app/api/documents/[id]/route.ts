@@ -5,7 +5,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 const NO_STORE = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
 const json = (body: unknown, init?: ResponseInit) => NextResponse.json(body, { ...init, headers: NO_STORE });
 const canAccess = (role: string) => [
-  "admin", "tong_bien_tap", "pho_tong_bien_tap", "phu_trach_phong_tri_su", "tri_su", "phu_trach_phong_bien_tap", "phu_trach_phong_phong_vien",
+  "admin", "pho_tong_bien_tap", "phu_trach_phong_tri_su", "tri_su", "phu_trach_phong_bien_tap", "phu_trach_phong_phong_vien",
 ].includes(role);
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
