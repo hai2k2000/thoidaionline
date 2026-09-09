@@ -55,6 +55,7 @@ export default function AttendancePage() {
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
   const [selectedDate, setSelectedDate] = useState(toDateInput());
+  const [period, setPeriod] = useState<"day" | "week" | "month">("day");
   const [message, setMessage] = useState("Đang tải dữ liệu chấm công...");
   const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([]);
   const [syncBusy, setSyncBusy] = useState(false);
@@ -89,7 +90,7 @@ export default function AttendancePage() {
 
   const loadAttendance = useCallback(async () => {
     const scope = isOrganizationView ? "organization" : "personal";
-    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&scope=${scope}`, {
+    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&period=${period}&scope=${scope}`, {
       cache: "no-store",
     });
     const payload = await response.json().catch(() => null) as {
@@ -106,8 +107,8 @@ export default function AttendancePage() {
     const dayList = payload.rows ?? [];
     setRows(dayList);
     setMonthlyRows(payload.monthlyRows ?? []);
-    setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi ngày ${selectedDate}.`}`);
-  }, [isOrganizationView, selectedDate]);
+    setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi.`}`);
+  }, [isOrganizationView, period, selectedDate]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -194,8 +195,16 @@ export default function AttendancePage() {
             </div>
           ) : null}
           <div className="grid gap-2 md:grid-cols-4">
+            <div className="text-sm md:col-span-1">
+              <label htmlFor="attendance-period">Khoảng xem</label>
+              <select id="attendance-period" value={period} onChange={(e) => setPeriod(e.target.value as "day" | "week" | "month")} className="mt-1 min-h-11 w-full rounded border px-3 py-2">
+                <option value="day">Theo ngày</option>
+                <option value="week">Theo tuần</option>
+                <option value="month">Theo tháng</option>
+              </select>
+            </div>
             <label className="text-sm md:col-span-1">
-              Ngày
+              Ngày làm mốc
               <input
                 type="date"
                 value={selectedDate}
@@ -222,7 +231,7 @@ export default function AttendancePage() {
         </section>
 
         <section className="mt-4 rounded-xl border bg-white p-4">
-          <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo ngày</h2>
+          <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}</h2>
           <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Bảng chấm công theo ngày, cuộn ngang để xem thêm">
           <table className="data-table min-w-[820px] text-left text-sm">
             <thead className="bg-slate-50">
@@ -247,7 +256,7 @@ export default function AttendancePage() {
                 </tr>
               ))}
               {rows.length === 0 ? (
-                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={6}>Chưa có dữ liệu chấm công cho ngày này.</td></tr>
+                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={6}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
               ) : null}
             </tbody>
           </table>

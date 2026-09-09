@@ -1,7 +1,9 @@
-Current Phase: Attendance device synchronization
-Current Task: COMPLETE — Wise Eye On 39 bridge, admin sync button, and daily schedule
+Current Phase: Attendance reporting views
+Current Task: COMPLETE — remove demo attendance records and add day/week/month filters
 
 Completed:
+- Removed any persisted demo attendance rows (none remained in production); real Wise Eye rows are preserved.
+- Attendance API and page now support day, week, and month periods using the selected date as the anchor.
 - Wise Eye On 39 bridge reads the device through the 32-bit zkemkeeper SDK and imports punches through a token-protected API.
 - Admin attendance page has an accessible “Đồng bộ ngay” action with live sync status and a daily 18:00 schedule indicator.
 - Attendance migration creates punch/request/log tables and maps 24 confirmed staff codes; Thanh Ngọc/code 10 and six absent device users are skipped.
@@ -17,6 +19,9 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Demo cleanup query completed with zero demo rows remaining.
+- Production build PASS after period filter changes.
+- Service restarted and healthy.
 - Production database backup created before migration.
 - Migration applied successfully; 24 staff mappings verified.
 - Production build PASS; service restarted and healthy.

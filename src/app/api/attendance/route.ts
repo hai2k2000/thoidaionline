@@ -68,8 +68,9 @@ export async function GET(request: Request) {
 
   const params = new URL(request.url).searchParams;
   const date = params.get("date") ?? "";
+  const period = params.get("period") ?? "day";
   const scope = params.get("scope") ?? "personal";
-  if (!isValidDate(date) || !["personal", "organization"].includes(scope)) {
+  if (!isValidDate(date) || !["personal", "organization"].includes(scope) || !["day", "week", "month"].includes(period)) {
     return apiError("invalid_request", 400);
   }
   if (scope === "organization" && guard.actor.role_code !== "admin") {
@@ -79,18 +80,36 @@ export async function GET(request: Request) {
   // Organization-wide attendance is deliberately an admin-only scope. The
   // personal scope remains tied to the signed-in actor even for administrators.
   const organizationScope = scope === "organization";
+  const anchor = new Date(`${date}T12:00:00Z`);
   const monthStart = `${date.slice(0, 7)}-01`;
+  let rangeStart = date;
+  let rangeEnd = date;
+  if (period === "week") {
+    const day = anchor.getUTCDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const start = new Date(anchor);
+    start.setUTCDate(start.getUTCDate() + mondayOffset);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+    rangeStart = start.toISOString().slice(0, 10);
+    rangeEnd = end.toISOString().slice(0, 10);
+  } else if (period === "month") {
+    rangeStart = monthStart;
+    const end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0, 12));
+    rangeEnd = end.toISOString().slice(0, 10);
+  }
   let dayQuery = serverSupabase
     .from("attendance_logs")
     .select("id,work_date,check_in,check_out,note,status,staff_users(full_name)")
-    .eq("work_date", date)
+    .gte("work_date", rangeStart)
+    .lte("work_date", rangeEnd)
     .order("check_in", { ascending: true, nullsFirst: false })
     .limit(500);
   let monthQuery = serverSupabase
     .from("attendance_logs")
     .select("id,work_date,check_in,check_out,note,status,staff_users(full_name)")
-    .gte("work_date", monthStart)
-    .lte("work_date", date)
+    .gte("work_date", period === "day" ? monthStart : rangeStart)
+    .lte("work_date", period === "day" ? date : rangeEnd)
     .order("work_date", { ascending: true })
     .limit(10000);
 
@@ -114,8 +133,8 @@ export async function GET(request: Request) {
     return apiJson({
       scope: organizationScope ? "organization" : "personal",
       demo: true,
-      rows: generateDemoDayRows(users, date),
-      monthlyRows: generateDemoRangeRows(users, monthStart, date),
+      rows: generateDemoRangeRows(users, rangeStart, rangeEnd),
+      monthlyRows: generateDemoRangeRows(users, monthStart, period === "day" ? date : rangeEnd),
       message: `Đã nạp dữ liệu DEMO chấm công cho ${users.length} nhân sự (trừ Tổng biên tập).`,
     });
   }
@@ -126,6 +145,6 @@ export async function GET(request: Request) {
     demo: false,
     rows: (dayResult.data ?? []) as unknown as AttendanceRow[],
     monthlyRows: (monthResult.data ?? []) as unknown as AttendanceRow[],
-    message: `Đã tải ${(dayResult.data ?? []).length} bản ghi ngày ${date}.`,
+    message: `Đã tải ${(dayResult.data ?? []).length} bản ghi theo ${period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}.`,
   });
 }
