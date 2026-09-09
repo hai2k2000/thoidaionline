@@ -6,14 +6,6 @@ const isAdmin = (actor: { role_code: string }) => actor.role_code === "admin";
 
 export async function GET(request: Request) {
   if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
-  const { data: existing } = await serverSupabase
-    .from("attendance_sync_requests")
-    .select("id,status,requested_at")
-    .in("status", ["pending", "running"])
-    .order("requested_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (existing) return apiJson({ request: existing });
   const { data, error } = await serverSupabase
     .from("attendance_sync_requests")
     .select("id,status,requested_at,started_at,completed_at,result,error")
