@@ -1,7 +1,7 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
 import { dutyTaskRepository } from "@/lib/dutyTaskRepository";
 
-const positions = ["Biên tập và xuất bản", "Biên tập bước 2", "Biên tập bước 1", "Phóng viên"];
+const positions = ["Xuất bản", "Biên tập", "Phóng viên"];
 const positionSet = new Set(positions);
 const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     const day = value as Record<string, unknown>;
     const date = typeof day.date === "string" ? day.date : "";
     const assignments = Array.isArray(day.assignments) ? day.assignments : [];
-    if (!date.startsWith(`${month}-`) || dates.has(date) || assignments.length < 1 || assignments.length > 4) return apiError("invalid_request", 400);
+    if (!date.startsWith(`${month}-`) || dates.has(date) || assignments.length < 1 || assignments.length > 3) return apiError("invalid_request", 400);
     dates.add(date);
     const seen = new Set<string>();
     for (const value of assignments) {

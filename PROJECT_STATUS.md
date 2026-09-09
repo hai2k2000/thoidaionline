@@ -1,12 +1,14 @@
 Current Phase: Attendance bridge operations
-Current Task: COMPLETE — disable console-flashing minute poll
+Current Task: COMPLETE — reduce duty roster to three positions
 
-Latest Task: COMPLETE — silent Wise Eye attendance bridge
+Latest Task: COMPLETE — three-position duty roster
 
-Latest Update: COMPLETE — minute polling disabled; realtime windows retained
+Latest Update: COMPLETE — Xuất bản, Biên tập, Phóng viên are now the only duty positions
 
 Completed:
 - Disabled the Wise Eye minute Scheduled Task because the 32-bit zkemkeeper COM host creates `conhost.exe` even with hidden launch flags; realtime polling and daily reconciliation remain enabled.
+- Replaced the four-position duty roster with exactly three positions: Xuất bản, Biên tập, Phóng viên.
+- Merged legacy Biên tập bước 1/2 rows into one Biên tập row, retaining the step 2 assignee when both existed and recording cancellation events for redundant rows.
 - Added a hidden Python launcher and updated the reusable task installer for any future task re-enablement.
 - Updated both Wise Eye scheduled-task actions to use `-WindowStyle Hidden` and the explicit bridge working directory; the realtime Startup launcher was already hidden.
 - Added the reusable Windows task-update script under `bridge/windows` so future task registration preserves silent execution.

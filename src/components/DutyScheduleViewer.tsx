@@ -14,12 +14,7 @@ type Row = {
   assignee: { full_name: string | null } | null;
   reviewer: { full_name: string | null } | null;
 };
-const positions = [
-  "Biên tập và xuất bản",
-  "Biên tập bước 2",
-  "Biên tập bước 1",
-  "Phóng viên",
-];
+  const positions = ["Xuất bản", "Biên tập", "Phóng viên"];
 const labels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 const formatDateVi = (iso: string) => {
   const [year, month, day] = iso.split("-");
@@ -28,9 +23,8 @@ const formatDateVi = (iso: string) => {
     : iso;
 };
 const positionShort: Record<string, string> = {
-  "Biên tập và xuất bản": "BT xuất bản",
-  "Biên tập bước 2": "BT bước 2",
-  "Biên tập bước 1": "BT bước 1",
+    "Xuất bản": "Xuất bản",
+    "Biên tập": "Biên tập",
   "Phóng viên": "Phóng viên",
 };
 export default function DutyScheduleViewer({

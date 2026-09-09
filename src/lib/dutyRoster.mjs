@@ -1,4 +1,4 @@
-export const DUTY_POSITIONS = ["Biên tập và xuất bản", "Biên tập bước 2", "Biên tập bước 1", "Phóng viên"];
+export const DUTY_POSITIONS = ["Xuất bản", "Biên tập", "Phóng viên"];
 
 export function monthDays(month) {
   const [year, monthNumber] = month.split("-").map(Number);
