@@ -1,11 +1,14 @@
-Current Phase: Attendance reporting views
-Current Task: COMPLETE — notification proxy load fix
+Current Phase: Duty schedule data
+Current Task: COMPLETE — September 2026 duty roster
 
-Latest Task: COMPLETE — seed September 2026 foreign-language online work schedule
+Latest Task: COMPLETE — import September 2026 duty roster
 
-Latest Update: COMPLETE — weekends default to full-team online work
+Latest Update: COMPLETE — 30-day duty roster is live
 
 Completed:
+- Imported the supplied September 2026 duty roster: 120 active tasks across 30 dates and four positions per date.
+- Mapped the source "Biên tập" row to both editor steps and kept the supplied publisher/reporter rotation unchanged.
+- Allowed Hồng Ninh in the approved duty-editor rotation and exempted duty tasks only from the system-admin participant guard so Mai Anh can retain her reporter duty.
 - Changed notification event queries to process task ID batches sequentially, preventing proxy 502/notification 500 errors for accounts with large task lists.
 - Batched participant-task lookups and notification-read keys so long UUID/key filters stay below the VPS proxy limit.
 - Duty schedule viewer now distinguishes loading, API failure, and a genuinely empty schedule instead of silently rendering empty cards after a failed request.
@@ -38,6 +41,9 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Pre-change full database backup created at `/opt/thoidai-work/backups/pre-september-duty-20260909150633/database.dump` with SHA-256 manifest.
+- Production query confirms 120 active September duty tasks, 30 dates, four positions per date, and no incomplete dates.
+- Source image was re-read directly; the September 5 editor was corrected to Ngô Trí Đường before final validation.
 - Notification load fix: targeted service-role reproduction passes across all task/read batches; production build PASS; service active; authenticated production smoke returns HTTP 200 for notifications and duty schedule.
 - Attendance window rollout: PowerShell bridge parse PASS; outside-window `-Once` exits without device/API work; one realtime process running; daily task scheduled at 18:30; production build PASS; service active after restart.
 - Work schedule table layout fix: production build PASS; service active after restart; production route responds (HTTP 307 authentication redirect).
