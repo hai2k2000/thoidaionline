@@ -25,7 +25,7 @@ export default function DutyTaskShell({ userLabel, people, departments }: { user
   const reviewerPeople = people.filter((p) => ["tong_bien_tap", "pho_tong_bien_tap"].includes(p.role_code ?? "") || (p.department_id === departmentId && (p.is_department_manager || ["truong_phong", "pho_truong_phong", "phu_trach_phong_bien_tap", "phu_trach_phong_phong_vien", "phu_trach_phong_tri_su"].includes(p.role_code ?? "") || ["truong_phong", "pho_truong_phong"].includes(p.job_title_code ?? ""))));
   const eligible = (position: string) => {
     if (position === "Biên tập và xuất bản") return people.filter((p) => ["tong_bien_tap", "pho_tong_bien_tap"].includes(p.job_title_code ?? ""));
-    if (["Biên tập bước 2", "Biên tập bước 1"].includes(position)) return people.filter((p) => ["leson", "triduong", "thihung"].includes(p.username.toLowerCase()));
+    if (["Biên tập bước 2", "Biên tập bước 1"].includes(position)) return people.filter((p) => ["leson", "triduong", "thihung", "hongninh"].includes(p.username.toLowerCase()));
     return scopedPeople.filter((p) => p.job_title_code === "phong_vien" && !isForeignReporter(p.username) && !["leson", "thihung", "triduong"].includes(p.username.toLowerCase()));
   };
   const personLabel = (person: Person) => person.username + " (" + person.full_name + ")";
