@@ -1,7 +1,11 @@
-Current Phase: Backend security hardening
-Current Task: COMPLETE — protect HR/assets/documents data paths and storage
+Current Phase: Attendance device synchronization
+Current Task: COMPLETE — Wise Eye On 39 bridge, admin sync button, and daily schedule
 
 Completed:
+- Wise Eye On 39 bridge reads the device through the 32-bit zkemkeeper SDK and imports punches through a token-protected API.
+- Admin attendance page has an accessible “Đồng bộ ngay” action with live sync status and a daily 18:00 schedule indicator.
+- Attendance migration creates punch/request/log tables and maps 24 confirmed staff codes; Thanh Ngọc/code 10 and six absent device users are skipped.
+- Duplicate active sync requests are prevented and bridge failures mark requests as failed.
 - Organization evaluation summary remains readable by every signed-in employee.
 - Personal attendance is served through a server-guarded API and scoped to the signed-in employee.
 - Organization-wide attendance is available only to admin accounts.
@@ -13,6 +17,11 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Production database backup created before migration.
+- Migration applied successfully; 24 staff mappings verified.
+- Production build PASS; service restarted and healthy.
+- Windows scheduled tasks created: polling every minute and daily sync at 18:00.
+- End-to-end demo sync PASS: 8 punches received, 4 matched users, 6 daily logs, code 10 excluded.
 - Targeted leadership assignment contract and participant-selection tests: PASS (7/7).
 - Supabase migration `20260830100000_fix_leadership_assignment_scope`: PASS on internal Supabase DB.
 - Leadership smoke-check confirms active department heads are accepted for leadership assignment.
@@ -38,4 +47,5 @@ Follow Up:
 - Full audit still reports four high dev-tooling vulnerabilities (`brace-expansion`, `flatted`, `js-yaml`, `picomatch`) and one low advisory; remediate in a separate dependency-maintenance task.
 
 Next:
-- Handle non-blocking dev-tooling audit findings and stale UI/contract tests in separate tasks; plan service non-root and atomic release follow-ups.
+- Monitor the first scheduled 18:00 run and reconcile any additional device users if the hardware roster changes.
+- Existing dev-tooling audit findings, stale UI contract test, and non-root service follow-up remain separate tasks.

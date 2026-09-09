@@ -15,6 +15,15 @@ type AttendanceRow = {
   staff_users?: { full_name: string } | null;
 };
 
+type SyncRequest = {
+  id: string;
+  status: "pending" | "running" | "succeeded" | "failed";
+  requested_at: string;
+  completed_at: string | null;
+  result?: { punches_received?: number; matched_users?: number; daily_logs?: number } | null;
+  error?: string | null;
+};
+
 const attendanceStatusLabel: Record<string, string> = {
   present: "Có mặt",
   absent: "Vắng",
@@ -47,7 +56,36 @@ export default function AttendancePage() {
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
   const [selectedDate, setSelectedDate] = useState(toDateInput());
   const [message, setMessage] = useState("Đang tải dữ liệu chấm công...");
+  const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([]);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
   const isOrganizationView = pathname === "/attendance" && user?.role_code === "admin";
+
+  const loadSyncStatus = useCallback(async () => {
+    if (!isOrganizationView) return;
+    const response = await fetch("/api/attendance/sync/status", { cache: "no-store" });
+    const payload = await response.json().catch(() => null) as { requests?: SyncRequest[] } | null;
+    if (response.ok && payload) setSyncRequests(payload.requests ?? []);
+  }, [isOrganizationView]);
+
+  const requestSync = async () => {
+    setSyncBusy(true);
+    setSyncMessage("Đang gửi yêu cầu tới máy đồng bộ...");
+    try {
+      const response = await fetch("/api/attendance/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device_id: "wise-eye-on-39-machine-1" }),
+      });
+      if (!response.ok) throw new Error();
+      setSyncMessage("Đã xếp hàng. Máy Windows sẽ đọc Wise Eye và cập nhật dữ liệu trong ít phút.");
+      await loadSyncStatus();
+    } catch {
+      setSyncMessage("Chưa tạo được yêu cầu đồng bộ. Vui lòng thử lại.");
+    } finally {
+      setSyncBusy(false);
+    }
+  };
 
   const loadAttendance = useCallback(async () => {
     const scope = isOrganizationView ? "organization" : "personal";
@@ -81,6 +119,15 @@ export default function AttendancePage() {
     }, 0);
     return () => clearTimeout(t);
   }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView, loadAttendance]);
+
+  useEffect(() => {
+    if (!isOrganizationView) return;
+    void loadSyncStatus();
+    const interval = window.setInterval(() => {
+      void loadSyncStatus().then(() => void loadAttendance());
+    }, 10000);
+    return () => window.clearInterval(interval);
+  }, [isOrganizationView, loadAttendance, loadSyncStatus]);
 
   const stats = useMemo(() => {
     const total = rows.length;
@@ -123,6 +170,29 @@ export default function AttendancePage() {
           </div>
 
         <section className="rounded-xl border bg-white p-4">
+          {isOrganizationView ? (
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-orange-200 bg-orange-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-slate-900">Đồng bộ máy chấm công</p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Máy 1 · Wise Eye On 39 · tự động hằng ngày lúc 18:00.
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-700" role="status" aria-live="polite">
+                  {syncMessage || (syncRequests[0]
+                    ? `Lần gần nhất: ${syncRequests[0].status === "succeeded" ? "Thành công" : syncRequests[0].status === "failed" ? "Thất bại" : syncRequests[0].status === "running" ? "Đang đọc dữ liệu" : "Đang chờ máy Windows"}`
+                    : "Chưa có lần đồng bộ nào.")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void requestSync()}
+                disabled={syncBusy || syncRequests[0]?.status === "pending" || syncRequests[0]?.status === "running"}
+                className="min-h-11 shrink-0 rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {syncBusy ? "Đang gửi..." : syncRequests[0]?.status === "running" ? "Đang đồng bộ..." : "Đồng bộ ngay"}
+              </button>
+            </div>
+          ) : null}
           <div className="grid gap-2 md:grid-cols-4">
             <label className="text-sm md:col-span-1">
               Ngày
