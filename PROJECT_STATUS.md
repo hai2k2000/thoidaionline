@@ -1,7 +1,10 @@
 Current Phase: Attendance reporting views
-Current Task: COMPLETE — sync the selected day/week/month range
+Current Task: COMPLETE — realtime attendance bridge
 
 Completed:
+- Added a long-running Windows bridge that polls Wise Eye logs every 5 seconds, sends only unseen punches, and spools failed requests for retry.
+- Added token-protected realtime punch API that upserts punches and recomputes the employee's daily first/last times.
+- Configured per-user Windows Startup launch because Scheduled Task creation requires administrator rights on this workstation.
 - Sync requests now carry the selected period and date range; the Windows bridge filters device punches to that range before import.
 - Daily scheduled sync continues to request the current local day.
 - Removed any persisted demo attendance rows (none remained in production); real Wise Eye rows are preserved.
@@ -21,6 +24,8 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Realtime bridge PowerShell parse PASS and process stays running; existing 8 punches remain deduplicated.
+- Production build PASS, service healthy, commit pushed.
 - Month-range validation sync PASS: 6 punches imported for July 2026, 4 matched users, 5 daily logs; duplicate-safe upsert preserved existing rows.
 - Demo cleanup query completed with zero demo rows remaining.
 - Production build PASS after period filter changes.
@@ -42,7 +47,7 @@ Validation:
 - Production dependency/build smoke: PASS (Next.js 16.3.4, service active, protected APIs return 401, security headers present).
 
 Blockers:
-- none
+- Windows Scheduled Task registration is denied for the current non-admin account; Startup launch is configured instead.
 
 Follow Up:
 - Password fallback `123456` remains unchanged by explicit user instruction for active accounts `admin`, `thanhhai`, `maianh`, and `quangthien`.
