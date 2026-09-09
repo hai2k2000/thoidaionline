@@ -34,7 +34,7 @@ const labels = {
   "evaluation-cycles": "Quản trị kỳ đánh giá",
   "work-schedule": "Lịch cơ quan",
   "work-schedule-leader": "Lịch công tác lãnh đạo",
-  "work-schedule-staff": "Lịch hoạt động nhân viên",
+  "work-schedule-staff": "Kế hoạch nhân viên",
   "work-schedule-admin": "Quản trị lịch công tác",
 } as const;
 
