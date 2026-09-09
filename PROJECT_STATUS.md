@@ -1,7 +1,9 @@
 Current Phase: Attendance reporting views
-Current Task: COMPLETE — remove demo attendance records and add day/week/month filters
+Current Task: COMPLETE — sync the selected day/week/month range
 
 Completed:
+- Sync requests now carry the selected period and date range; the Windows bridge filters device punches to that range before import.
+- Daily scheduled sync continues to request the current local day.
 - Removed any persisted demo attendance rows (none remained in production); real Wise Eye rows are preserved.
 - Attendance API and page now support day, week, and month periods using the selected date as the anchor.
 - Wise Eye On 39 bridge reads the device through the 32-bit zkemkeeper SDK and imports punches through a token-protected API.
@@ -19,6 +21,7 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Month-range validation sync PASS: 6 punches imported for July 2026, 4 matched users, 5 daily logs; duplicate-safe upsert preserved existing rows.
 - Demo cleanup query completed with zero demo rows remaining.
 - Production build PASS after period filter changes.
 - Service restarted and healthy.
