@@ -207,7 +207,10 @@ export default function AttendancePage() {
               <div>
                 <p className="text-sm font-bold text-slate-900">Đồng bộ máy chấm công</p>
                 <p className="mt-1 text-xs leading-5 text-slate-600">
-                  Máy 1 · Wise Eye On 39 · tự động hằng ngày lúc 18:00.
+                  Máy 1 · realtime 07:30–09:30 và 16:30–18:30 · đối soát lúc 18:30.
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Ngoài khung giờ, yêu cầu “Đồng bộ ngay” sẽ chờ đến khung đồng bộ kế tiếp.
                 </p>
                 <p className="mt-1 text-xs font-semibold text-slate-700" role="status" aria-live="polite">
                   {syncMessage || (syncRequests[0]

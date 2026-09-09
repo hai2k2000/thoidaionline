@@ -1,11 +1,13 @@
 Current Phase: Attendance reporting views
-Current Task: COMPLETE — work schedule table layout fix
+Current Task: COMPLETE — attendance sync windows
 
 Latest Task: COMPLETE — seed September 2026 foreign-language online work schedule
 
 Latest Update: COMPLETE — weekends default to full-team online work
 
 Completed:
+- Limited Wise Eye realtime reads to 07:30–09:30 and 16:30–18:30; the minute task remains a lightweight pending-request poll outside those windows, while explicit admin sync requests still run immediately.
+- Moved the daily reconciliation task to 18:30 and updated the attendance page schedule guidance.
 - Fixed the work schedule table identity columns so “STT” and “Họ và tên” keep readable widths instead of wrapping one character per line; day columns remain horizontally scrollable.
 - Removed Saturday/Sunday assignments from the September foreign-language schedule; weekends are intentionally left blank as the default full-team online days.
 - Viewer now labels empty weekend cards “Mặc định cả tổ / Cả tổ ngoại ngữ” instead of “Chưa phân công”.
@@ -33,6 +35,7 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Attendance window rollout: PowerShell bridge parse PASS; outside-window `-Once` exits without device/API work; one realtime process running; daily task scheduled at 18:30; production build PASS; service active after restart.
 - Work schedule table layout fix: production build PASS; service active after restart; production route responds (HTTP 307 authentication redirect).
 - September schedule RPC cancelled 48 weekend assignments and kept 24 weekday assignments unchanged.
 - Pre-change database backup created; production query confirms weekend rows are empty.
@@ -75,5 +78,5 @@ Follow Up:
 - Full audit still reports four high dev-tooling vulnerabilities (`brace-expansion`, `flatted`, `js-yaml`, `picomatch`) and one low advisory; remediate in a separate dependency-maintenance task.
 
 Next:
-- Monitor the first scheduled 18:00 run and reconcile any additional device users if the hardware roster changes.
+- Monitor the first scheduled 18:30 reconciliation run and reconcile any additional device users if the hardware roster changes.
 - Existing dev-tooling audit findings, stale UI contract test, and non-root service follow-up remain separate tasks.

@@ -11,6 +11,15 @@ $deviceIp = "192.168.79.201"
 $devicePort = 4370
 $machineNumber = 1
 
+function Test-AttendanceWindow([datetime]$Time) {
+  $minuteOfDay = ($Time.Hour * 60) + $Time.Minute
+  return ($minuteOfDay -ge 450 -and $minuteOfDay -le 570) -or
+    ($minuteOfDay -ge 990 -and $minuteOfDay -le 1110)
+}
+
+# The minute task stays registered, but does no API or device work outside attendance windows.
+if (-not $Daily -and -not (Test-AttendanceWindow (Get-Date))) { exit 0 }
+
 if (-not (Test-Path $ConfigPath)) { throw "Missing bridge config: $ConfigPath" }
 $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 if ([string]::IsNullOrWhiteSpace($config.bridgeToken)) { throw "bridgeToken is missing" }

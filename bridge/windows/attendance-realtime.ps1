@@ -4,6 +4,11 @@ $apiBase = "https://www.thoidai.online"; $deviceId = "wise-eye-on-39-machine-1";
 $statePath = "C:\WiseEyeOn39\bridge\realtime-seen.json"; $spoolPath = "C:\WiseEyeOn39\bridge\realtime-spool.jsonl"
 $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json; $headers = @{ "x-attendance-bridge-token" = [string]$config.bridgeToken }
 $seen = @{}; if (Test-Path $statePath) { (Get-Content $statePath -Raw | ConvertFrom-Json).psobject.Properties | ForEach-Object { $seen[$_.Name] = $true } }
+function Test-AttendanceWindow([datetime]$Time) {
+  $minuteOfDay = ($Time.Hour * 60) + $Time.Minute
+  return ($minuteOfDay -ge 450 -and $minuteOfDay -le 570) -or
+    ($minuteOfDay -ge 990 -and $minuteOfDay -le 1110)
+}
 function Send-Punch($row) { try { Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) | Out-Null; return $true } catch { Add-Content -Path $spoolPath -Value ($row | ConvertTo-Json -Compress); return $false } }
 function Read-DeviceData {
   $zk = New-Object -ComObject "zkemkeeper.ZKEM"; $connected = $false
@@ -20,6 +25,10 @@ function Read-DeviceData {
   } finally { if ($connected) { [void]$zk.Disconnect() } }
 }
 while ($true) {
+  if (-not (Test-AttendanceWindow (Get-Date))) {
+    Start-Sleep -Seconds 30
+    continue
+  }
   try {
     foreach ($row in @(Read-DeviceData)) {
       $key = "$($row.enroll_number)|$($row.punched_at)"
