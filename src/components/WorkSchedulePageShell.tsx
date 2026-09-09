@@ -312,11 +312,18 @@ export default function WorkSchedulePageShell({
           </section>
 
           <section className="table-scroll mt-3 rounded-xl border bg-white shadow-sm">
-            <table className="data-table w-full min-w-[1100px] border-collapse text-sm">
+            <table className="work-schedule-table data-table w-full min-w-[1290px] border-collapse text-sm">
+              <colgroup>
+                <col className="w-14" />
+                <col className="w-56" />
+                {range.days.map((date) => (
+                  <col key={`column-${iso(date)}`} className="w-36" />
+                ))}
+              </colgroup>
               <thead>
                 <tr className="border-b bg-slate-100 text-center">
-                  <th scope="col" className="w-12 p-2">STT</th>
-                  <th scope="col" className="w-44 p-2 text-left">Họ và tên</th>
+                  <th scope="col" className="w-14 min-w-14 p-2">STT</th>
+                  <th scope="col" className="w-56 min-w-56 p-2 text-left">Họ và tên</th>
                   {range.days.map((date, index) => (
                     <th scope="col" key={iso(date)} className="min-w-[145px] p-2">
                       {["Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy", "Chủ nhật"][index]}
@@ -334,7 +341,7 @@ export default function WorkSchedulePageShell({
                   .map((person, index) => (
                     <tr key={person.id} className="border-b align-top">
                       <td className="p-2 text-center">{index + 1}</td>
-                      <td className="p-2 font-semibold">
+                      <td className="whitespace-nowrap p-2 font-semibold">
                         {person.full_name}
                         <span className="block text-xs font-normal text-slate-500">{role(person)}</span>
                       </td>
