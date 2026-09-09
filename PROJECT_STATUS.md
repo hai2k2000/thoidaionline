@@ -6,7 +6,7 @@ Latest Task: COMPLETE — seed September 2026 foreign-language online work sched
 Latest Update: COMPLETE — weekends default to full-team online work
 
 Completed:
-- Limited Wise Eye realtime reads to 07:30–09:30 and 16:30–18:30; the minute task remains a lightweight pending-request poll outside those windows, while explicit admin sync requests still run immediately.
+- Limited Wise Eye realtime reads and pending-request polling to 07:30–09:30 and 16:30–18:30; admin requests created outside those windows wait for the next window or the 18:30 reconciliation.
 - Moved the daily reconciliation task to 18:30 and updated the attendance page schedule guidance.
 - Fixed the work schedule table identity columns so “STT” and “Họ và tên” keep readable widths instead of wrapping one character per line; day columns remain horizontally scrollable.
 - Removed Saturday/Sunday assignments from the September foreign-language schedule; weekends are intentionally left blank as the default full-team online days.
