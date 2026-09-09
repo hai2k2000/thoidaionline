@@ -52,6 +52,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat("vi-VN", {
 
 const taskSelect = "id,title,status,due_date,created_at,updated_at,created_by,owner_id,assignee_id,reviewer_id";
 const assignmentCutoff = () => new Date(Date.now() - 30 * 86400000).toISOString();
+const chunks = <T,>(items: T[], size = 40) => Array.from({ length: Math.ceil(items.length / size) }, (_, index) => items.slice(index * size, (index + 1) * size));
 
 export const notificationRepository = {
   async list(userId: string): Promise<{ ok: true; items: NotificationItem[] } | { ok: false }> {
@@ -81,15 +82,15 @@ export const notificationRepository = {
     const taskIds = tasks.map((task) => task.id);
     if (!taskIds.length) return { ok: true, items: [] };
 
-    const [comments, statuses, deadlines] = await Promise.all([
-      serverSupabase.from("task_comments").select("id,task_id,user_id,content,created_at,staff_users(full_name)")
-        .in("task_id", taskIds).or(`user_id.is.null,user_id.neq.${userId}`).order("created_at", { ascending: false }).limit(100),
-      serverSupabase.from("task_status_events").select("id,task_id,actor_id,to_status,reason,created_at")
-        .in("task_id", taskIds).neq("actor_id", userId).order("created_at", { ascending: false }).limit(100),
-      serverSupabase.from("task_deadline_history").select("id,task_id,changed_by,new_due_date,reason,changed_at")
-        .in("task_id", taskIds).neq("changed_by", userId).order("changed_at", { ascending: false }).limit(100),
-    ]);
-    if (comments.error || statuses.error || deadlines.error) return { ok: false };
+    const batchResults = await Promise.all(chunks(taskIds).map(async (batch) => Promise.all([
+      serverSupabase.from("task_comments").select("id,task_id,user_id,content,created_at,staff_users(full_name)").in("task_id", batch).or(`user_id.is.null,user_id.neq.${userId}`).order("created_at", { ascending: false }).limit(100),
+      serverSupabase.from("task_status_events").select("id,task_id,actor_id,to_status,reason,created_at").in("task_id", batch).neq("actor_id", userId).order("created_at", { ascending: false }).limit(100),
+      serverSupabase.from("task_deadline_history").select("id,task_id,changed_by,new_due_date,reason,changed_at").in("task_id", batch).neq("changed_by", userId).order("changed_at", { ascending: false }).limit(100),
+    ])));
+    if (batchResults.some((batch) => batch.some((result) => result.error))) return { ok: false };
+    const comments = { data: batchResults.flatMap((batch) => batch[0].data ?? []) };
+    const statuses = { data: batchResults.flatMap((batch) => batch[1].data ?? []) };
+    const deadlines = { data: batchResults.flatMap((batch) => batch[2].data ?? []) };
 
     const items: Array<NotificationItem & { rank: number }> = [];
     const taskTitle = (taskId: string) => taskMap.get(taskId)?.title ?? "Công việc";
