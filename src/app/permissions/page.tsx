@@ -143,24 +143,26 @@ export default function PermissionsPage() {
             <button disabled={creatingRole} onClick={() => void createRole()} className="rounded bg-orange-500 px-4 py-2 font-semibold text-white disabled:opacity-50">{creatingRole ? "Đang thêm..." : "Thêm vai trò"}</button>
           </section>
           <div className="mb-2 flex flex-wrap items-center gap-2"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="rounded border bg-white px-3 py-2"><option value="active">Đang hoạt động</option><option value="locked">Đã khóa</option><option value="all">Tất cả</option></select><button onClick={() => void load()} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600">Tải lại</button><p className="text-sm text-slate-600" aria-live="polite">{message}</p></div>
-          <section className="overflow-auto rounded-xl border bg-white p-4">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50"><tr><th className="px-2 py-2">Vai trò</th>{columns.map((column) => <th key={column.key} className="px-2 py-2">{column.label}</th>)}{canRename ? <th className="px-2 py-2">Thao tác</th> : null}</tr></thead>
+          <section className="rounded-xl border bg-white p-4">
+            <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Bảng phân quyền, cuộn ngang để xem thêm">
+            <table className="data-table min-w-[980px] text-left text-sm">
+              <thead className="bg-slate-50"><tr><th scope="col" className="min-w-72 px-3 py-2">Vai trò</th>{columns.map((column) => <th scope="col" key={column.key} className="min-w-36 px-3 py-2 text-center">{column.label}</th>)}{canRename ? <th scope="col" className="px-3 py-2">Thao tác</th> : null}</tr></thead>
               <tbody>
                 {rows.map((row) => {
                   const isEditing = editingRoleId === row.role_id;
                   return <tr key={row.role_id} className="border-t">
-                    <td className="min-w-72 px-2 py-2 align-top">
+                    <td className="min-w-72 px-3 py-2 align-top">
                       {isEditing ? <input autoFocus maxLength={120} value={editingName} onChange={(event) => setEditingName(event.target.value)} className="w-full rounded border px-2 py-1" aria-label="Tên vai trò" /> : <span>{row.roles?.name ?? "(Chưa đặt tên)"}</span>}
                       <div className="mt-1 text-xs text-slate-500">Mã: {row.roles?.code ?? row.role_id} · {row.roles?.active === false ? "Đã khóa" : "Đang hoạt động"}</div>
                     </td>
-                    {columns.map((column) => <td key={column.key} className="px-2 py-2 text-center"><input type="checkbox" checked={row[column.key]} disabled={!canRename || busyPermission} onChange={(event) => void updatePermission(row.role_id, column.key, event.target.checked)} aria-label={`${row.roles?.name ?? "Vai trò"}: ${column.label}`} /></td>)}
-                    {canRename ? <td className="whitespace-nowrap px-2 py-2 align-top">{isEditing ? <><button disabled={savingRoleId === row.role_id} onClick={() => void saveName(row.role_id)} className="mr-2 rounded bg-orange-500 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">{savingRoleId === row.role_id ? "Đang lưu..." : "Lưu"}</button><button onClick={() => setEditingRoleId(null)} className="rounded bg-slate-200 px-3 py-1 text-xs">Hủy</button></> : <><button onClick={() => beginEdit(row)} className="mr-2 rounded bg-slate-200 px-3 py-1 text-xs font-semibold hover:bg-orange-50">Đổi tên</button><button disabled={row.roles?.code === "admin" || savingRoleId === row.role_id} onClick={() => void setRoleActive(row, row.roles?.active === false)} className="rounded bg-slate-200 px-3 py-1 text-xs font-semibold disabled:opacity-50">{row.roles?.active === false ? "Mở khóa" : "Khóa"}</button></>}</td> : null}
+                    {columns.map((column) => <td key={column.key} className="px-3 py-2 text-center"><input className="h-5 w-5 accent-orange-600" type="checkbox" checked={row[column.key]} disabled={!canRename || busyPermission} onChange={(event) => void updatePermission(row.role_id, column.key, event.target.checked)} aria-label={`${row.roles?.name ?? "Vai trò"}: ${column.label}`} /></td>)}
+                    {canRename ? <td className="whitespace-nowrap px-3 py-2 align-top"><div className="flex flex-wrap gap-2">{isEditing ? <><button disabled={savingRoleId === row.role_id} onClick={() => void saveName(row.role_id)} className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{savingRoleId === row.role_id ? "Đang lưu..." : "Lưu"}</button><button onClick={() => setEditingRoleId(null)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Hủy</button></> : <><button onClick={() => beginEdit(row)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-800">Đổi tên</button><button disabled={row.roles?.code === "admin" || savingRoleId === row.role_id} onClick={() => void setRoleActive(row, row.roles?.active === false)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">{row.roles?.active === false ? "Mở khóa" : "Khóa"}</button></>}</div></td> : null}
                   </tr>;
                 })}
                 {rows.length === 0 ? <tr><td colSpan={columns.length + (canRename ? 2 : 1)} className="px-2 py-8 text-center text-slate-500">Chưa có dữ liệu phân quyền.</td></tr> : null}
               </tbody>
             </table>
+            </div>
           </section>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import PasswordInput from "@/components/PasswordInput";
+import AuthShell from "@/components/AuthShell";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,44 +17,48 @@ export default function LoginPage() {
   const submit = async () => {
     try {
       const res = await login(identifier.trim(), password);
-      if (!res.ok) return setMessage(`❌ ${res.error}`);
-      setMessage("✅ Đăng nhập thành công.");
+      if (!res.ok) return setMessage(`Đăng nhập không thành công: ${res.error}`);
+      setMessage("Đăng nhập thành công.");
       router.replace("/tasks");
     } catch {
-      setMessage("❌ Không kết nối được dữ liệu đăng nhập. Vui lòng thử lại.");
+      setMessage("Không kết nối được dữ liệu đăng nhập. Vui lòng thử lại.");
     }
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:p-6">
-      <div className="mx-auto mt-6 w-full max-w-md rounded-xl border bg-white p-4 sm:mt-16 sm:p-6">
-        <div className="mb-4 flex items-center gap-3">
-          <img src="/thoidai-logo.png" alt="Báo Thời Đại" className="h-14 w-auto object-contain" />
-          <div>
-            <h1 className="text-xl font-bold sm:text-2xl">Thời Đại Work</h1>
-            <p className="text-xs text-slate-500">Hệ thống quản lý công việc nội bộ</p>
-          </div>
-        </div>
-        <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="mt-4 space-y-3">
+    <AuthShell
+      title="Đăng nhập"
+      description="Sử dụng tên đăng nhập, thư điện tử hoặc số điện thoại đã đăng ký."
+      footer={<Link className="inline-flex min-h-11 items-center text-sm font-semibold text-orange-700 underline decoration-orange-300 underline-offset-4 hover:text-orange-900" href="/forgot-password">Quên mật khẩu?</Link>}
+    >
+        <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="flex flex-col gap-5">
+          <label htmlFor="identifier" className="grid gap-2 text-sm font-semibold text-slate-800">Tên đăng nhập, thư điện tử hoặc số điện thoại
           <input
-            className="w-full rounded border px-3 py-3 text-base"
-            placeholder="Tên đăng nhập, thư điện tử hoặc số điện thoại"
+            id="identifier"
+            name="identifier"
+            autoComplete="username"
+            className="min-h-12 w-full rounded-none border border-slate-300 px-3 py-3 text-base font-normal"
+            placeholder="Nhập thông tin tài khoản"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
           />
+          </label>
+          <label htmlFor="password" className="grid gap-2 text-sm font-semibold text-slate-800">Mật khẩu
           <PasswordInput
-            className="w-full rounded border px-3 py-3 text-base"
-            placeholder="Mật khẩu"
+            id="password"
+            name="password"
+            autoComplete="current-password"
+            className="min-h-12 w-full rounded-none border border-slate-300 px-3 py-3 text-base font-normal"
+            placeholder="Nhập mật khẩu"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button type="submit" className="w-full rounded bg-slate-900 px-4 py-3 text-base font-semibold text-white">
+          </label>
+          <button type="submit" className="min-h-12 w-full rounded-none bg-orange-600 px-4 py-3 text-base font-semibold text-white hover:bg-orange-700">
             Đăng nhập
           </button>
-          <Link className="block text-center text-sm text-blue-700 underline" href="/forgot-password">Quên mật khẩu?</Link>
-          <p className="text-sm text-slate-600">{message}</p>
+          <p className="min-h-6 text-sm leading-6 text-slate-600" role="status" aria-live="polite">{message}</p>
         </form>
-      </div>
-    </main>
+    </AuthShell>
   );
 }

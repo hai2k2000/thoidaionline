@@ -102,7 +102,7 @@ export default function DepartmentsPage() {
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
+        <section className="mt-4 rounded-xl border bg-white p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-slate-600">Hiển thị {visibleDepartments.length}/{deps.length} phòng ban</p>
             <label className="flex items-center gap-2 text-sm font-semibold">Trạng thái
@@ -113,30 +113,32 @@ export default function DepartmentsPage() {
               </select>
             </label>
           </div>
-          <table className="min-w-full text-left text-sm">
+          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách phòng ban, cuộn ngang để xem thêm">
+          <table className="data-table min-w-[640px] text-left text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-2 py-2">Mã</th>
-                <th className="px-2 py-2">Tên phòng ban</th>
-                <th className="px-2 py-2">Trạng thái</th>
-                <th className="px-2 py-2">Hành động</th>
+                <th scope="col" className="px-3 py-2">Mã</th>
+                <th scope="col" className="px-3 py-2">Tên phòng ban</th>
+                <th scope="col" className="px-3 py-2">Trạng thái</th>
+                <th scope="col" className="px-3 py-2">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {visibleDepartments.map((d) => (
                 <tr key={d.id} className="border-t">
-                  <td className="px-2 py-2">{d.code}</td>
-                  <td className="px-2 py-2">
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{d.code}</td>
+                  <td className="min-w-64 px-3 py-2">
                     <input className="w-full rounded border px-2 py-1" value={d.name} onChange={(e) => setDeps((prev) => prev.map((x) => x.id === d.id ? { ...x, name: e.target.value } : x))} onBlur={() => updateDepartment(d.id, { name: d.name })} />
                   </td>
-                  <td className="px-2 py-2">{d.active ? "Đang dùng" : "Đã khóa"}</td>
-                  <td className="px-2 py-2">
-                    <button onClick={() => updateDepartment(d.id, { active: !d.active })} className="rounded bg-slate-200 px-2 py-1 text-xs">{d.active ? "Khóa" : "Mở"}</button>
+                  <td className="px-3 py-2"><span className={`table-status ${d.active ? "table-status-success" : "table-status-neutral"}`}>{d.active ? "Đang dùng" : "Đã khóa"}</span></td>
+                  <td className="whitespace-nowrap px-3 py-2">
+                    <button onClick={() => updateDepartment(d.id, { active: !d.active })} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-800">{d.active ? "Khóa" : "Mở"}</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
           {!visibleDepartments.length ? <p className="py-6 text-center text-sm text-slate-500">Không có phòng ban phù hợp bộ lọc.</p> : null}
         </section>
         </div>

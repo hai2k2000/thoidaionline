@@ -3,6 +3,8 @@
 import { useState, type ChangeEvent } from "react";
 
 type Props = {
+  id?: string;
+  name?: string;
   value: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
@@ -14,6 +16,8 @@ type Props = {
 };
 
 export default function PasswordInput({
+  id,
+  name,
   value,
   onChange,
   placeholder,
@@ -27,6 +31,8 @@ export default function PasswordInput({
   return (
     <div className="relative">
       <input
+        id={id}
+        name={name}
         type={visible ? "text" : "password"}
         className={`${className} pr-16`}
         value={value}
@@ -43,7 +49,7 @@ export default function PasswordInput({
         aria-pressed={visible}
         aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
         onClick={() => setVisible((current) => !current)}
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+        className="absolute inset-y-0 right-0 min-w-11 rounded px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
       >
         {visible ? "Ẩn" : "Hiện"}
       </button>

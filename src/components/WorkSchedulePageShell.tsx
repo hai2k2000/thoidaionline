@@ -1,6 +1,373 @@
-﻿"use client";
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
-type Person={id:string;full_name:string;roles?:{code?:string}|null;job_titles?:{code?:string}|null}; type Row={id:string;work_date:string;start_time:string|null;end_time:string|null;title:string;location:string|null;participant_ids:string[]};
-const iso=(d:Date)=>d.toISOString().slice(0,10); const role=(p:Person)=>p.roles?.code === "tong_bien_tap" ? "Tổng biên tập" : p.roles?.code === "pho_tong_bien_tap" ? "PhÃ³ Tổng biên tập" : p.job_titles?.code?.startsWith("truong_phong") ? "Trưởng phòng" : p.job_titles?.code?.startsWith("phong_vien") ? "Phóng viên" : "Nhân sự";
-export default function WorkSchedulePageShell({people,userLabel}:{people:Person[];userLabel:string}){const [period,setPeriod]=useState<"day"|"week"|"month">("week");const [anchor,setAnchor]=useState(iso(new Date()));const [selected,setSelected]=useState(people.map(p=>p.id));const [rows,setRows]=useState<Row[]>([]);const [month,setMonth]=useState(anchor.slice(0,7));const [week,setWeek]=useState(0);const weeks=useMemo(()=>{const [y,m]=month.split("-").map(Number);const first=new Date(y,m-1,1,12),last=new Date(y,m,0,12),start=new Date(first);start.setDate(1-((first.getDay()+6)%7));const out=[];for(let d=new Date(start);d<=last||out.length<5;d.setDate(d.getDate()+7)){const e=new Date(d);e.setDate(d.getDate()+6);out.push({start:new Date(d),end:e});}return out;},[month]);const range=useMemo(()=>{if(period==="day"){const d=new Date(`${anchor}T12:00:00`);return{from:iso(d),to:iso(d),days:[d]};}const s=period==="month"?new Date(weeks[week]?.start):new Date(`${anchor}T12:00:00`);s.setDate(s.getDate()-((s.getDay()+6)%7));const e=new Date(s);e.setDate(s.getDate()+6);return{from:iso(s),to:iso(e),days:Array.from({length:7},(_,i)=>{const x=new Date(s);x.setDate(s.getDate()+i);return x})};},[anchor,period,weeks,week]);useEffect(()=>{fetch(`/api/work-schedule?from=${range.from}&to=${range.to}`).then(r=>r.ok?r.json():Promise.reject()).then(b=>setRows(b.rows??[])).catch(()=>setRows([]));},[range]);const names=(ids:string[])=>ids.map(id=>people.find(p=>p.id===id)?.full_name).filter(Boolean).join(", ");return <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900"><div className="mx-auto flex max-w-[1600px] gap-4"><AppNav currentPath="/work-schedule" userLabel={userLabel} onLogout={()=>{}}/><main className="min-w-0 flex-1"><header className="rounded-xl border bg-white p-4 shadow-sm"><h1 className="text-2xl font-bold">LỊCH CÔNG TÁC</h1><p className="text-sm text-slate-600">Lá»‹ch toÃ n cÆ¡ quan Â· TBT Â· PhÃ³ TBT Â· Trưởng phòng Â· Phóng viên</p></header><section className="mt-3 rounded-xl border bg-white p-3 shadow-sm"><div className="flex flex-wrap items-end gap-3">{period==="day"?<label className="text-sm font-semibold">Ngày<input type="date" value={anchor} onChange={e=>setAnchor(e.target.value)} className="ml-2 rounded border px-3 py-2 font-normal"/></label>:<><label className="text-sm font-semibold">Năm<select value={month.slice(0,4)} onChange={e=>setMonth(`${e.target.value}-${month.slice(5,7)}`)} className="ml-2 rounded border px-3 py-2 font-normal">{[2025,2026,2027].map(y=><option key={y}>{y}</option>)}</select></label><label className="text-sm font-semibold">Tháng<select value={month.slice(5,7)} onChange={e=>setMonth(`${month.slice(0,4)}-${e.target.value}`)} className="ml-2 rounded border px-3 py-2 font-normal">{Array.from({length:12},(_,i)=><option key={i} value={String(i+1).padStart(2,"0")}>{i+1}</option>)}</select></label><label className="text-sm font-semibold">Tuần<select value={week} onChange={e=>setWeek(Number(e.target.value))} className="ml-2 rounded border px-3 py-2 font-normal">{weeks.map((w,i)=><option key={i} value={i}>Tuần {i+1} ({String(w.start.getDate()).padStart(2,"0")}/{String(w.start.getMonth()+1).padStart(2,"0")} - {String(w.end.getDate()).padStart(2,"0")}/{String(w.end.getMonth()+1).padStart(2,"0")})</option>)}</select></label></>}<button type="button" onClick={()=>{setAnchor(iso(new Date()));setPeriod("day")}} className="rounded bg-red-700 px-4 py-2 font-semibold text-white">Hôm nay</button></div><div className="mt-3 flex max-h-24 flex-wrap gap-x-6 gap-y-2 overflow-y-auto border-t pt-3">{people.map(p=><label key={p.id} className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={selected.includes(p.id)} onChange={()=>setSelected(s=>s.includes(p.id)?s.filter(id=>id!==p.id):[...s,p.id])}/>{p.full_name} <em className="text-xs text-slate-500">({role(p)})</em></label>)}</div></section><section className="mt-3 overflow-x-auto rounded-xl border bg-white shadow-sm"><table className="w-full min-w-[1100px] border-collapse text-sm"><thead><tr className="border-b bg-slate-100 text-center"><th className="w-12 p-2">STT</th><th className="w-44 p-2 text-left">Họ và tên</th>{range.days.map((d,i)=><th key={iso(d)} className="min-w-[145px] p-2">{["Thứ hai","Thứ ba","Thứ tư","Thứ năm","Thứ sáu","Thứ bảy","Chủ nhật"][i]}<br/><span className="font-normal">({String(d.getDate()).padStart(2,"0")}/{String(d.getMonth()+1).padStart(2,"0")})</span></th>)}</tr></thead><tbody>{people.filter(p=>selected.includes(p.id)).map((p,i)=><tr key={p.id} className="border-b align-top"><td className="p-2 text-center">{i+1}</td><td className="p-2 font-semibold">{p.full_name}<span className="block text-xs font-normal text-slate-500">{role(p)}</span></td>{range.days.map(d=><td key={iso(d)} className="p-1">{rows.filter(r=>r.work_date===iso(d)&&r.participant_ids.includes(p.id)).map(r=><article key={r.id} className="mb-1 rounded border-l-4 border-blue-500 bg-blue-50 p-2 text-xs text-blue-900"><b>{r.start_time?.slice(0,5)??""}{r.end_time?`-${r.end_time.slice(0,5)}`:""}</b><p className="font-semibold">{r.title}</p>{r.location?<p>{r.location}</p>:null}<p>{names(r.participant_ids)}</p></article>)}</td>)}</tr>)}</tbody></table></section></main></div></div>}
+
+type Person = {
+  id: string;
+  full_name: string;
+  roles?: { code?: string } | null;
+  job_titles?: { code?: string } | null;
+};
+
+type Row = {
+  id: string;
+  work_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  title: string;
+  location: string | null;
+  participant_ids: string[];
+};
+
+const iso = (date: Date) => date.toISOString().slice(0, 10);
+
+const role = (person: Person) =>
+  person.roles?.code === "tong_bien_tap"
+    ? "Tổng biên tập"
+    : person.roles?.code === "pho_tong_bien_tap"
+      ? "Phó Tổng biên tập"
+      : person.job_titles?.code?.startsWith("truong_phong")
+        ? "Trưởng phòng"
+        : person.job_titles?.code?.startsWith("phong_vien")
+          ? "Phóng viên"
+          : "Nhân sự";
+
+export default function WorkSchedulePageShell({
+  people,
+  userLabel,
+}: {
+  people: Person[];
+  userLabel: string;
+}) {
+  const [period, setPeriod] = useState<"day" | "week" | "month">("week");
+  const [anchor, setAnchor] = useState(iso(new Date()));
+  const [selected, setSelected] = useState(people.map((person) => person.id));
+  const [personQuery, setPersonQuery] = useState("");
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [month, setMonth] = useState(anchor.slice(0, 7));
+  const [week, setWeek] = useState(0);
+
+  const weeks = useMemo(() => {
+    const [year, monthNumber] = month.split("-").map(Number);
+    const first = new Date(year, monthNumber - 1, 1, 12);
+    const last = new Date(year, monthNumber, 0, 12);
+    const start = new Date(first);
+    start.setDate(1 - ((first.getDay() + 6) % 7));
+    const output: { start: Date; end: Date }[] = [];
+
+    for (
+      let date = new Date(start);
+      date <= last || output.length < 5;
+      date.setDate(date.getDate() + 7)
+    ) {
+      const end = new Date(date);
+      end.setDate(date.getDate() + 6);
+      output.push({ start: new Date(date), end });
+    }
+
+    return output;
+  }, [month]);
+
+  const range = useMemo(() => {
+    if (period === "day") {
+      const date = new Date(`${anchor}T12:00:00`);
+      return { from: iso(date), to: iso(date), days: [date] };
+    }
+
+    const start =
+      period === "month"
+        ? new Date(weeks[week]?.start ?? new Date())
+        : new Date(`${anchor}T12:00:00`);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+
+    return {
+      from: iso(start),
+      to: iso(end),
+      days: Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        return date;
+      }),
+    };
+  }, [anchor, period, week, weeks]);
+
+  useEffect(() => {
+    fetch(`/api/work-schedule?from=${range.from}&to=${range.to}`)
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((body) => setRows(body.rows ?? []))
+      .catch(() => setRows([]));
+  }, [range]);
+
+  const filteredPeople = useMemo(() => {
+    const query = personQuery.trim().toLocaleLowerCase("vi-VN");
+    if (!query) return people;
+    return people.filter((person) =>
+      `${person.full_name} ${role(person)}`.toLocaleLowerCase("vi-VN").includes(query),
+    );
+  }, [people, personQuery]);
+
+  const selectedCount = people.filter((person) => selected.includes(person.id)).length;
+  const names = (ids: string[]) =>
+    ids
+      .map((id) => people.find((person) => person.id === id)?.full_name)
+      .filter(Boolean)
+      .join(", ");
+
+  const selectAll = () => setSelected(people.map((person) => person.id));
+  const clearAll = () => setSelected([]);
+
+  return (
+    <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900">
+      <div className="mx-auto flex max-w-[1600px] gap-4">
+        <AppNav currentPath="/work-schedule" userLabel={userLabel} onLogout={() => {}} />
+        <main className="min-w-0 flex-1">
+          <header className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+              Lịch làm việc
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">Lịch công tác</h1>
+            <p className="text-sm text-slate-600">
+              Lịch toàn cơ quan · TBT · Phó TBT · Trưởng phòng · Phóng viên
+            </p>
+          </header>
+
+          <section className="mt-3 rounded-xl border bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-end gap-4">
+              {period === "day" ? (
+                <label className="text-sm font-semibold">
+                  Ngày
+                  <input
+                    type="date"
+                    value={anchor}
+                    onChange={(event) => setAnchor(event.target.value)}
+                    className="ml-2 rounded border px-3 py-2 font-normal"
+                  />
+                </label>
+              ) : (
+                <>
+                  <label className="text-sm font-semibold">
+                    Năm
+                    <select
+                      value={month.slice(0, 4)}
+                      onChange={(event) => setMonth(`${event.target.value}-${month.slice(5, 7)}`)}
+                      className="ml-2 rounded border px-3 py-2 font-normal"
+                    >
+                      {[2025, 2026, 2027].map((year) => (
+                        <option key={year}>{year}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm font-semibold">
+                    Tháng
+                    <select
+                      value={month.slice(5, 7)}
+                      onChange={(event) => setMonth(`${month.slice(0, 4)}-${event.target.value}`)}
+                      className="ml-2 rounded border px-3 py-2 font-normal"
+                    >
+                      {Array.from({ length: 12 }, (_, index) => (
+                        <option key={index} value={String(index + 1).padStart(2, "0")}>
+                          {index + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm font-semibold">
+                    Tuần
+                    <select
+                      value={week}
+                      onChange={(event) => setWeek(Number(event.target.value))}
+                      className="ml-2 rounded border px-3 py-2 font-normal"
+                    >
+                      {weeks.map((item, index) => (
+                        <option key={index} value={index}>
+                          Tuần {index + 1} ({String(item.start.getDate()).padStart(2, "0")}/
+                          {String(item.start.getMonth() + 1).padStart(2, "0")} - {String(item.end.getDate()).padStart(2, "0")}/
+                          {String(item.end.getMonth() + 1).padStart(2, "0")})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setAnchor(iso(new Date()));
+                  setPeriod("day");
+                }}
+                className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+              >
+                Hôm nay
+              </button>
+            </div>
+
+            <div className="mt-5 border-t pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-sm font-bold text-slate-900">Nhân sự trong lịch</h2>
+                    <span
+                      role="status"
+                      aria-live="polite"
+                      className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800"
+                    >
+                      {selectedCount}/{people.length} đã chọn
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">Hiển thị nhân sự đang hoạt động.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPeopleOpen((current) => !current)}
+                    aria-expanded={peopleOpen}
+                    aria-controls="work-schedule-people-panel"
+                    className="min-h-10 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+                  >
+                    {peopleOpen ? "Ẩn danh sách" : "Chọn nhân sự"}
+                  </button>
+                </div>
+              </div>
+
+              {peopleOpen ? (
+                <div
+                  id="work-schedule-people-panel"
+                  className="mt-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-slate-600">
+                      Bỏ chọn một người sẽ ẩn người đó khỏi bảng.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAll}
+                        disabled={selectedCount === people.length}
+                        className="min-h-10 rounded-lg border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Chọn tất cả
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearAll}
+                        disabled={selectedCount === 0}
+                        className="min-h-10 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Bỏ chọn
+                      </button>
+                    </div>
+                  </div>
+
+                  <label className="mt-3 block text-xs font-semibold text-slate-700">
+                    Tìm nhân sự
+                    <input
+                      type="search"
+                      value={personQuery}
+                      onChange={(event) => setPersonQuery(event.target.value)}
+                      placeholder="Nhập tên hoặc chức danh…"
+                      className="mt-1 block min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    />
+                  </label>
+
+                  <div className="mt-3 grid max-h-56 grid-cols-1 gap-x-5 gap-y-1 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    {filteredPeople.length ? (
+                      filteredPeople.map((person) => (
+                        <label
+                          key={person.id}
+                          className="flex min-h-10 items-center gap-2 rounded-md px-2 text-sm transition hover:bg-orange-50"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-5 w-5 shrink-0 accent-orange-600 focus:ring-2 focus:ring-orange-500"
+                            checked={selected.includes(person.id)}
+                            onChange={() =>
+                              setSelected((current) =>
+                                current.includes(person.id)
+                                  ? current.filter((id) => id !== person.id)
+                                  : [...current, person.id],
+                              )
+                            }
+                          />
+                          <span className="min-w-0 truncate" title={person.full_name}>
+                            {person.full_name}
+                          </span>
+                          <em className="shrink-0 text-xs not-italic text-slate-500">
+                            ({role(person)})
+                          </em>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="col-span-full px-2 py-3 text-sm text-slate-500">
+                        Không tìm thấy nhân sự phù hợp.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="table-scroll mt-3 rounded-xl border bg-white shadow-sm">
+            <table className="data-table w-full min-w-[1100px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b bg-slate-100 text-center">
+                  <th scope="col" className="w-12 p-2">STT</th>
+                  <th scope="col" className="w-44 p-2 text-left">Họ và tên</th>
+                  {range.days.map((date, index) => (
+                    <th scope="col" key={iso(date)} className="min-w-[145px] p-2">
+                      {["Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy", "Chủ nhật"][index]}
+                      <br />
+                      <span className="font-normal">
+                        ({String(date.getDate()).padStart(2, "0")}/{String(date.getMonth() + 1).padStart(2, "0")})
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {people
+                  .filter((person) => selected.includes(person.id))
+                  .map((person, index) => (
+                    <tr key={person.id} className="border-b align-top">
+                      <td className="p-2 text-center">{index + 1}</td>
+                      <td className="p-2 font-semibold">
+                        {person.full_name}
+                        <span className="block text-xs font-normal text-slate-500">{role(person)}</span>
+                      </td>
+                      {range.days.map((date) => (
+                        <td key={iso(date)} className="p-1">
+                          {rows
+                            .filter(
+                              (row) =>
+                                row.work_date === iso(date) && row.participant_ids.includes(person.id),
+                            )
+                            .map((row) => (
+                              <article
+                                key={row.id}
+                                className="mb-1 rounded-lg border-l-4 border-orange-500 bg-orange-50 p-2 text-xs text-orange-950"
+                              >
+                                <b>
+                                  {row.start_time?.slice(0, 5) ?? ""}
+                                  {row.end_time ? `-${row.end_time.slice(0, 5)}` : ""}
+                                </b>
+                                <p className="font-semibold">{row.title}</p>
+                                {row.location ? <p>{row.location}</p> : null}
+                                <p>{names(row.participant_ids)}</p>
+                              </article>
+                            ))}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </section>
+        </main>
+      </div>
+    </div>
+  );
+}

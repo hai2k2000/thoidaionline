@@ -46,6 +46,22 @@ const assetStatusLabel: Record<string, string> = {
   liquidated: "Thanh lý",
 };
 
+const taskStatusTone = (status: TaskRow["status"]) => status === "done"
+  ? "table-status-success"
+  : status === "rejected"
+    ? "table-status-danger"
+    : status === "pending_review"
+      ? "table-status-warning"
+      : "table-status-neutral";
+
+const assetStatusTone = (status?: string | null) => status === "available"
+  ? "table-status-success"
+  : status === "broken"
+    ? "table-status-danger"
+    : status === "maintenance"
+      ? "table-status-warning"
+      : "table-status-neutral";
+
 export default function ProfilePage() {
   const router = useRouter();
   const { loading: authLoading, user, logout } = useAuth();
@@ -151,87 +167,93 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
+        <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Công việc liên quan đến mình (được giao)</h2>
-          <table className="table-soft-red min-w-full text-left text-sm">
+          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Công việc được giao, cuộn ngang để xem thêm">
+          <table className="table-soft-red data-table min-w-[820px] text-left text-sm">
             <thead>
               <tr>
-                <th className="px-2 py-2">Tiêu đề</th>
-                <th className="px-2 py-2">Phòng ban</th>
-                <th className="px-2 py-2">Trạng thái</th>
-                <th className="px-2 py-2">Tiến độ</th>
-                <th className="px-2 py-2">Hạn hoàn thành</th>
+                <th scope="col" className="min-w-80 px-3 py-2">Tiêu đề</th>
+                <th scope="col" className="px-3 py-2">Phòng ban</th>
+                <th scope="col" className="px-3 py-2">Trạng thái</th>
+                <th scope="col" className="px-3 py-2 text-right">Tiến độ</th>
+                <th scope="col" className="px-3 py-2">Hạn hoàn thành</th>
               </tr>
             </thead>
             <tbody>
               {tasksAssignedToMe.map((t) => (
                 <tr key={`mine-${t.id}`} className="cursor-pointer" onClick={() => router.push(`/tasks/${t.id}`)}>
-                  <td className="px-2 py-2">
+                    <td className="min-w-80 px-3 py-2">
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{t.title}</span>
                   </td>
-                  <td className="px-2 py-2">{t.departments?.name ?? "-"}</td>
-                  <td className="px-2 py-2">{statusLabel[t.status]}</td>
-                  <td className="px-2 py-2">{t.progress_percent}%</td>
-                  <td className="px-2 py-2">{t.due_date ?? "-"}</td>
+                  <td className="px-3 py-2">{t.departments?.name ?? "-"}</td>
+                  <td className="px-3 py-2"><span className={`table-status ${taskStatusTone(t.status)}`}>{statusLabel[t.status]}</span></td>
+                  <td className="px-3 py-2 text-right font-semibold">{t.progress_percent}%</td>
+                  <td className="whitespace-nowrap px-3 py-2">{t.due_date ?? "-"}</td>
                 </tr>
               ))}
               {tasksAssignedToMe.length === 0 ? <tr><td className="px-2 py-4 text-slate-500" colSpan={5}>Chưa có việc được giao.</td></tr> : null}
             </tbody>
           </table>
+          </div>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
+        <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Công việc mình đang giao cho người khác</h2>
-          <table className="table-soft-red min-w-full text-left text-sm">
+          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Công việc đã giao, cuộn ngang để xem thêm">
+          <table className="table-soft-red data-table min-w-[760px] text-left text-sm">
             <thead>
               <tr>
-                <th className="px-2 py-2">Tiêu đề</th>
-                <th className="px-2 py-2">Người phụ trách</th>
-                <th className="px-2 py-2">Trạng thái</th>
-                <th className="px-2 py-2">Hạn hoàn thành</th>
+                <th scope="col" className="min-w-80 px-3 py-2">Tiêu đề</th>
+                <th scope="col" className="px-3 py-2">Người phụ trách</th>
+                <th scope="col" className="px-3 py-2">Trạng thái</th>
+                <th scope="col" className="px-3 py-2">Hạn hoàn thành</th>
               </tr>
             </thead>
             <tbody>
               {tasksAssignedByMe.map((t) => (
                 <tr key={`byme-${t.id}`} className="cursor-pointer" onClick={() => router.push(`/tasks/${t.id}`)}>
-                  <td className="px-2 py-2">
+                    <td className="min-w-80 px-3 py-2">
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{t.title}</span>
                   </td>
-                  <td className="px-2 py-2">{t.assignee?.full_name ?? "-"}</td>
-                  <td className="px-2 py-2">{statusLabel[t.status]}</td>
-                  <td className="px-2 py-2">{t.due_date ?? "-"}</td>
+                  <td className="px-3 py-2">{t.assignee?.full_name ?? "-"}</td>
+                  <td className="px-3 py-2"><span className={`table-status ${taskStatusTone(t.status)}`}>{statusLabel[t.status]}</span></td>
+                  <td className="whitespace-nowrap px-3 py-2">{t.due_date ?? "-"}</td>
                 </tr>
               ))}
               {tasksAssignedByMe.length === 0 ? <tr><td className="px-2 py-4 text-slate-500" colSpan={4}>Bạn chưa giao việc nào.</td></tr> : null}
             </tbody>
           </table>
+          </div>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
+        <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Tài sản đang được giao cho mình</h2>
-          <table className="table-soft-red min-w-full text-left text-sm">
+          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Tài sản được giao, cuộn ngang để xem thêm">
+          <table className="table-soft-red data-table min-w-[680px] text-left text-sm">
             <thead>
               <tr>
-                <th className="px-2 py-2">Tên tài sản</th>
-                <th className="px-2 py-2">Nhóm</th>
-                <th className="px-2 py-2">Tình trạng</th>
-                <th className="px-2 py-2">Ngày giao</th>
+                <th scope="col" className="min-w-64 px-3 py-2">Tên tài sản</th>
+                <th scope="col" className="px-3 py-2">Nhóm</th>
+                <th scope="col" className="px-3 py-2">Tình trạng</th>
+                <th scope="col" className="px-3 py-2">Ngày giao</th>
               </tr>
             </thead>
             <tbody>
               {myAssets.map((a) => (
                 <tr key={a.id} className="cursor-pointer" onClick={() => router.push(`/assets/${a.asset_id}`)}>
-                  <td className="px-2 py-2">
+                    <td className="min-w-64 px-3 py-2">
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{a.assets?.asset_name ?? "-"}</span>
                   </td>
-                  <td className="px-2 py-2">{a.assets?.category ?? "-"}</td>
-                  <td className="px-2 py-2">{a.assets?.status ? (assetStatusLabel[a.assets.status] ?? a.assets.status) : "-"}</td>
-                  <td className="px-2 py-2">{a.assigned_at ? new Date(a.assigned_at).toLocaleDateString("vi-VN") : "-"}</td>
+                  <td className="px-3 py-2">{a.assets?.category ?? "-"}</td>
+                  <td className="px-3 py-2"><span className={`table-status ${assetStatusTone(a.assets?.status)}`}>{a.assets?.status ? (assetStatusLabel[a.assets.status] ?? a.assets.status) : "-"}</span></td>
+                  <td className="whitespace-nowrap px-3 py-2">{a.assigned_at ? new Date(a.assigned_at).toLocaleDateString("vi-VN") : "-"}</td>
                 </tr>
               ))}
               {myAssets.length === 0 ? <tr><td className="px-2 py-4 text-slate-500" colSpan={4}>Chưa có tài sản được giao.</td></tr> : null}
             </tbody>
           </table>
+          </div>
         </section>
         </div>
       </div>

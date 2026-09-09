@@ -487,23 +487,23 @@ export default function UsersPage() {
               </button>
             </div>
             <p className="mb-2 text-sm text-slate-600">{message}</p>
-            <div className="overflow-auto rounded-lg border">
-              <table className="min-w-full text-left text-sm">
+            <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách nhân viên, cuộn ngang để xem thêm">
+              <table className="data-table min-w-[980px] text-left text-sm">
                 <thead>
                   <tr>
-                    <th className="px-2 py-2">Họ tên</th>
-                    <th className="px-2 py-2">Tên đăng nhập</th>
-                    <th className="px-2 py-2">Chức vụ</th>
-                    <th className="px-2 py-2">Vai trò</th>
-                    <th className="px-2 py-2">Phòng ban</th>
-                    <th className="px-2 py-2">Trạng thái</th>
-                    {isAdmin ? <th className="px-2 py-2">Thao tác</th> : null}
+                    <th scope="col" className="px-3 py-2">Họ tên</th>
+                    <th scope="col" className="px-3 py-2">Tên đăng nhập</th>
+                    <th scope="col" className="px-3 py-2">Chức vụ</th>
+                    <th scope="col" className="px-3 py-2">Vai trò</th>
+                    <th scope="col" className="px-3 py-2">Phòng ban</th>
+                    <th scope="col" className="px-3 py-2">Trạng thái</th>
+                    {isAdmin ? <th scope="col" className="px-3 py-2">Thao tác</th> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.map((u) => (
                     <tr key={u.id} className="border-t">
-                      <td className="px-2 py-2">
+                      <td className="min-w-52 px-3 py-2">
                         <button
                           onClick={() => void openUser(u)}
                           className="font-semibold text-orange-800 underline-offset-2 hover:underline"
@@ -511,17 +511,17 @@ export default function UsersPage() {
                           {u.full_name}
                         </button>
                       </td>
-                      <td className="px-2 py-2">{u.username ?? "-"}</td>
-                      <td className="px-2 py-2">{u.job_titles?.name ?? "-"}</td>
-                      <td className="px-2 py-2">{u.roles?.name ?? "-"}</td>
-                      <td className="px-2 py-2">
+                      <td className="px-3 py-2 font-mono text-xs text-slate-600">{u.username ?? "-"}</td>
+                      <td className="px-3 py-2">{u.job_titles?.name ?? "-"}</td>
+                      <td className="px-3 py-2">{u.roles?.name ?? "-"}</td>
+                      <td className="px-3 py-2">
                         {deps.find((d) => d.id === u.department_id)?.name ??
                           "-"}
                       </td>
-                      <td className="px-2 py-2">
-                        {u.active ? "Đang hoạt động" : "Đã khóa"}
+                      <td className="px-3 py-2">
+                        <span className={`table-status ${u.active ? "table-status-success" : "table-status-neutral"}`}>{u.active ? "Đang hoạt động" : "Đã khóa"}</span>
                       </td>
-                      {isAdmin ? <td className="px-2 py-2"><button type="button" disabled={savingUser || u.id === user?.id} onClick={() => void toggleUserActive(u)} className="rounded bg-slate-200 px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">{u.active ? "Khóa" : "Mở khóa"}</button></td> : null}
+                      {isAdmin ? <td className="whitespace-nowrap px-3 py-2"><button type="button" disabled={savingUser || u.id === user?.id} onClick={() => void toggleUserActive(u)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-800 disabled:cursor-not-allowed disabled:opacity-50">{u.active ? "Khóa" : "Mở khóa"}</button></td> : null}
                     </tr>
                   ))}
                   {filteredUsers.length === 0 ? (

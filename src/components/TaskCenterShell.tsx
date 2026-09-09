@@ -141,8 +141,8 @@ export default function TaskCenterShell(props: Props) {
                 {tasks.items.length ? (
                   <>
                     <div ref={tableRef} className="hidden overflow-x-auto lg:block">
-                    <table className="w-full min-w-[980px] border-collapse text-sm">
-                      <thead><tr className="border-b text-left text-slate-600"><th className="w-12 p-2">STT</th><th className="p-2">Tên công việc</th><th className="p-2">Người giao</th><th className="p-2">Người nhận việc</th><th className="p-2">Người theo dõi</th><th className="p-2">Hạn hoàn thành</th><th className="p-2">Điểm</th><th className="p-2">Trạng thái</th></tr></thead>
+                    <table className="data-table w-full min-w-[1080px] border-collapse text-sm">
+                      <thead><tr className="border-b text-left text-slate-600"><th scope="col" className="w-12 p-2">STT</th><th scope="col" className="p-2">Tên công việc</th><th scope="col" className="p-2">Người giao</th><th scope="col" className="p-2">Người nhận việc</th><th scope="col" className="p-2">Người theo dõi</th><th scope="col" className="p-2">Hạn hoàn thành</th><th scope="col" className="p-2">Điểm</th><th scope="col" className="p-2">Trạng thái</th></tr></thead>
                       <tbody>{tasks.items.map((task, index) => {
                         const open = expandedId === task.id;
                         const requirements = requirementsOf(task);

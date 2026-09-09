@@ -5,12 +5,12 @@
   --foreground: #3a2b31;
   --brand-red: #f97316;
   --brand-red-dark: #ea580c;
-  --fresh-blue-50: #fff7ed;
-  --fresh-blue-100: #ffedd5;
-  --fresh-blue-200: #fed7aa;
-  --fresh-blue-300: #fdba74;
-  --fresh-blue-700: #ea580c;
-  --fresh-blue-800: #9a3412;
+  --table-header-surface: #fff7ed;
+  --table-header-surface-strong: #ffedd5;
+  --table-border: #fed7aa;
+  --brand: #f97316;
+  --brand-strong: #ea580c;
+  --brand-ink: #9a3412;
 }
 
 @theme inline {
@@ -38,42 +38,166 @@ textarea {
 select,
 input,
 textarea {
-  border-color: #bfdbfe;
+  border-color: #cbd5e1;
   background: #fff;
 }
 
 select:focus,
 input:focus,
 textarea:focus {
-  outline: none;
   border-color: var(--brand-red);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.18);
 }
 
-button:hover {
+:focus-visible {
+  outline: 2px solid #c2410c;
+  outline-offset: 2px;
+}
+
+button[type="submit"]:hover {
   transform: translateY(-1px);
 }
 
-button:active {
+button[type="submit"]:active {
   transform: translateY(0);
 }
 
 table {
   border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+/* Shared data-table primitives. Keep dense information scannable without
+   forcing narrow columns or letting wide tables break the page on mobile. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: thin;
+}
+
+.table-scroll:focus-visible {
+  outline: 2px solid var(--brand-strong);
+  outline-offset: 2px;
+}
+
+.data-table {
+  min-width: 680px;
+}
+
+.data-table th,
+.data-table td {
+  padding-block: 0.7rem;
+}
+
+.data-table tbody tr:focus-within {
+  background: #fff7ed;
+}
+
+.table-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 1.75rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.table-status::before {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+  opacity: 0.8;
+}
+
+.table-status-success { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+.table-status-warning { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.table-status-danger { border-color: #fed7aa; background: #fff7ed; color: #9a3412; }
+.table-status-neutral { border-color: #e2e8f0; background: #f8fafc; color: #475569; }
+
+table th,
+table td {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+table thead tr:not([class*="bg-"]) {
+  background: #f8fafc;
+}
+
+table thead th {
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+table thead tr {
+  border-bottom: 1px solid #cbd5e1;
+}
+
+table tfoot tr {
+  border-top: 2px solid #cbd5e1;
+  background: #f8fafc;
+}
+
+table caption {
+  caption-side: top;
+  padding: 0.75rem 1rem;
+  color: #475569;
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+table tbody tr:not([class*="bg-"]) {
+  border-top: 1px solid #e2e8f0;
+  transition: background-color 0.18s ease;
+}
+
+table tbody tr:not([class*="bg-"]):hover {
+  background: #fff7ed;
+}
+
+table tbody tr:not([class*="bg-"]):nth-child(even) {
+  background: #fcfcfd;
+}
+
+table tbody tr:not([class*="bg-"]):nth-child(even):hover {
+  background: #fff7ed;
+}
+
+table :where(input:not([type="checkbox"]), select, textarea) {
+  min-height: 2.5rem;
+  border-radius: 0.5rem;
+}
+
+table :where(button, a) {
+  touch-action: manipulation;
 }
 
 .compact-mode main :where(section, header) { padding: 0.75rem !important; }
 .compact-mode main { gap: 0.75rem !important; }
 .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 
-/* Fresh blue theme for tables */
+/* Shared warm-neutral table theme */
 .table-soft-red thead {
-  background: linear-gradient(180deg, var(--fresh-blue-50) 0%, #e0f2fe 100%);
+  background: linear-gradient(180deg, #fffaf5 0%, var(--table-header-surface-strong) 100%);
 }
 
 .table-soft-red thead th {
-  color: var(--fresh-blue-800);
-  border-bottom: 1px solid var(--fresh-blue-200);
+  color: var(--brand-ink);
+  border-bottom: 1px solid var(--table-border);
 }
 
 .table-soft-red tbody tr {
@@ -81,11 +205,11 @@ table {
 }
 
 .table-soft-red tbody tr:nth-child(even) {
-  background: #f8fbff;
+  background: #fffdfb;
 }
 
 .table-soft-red tbody tr:hover {
-  background: #edf6ff;
+  background: #fff7ed;
 }
 
 /* Calm, compact panels: one border and one restrained shadow. */

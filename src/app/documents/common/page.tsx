@@ -57,35 +57,37 @@ export default function CommonDocumentsPage() {
             <h1 className="text-2xl font-bold">Tài liệu chung</h1>
           </div>
 
-        <section className="rounded-xl border bg-white p-4 overflow-auto">
+        <section className="rounded-xl border bg-white p-4">
           <div className="mb-3">
             <input className="w-full rounded border px-3 py-2 md:w-96" placeholder="Tìm theo mã/tiêu đề/trạng thái" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <p className="mb-2 text-sm text-slate-600">{message}</p>
 
-          <table className="table-soft-red min-w-full text-left text-sm">
+          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách tài liệu chung, cuộn ngang để xem thêm">
+          <table className="table-soft-red data-table min-w-[760px] text-left text-sm">
             <thead>
               <tr>
-                <th className="px-2 py-2">Mã</th>
-                <th className="px-2 py-2">Loại</th>
-                <th className="px-2 py-2">Tiêu đề</th>
-                <th className="px-2 py-2">Trạng thái</th>
+                <th scope="col" className="px-3 py-2">Mã</th>
+                <th scope="col" className="px-3 py-2">Loại</th>
+                <th scope="col" className="min-w-96 px-3 py-2">Tiêu đề</th>
+                <th scope="col" className="px-3 py-2">Trạng thái</th>
               </tr>
             </thead>
             <tbody>
               {filteredRows.map((r) => (
                 <tr key={r.id ?? r.doc_code} className="cursor-pointer" onClick={() => r.id && router.push(`/documents/${r.id}`)}>
-                  <td className="px-2 py-2">{r.doc_code}</td>
-                  <td className="px-2 py-2">Tài liệu chung</td>
-                  <td className="px-2 py-2">
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{r.doc_code}</td>
+                  <td className="px-3 py-2">Tài liệu chung</td>
+                  <td className="min-w-96 px-3 py-2">
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{r.title}</span>
                   </td>
-                  <td className="px-2 py-2">{docStatusLabel[r.status ?? "new"] ?? (r.status ?? "Mới")}</td>
+                  <td className="px-3 py-2"><span className={`table-status ${r.status === "done" ? "table-status-success" : r.status === "in_progress" ? "table-status-warning" : "table-status-neutral"}`}>{docStatusLabel[r.status ?? "new"] ?? (r.status ?? "Mới")}</span></td>
                 </tr>
               ))}
               {filteredRows.length === 0 ? <tr><td colSpan={4} className="px-2 py-6 text-center text-slate-500">Chưa có tài liệu.</td></tr> : null}
             </tbody>
           </table>
+          </div>
         </section>
         </div>
       </div>

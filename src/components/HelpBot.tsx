@@ -224,7 +224,7 @@ export default function HelpBot() {
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Đóng trợ lý"
-              className="px-2 text-lg"
+              className="min-h-11 min-w-11 rounded-lg px-2 text-lg"
             >
               ×
             </button>
@@ -261,7 +261,7 @@ export default function HelpBot() {
                 type="button"
                 onClick={() => ask(s.title)}
                 disabled={typing}
-                className="rounded-full border px-2 py-1 text-xs text-orange-700"
+                className="min-h-11 rounded-full border px-3 py-2 text-xs text-orange-700"
               >
                 {s.title}
               </button>
@@ -291,7 +291,8 @@ export default function HelpBot() {
             />
             <button
               disabled={typing}
-              className="self-end rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              type="submit"
+              className="min-h-11 self-end rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
               {typing ? "Đợi…" : "Gửi"}
             </button>
@@ -304,7 +305,7 @@ export default function HelpBot() {
         aria-label="Mở trợ lý hướng dẫn"
         className="ml-auto flex items-center gap-2 rounded-full bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-orange-700"
       >
-        💬 Trợ giúp
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.6 8.6 0 0 1-3.4-.7L4 20l1.7-3.6A7.5 7.5 0 1 1 20 11.5Z" /><path d="M8 11h.01M12 11h.01M16 11h.01" /></svg> Trợ giúp
       </button>
     </div>
   );

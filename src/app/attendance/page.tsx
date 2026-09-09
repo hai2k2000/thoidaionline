@@ -151,28 +151,29 @@ export default function AttendancePage() {
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
+        <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo ngày</h2>
-          <table className="min-w-full text-left text-sm">
+          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Bảng chấm công theo ngày, cuộn ngang để xem thêm">
+          <table className="data-table min-w-[820px] text-left text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-2 py-2">Nhân sự</th>
-                <th className="px-2 py-2">Giờ vào</th>
-                <th className="px-2 py-2">Giờ ra</th>
-                <th className="px-2 py-2">Tổng giờ</th>
-                <th className="px-2 py-2">Trạng thái</th>
-                <th className="px-2 py-2">Ghi chú</th>
+                <th scope="col" className="px-3 py-2">Nhân sự</th>
+                <th scope="col" className="px-3 py-2">Giờ vào</th>
+                <th scope="col" className="px-3 py-2">Giờ ra</th>
+                <th scope="col" className="px-3 py-2 text-right">Tổng giờ</th>
+                <th scope="col" className="px-3 py-2">Trạng thái</th>
+                <th scope="col" className="min-w-64 px-3 py-2">Ghi chú</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-t">
-                  <td className="px-2 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
-                  <td className="px-2 py-2">{r.check_in ?? "-"}</td>
-                  <td className="px-2 py-2">{r.check_out ?? "-"}</td>
-                  <td className="px-2 py-2">{workedHours(r.check_in, r.check_out).toFixed(2)}</td>
-                  <td className="px-2 py-2">{attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</td>
-                  <td className="px-2 py-2">{r.note ?? "-"}</td>
+                  <td className="px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
+                  <td className="whitespace-nowrap px-3 py-2">{r.check_in ?? "-"}</td>
+                  <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
+                  <td className="px-3 py-2 text-right font-semibold">{workedHours(r.check_in, r.check_out).toFixed(2)}</td>
+                  <td className="px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
+                  <td className="min-w-64 px-3 py-2">{r.note ?? "-"}</td>
                 </tr>
               ))}
               {rows.length === 0 ? (
@@ -180,26 +181,28 @@ export default function AttendancePage() {
               ) : null}
             </tbody>
           </table>
+          </div>
         </section>
 
-        <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
+        <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Tổng công từ đầu tháng đến ngày hiện tại</h2>
-          <table className="min-w-full text-left text-sm">
+          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Bảng tổng công theo tháng, cuộn ngang để xem thêm">
+          <table className="data-table min-w-[680px] text-left text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-2 py-2">Nhân sự</th>
-                <th className="px-2 py-2">Số ngày có công</th>
-                <th className="px-2 py-2">Tổng giờ làm</th>
-                <th className="px-2 py-2">Công quy đổi (8h=1 công)</th>
+                <th scope="col" className="px-3 py-2">Nhân sự</th>
+                <th scope="col" className="px-3 py-2 text-right">Số ngày có công</th>
+                <th scope="col" className="px-3 py-2 text-right">Tổng giờ làm</th>
+                <th scope="col" className="px-3 py-2 text-right">Công quy đổi (8h=1 công)</th>
               </tr>
             </thead>
             <tbody>
               {monthlySummary.map((r) => (
                 <tr key={`sum-${r.name}`} className="border-t">
-                  <td className="px-2 py-2 font-semibold">{r.name}</td>
-                  <td className="px-2 py-2">{r.daysPresent}</td>
-                  <td className="px-2 py-2">{r.totalHours.toFixed(2)}</td>
-                  <td className="px-2 py-2">{r.workUnits.toFixed(2)}</td>
+                  <td className="px-3 py-2 font-semibold">{r.name}</td>
+                  <td className="px-3 py-2 text-right">{r.daysPresent}</td>
+                  <td className="px-3 py-2 text-right">{r.totalHours.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-right">{r.workUnits.toFixed(2)}</td>
                 </tr>
               ))}
               {monthlySummary.length === 0 ? (
@@ -207,6 +210,7 @@ export default function AttendancePage() {
               ) : null}
             </tbody>
           </table>
+          </div>
         </section>
         </div>
       </div>

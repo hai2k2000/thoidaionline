@@ -158,33 +158,34 @@ export default function HrProfilesPage() {
             <p className="mt-2 text-sm text-slate-600">{message}</p>
           </section>
 
-          <section className="mt-4 rounded-xl border bg-white p-4 overflow-auto">
-            <table className="min-w-full text-left text-sm">
+          <section className="mt-4 rounded-xl border bg-white p-4">
+            <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách hồ sơ nhân sự, cuộn ngang để xem thêm">
+            <table className="data-table min-w-[960px] text-left text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-2 py-2">Họ tên</th>
-                  <th className="px-2 py-2">Chức vụ</th>
-                  <th className="px-2 py-2">Phòng ban</th>
-                  <th className="px-2 py-2">Năm sinh</th>
-                  <th className="px-2 py-2">Địa chỉ</th>
-                  <th className="px-2 py-2">SĐT</th>
-                  <th className="px-2 py-2">Hồ sơ</th>
+                  <th scope="col" className="px-3 py-2">Họ tên</th>
+                  <th scope="col" className="px-3 py-2">Chức vụ</th>
+                  <th scope="col" className="px-3 py-2">Phòng ban</th>
+                  <th scope="col" className="px-3 py-2 text-center">Năm sinh</th>
+                  <th scope="col" className="min-w-64 px-3 py-2">Địa chỉ</th>
+                  <th scope="col" className="px-3 py-2">SĐT</th>
+                  <th scope="col" className="px-3 py-2">Hồ sơ</th>
                 </tr>
               </thead>
               <tbody>
                 {mergedRows.map(({ user: su, profile }) => (
                   <tr key={su.id} className="cursor-pointer border-t hover:bg-slate-50" onClick={() => router.push(`/hr-profiles/${su.id}`)}>
-                    <td className="px-2 py-2">
+                    <td className="min-w-52 px-3 py-2">
                       <Link href={`/hr-profiles/${su.id}`} className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800 hover:from-orange-100 hover:to-amber-200" onClick={(e) => e.stopPropagation()}>
                         {su.full_name}
                       </Link>
                     </td>
-                    <td className="px-2 py-2">{su.job_title_name ?? "-"}</td>
-                    <td className="px-2 py-2">{su.department_name ?? "-"}</td>
-                    <td className="px-2 py-2">{profile?.date_of_birth ? new Date(profile.date_of_birth).getFullYear() : "-"}</td>
-                    <td className="px-2 py-2">{profile?.address ?? "-"}</td>
-                    <td className="px-2 py-2">{profile?.emergency_contact_phone ?? "-"}</td>
-                    <td className="px-2 py-2">
+                    <td className="px-3 py-2">{su.job_title_name ?? "-"}</td>
+                    <td className="px-3 py-2">{su.department_name ?? "-"}</td>
+                    <td className="px-3 py-2 text-center">{profile?.date_of_birth ? new Date(profile.date_of_birth).getFullYear() : "-"}</td>
+                    <td className="min-w-64 px-3 py-2">{profile?.address ?? "-"}</td>
+                    <td className="whitespace-nowrap px-3 py-2">{profile?.emergency_contact_phone ?? "-"}</td>
+                    <td className="whitespace-nowrap px-3 py-2">
                       <Link href={`/hr-profiles/${su.id}`} className="rounded bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-300" onClick={(e) => e.stopPropagation()}>
                         Xem hồ sơ
                       </Link>
@@ -193,6 +194,7 @@ export default function HrProfilesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         </div>
       </div>
