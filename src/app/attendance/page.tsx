@@ -82,7 +82,16 @@ export default function AttendancePage() {
     if (!isOrganizationView) return;
     const response = await fetch("/api/attendance/sync/status", { cache: "no-store" });
     const payload = await response.json().catch(() => null) as { requests?: SyncRequest[] } | null;
-    if (response.ok && payload) setSyncRequests(payload.requests ?? []);
+    if (response.ok && payload) {
+      const requests = payload.requests ?? [];
+      setSyncRequests(requests);
+      const latest = requests[0];
+      if (latest?.status === "succeeded" && latest.result) {
+        setSyncMessage(`Đồng bộ xong: ${latest.result.punches_received ?? 0} lượt chấm, ${latest.result.matched_users ?? 0} nhân sự khớp, ${latest.result.daily_logs ?? 0} ngày công.`);
+      } else if (latest?.status === "failed") {
+        setSyncMessage(`Đồng bộ thất bại: ${latest.error ?? "Không rõ nguyên nhân"}`);
+      }
+    }
   }, [isOrganizationView]);
 
   const requestSync = async () => {
@@ -286,7 +295,7 @@ export default function AttendancePage() {
         </section>
 
         <section className="mt-4 rounded-xl border bg-white p-4">
-          <h2 className="mb-2 text-lg font-semibold">Tổng công từ đầu tháng đến ngày hiện tại</h2>
+          <h2 className="mb-2 text-lg font-semibold">Tổng công {period === "month" ? "trong tháng đã chọn" : period === "week" ? "trong tuần đã chọn" : "từ đầu tháng đến ngày hiện tại"}</h2>
           <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Bảng tổng công theo tháng, cuộn ngang để xem thêm">
           <table className="data-table min-w-[680px] text-left text-sm">
             <thead className="bg-slate-50">
