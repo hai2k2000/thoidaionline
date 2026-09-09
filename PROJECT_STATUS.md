@@ -1,7 +1,11 @@
 Current Phase: Attendance reporting views
 Current Task: COMPLETE — realtime attendance bridge
 
+Latest Task: COMPLETE — seed September 2026 foreign-language online work schedule
+
 Completed:
+- Added the September 2026 online foreign-language schedule from the supplied spreadsheet: 28 active days and 72 assignments.
+- Chinese-language days include both Chinese reporters; “Các tổ làm online” days include all six foreign-language reporters.
 - Added a long-running Windows bridge that polls Wise Eye logs every 5 seconds, sends only unseen punches, and spools failed requests for retry.
 - Added token-protected realtime punch API that upserts punches and recomputes the employee's daily first/last times.
 - Configured per-user Windows Startup launch because Scheduled Task creation requires administrator rights on this workstation.
@@ -24,6 +28,9 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Pre-change database backup created.
+- Schedule RPC completed successfully and audit entries were written.
+- Production query confirms 72 active September assignments across 28 dates.
 - Realtime bridge PowerShell parse PASS and process stays running; existing 8 punches remain deduplicated.
 - Production build PASS, service healthy, commit pushed.
 - Month-range validation sync PASS: 6 punches imported for July 2026, 4 matched users, 5 daily logs; duplicate-safe upsert preserved existing rows.
