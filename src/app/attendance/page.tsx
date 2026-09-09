@@ -33,6 +33,22 @@ const attendanceStatusLabel: Record<string, string> = {
 
 const toDateInput = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+const selectedRange = (date: string, period: "day" | "week" | "month") => {
+  const anchor = new Date(`${date}T12:00:00Z`);
+  if (period === "day") return { start: date, end: date };
+  if (period === "month") {
+    const start = `${date.slice(0, 7)}-01`;
+    const end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0, 12)).toISOString().slice(0, 10);
+    return { start, end };
+  }
+  const day = anchor.getUTCDay();
+  const start = new Date(anchor);
+  start.setUTCDate(start.getUTCDate() + (day === 0 ? -6 : 1 - day));
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+};
+
 const timeToMin = (t?: string | null) => {
   if (!t) return null;
   const [h, m] = t.split(":").map((x) => Number(x));
@@ -70,13 +86,19 @@ export default function AttendancePage() {
   }, [isOrganizationView]);
 
   const requestSync = async () => {
+    const range = selectedRange(selectedDate, period);
     setSyncBusy(true);
     setSyncMessage("Đang gửi yêu cầu tới máy đồng bộ...");
     try {
       const response = await fetch("/api/attendance/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ device_id: "wise-eye-on-39-machine-1" }),
+        body: JSON.stringify({
+          device_id: "wise-eye-on-39-machine-1",
+          period,
+          range_start: range.start,
+          range_end: range.end,
+        }),
       });
       if (!response.ok) throw new Error();
       setSyncMessage("Đã xếp hàng. Máy Windows sẽ đọc Wise Eye và cập nhật dữ liệu trong ít phút.");

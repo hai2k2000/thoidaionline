@@ -14,7 +14,16 @@ export async function POST(request: Request) {
   if (existing) return apiJson({ request: existing });
   const { data, error } = await serverSupabase
     .from("attendance_sync_requests")
-    .insert({ status: "pending", result: { source: "daily", device_id: "wise-eye-on-39-machine-1" } })
+    .insert({
+      status: "pending",
+      result: {
+        source: "daily",
+        device_id: "wise-eye-on-39-machine-1",
+        period: "day",
+        range_start: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }),
+        range_end: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }),
+      },
+    })
     .select("id,status,requested_at")
     .single();
   if (error?.code === "23505") {

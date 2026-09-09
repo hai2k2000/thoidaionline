@@ -3,6 +3,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { bridgeAuthorized } from "@/lib/attendanceBridgeAuth";
 
 const isAdmin = (actor: { role_code: string }) => actor.role_code === "admin";
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request: Request) {
   if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
@@ -21,9 +22,15 @@ export async function POST(request: Request) {
   if (!isAdmin(guard.actor)) return apiError("forbidden", 403);
   const body = await readJsonObject(request);
   const deviceId = typeof body?.device_id === "string" ? body.device_id : "wise-eye-on-39-machine-1";
+  const period = typeof body?.period === "string" ? body.period : "day";
+  const rangeStart = typeof body?.range_start === "string" ? body.range_start : "";
+  const rangeEnd = typeof body?.range_end === "string" ? body.range_end : "";
+  if (!["day", "week", "month"].includes(period) || !DATE_PATTERN.test(rangeStart) || !DATE_PATTERN.test(rangeEnd) || rangeStart > rangeEnd) {
+    return apiError("invalid_request", 400);
+  }
   const { data, error } = await serverSupabase
     .from("attendance_sync_requests")
-    .insert({ requested_by: guard.actor.id, status: "pending", result: { device_id: deviceId } })
+    .insert({ requested_by: guard.actor.id, status: "pending", result: { device_id: deviceId, period, range_start: rangeStart, range_end: rangeEnd } })
     .select("id,status,requested_at")
     .single();
   if (error?.code === "23505") {

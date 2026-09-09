@@ -62,6 +62,14 @@ function Read-DeviceData {
 function Complete-Request($request) {
   try {
     $punches = @(Read-DeviceData)
+    $rangeStart = [string]$request.result.range_start
+    $rangeEnd = [string]$request.result.range_end
+    if ($rangeStart -and $rangeEnd) {
+      $punches = @($punches | Where-Object {
+        $date = ([datetimeoffset]::Parse($_.punched_at)).ToString("yyyy-MM-dd")
+        $date -ge $rangeStart -and $date -le $rangeEnd
+      })
+    }
     Invoke-BridgeApi "/api/attendance/sync/complete" "POST" @{ request_id = $request.id; device_id = $deviceId; punches = $punches }
   } catch {
     try { Invoke-BridgeApi "/api/attendance/sync/fail" "POST" @{ request_id = $request.id; error = $_.Exception.Message } | Out-Null } catch { }
