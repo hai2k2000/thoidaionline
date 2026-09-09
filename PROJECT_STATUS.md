@@ -3,7 +3,11 @@ Current Task: COMPLETE — realtime attendance bridge
 
 Latest Task: COMPLETE — seed September 2026 foreign-language online work schedule
 
+Latest Update: COMPLETE — weekends default to full-team online work
+
 Completed:
+- Removed Saturday/Sunday assignments from the September foreign-language schedule; weekends are intentionally left blank as the default full-team online days.
+- Viewer now labels empty weekend cards “Mặc định cả tổ / Cả tổ ngoại ngữ” instead of “Chưa phân công”.
 - Added the September 2026 online foreign-language schedule from the supplied spreadsheet: 28 active days and 72 assignments.
 - Chinese-language days include both Chinese reporters; “Các tổ làm online” days include all six foreign-language reporters.
 - Added a long-running Windows bridge that polls Wise Eye logs every 5 seconds, sends only unseen punches, and spools failed requests for retry.
@@ -28,6 +32,8 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- September schedule RPC cancelled 48 weekend assignments and kept 24 weekday assignments unchanged.
+- Pre-change database backup created; production query confirms weekend rows are empty.
 - Pre-change database backup created.
 - Schedule RPC completed successfully and audit entries were written.
 - Production query confirms 72 active September assignments across 28 dates.

@@ -42,6 +42,10 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
     }
     return out;
   }, [rows, range.from, range.to]);
+  const isWeekend = (date: string) => {
+    const day = new Date(`${date}T12:00:00Z`).getUTCDay();
+    return day === 0 || day === 6;
+  };
   const shift = (n: number) => {
     const d = new Date(`${anchor}T12:00:00Z`);
     d.setUTCDate(
@@ -119,7 +123,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
                   </h2>
                   <p className="mt-2 text-sm">
                     <span className="text-slate-500">Thời gian:</span>{" "}
-                    {assignments.length ? "Cả ngày" : "—"}
+                    {assignments.length ? "Cả ngày" : isWeekend(date) ? "Mặc định cả tổ" : "—"}
                   </p>
                   <div className="text-sm">
                     <span className="text-slate-500">Người làm trực tuyến:</span>
@@ -136,7 +140,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
                         )}
                       </ul>
                     ) : (
-                      " Chưa phân công"
+                      isWeekend(date) ? " Cả tổ ngoại ngữ" : " Chưa phân công"
                     )}
                   </div>
                 </article>
