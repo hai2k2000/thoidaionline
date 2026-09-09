@@ -1,11 +1,13 @@
-Current Phase: Duty schedule data
-Current Task: COMPLETE — September 2026 duty roster
+Current Phase: Attendance bridge operations
+Current Task: COMPLETE — hidden Wise Eye scheduled polling
 
-Latest Task: COMPLETE — import September 2026 duty roster
+Latest Task: COMPLETE — run Wise Eye polling silently
 
-Latest Update: COMPLETE — 30-day duty roster is live
+Latest Update: COMPLETE — minute polling no longer opens a console window
 
 Completed:
+- Updated both Wise Eye scheduled-task actions to use `-WindowStyle Hidden` and the explicit bridge working directory; the realtime Startup launcher was already hidden.
+- Added the reusable Windows task-update script under `bridge/windows` so future task registration preserves silent execution.
 - Imported the supplied September 2026 duty roster: 120 active tasks across 30 dates and four positions per date.
 - Mapped the source "Biên tập" row to both editor steps and kept the supplied publisher/reporter rotation unchanged.
 - Allowed Hồng Ninh in the approved duty-editor rotation and exempted duty tasks only from the system-admin participant guard so Mai Anh can retain her reporter duty.
@@ -41,6 +43,8 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Backed up both scheduled-task XML definitions under `C:\WiseEyeOn39\bridge\backup-hidden-20260909152603` before changing them.
+- Both registered actions now contain `WindowStyle Hidden`; the manual polling run returned result `0`, the next minute run also returned `0`, and realtime remained active.
 - Pre-change full database backup created at `/opt/thoidai-work/backups/pre-september-duty-20260909150633/database.dump` with SHA-256 manifest.
 - Production query confirms 120 active September duty tasks, 30 dates, four positions per date, and no incomplete dates.
 - Source image was re-read directly; the September 5 editor was corrected to Ngô Trí Đường before final validation.
