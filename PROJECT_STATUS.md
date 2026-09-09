@@ -1,11 +1,13 @@
 Current Phase: Attendance bridge operations
-Current Task: COMPLETE — hidden Wise Eye scheduled polling
+Current Task: COMPLETE — disable console-flashing minute poll
 
-Latest Task: COMPLETE — run Wise Eye polling silently
+Latest Task: COMPLETE — silent Wise Eye attendance bridge
 
-Latest Update: COMPLETE — minute polling no longer opens a console window
+Latest Update: COMPLETE — minute polling disabled; realtime windows retained
 
 Completed:
+- Disabled the Wise Eye minute Scheduled Task because the 32-bit zkemkeeper COM host creates `conhost.exe` even with hidden launch flags; realtime polling and daily reconciliation remain enabled.
+- Added a hidden Python launcher and updated the reusable task installer for any future task re-enablement.
 - Updated both Wise Eye scheduled-task actions to use `-WindowStyle Hidden` and the explicit bridge working directory; the realtime Startup launcher was already hidden.
 - Added the reusable Windows task-update script under `bridge/windows` so future task registration preserves silent execution.
 - Imported the supplied September 2026 duty roster: 120 active tasks across 30 dates and four positions per date.
@@ -43,6 +45,8 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Backed up task XML definitions before launcher changes at `C:\WiseEyeOn39\bridge\backup-launcher-20260909153830`.
+- After disabling minute polling, a 70-second process monitor observed no Wise Eye/PowerShell/conhost launches; daily reconciliation remains scheduled for 18:30.
 - Backed up both scheduled-task XML definitions under `C:\WiseEyeOn39\bridge\backup-hidden-20260909152603` before changing them.
 - Both registered actions now contain `WindowStyle Hidden`; the manual polling run returned result `0`, the next minute run also returned `0`, and realtime remained active.
 - Pre-change full database backup created at `/opt/thoidai-work/backups/pre-september-duty-20260909150633/database.dump` with SHA-256 manifest.
