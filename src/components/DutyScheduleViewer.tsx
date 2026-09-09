@@ -53,13 +53,21 @@ export default function DutyScheduleViewer({
   const [view, setView] = useState<"day" | "week" | "month">(initialView);
   const [anchor, setAnchor] = useState(new Date().toISOString().slice(0, 10));
   const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const scope = initialScope;
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);
   useEffect(() => {
+    setLoading(true);
+    setLoadError(false);
     fetch(`/api/duty-schedule?from=${range.from}&to=${range.to}${scope === "personal" ? "&mine=1" : ""}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then((body) => setRows(body.rows ?? []))
-      .catch(() => setRows([]));
+      .catch(() => {
+        setRows([]);
+        setLoadError(true);
+      })
+      .finally(() => setLoading(false));
   }, [range.from, range.to, scope]);
   const byDate = useMemo(
     () =>
@@ -182,7 +190,9 @@ export default function DutyScheduleViewer({
                 ))}
               </div>
             </div>
-            <div className={`mt-3 grid w-full gap-2 ${density.grid}`}>
+            {loading ? <p className="mt-3 rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">Đang tải lịch trực…</p> : null}
+            {!loading && loadError ? <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Không tải được lịch trực. Vui lòng thử lại hoặc kiểm tra kết nối máy chủ.</p> : null}
+            {!loading && !loadError ? <div className={`mt-3 grid w-full gap-2 ${density.grid}`}>
               {dayCards.map(([date, items]) => (
                 <article
                   key={date}
@@ -231,7 +241,7 @@ export default function DutyScheduleViewer({
                   Không có lịch trực trong khoảng thời gian này.
                 </p>
               ) : null}
-            </div>
+            </div> : null}
           </section>
         </main>
       </div>

@@ -1,11 +1,14 @@
 Current Phase: Attendance reporting views
-Current Task: COMPLETE — attendance sync windows
+Current Task: COMPLETE — notification proxy load fix
 
 Latest Task: COMPLETE — seed September 2026 foreign-language online work schedule
 
 Latest Update: COMPLETE — weekends default to full-team online work
 
 Completed:
+- Changed notification event queries to process task ID batches sequentially, preventing proxy 502/notification 500 errors for accounts with large task lists.
+- Batched participant-task lookups and notification-read keys so long UUID/key filters stay below the VPS proxy limit.
+- Duty schedule viewer now distinguishes loading, API failure, and a genuinely empty schedule instead of silently rendering empty cards after a failed request.
 - Limited Wise Eye realtime reads and pending-request polling to 07:30–09:30 and 16:30–18:30; admin requests created outside those windows wait for the next window or the 18:30 reconciliation.
 - Moved the daily reconciliation task to 18:30 and updated the attendance page schedule guidance.
 - Fixed the work schedule table identity columns so “STT” and “Họ và tên” keep readable widths instead of wrapping one character per line; day columns remain horizontally scrollable.
@@ -35,6 +38,7 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Notification load fix: targeted service-role reproduction passes across all task/read batches; production build PASS; service active; authenticated production smoke returns HTTP 200 for notifications and duty schedule.
 - Attendance window rollout: PowerShell bridge parse PASS; outside-window `-Once` exits without device/API work; one realtime process running; daily task scheduled at 18:30; production build PASS; service active after restart.
 - Work schedule table layout fix: production build PASS; service active after restart; production route responds (HTTP 307 authentication redirect).
 - September schedule RPC cancelled 48 weekend assignments and kept 24 weekday assignments unchanged.

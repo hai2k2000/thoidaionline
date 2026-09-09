@@ -68,29 +68,42 @@ export const notificationRepository = {
     const directPromise = serverSupabase.from("tasks").select(taskSelect)
       .or(`created_by.eq.${userId},owner_id.eq.${userId},assignee_id.eq.${userId},reviewer_id.eq.${userId}`)
       .order("updated_at", { ascending: false }).limit(500);
-    const participantPromise = participantIds.length
-      ? serverSupabase.from("tasks").select(taskSelect).in("id", participantIds).limit(500)
-      : Promise.resolve({ data: [], error: null });
-    const [directResult, participantTaskResult] = await Promise.all([directPromise, participantPromise]);
-    if (directResult.error || participantTaskResult.error) return { ok: false };
+    const participantTaskResults: Array<{ data: unknown[] | null; error: { code?: string | null } | null }> = [];
+    for (const batch of chunks(participantIds)) {
+      participantTaskResults.push(await serverSupabase.from("tasks").select(taskSelect).in("id", batch).limit(500));
+    }
+    const directResult = await directPromise;
+    if (directResult.error || participantTaskResults.some((result) => result.error)) return { ok: false };
 
     const taskMap = new Map<string, TaskRow>();
-    for (const task of [...(directResult.data ?? []), ...(participantTaskResult.data ?? [])] as TaskRow[]) {
+    for (const task of [
+      ...(directResult.data ?? []),
+      ...participantTaskResults.flatMap((result) => result.data ?? []),
+    ] as TaskRow[]) {
       taskMap.set(task.id, task);
     }
     const tasks = [...taskMap.values()];
     const taskIds = tasks.map((task) => task.id);
     if (!taskIds.length) return { ok: true, items: [] };
 
-    const batchResults = await Promise.all(chunks(taskIds).map(async (batch) => Promise.all([
-      serverSupabase.from("task_comments").select("id,task_id,user_id,content,created_at,staff_users(full_name)").in("task_id", batch).or(`user_id.is.null,user_id.neq.${userId}`).order("created_at", { ascending: false }).limit(100),
-      serverSupabase.from("task_status_events").select("id,task_id,actor_id,to_status,reason,created_at").in("task_id", batch).neq("actor_id", userId).order("created_at", { ascending: false }).limit(100),
-      serverSupabase.from("task_deadline_history").select("id,task_id,changed_by,new_due_date,reason,changed_at").in("task_id", batch).neq("changed_by", userId).order("changed_at", { ascending: false }).limit(100),
-    ])));
-    if (batchResults.some((batch) => batch.some((result) => result.error))) return { ok: false };
-    const comments = { data: batchResults.flatMap((batch) => batch[0].data ?? []) };
-    const statuses = { data: batchResults.flatMap((batch) => batch[1].data ?? []) };
-    const deadlines = { data: batchResults.flatMap((batch) => batch[2].data ?? []) };
+    // Keep PostgREST concurrency low; large task lists otherwise trigger the VPS proxy's 502 limit.
+    const commentRows: unknown[] = [];
+    const statusRows: unknown[] = [];
+    const deadlineRows: unknown[] = [];
+    for (const batch of chunks(taskIds)) {
+      const [commentResult, statusResult, deadlineResult] = await Promise.all([
+        serverSupabase.from("task_comments").select("id,task_id,user_id,content,created_at,staff_users(full_name)").in("task_id", batch).or(`user_id.is.null,user_id.neq.${userId}`).order("created_at", { ascending: false }).limit(100),
+        serverSupabase.from("task_status_events").select("id,task_id,actor_id,to_status,reason,created_at").in("task_id", batch).neq("actor_id", userId).order("created_at", { ascending: false }).limit(100),
+        serverSupabase.from("task_deadline_history").select("id,task_id,changed_by,new_due_date,reason,changed_at").in("task_id", batch).neq("changed_by", userId).order("changed_at", { ascending: false }).limit(100),
+      ]);
+      if (commentResult.error || statusResult.error || deadlineResult.error) return { ok: false };
+      commentRows.push(...(commentResult.data ?? []));
+      statusRows.push(...(statusResult.data ?? []));
+      deadlineRows.push(...(deadlineResult.data ?? []));
+    }
+    const comments = { data: commentRows as Array<{ id: string; task_id: string; user_id: string | null; content: string; created_at: string; staff_users: unknown }> };
+    const statuses = { data: statusRows as Array<{ id: string; task_id: string; actor_id: string; to_status: string; reason: string | null; created_at: string }> };
+    const deadlines = { data: deadlineRows as Array<{ id: string; task_id: string; changed_by: string; new_due_date: string | null; reason: string | null; changed_at: string }> };
 
     const items: Array<NotificationItem & { rank: number }> = [];
     const taskTitle = (taskId: string) => taskMap.get(taskId)?.title ?? "Công việc";
@@ -163,12 +176,13 @@ export const notificationRepository = {
     items.sort((a, b) => a.rank - b.rank || b.createdAt.localeCompare(a.createdAt));
     const visible = items.slice(0, 60);
     const keys = visible.map((item) => item.key);
-    const reads = keys.length
-      ? await serverSupabase.from("user_notification_reads").select("notification_key")
-        .eq("user_id", userId).in("notification_key", keys)
-      : { data: [], error: null };
-    if (reads.error) return { ok: false };
-    const readKeys = new Set((reads.data ?? []).map((row) => row.notification_key));
+    const readKeys = new Set<string>();
+    for (const batch of chunks(keys)) {
+      const reads = await serverSupabase.from("user_notification_reads").select("notification_key")
+        .eq("user_id", userId).in("notification_key", batch);
+      if (reads.error) return { ok: false };
+      for (const row of reads.data ?? []) readKeys.add(row.notification_key);
+    }
     return {
       ok: true,
       items: visible.map((item) => ({
