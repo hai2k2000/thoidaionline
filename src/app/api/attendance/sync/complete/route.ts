@@ -57,31 +57,34 @@ export async function POST(request: Request) {
     .eq("active", true);
   if (userError) return failRequest(requestId, userError.message);
   const userByCode = new Map((users ?? []).map((user) => [user.attendance_code, user]));
-  const daily = new Map<string, { user_id: string; work_date: string; check_in: string; check_out: string }>();
+  const daily = new Map<string, { user_id: string; work_date: string; earliest: Date; latest: Date }>();
   for (const punch of punches) {
     const user = userByCode.get(punch.enroll_number);
     if (!user) continue;
     const instant = new Date(punch.punched_at);
     const date = instant.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
-    const time = instant.toLocaleTimeString("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour12: false });
     const key = `${user.id}:${date}`;
     const current = daily.get(key);
-    if (!current) daily.set(key, { user_id: user.id, work_date: date, check_in: time, check_out: time });
+    if (!current) daily.set(key, { user_id: user.id, work_date: date, earliest: instant, latest: instant });
     else {
-      if (time < current.check_in) current.check_in = time;
-      if (time > current.check_out) current.check_out = time;
+      if (instant.getTime() < current.earliest.getTime()) current.earliest = instant;
+      if (instant.getTime() > current.latest.getTime()) current.latest = instant;
     }
   }
-  const logs = [...daily.values()].map((row) => ({
-    user_id: row.user_id,
-    work_date: row.work_date,
-    check_in: row.check_in,
-    check_out: row.check_out === row.check_in ? null : row.check_out,
-    status: "present",
-    source: "wise_eye",
-    note: "Đồng bộ từ Wise Eye On 39",
-    synced_at: new Date().toISOString(),
-  }));
+  const logs = [...daily.values()].map((row) => {
+    const checkIn = row.earliest.toLocaleTimeString("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour12: false });
+    const checkOut = row.latest.toLocaleTimeString("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour12: false });
+    return {
+      user_id: row.user_id,
+      work_date: row.work_date,
+      check_in: checkIn,
+      check_out: row.latest.getTime() === row.earliest.getTime() ? null : checkOut,
+      status: "present",
+      source: "wise_eye",
+      note: "Đồng bộ từ Wise Eye On 39",
+      synced_at: new Date().toISOString(),
+    };
+  });
   if (logs.length) {
     const { error: logError } = await serverSupabase
       .from("attendance_logs")

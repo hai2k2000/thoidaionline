@@ -21,14 +21,16 @@ export async function POST(request: Request) {
   const user = users?.[0];
   if (!user) return apiJson({ ok: true, matched: false });
   const localDate = new Date(punchedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
-  const { data: punches, error: listError } = await serverSupabase.from("attendance_punches").select("punched_at").eq("enroll_number", enroll).order("punched_at", { ascending: true }).limit(20000);
+  const { data: punches, error: listError } = await serverSupabase.from("attendance_punches").select("punched_at").eq("device_id", deviceId).eq("enroll_number", enroll).order("punched_at", { ascending: true }).limit(20000);
   if (listError) return apiError("operation_failed", 500);
-  const times = (punches ?? []).filter((p) => new Date(p.punched_at).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }) === localDate).map((p) => new Date(p.punched_at).toLocaleTimeString("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour12: false })).sort();
-  if (!times.length) return apiJson({ ok: true, matched: true, work_date: localDate });
+  const instants = (punches ?? []).map((p) => new Date(p.punched_at)).filter((instant) => instant.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }) === localDate).sort((a, b) => a.getTime() - b.getTime());
+  if (!instants.length) return apiJson({ ok: true, matched: true, work_date: localDate });
+  const checkIn = instants[0].toLocaleTimeString("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour12: false });
+  const checkOut = instants.length > 1 ? instants[instants.length - 1].toLocaleTimeString("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour12: false }) : null;
   const { error: logError } = await serverSupabase.from("attendance_logs").upsert({
-    user_id: user.id, work_date: localDate, check_in: times[0], check_out: times.length > 1 ? times[times.length - 1] : null,
+    user_id: user.id, work_date: localDate, check_in: checkIn, check_out: checkOut,
     status: "present", source: "wise_eye", note: "Đồng bộ realtime từ Wise Eye On 39", synced_at: new Date().toISOString(),
   }, { onConflict: "user_id,work_date" });
   if (logError) return apiError("operation_failed", 500);
-  return apiJson({ ok: true, matched: true, work_date: localDate, check_in: times[0], check_out: times.length > 1 ? times[times.length - 1] : null });
+  return apiJson({ ok: true, matched: true, work_date: localDate, check_in: checkIn, check_out: checkOut });
 }
