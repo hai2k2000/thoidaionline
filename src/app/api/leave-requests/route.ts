@@ -8,20 +8,31 @@ const REVIEW_ROLES = new Set(["admin", "tong_bien_tap", "pho_tong_bien_tap", "ph
 
 const canReview = (actor: { role_code: string; is_department_manager?: boolean }) => actor.is_department_manager === true || REVIEW_ROLES.has(actor.role_code);
 
-export async function GET() {
+export async function GET(request: Request) {
   const guard = await requireReadActor();
   if (!guard.ok) return guard.response;
-  const mine = await serverSupabase.from("leave_requests").select("id,requester_id,department_id,start_date,end_date,start_period,end_period,leave_type,reason,status,reviewed_by,reviewed_at,review_note,created_at,requester:staff_users!leave_requests_requester_id_fkey(full_name),reviewer:staff_users!leave_requests_reviewed_by_fkey(full_name)").eq("requester_id", guard.actor.id).order("created_at", { ascending: false }).limit(50);
+  const params = new URL(request.url).searchParams;
+  const from = params.get("from") ?? "";
+  const to = params.get("to") ?? "";
+  if (!DATE.test(from) || !DATE.test(to) || from > to) return apiError("invalid_request", 400);
+  const fields = "id,requester_id,department_id,start_date,end_date,start_period,end_period,leave_type,reason,status,reviewed_by,reviewed_at,review_note,created_at,requester:staff_users!leave_requests_requester_id_fkey(full_name),reviewer:staff_users!leave_requests_reviewed_by_fkey(full_name)";
+  const mine = await serverSupabase.from("leave_requests").select(fields).eq("requester_id", guard.actor.id).lte("start_date", to).gte("end_date", from).order("created_at", { ascending: false }).limit(100);
   if (mine.error) return apiError("operation_failed", 500);
   let approvals: unknown[] = [];
   if (canReview(guard.actor)) {
-    let query = serverSupabase.from("leave_requests").select("id,requester_id,department_id,start_date,end_date,start_period,end_period,leave_type,reason,status,reviewed_by,reviewed_at,review_note,created_at,requester:staff_users!leave_requests_requester_id_fkey(full_name),reviewer:staff_users!leave_requests_reviewed_by_fkey(full_name)").eq("status", "pending").order("created_at", { ascending: true }).limit(200);
+    let query = serverSupabase.from("leave_requests").select(fields).eq("status", "pending").lte("start_date", to).gte("end_date", from).order("created_at", { ascending: true }).limit(200);
     if (guard.actor.role_code !== "admin" && !REVIEW_ROLES.has(guard.actor.role_code)) query = query.eq("department_id", guard.actor.department_id ?? "");
     const result = await query;
     if (result.error) return apiError("operation_failed", 500);
     approvals = result.data ?? [];
   }
-  return apiJson({ mine: mine.data ?? [], approvals });
+  let management: unknown[] = [];
+  if (guard.actor.role_code === "admin") {
+    const result = await serverSupabase.from("leave_requests").select(fields).lte("start_date", to).gte("end_date", from).order("created_at", { ascending: false }).limit(500);
+    if (result.error) return apiError("operation_failed", 500);
+    management = result.data ?? [];
+  }
+  return apiJson({ mine: mine.data ?? [], approvals, management });
 }
 
 export async function POST(request: Request) {
