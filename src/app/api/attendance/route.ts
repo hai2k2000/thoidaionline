@@ -167,8 +167,7 @@ export async function GET(request: Request) {
     if (leave) parts.push(leave.start_period === "full" && leave.end_period === "full" ? ({ annual: "Nghỉ phép", sick: "Nghỉ ốm", unpaid: "Nghỉ không lương", personal: "Nghỉ việc riêng", business: "Công tác" }[leave.leave_type] ?? "Nghỉ") : "Nghỉ phép theo buổi");
     const leaveIsFull = !!leave && leave.start_period === "full" && leave.end_period === "full";
     if (onlineDay && !leaveIsFull) parts.push("Làm việc online");
-    const generated = parts.join("; ");
-    return [row.note?.replace(/^\[DEMO\]\s*/, "").trim(), generated].filter(Boolean).join("; ");
+    return parts.join("; ");
   };
   const withNotes = (items: AttendanceRow[]) => items.map((row) => ({ ...row, note: noteFor(row) }));
   const contextRows = (items: AttendanceRow[], from: string, to: string) => {
