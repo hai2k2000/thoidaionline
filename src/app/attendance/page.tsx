@@ -48,6 +48,16 @@ const attendanceStatusLabel: Record<string, string> = {
 
 const toDateInput = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+const leaveDurationDays = (startDate: string, endDate: string) => {
+  if (!startDate || !endDate || endDate < startDate) return 0;
+  return Math.floor((Date.parse(`${endDate}T12:00:00Z`) - Date.parse(`${startDate}T12:00:00Z`)) / 86_400_000) + 1;
+};
+
+const leavePeriodLabel = (item: Pick<LeaveRequest, "start_date" | "end_date">) => {
+  const days = leaveDurationDays(item.start_date, item.end_date);
+  return `${item.start_date} → ${item.end_date} · ${days} ngày`;
+};
+
 const selectedRange = (date: string, period: "day" | "week" | "month") => {
   const anchor = new Date(`${date}T12:00:00Z`);
   if (period === "day") return { start: date, end: date };
@@ -97,6 +107,7 @@ export default function AttendancePage() {
   const [leaveForm, setLeaveForm] = useState({ startDate: selectedDate, endDate: selectedDate, startPeriod: "full", endPeriod: "full", leaveType: "annual", reason: "" });
   const [leaveBusy, setLeaveBusy] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [leaveError, setLeaveError] = useState("");
   const isOrganizationView = pathname === "/attendance" && user?.role_code === "admin";
 
   const loadSyncStatus = useCallback(async () => {
@@ -170,13 +181,16 @@ export default function AttendancePage() {
   }, [period, selectedDate]);
 
   const submitLeave = async (event: React.FormEvent) => {
-    event.preventDefault(); setLeaveBusy(true);
+    event.preventDefault();
+    if (leaveForm.endDate < leaveForm.startDate) return setLeaveError("Ngày kết thúc không được trước ngày bắt đầu.");
+    setLeaveBusy(true); setLeaveError("");
     try {
       const response = await fetch("/api/leave-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(leaveForm) });
-      if (!response.ok) throw new Error();
+      if (!response.ok) throw new Error("Chưa gửi được đơn. Vui lòng kiểm tra khoảng ngày và thử lại.");
       setLeaveForm((current) => ({ ...current, reason: "" })); await loadLeaveRequests();
       setLeaveModalOpen(false);
-    } finally { setLeaveBusy(false); }
+    } catch (error) { setLeaveError(error instanceof Error ? error.message : "Chưa gửi được đơn."); }
+    finally { setLeaveBusy(false); }
   };
 
   const reviewLeave = async (request: LeaveRequest, action: "approve" | "reject") => {
@@ -239,6 +253,7 @@ export default function AttendancePage() {
   }, [monthlyRows]);
 
   const leaveRange = useMemo(() => selectedRange(selectedDate, period), [period, selectedDate]);
+  const leaveFormDays = useMemo(() => leaveDurationDays(leaveForm.startDate, leaveForm.endDate), [leaveForm.endDate, leaveForm.startDate]);
   const visibleLeaveRequests = useMemo(() => leaveRequests.filter((item) => item.start_date <= leaveRange.end && item.end_date >= leaveRange.start), [leaveRequests, leaveRange]);
   const visibleLeaveApprovals = useMemo(() => leaveApprovals.filter((item) => item.start_date <= leaveRange.end && item.end_date >= leaveRange.start), [leaveApprovals, leaveRange]);
 
@@ -256,19 +271,23 @@ export default function AttendancePage() {
 
           <div className="mb-4 flex items-center justify-between rounded-xl border bg-white p-4">
             <div><h2 className="text-lg font-semibold">Nghỉ phép</h2><p className="mt-1 text-sm text-slate-600">Đơn đã duyệt sẽ tự động hiện trong cột Ghi chú của bảng chấm công.</p></div>
-            <button type="button" onClick={() => setLeaveModalOpen(true)} className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Gửi đơn xin nghỉ</button>
+            <button type="button" onClick={() => { setLeaveError(""); setLeaveModalOpen(true); }} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Gửi đơn xin nghỉ</button>
           </div>
           {leaveModalOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="leave-dialog-title">
             <form onSubmit={submitLeave} className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
               <div className="flex items-center justify-between"><h2 id="leave-dialog-title" className="text-lg font-semibold">Gửi đơn xin nghỉ</h2><button type="button" onClick={() => setLeaveModalOpen(false)} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
-              <p className="mt-1 text-sm text-slate-600">Đơn sẽ chuyển đến trưởng phòng hoặc lãnh đạo có thẩm quyền để xem xét.</p>
+              <p className="mt-1 text-sm text-slate-600">Chọn đầy đủ từ ngày đến ngày. Đơn nghỉ từ 3 ngày trở lên bắt buộc Tổng biên tập phê duyệt.</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <label className="text-sm">Từ ngày<input type="date" required value={leaveForm.startDate} onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })} className="mt-1 w-full rounded border px-3 py-2" /></label>
-                <label className="text-sm">Đến ngày<input type="date" required value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} className="mt-1 w-full rounded border px-3 py-2" /></label>
+                <label className="text-sm font-medium">Từ ngày<input type="date" required value={leaveForm.startDate} onChange={(e) => { const startDate = e.target.value; setLeaveForm({ ...leaveForm, startDate, endDate: leaveForm.endDate < startDate ? startDate : leaveForm.endDate }); }} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
+                <label className="text-sm font-medium">Đến ngày<input type="date" required min={leaveForm.startDate} value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
                 <label className="text-sm">Loại nghỉ<select value={leaveForm.leaveType} onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })} className="mt-1 w-full rounded border px-3 py-2"><option value="annual">Phép năm</option><option value="sick">Nghỉ ốm</option><option value="unpaid">Không lương</option><option value="personal">Việc riêng</option><option value="business">Công tác</option></select></label>
                 <label className="text-sm">Thời gian<select value={leaveForm.startPeriod} onChange={(e) => setLeaveForm({ ...leaveForm, startPeriod: e.target.value, endPeriod: e.target.value })} className="mt-1 w-full rounded border px-3 py-2"><option value="full">Cả ngày</option><option value="morning">Buổi sáng</option><option value="afternoon">Buổi chiều</option></select></label>
               </div>
+              <div className={`mt-3 rounded-lg border px-3 py-2 text-sm ${leaveFormDays >= 3 ? "border-amber-300 bg-amber-50 text-amber-900" : "border-slate-200 bg-slate-50 text-slate-700"}`} role="status">
+                {leaveFormDays > 0 ? `Thời gian nghỉ: ${leaveFormDays} ngày. ${leaveFormDays >= 3 ? "Đơn này sẽ chuyển Tổng biên tập phê duyệt." : "Đơn sẽ chuyển cấp quản lý có thẩm quyền phê duyệt."}` : "Vui lòng chọn khoảng ngày nghỉ hợp lệ."}
+              </div>
               <label className="mt-2 block text-sm">Lý do<textarea required minLength={3} maxLength={1000} value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
+              {leaveError ? <p className="mt-2 text-sm font-medium text-red-700" role="alert">{leaveError}</p> : null}
               <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setLeaveModalOpen(false)} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={leaveBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{leaveBusy ? "Đang gửi..." : "Gửi đơn"}</button></div>
             </form>
           </div> : null}
@@ -373,14 +392,14 @@ export default function AttendancePage() {
           <h2 className="mb-2 text-lg font-semibold">Đơn xin nghỉ trong khoảng đã chọn</h2>
           <p className="mb-3 text-sm text-slate-600">Danh sách được lọc theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"} và ngày làm mốc ở trên.</p>
           <div className="space-y-2 text-sm">
-            {visibleLeaveRequests.map((item) => <div key={item.id} className="rounded border p-3"><div className="font-semibold">{item.start_date} → {item.end_date} · {item.status === "pending" ? "Chờ duyệt" : item.status === "approved" ? "Đã duyệt" : item.status === "rejected" ? "Từ chối" : "Đã hủy"}</div><div className="text-slate-600">{item.reason}{item.review_note ? ` · ${item.review_note}` : ""}</div></div>)}
+            {visibleLeaveRequests.map((item) => <div key={item.id} className="rounded border p-3"><div className="font-semibold">{leavePeriodLabel(item)} · {item.status === "pending" ? "Chờ duyệt" : item.status === "approved" ? "Đã duyệt" : item.status === "rejected" ? "Từ chối" : "Đã hủy"}</div>{leaveDurationDays(item.start_date, item.end_date) >= 3 ? <div className="mt-1 text-xs font-semibold text-amber-700">Cấp duyệt: Tổng biên tập</div> : null}<div className="text-slate-600">{item.reason}{item.review_note ? ` · ${item.review_note}` : ""}</div></div>)}
             {!visibleLeaveRequests.length ? <p className="text-slate-500">Không có đơn xin nghỉ trong khoảng này.</p> : null}
           </div>
         </section>
 
-        {visibleLeaveApprovals.length ? <section className="mt-4 rounded-xl border bg-white p-4"><h2 className="mb-2 text-lg font-semibold">Duyệt đơn xin nghỉ</h2><p className="mb-3 text-sm text-slate-600">Các đơn chờ duyệt của nhân viên trong khoảng thời gian đang xem.</p><div className="space-y-2 text-sm">{visibleLeaveApprovals.map((item) => <div key={item.id} className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-semibold">{item.requester?.full_name ?? "Nhân viên"} · {item.start_date} → {item.end_date}</div><div className="text-slate-600">{item.reason}</div></div><div className="flex gap-2"><button type="button" disabled={leaveBusy} onClick={() => void reviewLeave(item, "approve")} className="rounded bg-emerald-700 px-3 py-2 font-semibold text-white disabled:opacity-50">Duyệt</button><button type="button" disabled={leaveBusy} onClick={() => void reviewLeave(item, "reject")} className="rounded border border-red-300 px-3 py-2 font-semibold text-red-700 disabled:opacity-50">Từ chối</button></div></div>)}</div></section> : null}
+        {visibleLeaveApprovals.length ? <section className="mt-4 rounded-xl border bg-white p-4"><h2 className="mb-2 text-lg font-semibold">Duyệt đơn xin nghỉ</h2><p className="mb-3 text-sm text-slate-600">Đơn từ 3 ngày trở lên chỉ hiển thị cho Tổng biên tập duyệt.</p><div className="space-y-2 text-sm">{visibleLeaveApprovals.map((item) => <div key={item.id} className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-semibold">{item.requester?.full_name ?? "Nhân viên"} · {leavePeriodLabel(item)}</div>{leaveDurationDays(item.start_date, item.end_date) >= 3 ? <div className="mt-1 text-xs font-semibold text-amber-700">Yêu cầu Tổng biên tập phê duyệt</div> : null}<div className="text-slate-600">{item.reason}</div></div><div className="flex gap-2"><button type="button" disabled={leaveBusy} onClick={() => void reviewLeave(item, "approve")} className="min-h-11 rounded bg-emerald-700 px-3 py-2 font-semibold text-white disabled:opacity-50">Duyệt</button><button type="button" disabled={leaveBusy} onClick={() => void reviewLeave(item, "reject")} className="min-h-11 rounded border border-red-300 px-3 py-2 font-semibold text-red-700 disabled:opacity-50">Từ chối</button></div></div>)}</div></section> : null}
 
-        {isOrganizationView ? <section className="mt-4 rounded-xl border bg-white p-4"><h2 className="mb-2 text-lg font-semibold">Quản lý đơn xin nghỉ</h2><p className="mb-3 text-sm text-slate-600">Admin xem toàn bộ đơn trong khoảng thời gian đang chọn.</p><div className="table-scroll rounded-lg border border-slate-200"><table className="data-table min-w-[760px] text-left text-sm"><thead className="bg-slate-50"><tr><th className="px-3 py-2">Nhân sự</th><th className="px-3 py-2">Thời gian</th><th className="px-3 py-2">Loại</th><th className="px-3 py-2">Trạng thái</th><th className="px-3 py-2">Lý do</th></tr></thead><tbody>{leaveManagement.map((item) => <tr key={item.id} className="border-t"><td className="px-3 py-2 font-semibold">{item.requester?.full_name ?? "-"}</td><td className="px-3 py-2">{item.start_date} → {item.end_date}</td><td className="px-3 py-2">{item.leave_type}</td><td className="px-3 py-2">{item.status === "pending" ? "Chờ duyệt" : item.status === "approved" ? "Đã duyệt" : item.status === "rejected" ? "Từ chối" : "Đã hủy"}</td><td className="px-3 py-2">{item.reason}</td></tr>)}{!leaveManagement.length ? <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-500">Không có đơn trong khoảng này.</td></tr> : null}</tbody></table></div></section> : null}
+        {isOrganizationView ? <section className="mt-4 rounded-xl border bg-white p-4"><h2 className="mb-2 text-lg font-semibold">Quản lý đơn xin nghỉ</h2><p className="mb-3 text-sm text-slate-600">Admin xem toàn bộ đơn; đơn từ 3 ngày trở lên do Tổng biên tập phê duyệt.</p><div className="table-scroll rounded-lg border border-slate-200"><table className="data-table min-w-[820px] text-left text-sm"><thead className="bg-slate-50"><tr><th className="px-3 py-2">Nhân sự</th><th className="px-3 py-2">Thời gian</th><th className="px-3 py-2">Số ngày</th><th className="px-3 py-2">Cấp duyệt</th><th className="px-3 py-2">Trạng thái</th><th className="px-3 py-2">Lý do</th></tr></thead><tbody>{leaveManagement.map((item) => { const days = leaveDurationDays(item.start_date, item.end_date); return <tr key={item.id} className="border-t"><td className="px-3 py-2 font-semibold">{item.requester?.full_name ?? "-"}</td><td className="whitespace-nowrap px-3 py-2">{item.start_date} → {item.end_date}</td><td className="px-3 py-2 text-center font-semibold">{days}</td><td className="px-3 py-2">{days >= 3 ? "Tổng biên tập" : "Quản lý có thẩm quyền"}</td><td className="px-3 py-2">{item.status === "pending" ? "Chờ duyệt" : item.status === "approved" ? "Đã duyệt" : item.status === "rejected" ? "Từ chối" : "Đã hủy"}</td><td className="px-3 py-2">{item.reason}</td></tr>; })}{!leaveManagement.length ? <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">Không có đơn trong khoảng này.</td></tr> : null}</tbody></table></div></section> : null}
 
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Tổng công {period === "month" ? "trong tháng đã chọn" : period === "week" ? "trong tuần đã chọn" : "từ đầu tháng đến ngày hiện tại"}</h2>

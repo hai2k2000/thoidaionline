@@ -8,6 +8,7 @@ const complete = readFileSync("src/app/api/attendance/sync/complete/route.ts", "
 const realtime = readFileSync("src/app/api/attendance/sync/realtime/route.ts", "utf8");
 const page = readFileSync("src/app/attendance/page.tsx", "utf8");
 const migration = readFileSync("supabase/migrations/20260910090000_leave_requests.sql", "utf8");
+const longLeaveMigration = readFileSync("supabase/migrations/20260910150000_long_leave_tbt_approval.sql", "utf8");
 
 test("leave workflow is authenticated, approved by leadership, and conflict-safe", () => {
   assert.match(route, /requireReadActor/);
@@ -17,6 +18,13 @@ test("leave workflow is authenticated, approved by leadership, and conflict-safe
   assert.match(route, /api_cancel_leave_request/);
   assert.match(migration, /overlapping leave request/);
   assert.match(migration, /status in \('pending','approved','rejected','cancelled'\)/);
+  assert.match(route, /requiresTbtApproval/);
+  assert.match(route, /guard\.actor\.role_code !== TBT_ROLE/);
+  assert.match(page, /leaveDurationDays/);
+  assert.match(page, /Đơn nghỉ từ 3 ngày trở lên bắt buộc Tổng biên tập phê duyệt/);
+  assert.match(page, /min=\{leaveForm\.startDate\}/);
+  assert.match(longLeaveMigration, /v_days >= 3/);
+  assert.match(longLeaveMigration, /<> 'tong_bien_tap'/);
 });
 
 test("attendance notes combine approved leave and online work and remain blank otherwise", () => {
