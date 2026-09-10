@@ -196,7 +196,16 @@ export async function GET(request: Request) {
       result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name } });
       existing.add(key);
     }
-    return result.sort((a, b) => a.work_date.localeCompare(b.work_date) || (a.staff_users?.full_name ?? "").localeCompare(b.staff_users?.full_name ?? "", "vi"));
+    return result.sort((a, b) => {
+      const byDate = a.work_date.localeCompare(b.work_date);
+      if (byDate) return byDate;
+      if (a.check_in && b.check_in) {
+        const byCheckIn = a.check_in.localeCompare(b.check_in);
+        if (byCheckIn) return byCheckIn;
+      } else if (a.check_in) return -1;
+      else if (b.check_in) return 1;
+      return (a.staff_users?.full_name ?? "").localeCompare(b.staff_users?.full_name ?? "", "vi");
+    });
   };
   return apiJson({
     scope: organizationScope ? "organization" : "personal",

@@ -26,6 +26,8 @@ test("attendance notes combine approved leave and online work and remain blank o
   assert.match(attendance, /parts\.join\("; "\)/);
   assert.doesNotMatch(attendance, /row\.note\?\.replace/);
   assert.match(attendance, /onlineRow\.work_date < from \|\| onlineRow\.work_date > to/);
+  assert.match(attendance, /a\.check_in\.localeCompare\(b\.check_in\)/);
+  assert.match(attendance, /else if \(a\.check_in\) return -1/);
   assert.match(complete, /earliest: Date; latest: Date/);
   assert.match(complete, /instant\.getTime\(\) < current\.earliest\.getTime\(\)/);
   assert.match(complete, /instant\.getTime\(\) > current\.latest\.getTime\(\)/);
