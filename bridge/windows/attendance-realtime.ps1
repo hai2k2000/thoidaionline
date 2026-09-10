@@ -9,11 +9,6 @@ function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null)
   if ($null -ne $Body) { $params.Body = ($Body | ConvertTo-Json -Depth 8 -Compress) }
   Invoke-RestMethod @params
 }
-function Test-AttendanceWindow([datetime]$Time) {
-  $minuteOfDay = ($Time.Hour * 60) + $Time.Minute
-  return ($minuteOfDay -ge 450 -and $minuteOfDay -le 570) -or
-    ($minuteOfDay -ge 990 -and $minuteOfDay -le 1110)
-}
 function Send-Punch($row) { try { Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) | Out-Null; return $true } catch { Add-Content -Path $spoolPath -Value ($row | ConvertTo-Json -Compress); return $false } }
 function Read-DeviceData {
   $zk = New-Object -ComObject "zkemkeeper.ZKEM"; $connected = $false
@@ -52,10 +47,6 @@ while ($true) {
   try { $handledRequest = Complete-PendingRequest } catch { $handledRequest = $false }
   if ($handledRequest) {
     Start-Sleep -Seconds 5
-    continue
-  }
-  if (-not (Test-AttendanceWindow (Get-Date))) {
-    Start-Sleep -Seconds 10
     continue
   }
   try {
