@@ -10,6 +10,8 @@ Completed:
 - Replaced the four-position duty roster with exactly three positions: Xuất bản, Biên tập, Phóng viên.
 - Added authenticated leave requests with leadership approval, conflict checks, cancellation, and audit history.
 - Attendance notes now derive from approved leave and active online-work schedules; no matching context leaves the note blank.
+- Added `/api/leave-requests` for authenticated employee submissions, leadership approvals/rejections, pending cancellation, conflict prevention, and audit history.
+- Attendance pages now include an employee leave form, personal request history, and a leadership approval queue.
 - Merged legacy Biên tập bước 1/2 rows into one Biên tập row, retaining the step 2 assignee when both existed and recording cancellation events for redundant rows.
 - Added a hidden Python launcher and updated the reusable task installer for any future task re-enablement.
 - Updated both Wise Eye scheduled-task actions to use `-WindowStyle Hidden` and the explicit bridge working directory; the realtime Startup launcher was already hidden.
