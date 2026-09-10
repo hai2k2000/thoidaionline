@@ -190,6 +190,7 @@ export async function GET(request: Request) {
     }
     for (const onlineRow of online) {
       if (!onlineRow.staff) continue;
+      if (onlineRow.work_date < from || onlineRow.work_date > to) continue;
       const key = `${onlineRow.staff.id}:${onlineRow.work_date}`;
       if (existing.has(key)) continue;
       result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name } });

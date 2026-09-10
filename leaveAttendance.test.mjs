@@ -23,6 +23,7 @@ test("attendance notes combine approved leave and online work and remain blank o
   assert.match(attendance, /Làm việc online/);
   assert.match(attendance, /parts\.join\("; "\)/);
   assert.doesNotMatch(attendance, /row\.note\?\.replace/);
+  assert.match(attendance, /onlineRow\.work_date < from \|\| onlineRow\.work_date > to/);
   assert.match(page, /Gửi đơn xin nghỉ/);
   assert.match(page, /Duyệt đơn xin nghỉ/);
   assert.match(page, /Đơn xin nghỉ trong khoảng đã chọn/);
