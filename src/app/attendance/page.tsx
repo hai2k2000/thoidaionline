@@ -7,12 +7,27 @@ import { useAuth } from "@/lib/auth";
 
 type AttendanceRow = {
   id: string;
+  user_id: string;
   work_date: string;
   check_in: string | null;
   check_out: string | null;
   note: string | null;
   status: string | null;
   staff_users?: { full_name: string } | null;
+};
+
+type LeaveRequest = {
+  id: string;
+  requester_id: string;
+  start_date: string;
+  end_date: string;
+  start_period: string;
+  end_period: string;
+  leave_type: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  review_note?: string | null;
+  requester?: { full_name: string } | null;
 };
 
 type SyncRequest = {
@@ -76,6 +91,10 @@ export default function AttendancePage() {
   const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([]);
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [leaveApprovals, setLeaveApprovals] = useState<LeaveRequest[]>([]);
+  const [leaveForm, setLeaveForm] = useState({ startDate: selectedDate, endDate: selectedDate, startPeriod: "full", endPeriod: "full", leaveType: "annual", reason: "" });
+  const [leaveBusy, setLeaveBusy] = useState(false);
   const isOrganizationView = pathname === "/attendance" && user?.role_code === "admin";
 
   const loadSyncStatus = useCallback(async () => {
@@ -141,16 +160,39 @@ export default function AttendancePage() {
     setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi.`}`);
   }, [isOrganizationView, period, selectedDate]);
 
+  const loadLeaveRequests = useCallback(async () => {
+    const response = await fetch("/api/leave-requests", { cache: "no-store" });
+    const payload = await response.json().catch(() => null) as { mine?: LeaveRequest[]; approvals?: LeaveRequest[] } | null;
+    if (response.ok && payload) { setLeaveRequests(payload.mine ?? []); setLeaveApprovals(payload.approvals ?? []); }
+  }, []);
+
+  const submitLeave = async (event: React.FormEvent) => {
+    event.preventDefault(); setLeaveBusy(true);
+    try {
+      const response = await fetch("/api/leave-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(leaveForm) });
+      if (!response.ok) throw new Error();
+      setLeaveForm((current) => ({ ...current, reason: "" })); await loadLeaveRequests();
+    } finally { setLeaveBusy(false); }
+  };
+
+  const reviewLeave = async (request: LeaveRequest, action: "approve" | "reject") => {
+    const note = action === "reject" ? window.prompt("Nhập lý do từ chối:", "")?.trim() ?? "" : "";
+    if (action === "reject" && note.length < 3) return;
+    setLeaveBusy(true);
+    try { await fetch("/api/leave-requests", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: request.id, action, note }) }); await loadLeaveRequests(); await loadAttendance(); } finally { setLeaveBusy(false); }
+  };
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
     if (pathname === "/attendance" && user.role_code !== "admin") return void router.push("/my-attendance");
     if (!canAccessModule("hr")) return void router.push("/");
+    void loadLeaveRequests();
     const t = setTimeout(() => {
       void loadAttendance();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView, loadAttendance]);
+  }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView, loadAttendance, loadLeaveRequests]);
 
   useEffect(() => {
     if (!isOrganizationView) return;
@@ -172,6 +214,7 @@ export default function AttendancePage() {
     const map = new Map<string, { days: Set<string>; hours: number }>();
 
     monthlyRows.forEach((r) => {
+      if (r.status === "leave") return;
       const name = r.staff_users?.full_name ?? "-";
       if (!map.has(name)) map.set(name, { days: new Set<string>(), hours: 0 });
       const current = map.get(name)!;
@@ -200,6 +243,27 @@ export default function AttendancePage() {
           <div className="mb-4">
             <h1 className="text-2xl font-bold">{isOrganizationView ? "Chấm công toàn cơ quan" : "Chấm công của tôi"}</h1>
           </div>
+
+          <section className="mb-4 grid gap-4 lg:grid-cols-2">
+            <form onSubmit={submitLeave} className="rounded-xl border bg-white p-4">
+              <h2 className="text-lg font-semibold">Xin nghỉ</h2>
+              <p className="mt-1 text-sm text-slate-600">Gửi đề nghị nghỉ để trưởng phòng hoặc lãnh đạo xem xét. Chỉ đơn đã duyệt mới được đưa vào ghi chú chấm công.</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className="text-sm">Từ ngày<input type="date" required value={leaveForm.startDate} onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })} className="mt-1 w-full rounded border px-3 py-2" /></label>
+                <label className="text-sm">Đến ngày<input type="date" required value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} className="mt-1 w-full rounded border px-3 py-2" /></label>
+                <label className="text-sm">Loại nghỉ<select value={leaveForm.leaveType} onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })} className="mt-1 w-full rounded border px-3 py-2"><option value="annual">Phép năm</option><option value="sick">Nghỉ ốm</option><option value="unpaid">Không lương</option><option value="personal">Việc riêng</option><option value="business">Công tác</option></select></label>
+                <label className="text-sm">Thời gian<select value={leaveForm.startPeriod} onChange={(e) => setLeaveForm({ ...leaveForm, startPeriod: e.target.value, endPeriod: e.target.value })} className="mt-1 w-full rounded border px-3 py-2"><option value="full">Cả ngày</option><option value="morning">Buổi sáng</option><option value="afternoon">Buổi chiều</option></select></label>
+              </div>
+              <label className="mt-2 block text-sm">Lý do<textarea required minLength={3} maxLength={1000} value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
+              <button disabled={leaveBusy} className="mt-3 rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Gửi đơn xin nghỉ</button>
+            </form>
+            <div className="rounded-xl border bg-white p-4">
+              <h2 className="text-lg font-semibold">Đơn xin nghỉ của tôi</h2>
+              <div className="mt-2 space-y-2 text-sm">{leaveRequests.slice(0, 5).map((item) => <div key={item.id} className="rounded border p-2"><div className="font-semibold">{item.start_date} → {item.end_date} · {item.status === "pending" ? "Chờ duyệt" : item.status === "approved" ? "Đã duyệt" : item.status === "rejected" ? "Từ chối" : "Đã hủy"}</div><div className="text-slate-600">{item.reason}{item.review_note ? ` · ${item.review_note}` : ""}</div></div>)}{leaveRequests.length === 0 ? <p className="text-slate-500">Chưa có đơn xin nghỉ.</p> : null}</div>
+            </div>
+          </section>
+
+          {leaveApprovals.length ? <section className="mb-4 rounded-xl border bg-white p-4"><h2 className="text-lg font-semibold">Duyệt đơn xin nghỉ</h2><div className="mt-2 space-y-2 text-sm">{leaveApprovals.map((item) => <div key={item.id} className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-semibold">{item.requester?.full_name ?? "Nhân viên"} · {item.start_date} → {item.end_date}</div><div className="text-slate-600">{item.reason}</div></div><div className="flex gap-2"><button type="button" disabled={leaveBusy} onClick={() => void reviewLeave(item, "approve")} className="rounded bg-emerald-700 px-3 py-2 font-semibold text-white disabled:opacity-50">Duyệt</button><button type="button" disabled={leaveBusy} onClick={() => void reviewLeave(item, "reject")} className="rounded border border-red-300 px-3 py-2 font-semibold text-red-700 disabled:opacity-50">Từ chối</button></div></div>)}</div></section> : null}
 
         <section className="rounded-xl border bg-white p-4">
           {isOrganizationView ? (
@@ -286,7 +350,7 @@ export default function AttendancePage() {
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
                   <td className="px-3 py-2 text-right font-semibold">{workedHours(r.check_in, r.check_out).toFixed(2)}</td>
                   <td className="px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
-                  <td className="min-w-64 px-3 py-2">{r.note ?? "-"}</td>
+                  <td className="min-w-64 px-3 py-2">{r.note ?? ""}</td>
                 </tr>
               ))}
               {rows.length === 0 ? (

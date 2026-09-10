@@ -1,13 +1,15 @@
 Current Phase: Attendance bridge operations
-Current Task: COMPLETE — reduce duty roster to three positions
+Current Task: COMPLETE — leave requests and attendance notes
 
-Latest Task: COMPLETE — three-position duty roster
+Latest Task: COMPLETE — approved leave and online work notes
 
-Latest Update: COMPLETE — Xuất bản, Biên tập, Phóng viên are now the only duty positions
+Latest Update: COMPLETE — approved leave and online work are shown in attendance notes
 
 Completed:
 - Disabled the Wise Eye minute Scheduled Task because the 32-bit zkemkeeper COM host creates `conhost.exe` even with hidden launch flags; realtime polling and daily reconciliation remain enabled.
 - Replaced the four-position duty roster with exactly three positions: Xuất bản, Biên tập, Phóng viên.
+- Added authenticated leave requests with leadership approval, conflict checks, cancellation, and audit history.
+- Attendance notes now derive from approved leave and active online-work schedules; no matching context leaves the note blank.
 - Merged legacy Biên tập bước 1/2 rows into one Biên tập row, retaining the step 2 assignee when both existed and recording cancellation events for redundant rows.
 - Added a hidden Python launcher and updated the reusable task installer for any future task re-enablement.
 - Updated both Wise Eye scheduled-task actions to use `-WindowStyle Hidden` and the explicit bridge working directory; the realtime Startup launcher was already hidden.
