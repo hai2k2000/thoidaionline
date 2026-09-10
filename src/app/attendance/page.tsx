@@ -199,13 +199,15 @@ export default function AttendancePage() {
   }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView, loadAttendance, loadLeaveRequests]);
 
   useEffect(() => {
-    if (!isOrganizationView) return;
-    void loadSyncStatus();
+    if (!user) return;
+    if (isOrganizationView) void loadSyncStatus();
     const interval = window.setInterval(() => {
-      void loadSyncStatus().then(() => void loadAttendance());
-    }, 10000);
+      if (document.visibilityState !== "visible") return;
+      void loadAttendance();
+      if (isOrganizationView) void loadSyncStatus();
+    }, 5000);
     return () => window.clearInterval(interval);
-  }, [isOrganizationView, loadAttendance, loadSyncStatus]);
+  }, [user, isOrganizationView, loadAttendance, loadSyncStatus]);
 
   const stats = useMemo(() => {
     const total = rows.length;

@@ -197,13 +197,17 @@ export async function GET(request: Request) {
       existing.add(key);
     }
     return result.sort((a, b) => {
-      const byDate = a.work_date.localeCompare(b.work_date);
+      const aLastPunch = a.check_out ?? a.check_in;
+      const bLastPunch = b.check_out ?? b.check_in;
+      if (aLastPunch && bLastPunch) {
+        const byDate = b.work_date.localeCompare(a.work_date);
+        if (byDate) return byDate;
+        const byLatestPunch = bLastPunch.localeCompare(aLastPunch);
+        if (byLatestPunch) return byLatestPunch;
+      } else if (aLastPunch) return -1;
+      else if (bLastPunch) return 1;
+      const byDate = b.work_date.localeCompare(a.work_date);
       if (byDate) return byDate;
-      if (a.check_in && b.check_in) {
-        const byCheckIn = a.check_in.localeCompare(b.check_in);
-        if (byCheckIn) return byCheckIn;
-      } else if (a.check_in) return -1;
-      else if (b.check_in) return 1;
       return (a.staff_users?.full_name ?? "").localeCompare(b.staff_users?.full_name ?? "", "vi");
     });
   };
