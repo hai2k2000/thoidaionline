@@ -280,7 +280,7 @@ export default function AttendancePage() {
                   Máy 1 · realtime 07:30–09:30 và 16:30–18:30 · đối soát lúc 18:30.
                 </p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Ngoài khung giờ, yêu cầu “Đồng bộ ngay” sẽ chờ đến khung đồng bộ kế tiếp.
+                  Nút “Đồng bộ ngay” được máy Windows xử lý nền trong ít giây, kể cả ngoài khung realtime.
                 </p>
                 <p className="mt-1 text-xs font-semibold text-slate-700" role="status" aria-live="polite">
                   {syncMessage || (syncRequests[0]

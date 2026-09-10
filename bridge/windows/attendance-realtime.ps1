@@ -4,6 +4,11 @@ $apiBase = "https://www.thoidai.online"; $deviceId = "wise-eye-on-39-machine-1";
 $statePath = "C:\WiseEyeOn39\bridge\realtime-seen.json"; $spoolPath = "C:\WiseEyeOn39\bridge\realtime-spool.jsonl"
 $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json; $headers = @{ "x-attendance-bridge-token" = [string]$config.bridgeToken }
 $seen = @{}; if (Test-Path $statePath) { (Get-Content $statePath -Raw | ConvertFrom-Json).psobject.Properties | ForEach-Object { $seen[$_.Name] = $true } }
+function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null) {
+  $params = @{ Uri = "$apiBase$Path"; Method = $Method; Headers = $headers; ContentType = "application/json" }
+  if ($null -ne $Body) { $params.Body = ($Body | ConvertTo-Json -Depth 8 -Compress) }
+  Invoke-RestMethod @params
+}
 function Test-AttendanceWindow([datetime]$Time) {
   $minuteOfDay = ($Time.Hour * 60) + $Time.Minute
   return ($minuteOfDay -ge 450 -and $minuteOfDay -le 570) -or
@@ -24,9 +29,33 @@ function Read-DeviceData {
     return $rows
   } finally { if ($connected) { [void]$zk.Disconnect() } }
 }
+function Complete-PendingRequest {
+  $pending = Invoke-BridgeApi "/api/attendance/sync/pending"
+  if (-not $pending -or -not $pending.request) { return $false }
+  try {
+    $punches = @(Read-DeviceData)
+    $rangeStart = [string]$pending.request.result.range_start
+    $rangeEnd = [string]$pending.request.result.range_end
+    if ($rangeStart -and $rangeEnd) {
+      $punches = @($punches | Where-Object {
+        $date = ([datetimeoffset]::Parse($_.punched_at)).ToString("yyyy-MM-dd")
+        $date -ge $rangeStart -and $date -le $rangeEnd
+      })
+    }
+    Invoke-BridgeApi "/api/attendance/sync/complete" "POST" @{ request_id = $pending.request.id; device_id = $deviceId; punches = $punches } | Out-Null
+  } catch {
+    try { Invoke-BridgeApi "/api/attendance/sync/fail" "POST" @{ request_id = $pending.request.id; error = $_.Exception.Message } | Out-Null } catch { }
+  }
+  return $true
+}
 while ($true) {
+  try { $handledRequest = Complete-PendingRequest } catch { $handledRequest = $false }
+  if ($handledRequest) {
+    Start-Sleep -Seconds 5
+    continue
+  }
   if (-not (Test-AttendanceWindow (Get-Date))) {
-    Start-Sleep -Seconds 30
+    Start-Sleep -Seconds 10
     continue
   }
   try {
