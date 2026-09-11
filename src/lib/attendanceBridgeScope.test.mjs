@@ -78,6 +78,12 @@ test("spooled punches are replayed only inside the configured realtime window", 
   assert.match(realtimeBridge, /if \(-not \(Test-RealtimeWindow\)\)[\s\S]*?continue[\s\S]*?Replay-Spool/);
 });
 
+test("stale spooled punches are preserved for later reconciliation instead of being dropped", () => {
+  assert.match(realtimeBridge, /deferredSpoolPath/);
+  assert.match(realtimeBridge, /Add-ToDeferredSpool/);
+  assert.match(realtimeBridge, /Test-RecentPunch \$row\)[\s\S]*?Add-ToDeferredSpool/);
+});
+
 test("new sync requests recognize a request that is currently completing", () => {
   assert.match(sync, /\["pending", "running", "completing"\]/);
   assert.match(dailyRequest, /\["pending", "running", "completing"\]/);

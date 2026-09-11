@@ -1,7 +1,7 @@
 param([string]$ConfigPath = "C:\WiseEyeOn39\bridge\config.json")
 $ErrorActionPreference = "Stop"
 $apiBase = "https://www.thoidai.online"; $deviceId = "wise-eye-on-39-machine-1"; $deviceIp = "192.168.79.201"; $devicePort = 4370; $machineNumber = 1
-$statePath = "C:\WiseEyeOn39\bridge\realtime-seen.json"; $spoolPath = "C:\WiseEyeOn39\bridge\realtime-spool.jsonl"
+$statePath = "C:\WiseEyeOn39\bridge\realtime-seen.json"; $spoolPath = "C:\WiseEyeOn39\bridge\realtime-spool.jsonl"; $deferredSpoolPath = "C:\WiseEyeOn39\bridge\realtime-deferred.jsonl"
 $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json; $headers = @{ "x-attendance-bridge-token" = [string]$config.bridgeToken }
 $seen = @{}; if (Test-Path $statePath) { (Get-Content $statePath -Raw | ConvertFrom-Json).psobject.Properties | ForEach-Object { $seen[$_.Name] = $true } }
 function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null) {
@@ -27,6 +27,11 @@ function Add-ToSpool($row) {
     Add-Content -Path $spoolPath -Value ($row | ConvertTo-Json -Compress)
   }
 }
+function Add-ToDeferredSpool($row) {
+  $key = Punch-Key $row
+  $exists = if (Test-Path $deferredSpoolPath) { @(Get-Content $deferredSpoolPath | Where-Object { try { (Punch-Key ($_ | ConvertFrom-Json)) -eq $key } catch { $false } }).Count -gt 0 } else { $false }
+  if (-not $exists) { Add-Content -Path $deferredSpoolPath -Value ($row | ConvertTo-Json -Compress) }
+}
 function Send-PunchCore($row) {
   try { Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) | Out-Null; return $true } catch { return $false }
 }
@@ -40,6 +45,7 @@ function Replay-Spool {
   $remaining = @()
   foreach ($row in $rows) {
     if (Test-RecentPunch $row) { if (-not (Send-PunchCore $row)) { $remaining += $row } }
+    else { Add-ToDeferredSpool $row }
   }
   if ($remaining.Count) { $remaining | ForEach-Object { $_ | ConvertTo-Json -Compress } | Set-Content -Path $spoolPath }
   elseif (Test-Path $spoolPath) { Set-Content -Path $spoolPath -Value "" }
