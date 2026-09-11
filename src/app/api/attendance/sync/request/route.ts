@@ -1,6 +1,6 @@
 import { apiError, apiJson } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { bridgeAuthorized } from "@/lib/attendanceBridgeAuth";
+import { bridgeAuthorized, configuredAttendanceDeviceId } from "@/lib/attendanceBridgeAuth";
 
 export async function POST(request: Request) {
   if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       status: "pending",
       result: {
         source: "daily",
-        device_id: "wise-eye-on-39-machine-1",
+        device_id: configuredAttendanceDeviceId(),
         period: "day",
         range_start: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }),
         range_end: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }),

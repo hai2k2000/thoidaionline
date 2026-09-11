@@ -1,6 +1,6 @@
 import { apiError, apiJson, readJsonObject } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { bridgeAuthorized } from "@/lib/attendanceBridgeAuth";
+import { bridgeAuthorized, configuredAttendanceDeviceId } from "@/lib/attendanceBridgeAuth";
 
 type Punch = {
   enroll_number: string;
@@ -31,10 +31,19 @@ export async function POST(request: Request) {
 
   const { data: requestRow, error: requestError } = await serverSupabase
     .from("attendance_sync_requests")
-    .select("id,status")
+    .select("id,status,result")
     .eq("id", requestId)
     .maybeSingle();
-  if (requestError || !requestRow || requestRow.status !== "running") return apiError("conflict", 409);
+  const configuredDeviceId = configuredAttendanceDeviceId();
+  const requestResult = requestRow?.result as { device_id?: string; range_start?: string; range_end?: string } | null;
+  const requestDeviceId = requestResult?.device_id ?? "";
+  const rangeStart = requestResult?.range_start ?? "";
+  const rangeEnd = requestResult?.range_end ?? "";
+  if (requestError || !requestRow || requestRow.status !== "running" || requestDeviceId !== configuredDeviceId || deviceId !== configuredDeviceId || !/^\d{4}-\d{2}-\d{2}$/.test(rangeStart) || !/^\d{4}-\d{2}-\d{2}$/.test(rangeEnd)) return apiError("conflict", 409);
+  if (punches.some((punch) => {
+    const punchDate = new Date(punch.punched_at).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+    return punchDate < rangeStart || punchDate > rangeEnd;
+  })) return apiError("invalid_request", 400);
 
   const payload = punches.map((punch) => ({
     device_id: deviceId,

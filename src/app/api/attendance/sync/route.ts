@@ -1,6 +1,6 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { bridgeAuthorized } from "@/lib/attendanceBridgeAuth";
+import { bridgeAuthorized, configuredAttendanceDeviceId } from "@/lib/attendanceBridgeAuth";
 
 const isAdmin = (actor: { role_code: string }) => actor.role_code === "admin";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -21,11 +21,12 @@ export async function POST(request: Request) {
   if (!guard.ok) return guard.response;
   if (!isAdmin(guard.actor)) return apiError("forbidden", 403);
   const body = await readJsonObject(request);
-  const deviceId = typeof body?.device_id === "string" ? body.device_id : "wise-eye-on-39-machine-1";
+  const configuredDeviceId = configuredAttendanceDeviceId();
+  const deviceId = typeof body?.device_id === "string" ? body.device_id : configuredDeviceId;
   const period = typeof body?.period === "string" ? body.period : "day";
   const rangeStart = typeof body?.range_start === "string" ? body.range_start : "";
   const rangeEnd = typeof body?.range_end === "string" ? body.range_end : "";
-  if (!["day", "week", "month"].includes(period) || !DATE_PATTERN.test(rangeStart) || !DATE_PATTERN.test(rangeEnd) || rangeStart > rangeEnd) {
+  if (deviceId !== configuredDeviceId || !["day", "week", "month"].includes(period) || !DATE_PATTERN.test(rangeStart) || !DATE_PATTERN.test(rangeEnd) || rangeStart > rangeEnd) {
     return apiError("invalid_request", 400);
   }
   const { data, error } = await serverSupabase

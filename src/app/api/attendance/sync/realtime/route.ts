@@ -1,6 +1,6 @@
 import { apiError, apiJson, readJsonObject } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { bridgeAuthorized } from "@/lib/attendanceBridgeAuth";
+import { bridgeAuthorized, configuredAttendanceDeviceId, vietnamDate } from "@/lib/attendanceBridgeAuth";
 
 const isRealtimeWindow = () => {
   const now = new Date();
@@ -17,7 +17,10 @@ export async function POST(request: Request) {
   const enroll = typeof body?.enroll_number === "string" ? body.enroll_number : "";
   const punchedAt = typeof body?.punched_at === "string" ? body.punched_at : "";
   const deviceId = typeof body?.device_id === "string" ? body.device_id : "";
-  if (!enroll || !punchedAt || !deviceId || !Number.isFinite(Date.parse(punchedAt))) return apiError("invalid_request", 400);
+  const configuredDeviceId = configuredAttendanceDeviceId();
+  const instant = new Date(punchedAt);
+  const localDate = vietnamDate(instant);
+  if (!enroll || enroll.length > 64 || deviceId !== configuredDeviceId || !Number.isFinite(instant.valueOf()) || localDate !== vietnamDate() || instant.getTime() > Date.now() + 10 * 60 * 1000) return apiError("invalid_request", 400);
   const { error: punchError } = await serverSupabase.from("attendance_punches").upsert({
     device_id: deviceId, enroll_number: enroll, punched_at: punchedAt,
     verify_mode: typeof body?.verify_mode === "number" ? body.verify_mode : null,
@@ -29,7 +32,6 @@ export async function POST(request: Request) {
   if (userError) return apiError("operation_failed", 500);
   const user = users?.[0];
   if (!user) return apiJson({ ok: true, matched: false });
-  const localDate = new Date(punchedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
   const { data: punches, error: listError } = await serverSupabase.from("attendance_punches").select("punched_at").eq("device_id", deviceId).eq("enroll_number", enroll).order("punched_at", { ascending: true }).limit(20000);
   if (listError) return apiError("operation_failed", 500);
   const instants = (punches ?? []).map((p) => new Date(p.punched_at)).filter((instant) => instant.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }) === localDate).sort((a, b) => a.getTime() - b.getTime());
