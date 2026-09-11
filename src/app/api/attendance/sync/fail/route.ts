@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     .from("attendance_sync_requests")
     .update({ status: "failed", completed_at: new Date().toISOString(), error })
     .eq("id", requestId)
-    .eq("status", "running")
+    .in("status", ["running", "completing"])
     .select("id,status,completed_at,error")
     .maybeSingle();
   if (updateError) return apiError("operation_failed", 500);

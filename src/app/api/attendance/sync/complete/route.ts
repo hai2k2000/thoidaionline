@@ -44,6 +44,11 @@ export async function POST(request: Request) {
     const punchDate = new Date(punch.punched_at).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
     return punchDate < rangeStart || punchDate > rangeEnd;
   })) return apiError("invalid_request", 400);
+  const { data: claimed, error: claimError } = await serverSupabase.from("attendance_sync_requests")
+    .update({ status: "completing", started_at: new Date().toISOString() })
+    .eq("id", requestId).eq("status", "running")
+    .select("id,status,result").maybeSingle();
+  if (claimError || !claimed || claimed.status !== "completing") return apiError("conflict", 409);
 
   const payload = punches.map((punch) => ({
     device_id: deviceId,
@@ -105,7 +110,7 @@ export async function POST(request: Request) {
     .from("attendance_sync_requests")
     .update({ status: "succeeded", completed_at: new Date().toISOString(), result })
     .eq("id", requestId)
-    .eq("status", "running");
+    .eq("status", "completing");
   if (doneError) return apiError("operation_failed", 500);
   return apiJson({ ok: true, result });
 }
@@ -115,6 +120,6 @@ async function failRequest(requestId: string, error: string) {
     status: "failed",
     completed_at: new Date().toISOString(),
     error: error.slice(0, 500),
-  }).eq("id", requestId).eq("status", "running");
+  }).eq("id", requestId).in("status", ["running", "completing"]);
   return apiError("operation_failed", 500);
 }

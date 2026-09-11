@@ -18,6 +18,13 @@ test("batch completion validates its queued device and date range", () => {
   assert.match(complete, /punchDate < rangeStart \|\| punchDate > rangeEnd/);
 });
 
+test("batch completion atomically claims a running request before ingesting", () => {
+  assert.match(complete, /status: "completing"/);
+  assert.match(complete, /eq\("status", "running"\)/);
+  assert.match(complete, /claimed\.status !== "completing"/);
+  assert.match(complete, /eq\("status", "completing"\)/);
+});
+
 test("admin sync requests cannot select an arbitrary attendance device", () => {
   assert.match(sync, /configuredAttendanceDeviceId/);
   assert.match(sync, /deviceId !== configuredDeviceId/);
