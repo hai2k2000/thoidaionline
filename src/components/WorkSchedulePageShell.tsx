@@ -36,9 +36,15 @@ const role = (person: Person) =>
 export default function WorkSchedulePageShell({
   people,
   userLabel,
+  scheduleScope = "all",
+  title = "Lịch công tác",
+  description = "Lịch toàn cơ quan · TBT · Phó TBT · Trưởng phòng · Phóng viên",
 }: {
   people: Person[];
   userLabel: string;
+  scheduleScope?: "all" | "self";
+  title?: string;
+  description?: string;
 }) {
   const [period, setPeriod] = useState<"day" | "week" | "month">("week");
   const [anchor, setAnchor] = useState(iso(new Date()));
@@ -96,11 +102,11 @@ export default function WorkSchedulePageShell({
   }, [anchor, period, week, weeks]);
 
   useEffect(() => {
-    fetch(`/api/work-schedule?from=${range.from}&to=${range.to}`)
+    fetch(`/api/work-schedule?from=${range.from}&to=${range.to}&scope=${scheduleScope}`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((body) => setRows(body.rows ?? []))
       .catch(() => setRows([]));
-  }, [range]);
+  }, [range, scheduleScope]);
 
   const filteredPeople = useMemo(() => {
     const query = personQuery.trim().toLocaleLowerCase("vi-VN");
@@ -129,10 +135,8 @@ export default function WorkSchedulePageShell({
             <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
               Lịch làm việc
             </p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight">Lịch công tác</h1>
-            <p className="text-sm text-slate-600">
-              Lịch toàn cơ quan · TBT · Phó TBT · Trưởng phòng · Phóng viên
-            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">{title}</h1>
+            <p className="text-sm text-slate-600">{description}</p>
           </header>
 
           <section className="mt-3 rounded-xl border bg-white p-4 shadow-sm">
@@ -205,7 +209,7 @@ export default function WorkSchedulePageShell({
               </button>
             </div>
 
-            <div className="mt-5 border-t pt-4">
+            {scheduleScope === "all" ? <div className="mt-5 border-t pt-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -308,7 +312,7 @@ export default function WorkSchedulePageShell({
                   </div>
                 </div>
               ) : null}
-            </div>
+            </div> : null}
           </section>
 
           <section className="table-scroll mt-3 rounded-xl border bg-white shadow-sm">

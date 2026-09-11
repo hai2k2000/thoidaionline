@@ -32,7 +32,7 @@ const labels = {
   permissions: "Ph\u00e2n quy\u1ec1n",
   "evaluation-rubrics": "Bộ tiêu chí đánh giá",
   "evaluation-cycles": "Quản trị kỳ đánh giá",
-  "work-schedule": "Lịch cơ quan",
+  "work-schedule": "Lịch làm việc",
   "work-schedule-leader": "Lịch công tác lãnh đạo",
   "work-schedule-staff": "Kế hoạch nhân viên",
   "work-schedule-admin": "Quản trị lịch công tác",

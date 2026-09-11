@@ -9,7 +9,10 @@ Latest Authentication Fix: COMPLETE — first-login accounts now use the documen
 
 Latest Attendance Workflow Update: COMPLETE — business-trip requests are clearly available beside leave requests
 
+Latest Work Schedule Privacy: COMPLETE — regular employees can only view their own plans
+
 Completed:
+- Restricted employee work-schedule queries, pages, and navigation so regular employees only receive their own plan; organization and leadership schedules remain available to authorized leaders and admin.
 - Clarified the existing business-trip request flow in employee, approval, and admin attendance views; approved trips continue to populate attendance notes and use the same date-range and approval rules as leave.
 - Repaired 21 active first-login accounts that still used the previous default and aligned future account creation with `Thoidai@123456`; accounts with changed passwords were excluded.
 - Disabled the Wise Eye minute Scheduled Task because the 32-bit zkemkeeper COM host creates `conhost.exe` even with hidden launch flags; realtime polling and daily reconciliation remain enabled.

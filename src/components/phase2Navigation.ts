@@ -25,6 +25,7 @@ export type Phase2Navigation = {
 export function getPhase2Navigation(
   access: Phase2NavigationAccess,
 ): Phase2Navigation {
+  const canViewAllSchedules = access.isDepartmentManager === true || ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode);
   return {
     primary: [
       ...(access.canAssignTask || ["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
@@ -41,7 +42,7 @@ export function getPhase2Navigation(
         : []),
       { id: "evaluation-summary", href: "/evaluation-summary" },
       { id: "work-schedule", href: "/work-schedule" },
-      { id: "work-schedule-leader", href: "/work-schedule/leadership" },
+      ...(canViewAllSchedules ? [{ id: "work-schedule-leader", href: "/work-schedule/leadership" } as const] : []),
       { id: "work-schedule-staff", href: "/work-schedule/staff" },
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
