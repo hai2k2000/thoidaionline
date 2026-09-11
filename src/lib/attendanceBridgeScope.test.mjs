@@ -92,6 +92,12 @@ test("realtime spool rewrites are single-instance and use an atomic replacement 
   assert.match(realtimeBridge, /Move-Item -LiteralPath \$tempPath -Destination \$Path -Force/);
 });
 
+test("realtime delivery does not discard punches when the API explicitly skips them", () => {
+  assert.match(realtimeBridge, /\$response = Invoke-RestMethod/);
+  assert.match(realtimeBridge, /\$response\.skipped -eq \$true/);
+  assert.match(realtimeBridge, /return \$false/);
+});
+
 test("new sync requests recognize a request that is currently completing", () => {
   assert.match(sync, /\["pending", "running", "completing"\]/);
   assert.match(dailyRequest, /\["pending", "running", "completing"\]/);

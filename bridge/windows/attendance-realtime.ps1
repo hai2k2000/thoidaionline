@@ -45,7 +45,11 @@ function Write-SpoolRows([string]$Path, $rows) {
   }
 }
 function Send-PunchCore($row) {
-  try { Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) | Out-Null; return $true } catch { return $false }
+  try {
+    $response = Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress)
+    if ($response.skipped -eq $true) { return $false }
+    return $true
+  } catch { return $false }
 }
 function Send-Punch($row) {
   if (Send-PunchCore $row) { return $true }
