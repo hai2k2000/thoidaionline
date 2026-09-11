@@ -10,26 +10,32 @@ type Row = {
   work_date: string;
   staff: { username: string; full_name: string } | null;
 };
+type View = "day"|"week"|"month";
 const labels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 const fmt = (iso: string) => {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 };
-export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel: string; initialView: "day" | "week" | "month" }) {
+export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel: string; initialView: View }) {
   const router = useRouter();
   const { logout } = useAuth();
-  const [view, setView] = useState<"day" | "week" | "month">(initialView);
+  const [view, setView] = useState<View>(initialView);
   const [anchor, setAnchor] = useState(new Date().toISOString().slice(0, 10));
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);
   const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   useEffect(() => {
+    setLoading(true);
+    setLoadError(false);
     fetch(`/api/online-work-schedule?from=${range.from}&to=${range.to}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((b) => setRows(b.rows ?? []))
-      .catch(() => setRows([]));
+      .catch(() => { setRows([]); setLoadError(true); })
+      .finally(() => setLoading(false));
   }, [range.from, range.to]);
   const cards = useMemo(() => {
-    const map = new Map<string, Row[]>();
+    const map = new Map<string,Row[]>();
     for (const row of rows)
       map.set(row.work_date, [...(map.get(row.work_date) ?? []), row]);
     const out: [string, Row[]][] = [];
@@ -109,7 +115,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
                 ))}
               </div>
             </div>
-            <div
+            {loading ? <p className="mt-4 rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Đang tải lịch làm việc online…</p> : loadError ? <p role="alert" className="mt-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">Không tải được lịch làm việc online. Vui lòng thử lại.</p> : <div
               className={`mt-3 grid gap-2 ${view === "month" ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-3"}`}
             >
               {cards.map(([date, assignments]) => (
@@ -126,7 +132,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
                     {assignments.length ? "Cả ngày" : isWeekend(date) ? "Mặc định cả tổ" : "—"}
                   </p>
                   <div className="text-sm">
-                    <span className="text-slate-500">Người làm trực tuyến:</span>
+                    <span className="text-slate-500">Người làm online:</span>
                     {assignments.length ? (
                       <ul className="mt-1 list-disc space-y-1 pl-5">
                         {assignments.map(
@@ -145,7 +151,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
                   </div>
                 </article>
               ))}
-            </div>
+            </div>}
           </section>
         </main>
       </div>

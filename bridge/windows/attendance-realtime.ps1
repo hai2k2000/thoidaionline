@@ -43,10 +43,23 @@ function Complete-PendingRequest {
   }
   return $true
 }
+function Test-RealtimeWindow {
+  $now = Get-Date
+  $morningStart = $now.Date.AddHours(7.5)
+  $morningEnd = $now.Date.AddHours(9.5)
+  $afternoonStart = $now.Date.AddHours(16.5)
+  $afternoonEnd = $now.Date.AddHours(18.5)
+  return ($now -ge $morningStart -and $now -le $morningEnd) -or ($now -ge $afternoonStart -and $now -le $afternoonEnd)
+}
 while ($true) {
   try { $handledRequest = Complete-PendingRequest } catch { $handledRequest = $false }
   if ($handledRequest) {
     Start-Sleep -Seconds 5
+    continue
+  }
+  # Keep the bridge alive, but avoid opening Wise Eye outside realtime windows.
+  if (-not (Test-RealtimeWindow)) {
+    Start-Sleep -Seconds 30
     continue
   }
   try {

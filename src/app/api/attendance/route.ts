@@ -1,14 +1,8 @@
 import { apiError, apiJson, requireReadActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
+import { FOREIGN_REPORTERS, isForeignReporter } from "@/lib/onlineWorkLanguage.mjs";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-type DemoUser = {
-  id: string;
-  full_name: string;
-  active: boolean;
-  roles?: { code?: string | null } | Array<{ code?: string | null }> | null;
-};
 
 type AttendanceRow = {
   id: string;
@@ -35,36 +29,6 @@ const isMissingAttendanceTable = (error: { code?: string | null; message?: strin
     || error.message?.includes("schema cache") === true
     || error.message?.includes("Could not find the table") === true
   );
-
-const roleCode = (user: DemoUser) => {
-  const role = Array.isArray(user.roles) ? user.roles[0] : user.roles;
-  return role?.code ?? "";
-};
-
-const toTime = (minutes: number) =>
-  `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}:00`;
-
-const generateDemoDayRows = (users: DemoUser[], date: string): AttendanceRow[] => users.map((user, index) => ({
-  id: `demo-${user.id}-${date}`,
-  user_id: user.id,
-  work_date: date,
-  check_in: toTime(8 * 60 + 2 + (index % 35)),
-  check_out: toTime(17 * 60 + 8 + (index % 40)),
-  note: "[DEMO] Chấm công mẫu",
-  status: "Có mặt",
-  staff_users: { full_name: user.full_name },
-}));
-
-const generateDemoRangeRows = (users: DemoUser[], fromDate: string, toDate: string): AttendanceRow[] => {
-  const from = new Date(`${fromDate}T12:00:00Z`);
-  const to = new Date(`${toDate}T12:00:00Z`);
-  const rows: AttendanceRow[] = [];
-  for (const date = new Date(from); date <= to; date.setUTCDate(date.getUTCDate() + 1)) {
-    if (date.getUTCDay() === 0) continue;
-    rows.push(...generateDemoDayRows(users, date.toISOString().slice(0, 10)));
-  }
-  return rows;
-};
 
 export async function GET(request: Request) {
   const guard = await requireReadActor();
@@ -124,23 +88,10 @@ export async function GET(request: Request) {
 
   const [dayResult, monthResult] = await Promise.all([dayQuery, monthQuery]);
   if (isMissingAttendanceTable(dayResult.error) || isMissingAttendanceTable(monthResult.error)) {
-    const usersResult = await serverSupabase
-      .from("staff_users")
-      .select("id,full_name,active,roles(code)")
-      .eq("active", true)
-      .order("full_name", { ascending: true });
-    if (usersResult.error) return apiError("operation_failed", 500);
-
-    let users = (usersResult.data ?? []) as unknown as DemoUser[];
-    users = users.filter((user) => roleCode(user) !== "tong_bien_tap");
+    // Keep the missing-schema path scoped to the signed-in user while reporting the service error.
+    let users: Array<{ id: string }> = [];
     if (!organizationScope) users = users.filter((user) => user.id === guard.actor.id);
-    return apiJson({
-      scope: organizationScope ? "organization" : "personal",
-      demo: true,
-      rows: generateDemoRangeRows(users, rangeStart, rangeEnd),
-      monthlyRows: generateDemoRangeRows(users, monthStart, period === "day" ? date : rangeEnd),
-      message: `Đã nạp dữ liệu DEMO chấm công cho ${users.length} nhân sự (trừ Tổng biên tập).`,
-    });
+    return apiError("operation_failed", 503);
   }
 
   if (dayResult.error || monthResult.error) return apiError("operation_failed", 500);
@@ -160,12 +111,38 @@ export async function GET(request: Request) {
   if (leaveResult.error || onlineResult.error) return apiError("operation_failed", 500);
   const leaves = (leaveResult.data ?? []) as unknown as Array<{ start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; requester: { id: string; full_name: string } | null }>;
   const online = (onlineResult.data ?? []) as unknown as Array<{ work_date: string; staff: { id: string; full_name: string } | null }>;
+  const foreignStaff = organizationScope
+    ? (await serverSupabase.from("staff_users").select("id,full_name,username").eq("active", true).in("username", Object.keys(FOREIGN_REPORTERS))).data ?? []
+    : [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }];
+  const foreignById = new Map(foreignStaff.filter((staff) => isForeignReporter(staff.username)).map((staff) => [staff.id, staff]));
+  // A blank weekend schedule means the whole foreign-language team works online by default.
+  for (const staff of foreignById.values()) {
+    for (const cursor = new Date(`${contextStart}T12:00:00Z`); cursor <= new Date(`${contextEnd}T12:00:00Z`); cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+      const workDate = cursor.toISOString().slice(0, 10);
+      if ([0, 6].includes(cursor.getUTCDay()) && !online.some((row) => row.work_date === workDate && row.staff?.id === staff.id)) {
+        online.push({ work_date: workDate, staff: { id: staff.id, full_name: staff.full_name } });
+      }
+    }
+  }
+  const leavePeriodsForDate = (leave: typeof leaves[number], workDate: string) => {
+    if (leave.start_date === leave.end_date) return [leave.start_period, leave.end_period];
+    if (workDate === leave.start_date) return [leave.start_period, leave.start_period];
+    if (workDate === leave.end_date) return [leave.end_period, leave.end_period];
+    return ["full", "full"];
+  };
+  const leaveLabel = (leave: typeof leaves[number], workDate: string) => {
+    const [startPeriod, endPeriod] = leavePeriodsForDate(leave, workDate);
+    const labels = startPeriod === "full" && endPeriod === "full"
+      ? { annual: "Nghỉ phép", sick: "Nghỉ ốm", unpaid: "Nghỉ không lương", personal: "Nghỉ việc riêng", business: "Công tác" }
+      : { annual: "Nghỉ phép theo buổi", sick: "Nghỉ ốm theo buổi", unpaid: "Nghỉ không lương theo buổi", personal: "Nghỉ việc riêng theo buổi", business: "Công tác theo buổi" };
+    return labels[leave.leave_type as keyof typeof labels] ?? (startPeriod === "full" && endPeriod === "full" ? "Nghỉ" : "Nghỉ theo buổi");
+  };
   const noteFor = (row: AttendanceRow) => {
     const leave = leaves.find((x) => x.requester?.id === row.user_id && x.start_date <= row.work_date && x.end_date >= row.work_date);
     const onlineDay = online.some((x) => x.work_date === row.work_date && x.staff?.id === row.user_id);
     const parts: string[] = [];
-    if (leave) parts.push(leave.start_period === "full" && leave.end_period === "full" ? ({ annual: "Nghỉ phép", sick: "Nghỉ ốm", unpaid: "Nghỉ không lương", personal: "Nghỉ việc riêng", business: "Công tác" }[leave.leave_type] ?? "Nghỉ") : "Nghỉ phép theo buổi");
-    const leaveIsFull = !!leave && leave.start_period === "full" && leave.end_period === "full";
+    if (leave) parts.push(leaveLabel(leave, row.work_date));
+    const leaveIsFull = !!leave && leavePeriodsForDate(leave, row.work_date).every((period) => period === "full");
     if (onlineDay && !leaveIsFull) parts.push("Làm việc online");
     return parts.join("; ");
   };
@@ -183,7 +160,7 @@ export async function GET(request: Request) {
       for (const workDate of dates(leave.start_date < from ? from : leave.start_date, leave.end_date > to ? to : leave.end_date)) {
         const key = `${leave.requester.id}:${workDate}`;
         if (existing.has(key)) continue;
-        const label = leave.start_period === "full" && leave.end_period === "full" ? ({ annual: "Nghỉ phép", sick: "Nghỉ ốm", unpaid: "Nghỉ không lương", personal: "Nghỉ việc riêng", business: "Công tác" }[leave.leave_type] ?? "Nghỉ") : "Nghỉ phép theo buổi";
+        const label = leaveLabel(leave, workDate);
         result.push({ id: `leave-${leave.requester.id}-${workDate}`, user_id: leave.requester.id, work_date: workDate, check_in: null, check_out: null, note: label, status: "leave", staff_users: { full_name: leave.requester.full_name } });
         existing.add(key);
       }

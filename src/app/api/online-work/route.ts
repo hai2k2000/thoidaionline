@@ -2,6 +2,11 @@ import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadAct
 import { onlineWorkRepository } from "@/lib/onlineWorkRepository";
 const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isValidDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+};
 export async function GET(request: Request) {
   const guard = await requireReadActor(); if (!guard.ok) return guard.response;
   if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
@@ -21,7 +26,7 @@ export async function POST(request: Request) {
     if (!value || typeof value !== "object") return apiError("invalid_request", 400);
     const row = value as Record<string, unknown>; const date = typeof row.date === "string" ? row.date : "";
     const staffIds = Array.isArray(row.staffIds) && row.staffIds.every(id => typeof id === "string") ? row.staffIds as string[] : [];
-    if (!date.startsWith(`${month}-`) || staffIds.length < 1 || staffIds.length > 6 || seen.has(date)) return apiError("invalid_request", 400);
+    if (!isValidDate(date) || !date.startsWith(`${month}-`) || staffIds.length < 1 || staffIds.length > 6 || seen.has(date)) return apiError("invalid_request", 400);
     if (staffIds.some(id => !uuidPattern.test(id)) || new Set(staffIds).size !== staffIds.length) return apiError("invalid_request", 400);
     seen.add(date); normalized.push({ date, staffIds });
   }
