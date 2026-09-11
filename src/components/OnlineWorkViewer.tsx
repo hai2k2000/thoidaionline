@@ -26,13 +26,14 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   useEffect(() => {
-    setLoading(true);
-    setLoadError(false);
-    fetch(`/api/online-work-schedule?from=${range.from}&to=${range.to}`)
+    const controller = new AbortController();
+    const begin = window.setTimeout(() => { setLoading(true); setLoadError(false); }, 0);
+    fetch(`/api/online-work-schedule?from=${range.from}&to=${range.to}`, { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((b) => setRows(b.rows ?? []))
-      .catch(() => { setRows([]); setLoadError(true); })
+      .catch((error) => { if (error?.name !== "AbortError") { setRows([]); setLoadError(true); } })
       .finally(() => setLoading(false));
+    return () => { window.clearTimeout(begin); controller.abort(); };
   }, [range.from, range.to]);
   const cards = useMemo(() => {
     const map = new Map<string,Row[]>();

@@ -2,8 +2,17 @@ import { apiError, apiJson, readJsonObject } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { bridgeAuthorized } from "@/lib/attendanceBridgeAuth";
 
+const isRealtimeWindow = () => {
+  const now = new Date();
+  const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", hour12: false }).format(now));
+  const minute = Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Ho_Chi_Minh", minute: "2-digit" }).format(now));
+  const total = hour * 60 + minute;
+  return (total >= 7 * 60 + 30 && total <= 9 * 60 + 30) || (total >= 16 * 60 + 30 && total <= 18 * 60 + 30);
+};
+
 export async function POST(request: Request) {
   if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
+  if (!isRealtimeWindow()) return apiJson({ ok: true, skipped: true, reason: "outside_realtime_window" });
   const body = await readJsonObject(request);
   const enroll = typeof body?.enroll_number === "string" ? body.enroll_number : "";
   const punchedAt = typeof body?.punched_at === "string" ? body.punched_at : "";
