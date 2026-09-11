@@ -3,6 +3,7 @@ import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { sortStaffRows } from "@/lib/staffOrdering";
 import { validateEmail, validatePhone } from "@/lib/userContactValidation";
+import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/defaultPassword";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -99,7 +100,7 @@ async function mutate(request: Request, mode: "create" | "update") {
       email,
       phone,
       active: true,
-      password: "123456",
+      password: DEFAULT_FIRST_LOGIN_PASSWORD,
     }).select("id,full_name,username,role_id,job_title_id,department_id,active").single();
     if (error) return json({ error: "Không thể tạo user." }, { status: 500 });
     return json({ user: data }, { status: 201 });

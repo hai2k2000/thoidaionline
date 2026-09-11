@@ -5,7 +5,10 @@ Latest Task: COMPLETE — approved leave and online work notes
 
 Latest Update: COMPLETE — approved leave and online work are shown in attendance notes
 
+Latest Authentication Fix: COMPLETE — first-login accounts now use the documented default password
+
 Completed:
+- Repaired 21 active first-login accounts that still used the previous default and aligned future account creation with `Thoidai@123456`; accounts with changed passwords were excluded.
 - Disabled the Wise Eye minute Scheduled Task because the 32-bit zkemkeeper COM host creates `conhost.exe` even with hidden launch flags; realtime polling and daily reconciliation remain enabled.
 - Replaced the four-position duty roster with exactly three positions: Xuất bản, Biên tập, Phóng viên.
 - Added authenticated leave requests with leadership approval, conflict checks, cancellation, and audit history.
@@ -51,6 +54,8 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Authentication repair migration dry-run matched 21 targets and rolled back cleanly; production migration then updated 21 accounts, left zero active hashes matching `123456`, and recorded 21 audit entries without storing password values.
+- Production login smoke test for `bachduong` with the documented first-login password returned HTTP 200; service remained active and `/login` returned HTTP 200.
 - Backed up task XML definitions before launcher changes at `C:\WiseEyeOn39\bridge\backup-launcher-20260909153830`.
 - After disabling minute polling, a 70-second process monitor observed no Wise Eye/PowerShell/conhost launches; daily reconciliation remains scheduled for 18:30.
 - Backed up both scheduled-task XML definitions under `C:\WiseEyeOn39\bridge\backup-hidden-20260909152603` before changing them.
@@ -92,7 +97,6 @@ Blockers:
 - Windows Scheduled Task registration is denied for the current non-admin account; Startup launch is configured instead.
 
 Follow Up:
-- Password fallback `123456` remains unchanged by explicit user instruction for active accounts `admin`, `thanhhai`, `maianh`, and `quangthien`.
 - Existing legacy HR files under `public/uploads/hr` should be migrated manually if any are found; new HR files use guarded runtime storage.
 - Service still runs as root and deploy process should be moved to an atomic non-root release workflow in a separate change.
 - The production database does not currently contain `attendance_logs`; the UI keeps the existing server-generated DEMO fallback until the attendance migration is provisioned.

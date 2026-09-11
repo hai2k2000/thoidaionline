@@ -3,6 +3,7 @@ import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { getPasswordPolicyError } from "@/lib/passwordPolicy";
+import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/defaultPassword";
 const json = (body: unknown, status=200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 export async function PATCH(request: Request) {
   if (!(await isSameOriginRequest())) return json({ error: "Yêu cầu không hợp lệ." }, 403);
@@ -15,7 +16,7 @@ export async function PATCH(request: Request) {
   const policyError = getPasswordPolicyError(newPassword); if (policyError) return json({ error: "Mật khẩu mới không đáp ứng chính sách bảo mật." }, 400);
   const { data, error } = await serverSupabase.from("staff_users").select("id,password_hash,password,session_version").eq("id", actor.id).eq("active", true).single();
   if (error || !data) return json({ error: "Không thể kiểm tra tài khoản." }, 500);
-  const valid = data.password_hash ? await verifyPassword(currentPassword, data.password_hash) : (data.password ?? "123456") === currentPassword;
+  const valid = data.password_hash ? await verifyPassword(currentPassword, data.password_hash) : (data.password ?? DEFAULT_FIRST_LOGIN_PASSWORD) === currentPassword;
   if (!valid) return json({ error: "Mật khẩu hiện tại không đúng." }, 401);
   const passwordHash = await hashPassword(newPassword);
   const updated = await serverSupabase.from("staff_users").update({ password_hash: passwordHash, password: null, session_version: data.session_version + 1 }).eq("id", actor.id).eq("session_version", data.session_version).select("id").maybeSingle();
