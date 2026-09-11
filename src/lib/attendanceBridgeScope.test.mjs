@@ -102,6 +102,12 @@ test("successful spool replay marks the punch as seen before the next device sca
   assert.match(realtimeBridge, /Send-PunchCore \$row\)[\s\S]*?\$seen\[\(Punch-Key \$row\)\] = \$true/);
 });
 
+test("realtime replay is bounded and each API call has a timeout", () => {
+  assert.match(realtimeBridge, /TimeoutSec 3/);
+  assert.match(realtimeBridge, /Select-Object -First 10/);
+  assert.match(realtimeBridge, /Select-Object -Skip 10/);
+});
+
 test("new sync requests recognize a request that is currently completing", () => {
   assert.match(sync, /\["pending", "running", "completing"\]/);
   assert.match(dailyRequest, /\["pending", "running", "completing"\]/);

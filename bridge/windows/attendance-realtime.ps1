@@ -46,7 +46,7 @@ function Write-SpoolRows([string]$Path, $rows) {
 }
 function Send-PunchCore($row) {
   try {
-    $response = Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress)
+    $response = Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) -TimeoutSec 3
     if ($response.skipped -eq $true) { return $false }
     return $true
   } catch { return $false }
@@ -58,8 +58,8 @@ function Send-Punch($row) {
 }
 function Replay-Spool {
   $rows = @(Get-SpoolRows); if (-not $rows.Count) { return }
-  $remaining = @()
-  foreach ($row in $rows) {
+  $remaining = @($rows | Select-Object -Skip 10)
+  foreach ($row in @($rows | Select-Object -First 10)) {
     if (Test-RecentPunch $row) {
       if (Send-PunchCore $row) { $seen[(Punch-Key $row)] = $true }
       else { $remaining += $row }
