@@ -9,6 +9,7 @@ const dailyRequest = readFileSync("src/app/api/attendance/sync/request/route.ts"
 const attendancePage = readFileSync("src/app/attendance/page.tsx", "utf8");
 const auth = readFileSync("src/lib/attendanceBridgeAuth.ts", "utf8");
 const pending = readFileSync("src/app/api/attendance/sync/pending/route.ts", "utf8");
+const recovery = readFileSync("src/lib/attendanceSyncRecovery.ts", "utf8");
 const realtimeBridge = readFileSync("bridge/windows/attendance-realtime.ps1", "utf8");
 
 test("realtime punches are bound to the configured device and current Vietnam date", () => {
@@ -52,8 +53,10 @@ test("batch logs are recomputed from canonical stored punches", () => {
 });
 
 test("stale completing requests can be reclaimed by the bridge", () => {
-  assert.match(pending, /completing/);
-  assert.match(pending, /started_at/);
+  assert.match(pending, /buildAttendanceSyncClaimFilter/);
+  assert.match(recovery, /status\.eq\.completing/);
+  assert.match(recovery, /started_at\.is\.null/);
+  assert.match(recovery, /requested_at\.lt/);
   assert.match(pending, /status: "running"/);
 });
 
