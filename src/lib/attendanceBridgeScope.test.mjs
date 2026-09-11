@@ -98,6 +98,10 @@ test("realtime delivery does not discard punches when the API explicitly skips t
   assert.match(realtimeBridge, /return \$false/);
 });
 
+test("successful spool replay marks the punch as seen before the next device scan", () => {
+  assert.match(realtimeBridge, /Send-PunchCore \$row\)[\s\S]*?\$seen\[\(Punch-Key \$row\)\] = \$true/);
+});
+
 test("new sync requests recognize a request that is currently completing", () => {
   assert.match(sync, /\["pending", "running", "completing"\]/);
   assert.match(dailyRequest, /\["pending", "running", "completing"\]/);

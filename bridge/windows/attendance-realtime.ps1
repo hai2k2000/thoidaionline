@@ -60,7 +60,10 @@ function Replay-Spool {
   $rows = @(Get-SpoolRows); if (-not $rows.Count) { return }
   $remaining = @()
   foreach ($row in $rows) {
-    if (Test-RecentPunch $row) { if (-not (Send-PunchCore $row)) { $remaining += $row } }
+    if (Test-RecentPunch $row) {
+      if (Send-PunchCore $row) { $seen[(Punch-Key $row)] = $true }
+      else { $remaining += $row }
+    }
     else { Add-ToDeferredSpool $row }
   }
   Write-SpoolRows $spoolPath $remaining
