@@ -23,6 +23,8 @@ test("batch completion validates its queued device and date range", () => {
   assert.match(complete, /select\("id,status,result"\)/);
   assert.match(complete, /requestDeviceId !== configuredDeviceId/);
   assert.match(complete, /punchDate < rangeStart \|\| punchDate > rangeEnd/);
+  assert.doesNotMatch(complete, /slice\(0, 20000\)/);
+  assert.match(complete, /punchesPayload\.length > 100000/);
 });
 
 test("batch completion atomically claims a running request before ingesting", () => {
@@ -48,6 +50,8 @@ test("batch logs are recomputed from canonical stored punches", () => {
   assert.match(complete, /canonicalPunches/);
   assert.match(complete, /gte\("punched_at", rangeStartInstant/);
   assert.match(complete, /lt\("punched_at", rangeEndExclusive/);
+  assert.match(complete, /\.range\(/);
+  assert.match(complete, /while \(true\)/);
   assert.match(complete, /status: "succeeded"/);
   assert.match(complete, /maybeSingle\(\)/);
 });

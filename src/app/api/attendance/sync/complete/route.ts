@@ -25,8 +25,9 @@ export async function POST(request: Request) {
   const body = await readJsonObject(request);
   const requestId = typeof body?.request_id === "string" ? body.request_id : "";
   const deviceId = typeof body?.device_id === "string" ? body.device_id : "";
-  const punches = Array.isArray(body?.punches) ? body.punches.filter(isPunch).slice(0, 20000) : [];
-  if (!requestId || !deviceId || punches.length !== (Array.isArray(body?.punches) ? body.punches.length : 0)) {
+  const punchesPayload = Array.isArray(body?.punches) ? body.punches : [];
+  const punches = punchesPayload.filter(isPunch);
+  if (!requestId || !deviceId || punchesPayload.length > 100000 || punches.length !== punchesPayload.length) {
     return apiError("invalid_request", 400);
   }
 
@@ -76,16 +77,24 @@ export async function POST(request: Request) {
   const rangeStartInstant = new Date(`${rangeStart}T00:00:00+07:00`);
   const rangeEndExclusive = new Date(`${rangeEnd}T00:00:00+07:00`);
   rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
-  const { data: canonicalPunches, error: canonicalError } = await serverSupabase
-    .from("attendance_punches")
-    .select("enroll_number,punched_at,verify_mode,in_out_mode,work_code")
-    .eq("device_id", configuredDeviceId)
-    .in("enroll_number", enrollments)
-    .gte("punched_at", rangeStartInstant.toISOString())
-    .lt("punched_at", rangeEndExclusive.toISOString())
-    .order("punched_at", { ascending: true })
-    .limit(20000);
-  if (canonicalError) return failRequest(requestId, canonicalError.message);
+  const canonicalPunches: Array<{ enroll_number: string; punched_at: string; verify_mode: number | null; in_out_mode: number | null; work_code: number | null }> = [];
+  const pageSize = 10000;
+  let page = 0;
+  while (true) {
+    const { data: pageRows, error: canonicalError } = await serverSupabase
+      .from("attendance_punches")
+      .select("enroll_number,punched_at,verify_mode,in_out_mode,work_code")
+      .eq("device_id", configuredDeviceId)
+      .in("enroll_number", enrollments)
+      .gte("punched_at", rangeStartInstant.toISOString())
+      .lt("punched_at", rangeEndExclusive.toISOString())
+      .order("punched_at", { ascending: true })
+      .range(page * pageSize, page * pageSize + pageSize - 1);
+    if (canonicalError) return failRequest(requestId, canonicalError.message);
+    canonicalPunches.push(...(pageRows ?? []));
+    if (!pageRows || pageRows.length < pageSize) break;
+    page += 1;
+  }
   const daily = new Map<string, { user_id: string; work_date: string; earliest: Date; latest: Date }>();
   for (const punch of (canonicalPunches ?? [])) {
     const user = userByCode.get(punch.enroll_number);
@@ -114,10 +123,15 @@ export async function POST(request: Request) {
       synced_at: new Date().toISOString(),
     };
   });
-  if (logs.length) {
-    const { error: logError } = await serverSupabase
-      .from("attendance_logs")
-      .upsert(logs, { onConflict: "user_id,work_date" });
+  for (const log of logs) {
+    const { error: logError } = await serverSupabase.rpc("api_merge_attendance_log", {
+      p_user_id: log.user_id,
+      p_work_date: log.work_date,
+      p_check_in: log.check_in,
+      p_check_out: log.check_out,
+      p_source: log.source,
+      p_note: log.note,
+    });
     if (logError) return failRequest(requestId, logError.message);
   }
   const result = { punches_received: punches.length, matched_users: userByCode.size, daily_logs: logs.length };

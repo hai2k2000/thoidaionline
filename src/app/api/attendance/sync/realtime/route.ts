@@ -38,10 +38,14 @@ export async function POST(request: Request) {
   if (!instants.length) return apiJson({ ok: true, matched: true, work_date: localDate });
   const checkIn = instants[0].toLocaleTimeString("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour12: false });
   const checkOut = instants.length > 1 ? instants[instants.length - 1].toLocaleTimeString("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour12: false }) : null;
-  const { error: logError } = await serverSupabase.from("attendance_logs").upsert({
-    user_id: user.id, work_date: localDate, check_in: checkIn, check_out: checkOut,
-    status: "present", source: "wise_eye", note: "Đồng bộ realtime từ Wise Eye On 39", synced_at: new Date().toISOString(),
-  }, { onConflict: "user_id,work_date" });
+  const { error: logError } = await serverSupabase.rpc("api_merge_attendance_log", {
+    p_user_id: user.id,
+    p_work_date: localDate,
+    p_check_in: checkIn,
+    p_check_out: checkOut,
+    p_source: "wise_eye",
+    p_note: "Đồng bộ realtime từ Wise Eye On 39",
+  });
   if (logError) return apiError("operation_failed", 500);
   return apiJson({ ok: true, matched: true, work_date: localDate, check_in: checkIn, check_out: checkOut });
 }
