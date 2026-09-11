@@ -211,7 +211,14 @@ export default function AttendancePage() {
     const note = action === "reject" ? window.prompt("Nhập lý do từ chối:", "")?.trim() ?? "" : "";
     if (action === "reject" && note.length < 3) return;
     setLeaveBusy(true);
-    try { await fetch("/api/leave-requests", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: request.id, action, note }) }); await loadLeaveRequests(); await loadAttendance(); } finally { setLeaveBusy(false); }
+    try {
+      const response = await fetch("/api/leave-requests", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: request.id, action, note }) });
+      if (!response.ok) throw new Error("Chưa cập nhật được đơn. Vui lòng tải lại và thử lại.");
+      await loadLeaveRequests();
+      await loadAttendance();
+    } catch (error) {
+      setLeaveError(error instanceof Error ? error.message : "Chưa cập nhật được đơn.");
+    } finally { setLeaveBusy(false); }
   };
 
   useEffect(() => {
