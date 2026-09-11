@@ -13,6 +13,7 @@ test("leave workflow is authenticated, approved by leadership, and conflict-safe
   assert.match(route, /api_create_leave_request/);
   assert.match(route, /api_review_leave_request/);
   assert.match(route, /api_cancel_leave_request/);
+  assert.match(route, /"business"/);
   assert.match(migration, /overlapping leave request/);
   assert.match(migration, /status in \('pending','approved','rejected','cancelled'\)/);
 });
@@ -21,8 +22,11 @@ test("attendance notes combine approved leave and online work and remain blank o
   assert.match(attendance, /leave_requests/);
   assert.match(attendance, /online_work_schedules/);
   assert.match(attendance, /Làm việc online/);
+  assert.match(attendance, /business: "Công tác"/);
   assert.match(attendance, /parts\.join\("; "\)/);
-  assert.match(page, /Xin nghỉ/);
-  assert.match(page, /Duyệt đơn xin nghỉ/);
+  assert.match(page, /leaveTypeLabel/);
+  assert.match(page, /value="business">Công tác/);
+  assert.match(page, /Gửi đơn nghỉ \/ công tác/);
+  assert.match(page, /Duyệt đơn nghỉ \/ công tác/);
   assert.match(page, /r\.note \?\? ""/);
 });
