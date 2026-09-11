@@ -60,6 +60,7 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Work-schedule privacy TypeScript check and 3 targeted authorization tests PASS; production employee smoke returned zero rows instead of four organization rows and direct `/work-schedule` access redirected to `/work-schedule/staff`.
 - Authentication repair migration dry-run matched 21 targets and rolled back cleanly; production migration then updated 21 accounts, left zero active hashes matching `123456`, and recorded 21 audit entries without storing password values.
 - Production login smoke test for `bachduong` with the documented first-login password returned HTTP 200; service remained active and `/login` returned HTTP 200.
 - Backed up task XML definitions before launcher changes at `C:\WiseEyeOn39\bridge\backup-launcher-20260909153830`.
