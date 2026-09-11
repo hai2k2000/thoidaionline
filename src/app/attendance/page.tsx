@@ -252,23 +252,27 @@ export default function AttendancePage() {
   }, [rows]);
 
   const monthlySummary = useMemo(() => {
-    const map = new Map<string, { days: Set<string>; hours: number }>();
+    const map = new Map<string, { name: string; presentDays: Set<string>; leaveWithPermission: Set<string>; leaveWithoutPermission: Set<string>; businessDays: Set<string> }>();
 
     monthlyRows.forEach((r) => {
-      if (r.status === "leave") return;
+      const key = r.user_id;
       const name = r.staff_users?.full_name ?? "-";
-      if (!map.has(name)) map.set(name, { days: new Set<string>(), hours: 0 });
-      const current = map.get(name)!;
-      current.days.add(r.work_date);
-      current.hours += workedHours(r.check_in, r.check_out);
+      if (!map.has(key)) map.set(key, { name, presentDays: new Set<string>(), leaveWithPermission: new Set<string>(), leaveWithoutPermission: new Set<string>(), businessDays: new Set<string>() });
+      const current = map.get(key)!;
+      const note = (r.note ?? "").toLocaleLowerCase("vi");
+      if (note.startsWith("công tác")) current.businessDays.add(r.work_date);
+      else if (r.status === "leave" || note.startsWith("nghỉ")) current.leaveWithPermission.add(r.work_date);
+      else if (r.status === "absent") current.leaveWithoutPermission.add(r.work_date);
+      else if (r.status === "present" || r.status === "late") current.presentDays.add(r.work_date);
     });
 
-    return Array.from(map.entries())
-      .map(([name, v]) => ({
-        name,
-        daysPresent: v.days.size,
-        totalHours: Number(v.hours.toFixed(2)),
-        workUnits: Number((v.hours / 8).toFixed(2)),
+    return Array.from(map.values())
+      .map((v) => ({
+        name: v.name,
+        daysPresent: v.presentDays.size,
+        leaveWithPermission: v.leaveWithPermission.size,
+        leaveWithoutPermission: v.leaveWithoutPermission.size,
+        businessDays: v.businessDays.size,
       }))
       .sort((a, b) => a.name.localeCompare(b.name, "vi"));
   }, [monthlyRows]);
@@ -426,13 +430,14 @@ export default function AttendancePage() {
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Tổng công {period === "month" ? "trong tháng đã chọn" : period === "week" ? "trong tuần đã chọn" : "từ đầu tháng đến ngày hiện tại"}</h2>
           <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Bảng tổng công theo tháng, cuộn ngang để xem thêm">
-          <table className="data-table min-w-[680px] text-left text-sm">
+          <table className="data-table min-w-[760px] text-left text-sm">
             <thead className="bg-slate-50">
               <tr>
                 <th scope="col" className="px-3 py-2">Nhân sự</th>
                 <th scope="col" className="px-3 py-2 text-right">Số ngày có công</th>
-                <th scope="col" className="px-3 py-2 text-right">Tổng giờ làm</th>
-                <th scope="col" className="px-3 py-2 text-right">Công quy đổi (8h=1 công)</th>
+                <th scope="col" className="px-3 py-2 text-right">Nghỉ có phép</th>
+                <th scope="col" className="px-3 py-2 text-right">Nghỉ không phép</th>
+                <th scope="col" className="px-3 py-2 text-right">Số ngày công tác</th>
               </tr>
             </thead>
             <tbody>
@@ -440,12 +445,13 @@ export default function AttendancePage() {
                 <tr key={`sum-${r.name}`} className="border-t">
                   <td className="px-3 py-2 font-semibold">{r.name}</td>
                   <td className="px-3 py-2 text-right">{r.daysPresent}</td>
-                  <td className="px-3 py-2 text-right">{r.totalHours.toFixed(2)}</td>
-                  <td className="px-3 py-2 text-right">{r.workUnits.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-right">{r.leaveWithPermission}</td>
+                  <td className="px-3 py-2 text-right">{r.leaveWithoutPermission}</td>
+                  <td className="px-3 py-2 text-right">{r.businessDays}</td>
                 </tr>
               ))}
               {monthlySummary.length === 0 ? (
-                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={4}>Chưa có dữ liệu tổng công.</td></tr>
+                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={5}>Chưa có dữ liệu tổng công.</td></tr>
               ) : null}
             </tbody>
           </table>
