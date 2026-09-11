@@ -36,8 +36,8 @@ class AuthSession {
       phone: json['phone'] as String?,
       username: json['username'] as String?,
       active: (json['active'] as bool?) ?? false,
-      roleCode: role?['code'] as String?,
-      roleName: role?['name'] as String?,
+      roleCode: (json['role_code'] as String?) ?? role?['code'] as String?,
+      roleName: (json['role_name'] as String?) ?? role?['name'] as String?,
     );
   }
 }

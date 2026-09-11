@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cookies, headers } from "next/headers";
+
 import {
   apiError,
   apiJson,
@@ -43,7 +45,10 @@ export async function requireReadActor(): Promise<ActorGuard> {
 }
 
 export async function requireMutationActor(): Promise<ActorGuard> {
-  if (!(await isSameOriginRequest())) {
+  const requestHeaders = await headers();
+  const hasCookie = (await cookies()).has("thoidai_work_session");
+  const hasBearer = /^Bearer\s+[^\s]+$/i.test(requestHeaders.get("authorization") ?? "");
+  if ((!hasBearer || hasCookie) && !(await isSameOriginRequest())) {
     return { ok: false, response: apiError("invalid_origin", 403) };
   }
   const actor = await getSessionUser();

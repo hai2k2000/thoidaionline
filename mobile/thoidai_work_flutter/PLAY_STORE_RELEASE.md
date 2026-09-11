@@ -14,7 +14,7 @@
 - Build định dạng `AAB`, không upload APK cho production.
 - Target Android 15 / API 35 trở lên theo yêu cầu Google Play hiện tại.
 - Dùng signing key riêng và lưu backup an toàn. Mất key sẽ rất khó xử lý release về sau.
-- Không commit `key.properties`, keystore, Supabase anon key thật.
+- Không commit `key.properties` hoặc keystore.
 
 ## Tạo Android project
 
@@ -70,8 +70,7 @@ storeFile=/absolute/path/to/thoidai-work-upload-keystore.jks
 flutter clean
 flutter pub get
 flutter build appbundle --release \
-  --dart-define=SUPABASE_URL=https://thoidai.online/supa \
-  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+  --dart-define=API_BASE_URL=https://thoidai.online
 ```
 
 File upload:

@@ -47,6 +47,7 @@ const TASK_LIST_FIELDS = [
   "plan_period",
   "self_claimable",
   "description",
+  "attachment_url",
   "evaluation_criteria",
   "departments(name)",
   "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
@@ -57,7 +58,6 @@ const TASK_LIST_FIELDS = [
 const TASK_DETAIL_FIELDS = [
   TASK_LIST_FIELDS,
   "description",
-  "attachment_url",
   "effort_weight",
   "evaluation_criteria",
   "owner:staff_users!tasks_owner_id_fkey(full_name)",

@@ -1,6 +1,6 @@
 # Thời Đại Work Mobile
 
-App Flutter MVP cho dự án `thoidai-work`, dùng trực tiếp Supabase endpoint của `thoidai.online`.
+App Flutter MVP cho dự án `thoidai-work`, dùng API đã xác thực của `thoidai.online`.
 
 ## Phạm vi hiện có
 
@@ -15,11 +15,10 @@ App Flutter MVP cho dự án `thoidai-work`, dùng trực tiếp Supabase endpoi
 App đọc cấu hình qua `--dart-define`:
 
 ```bash
---dart-define=SUPABASE_URL=https://thoidai.online/supa
---dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+--dart-define=API_BASE_URL=https://thoidai.online
 ```
 
-Lấy `SUPABASE_ANON_KEY` từ `.env.production` trên server hoặc Supabase project settings. Không commit key thật vào repo.
+Ứng dụng không cần Supabase anon key và không đọc trực tiếp bảng dữ liệu.
 
 ## Chạy local
 
@@ -30,16 +29,14 @@ cd mobile/thoidai_work_flutter
 flutter create --platforms=android,ios .
 flutter pub get
 flutter run \
-  --dart-define=SUPABASE_URL=https://thoidai.online/supa \
-  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+  --dart-define=API_BASE_URL=https://thoidai.online
 ```
 
 ## Build Android
 
 ```bash
 flutter build apk --release \
-  --dart-define=SUPABASE_URL=https://thoidai.online/supa \
-  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+  --dart-define=API_BASE_URL=https://thoidai.online
 ```
 
 File APK sẽ nằm ở `build/app/outputs/flutter-apk/app-release.apk`.

@@ -1,10 +1,7 @@
 class AppConfig {
-  static const supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: 'https://thoidai.online/supa',
+  static const apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://thoidai.online',
   );
-
-  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-
-  static bool get isConfigured => supabaseAnonKey.trim().isNotEmpty;
+  static bool get isConfigured => apiBaseUrl.trim().isNotEmpty;
 }

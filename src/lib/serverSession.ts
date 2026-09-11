@@ -26,6 +26,7 @@ export type ServerAuthUser = {
   role_name: string;
   role_level: number;
   active: boolean;
+  session_version: number;
   is_department_manager: boolean;
   permissions: PermissionSet;
   avatar_url: string | null;
@@ -47,7 +48,11 @@ export function verifySessionToken(token: string | undefined) {
 }
 
 export async function getSessionUser(): Promise<ServerAuthUser | null> {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const requestHeaders = await headers();
+  const authorization = requestHeaders.get("authorization");
+  const bearer = authorization?.match(/^Bearer\s+([^\s]+)$/i)?.[1];
+  const cookieToken = (await cookies()).get(SESSION_COOKIE)?.value;
+  const token = cookieToken ?? bearer;
   const session = verifySessionToken(token);
   if (!session) return null;
 
@@ -105,6 +110,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     role_name: row.roles.name,
     role_level: row.roles.level,
     active: row.active,
+    session_version: row.session_version,
     is_department_manager: isDepartmentManager,
     permissions: normalizePermissions(row.roles.role_permissions),
     avatar_url: avatarResult?.data?.signedUrl ?? null,

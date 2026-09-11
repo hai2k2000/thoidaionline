@@ -1,71 +1,84 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+
+import '../app_config.dart';
 import '../models/auth_session.dart';
 
 export '../models/auth_session.dart';
 
 class AuthService {
-  static const _sessionKey = 'thoidai_work_user_id';
-
-  SupabaseClient get _client => Supabase.instance.client;
+  static const _tokenKey = 'thoidai_work_session_token';
+  static const _secureStorage = FlutterSecureStorage();
 
   Future<AuthSession?> restoreSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString(_sessionKey);
-    if (userId == null || userId.isEmpty) return null;
-    return _loadById(userId);
+    final token = await _secureStorage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) return null;
+    try {
+      return await _loadSession(token);
+    } on AuthException {
+      await _secureStorage.delete(key: _tokenKey);
+      return null;
+    }
   }
 
   Future<AuthSession> login(String identifier, String password) async {
-    final normalizedIdentifier = identifier.trim().toLowerCase();
-    final normalizedPassword = password.trim();
-
-    final row = await _client
-        .from('staff_users')
-        .select(
-          'id,full_name,email,phone,username,password,active,roles(code,name)',
-        )
-        .or(
-          'username.eq.$normalizedIdentifier,email.ilike.$normalizedIdentifier,phone.eq.$normalizedIdentifier',
-        )
-        .limit(1)
-        .maybeSingle();
-
-    if (row == null) {
-      throw AuthException('Sai tài khoản hoặc mật khẩu.');
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/api/auth/mobile-login'),
+      headers: const {'content-type': 'application/json'},
+      body: jsonEncode({'identifier': identifier, 'password': password}),
+    );
+    if (response.statusCode != 200) throw AuthException(_errorMessage(response));
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final token = body['token'] as String?;
+    if (token == null || token.isEmpty) throw const AuthException('Phiên đăng nhập không hợp lệ.');
+    await _secureStorage.write(key: _tokenKey, value: token);
+    try {
+      return await _loadSession(token);
+    } catch (_) {
+      await _secureStorage.delete(key: _tokenKey);
+      rethrow;
     }
-
-    final active = (row['active'] as bool?) ?? false;
-    if (!active) {
-      throw AuthException('Tài khoản đã bị khóa.');
-    }
-
-    final storedPassword = ((row['password'] as String?) ?? '123456').trim();
-    if (storedPassword != normalizedPassword) {
-      throw AuthException('Sai tài khoản hoặc mật khẩu.');
-    }
-
-    final session = AuthSession.fromJson(row);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_sessionKey, session.id);
-    return session;
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_sessionKey);
+    final token = await _secureStorage.read(key: _tokenKey);
+    if (token != null && token.isNotEmpty) {
+      await http.post(Uri.parse('${AppConfig.apiBaseUrl}/api/auth/mobile-logout'), headers: _headers(token));
+    }
+    await _secureStorage.delete(key: _tokenKey);
   }
 
-  Future<AuthSession?> _loadById(String userId) async {
-    final row = await _client
-        .from('staff_users')
-        .select('id,full_name,email,phone,username,active,roles(code,name)')
-        .eq('id', userId)
-        .maybeSingle();
+  Future<String?> readToken() => _secureStorage.read(key: _tokenKey);
 
-    if (row == null) return null;
-    final session = AuthSession.fromJson(row);
-    return session.active ? session : null;
+  Future<AuthSession> _loadSession(String token) async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/api/auth/session'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200) throw const AuthException('Phiên đăng nhập đã hết hạn.');
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final user = body['user'];
+    if (user is! Map<String, dynamic>) throw const AuthException('Phiên đăng nhập không hợp lệ.');
+    return AuthSession.fromJson(user);
   }
+
+  Map<String, String> _headers(String token) => {'authorization': 'Bearer $token'};
+
+  String _errorMessage(http.Response response) {
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return (body['error'] as String?) ?? 'Sai tài khoản hoặc mật khẩu.';
+    } catch (_) {
+      return 'Không kết nối được máy chủ đăng nhập.';
+    }
+  }
+}
+
+class AuthException implements Exception {
+  const AuthException(this.message);
+  final String message;
+  @override
+  String toString() => message;
 }

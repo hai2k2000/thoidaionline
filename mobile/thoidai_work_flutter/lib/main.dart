@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_config.dart';
 import 'features/home_shell.dart';
@@ -13,13 +12,6 @@ import 'widgets/branded_loading.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  if (AppConfig.isConfigured) {
-    await Supabase.initialize(
-      url: AppConfig.supabaseUrl,
-      anonKey: AppConfig.supabaseAnonKey,
-    );
-  }
 
   await PushNotificationService().initialize();
   runApp(const ThoiDaiWorkApp());
@@ -122,7 +114,8 @@ class _ConfigMissingScreen extends StatelessWidget {
           padding: EdgeInsets.all(24),
           child: Center(
             child: Text(
-              'Thiếu SUPABASE_ANON_KEY. Chạy app với --dart-define để cấu hình kết nối.',
+              'Thiếu địa chỉ máy chủ. Chạy app với '
+              '--dart-define=API_BASE_URL để cấu hình kết nối.',
               textAlign: TextAlign.center,
             ),
           ),
