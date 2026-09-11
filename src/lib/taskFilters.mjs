@@ -61,20 +61,6 @@ export function taskListHref(query, patch) {
   if (next.scope !== "all") params.set("scope", next.scope);
   if (next.taskType) params.set("type", next.taskType);
   if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
-  if (next.category) params.set("category", next.category);
   if (next.status) params.set("status", next.status);
   if (next.fromDate) params.set("from", next.fromDate);
   if (next.statusGroup) params.set("state", next.statusGroup);
@@ -85,4 +71,19 @@ export function taskListHref(query, patch) {
   if (next.pageSize !== 25) params.set("pageSize", String(next.pageSize));
   const value = params.toString();
   return value ? `/tasks?${value}` : "/tasks";
+}
+
+/** @param {import("./taskContracts").TaskListQuery} query */
+export function countTaskListFilters(query) {
+  return [
+    query.search,
+    query.taskType,
+    query.category,
+    query.status,
+    query.statusGroup,
+    query.deadlineState,
+    query.fromDate,
+    query.toDate,
+    query.departmentId,
+  ].filter(Boolean).length;
 }

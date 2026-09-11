@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseTaskListSearchParams, taskListHref } from "./taskFilters.mjs";
+import { countTaskListFilters, parseTaskListSearchParams, taskListHref } from "./taskFilters.mjs";
+
+test("Task Center counts each active filter once", () => {
+  const query = parseTaskListSearchParams(new URLSearchParams(
+    "q=bao&type=assigned&category=duty&status=in_progress&state=unfinished&deadline=overdue&from=2026-09-01&to=2026-09-30&department=11111111-1111-4111-8111-111111111111",
+  ));
+  assert.equal(countTaskListFilters(query), 9);
+  assert.equal(countTaskListFilters(parseTaskListSearchParams(new URLSearchParams())), 0);
+});
 
 test("Task Center filters round-trip through canonical URL state", () => {
   const params = new URLSearchParams({

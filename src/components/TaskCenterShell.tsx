@@ -7,7 +7,7 @@ import AppNav from "@/components/AppNav";
 import PersonalTaskActions from "@/components/PersonalTaskActions";
 import WorkScheduleSummary from "@/components/WorkScheduleSummary";
 import { useAuth } from "@/lib/auth";
-import { taskListHref } from "@/lib/taskFilters.mjs";
+import { countTaskListFilters, taskListHref } from "@/lib/taskFilters.mjs";
 import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
 import type { TaskCenterView } from "@/lib/taskCenterView";
 import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
@@ -105,7 +105,7 @@ export default function TaskCenterShell(props: Props) {
   const { logout } = useAuth();
   const onLogout = () => { logout(); router.replace("/login"); };
   const totalPages = Math.max(1, Math.ceil(tasks.total / tasks.pageSize));
-  const activeFilters = [query.search, query.taskType, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.category, query.status, query.statusGroup, query.deadlineState, query.fromDate, query.toDate, query.departmentId].filter(Boolean).length;
+  const activeFilters = countTaskListFilters(query);
   const listHref = (patch: Partial<TaskListQuery>) => { const href = taskListHref(query, patch).replace(/^\/tasks/, basePath); if (!taskMode) return href; const url = new URL(href, "http://local"); url.searchParams.set("scope", "personal"); return `${url.pathname}?${url.searchParams.toString()}`; };
   useEffect(() => { const close = (event: PointerEvent) => { if (tableRef.current && !tableRef.current.contains(event.target as Node)) setExpandedId(null); }; document.addEventListener("pointerdown", close); return () => document.removeEventListener("pointerdown", close); }, []);
 
