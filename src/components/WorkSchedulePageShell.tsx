@@ -52,6 +52,9 @@ export default function WorkSchedulePageShell({
   const [personQuery, setPersonQuery] = useState("");
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
   const [month, setMonth] = useState(anchor.slice(0, 7));
   const [week, setWeek] = useState(0);
 
@@ -102,11 +105,16 @@ export default function WorkSchedulePageShell({
   }, [anchor, period, week, weeks]);
 
   useEffect(() => {
-    fetch(`/api/work-schedule?from=${range.from}&to=${range.to}&scope=${scheduleScope}`)
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError(false);
+    fetch(`/api/work-schedule?from=${range.from}&to=${range.to}&scope=${scheduleScope}`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((body) => setRows(body.rows ?? []))
-      .catch(() => setRows([]));
-  }, [range, scheduleScope]);
+      .catch((error) => { if (error?.name !== "AbortError") setLoadError(true); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [range.from, range.to, retryToken, scheduleScope]);
 
   const filteredPeople = useMemo(() => {
     const query = personQuery.trim().toLocaleLowerCase("vi-VN");
@@ -320,7 +328,9 @@ export default function WorkSchedulePageShell({
             </div> : null}
           </section>
 
-          <section className="table-scroll mt-3 rounded-xl border bg-white shadow-sm">
+          {loading ? <p className="mt-3 rounded-xl border bg-white p-5 text-sm text-slate-600 shadow-sm">Đang tải lịch công tác...</p> : null}
+          {!loading && loadError ? <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><span>Không tải được lịch công tác. Dữ liệu cũ được giữ nguyên để tránh hiển thị nhầm là lịch trống.</span><button type="button" onClick={() => setRetryToken((value) => value + 1)} className="rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold">Thử lại</button></div> : null}
+          {!loadError ? <section className="table-scroll mt-3 rounded-xl border bg-white shadow-sm">
             <table className="work-schedule-table data-table w-full min-w-[1290px] border-collapse text-sm">
               <colgroup>
                 <col className="w-14" />
@@ -381,7 +391,7 @@ export default function WorkSchedulePageShell({
                   ))}
               </tbody>
             </table>
-          </section>
+          </section> : null}
         </main>
       </div>
     </div>
