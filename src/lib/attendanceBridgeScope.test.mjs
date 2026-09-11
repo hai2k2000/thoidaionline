@@ -84,6 +84,14 @@ test("stale spooled punches are preserved for later reconciliation instead of be
   assert.match(realtimeBridge, /Test-RecentPunch \$row\)[\s\S]*?Add-ToDeferredSpool/);
 });
 
+test("realtime spool rewrites are single-instance and use an atomic replacement file", () => {
+  assert.match(realtimeBridge, /System\.Threading\.Mutex/);
+  assert.match(realtimeBridge, /WaitOne\(0\)/);
+  assert.match(realtimeBridge, /function Write-SpoolRows/);
+  assert.match(realtimeBridge, /\.tmp\.\$PID/);
+  assert.match(realtimeBridge, /Move-Item -LiteralPath \$tempPath -Destination \$Path -Force/);
+});
+
 test("new sync requests recognize a request that is currently completing", () => {
   assert.match(sync, /\["pending", "running", "completing"\]/);
   assert.match(dailyRequest, /\["pending", "running", "completing"\]/);
