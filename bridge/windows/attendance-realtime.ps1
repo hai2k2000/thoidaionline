@@ -9,7 +9,41 @@ function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null)
   if ($null -ne $Body) { $params.Body = ($Body | ConvertTo-Json -Depth 8 -Compress) }
   Invoke-RestMethod @params
 }
-function Send-Punch($row) { try { Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) | Out-Null; return $true } catch { Add-Content -Path $spoolPath -Value ($row | ConvertTo-Json -Compress); return $false } }
+function Punch-Key($row) { return "$($row.enroll_number)|$($row.punched_at)" }
+function Get-SpoolRows {
+  if (-not (Test-Path $spoolPath)) { return @() }
+  $rows = @(); $keys = @{}
+  foreach ($line in @(Get-Content $spoolPath)) {
+    try {
+      $row = $line | ConvertFrom-Json; $key = Punch-Key $row
+      if ($row.enroll_number -and $row.punched_at -and -not $keys.ContainsKey($key)) { $keys[$key] = $true; $rows += $row }
+    } catch { }
+  }
+  return $rows
+}
+function Add-ToSpool($row) {
+  $key = Punch-Key $row
+  if (-not (Get-SpoolRows | Where-Object { (Punch-Key $_) -eq $key })) {
+    Add-Content -Path $spoolPath -Value ($row | ConvertTo-Json -Compress)
+  }
+}
+function Send-PunchCore($row) {
+  try { Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) | Out-Null; return $true } catch { return $false }
+}
+function Send-Punch($row) {
+  if (Send-PunchCore $row) { return $true }
+  Add-ToSpool $row
+  return $false
+}
+function Replay-Spool {
+  $rows = @(Get-SpoolRows); if (-not $rows.Count) { return }
+  $remaining = @()
+  foreach ($row in $rows) {
+    if (Test-RecentPunch $row) { if (-not (Send-PunchCore $row)) { $remaining += $row } }
+  }
+  if ($remaining.Count) { $remaining | ForEach-Object { $_ | ConvertTo-Json -Compress } | Set-Content -Path $spoolPath }
+  elseif (Test-Path $spoolPath) { Set-Content -Path $spoolPath -Value "" }
+}
 function Test-RecentPunch($row) { try { $instant = [datetimeoffset]::Parse([string]$row.punched_at); $now = [datetimeoffset]::Now; return $instant -ge $now.AddMinutes(-10) -and $instant -le $now.AddMinutes(10) } catch { return $false } }
 function Read-DeviceData {
   $zk = New-Object -ComObject "zkemkeeper.ZKEM"; $connected = $false
@@ -63,6 +97,7 @@ while ($true) {
     Start-Sleep -Seconds 30
     continue
   }
+  try { Replay-Spool } catch { }
   try {
     foreach ($row in @(Read-DeviceData)) {
       $key = "$($row.enroll_number)|$($row.punched_at)"

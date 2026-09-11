@@ -65,6 +65,19 @@ test("realtime bridge skips punches outside the ten-minute delivery window", () 
   assert.match(realtimeBridge, /AddMinutes\(10\)/);
 });
 
+test("realtime bridge replays a deduplicated spool instead of appending the same failed punch forever", () => {
+  assert.match(realtimeBridge, /function Get-SpoolRows/);
+  assert.match(realtimeBridge, /function Replay-Spool/);
+  assert.match(realtimeBridge, /function Add-ToSpool/);
+  assert.match(realtimeBridge, /realtime-spool\.jsonl/);
+  assert.match(realtimeBridge, /Replay-Spool/);
+  assert.match(realtimeBridge, /enroll_number.*punched_at/);
+});
+
+test("spooled punches are replayed only inside the configured realtime window", () => {
+  assert.match(realtimeBridge, /if \(-not \(Test-RealtimeWindow\)\)[\s\S]*?continue[\s\S]*?Replay-Spool/);
+});
+
 test("new sync requests recognize a request that is currently completing", () => {
   assert.match(sync, /\["pending", "running", "completing"\]/);
   assert.match(dailyRequest, /\["pending", "running", "completing"\]/);
