@@ -27,6 +27,7 @@ const positionShort: Record<string, string> = {
     "Biên tập": "Biên tập",
   "Phóng viên": "Phóng viên",
 };
+const vietnamToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
 export default function DutyScheduleViewer({
   userLabel,
   initialView,
@@ -38,14 +39,9 @@ export default function DutyScheduleViewer({
 }) {
   const router = useRouter();
   const { logout, user } = useAuth();
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  const today = vietnamToday();
   const [view, setView] = useState<"day" | "week" | "month">(initialView);
-  const [anchor, setAnchor] = useState(new Date().toISOString().slice(0, 10));
+  const [anchor, setAnchor] = useState(vietnamToday);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -152,7 +148,7 @@ export default function DutyScheduleViewer({
               </button>
               <button
                 className="rounded border px-3 py-2"
-                onClick={() => setAnchor(new Date().toISOString().slice(0, 10))}
+                onClick={() => setAnchor(vietnamToday())}
               >
                 Hôm nay
               </button>

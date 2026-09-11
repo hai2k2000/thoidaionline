@@ -12,6 +12,7 @@ type Row = {
 };
 type View = "day"|"week"|"month";
 const labels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const vietnamToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
 const fmt = (iso: string) => {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
@@ -20,7 +21,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
   const router = useRouter();
   const { logout } = useAuth();
   const [view, setView] = useState<View>(initialView);
-  const [anchor, setAnchor] = useState(new Date().toISOString().slice(0, 10));
+  const [anchor, setAnchor] = useState(vietnamToday);
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +89,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
               </button>
               <button
                 className="rounded border px-3 py-2"
-                onClick={() => setAnchor(new Date().toISOString().slice(0, 10))}
+                onClick={() => setAnchor(vietnamToday())}
               >
                 Hôm nay
               </button>

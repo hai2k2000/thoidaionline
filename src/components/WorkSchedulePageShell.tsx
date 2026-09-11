@@ -183,7 +183,12 @@ export default function WorkSchedulePageShell({
                     Tuần
                     <select
                       value={week}
-                      onChange={(event) => setWeek(Number(event.target.value))}
+                      onChange={(event) => {
+                        const nextWeek = Number(event.target.value);
+                        setWeek(nextWeek);
+                        setAnchor(iso(weeks[nextWeek].start));
+                        setPeriod("week");
+                      }}
                       className="ml-2 rounded border px-3 py-2 font-normal"
                     >
                       {weeks.map((item, index) => (
