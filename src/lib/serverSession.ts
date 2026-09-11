@@ -27,6 +27,7 @@ export type ServerAuthUser = {
   role_level: number;
   active: boolean;
   session_version: number;
+  must_change_password: boolean;
   is_department_manager: boolean;
   permissions: PermissionSet;
   avatar_url: string | null;
@@ -39,8 +40,8 @@ function secret() {
   return value;
 }
 
-export function createSessionToken(userId: string, sessionVersion: number) {
-  return createSignedSessionToken({ userId, sessionVersion, secret: secret() });
+export function createSessionToken(userId: string, sessionVersion: number, mustChangePassword = false) {
+  return createSignedSessionToken({ userId, sessionVersion, mustChangePassword, secret: secret() });
 }
 
 export function verifySessionToken(token: string | undefined) {
@@ -60,7 +61,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   const { data, error } = await serverSupabase
     .from("staff_users")
     .select(
-      "id,full_name,email,phone,username,department_id,job_title_id,active,session_version,avatar_path,preferences," +
+      "id,full_name,email,phone,username,department_id,job_title_id,active,session_version,must_change_password,avatar_path,preferences," +
       `roles(code,name,level${roleLifecycleEnabled ? ",active" : ""},role_permissions(` +
       "can_manage_users,can_manage_permissions,can_create_task," +
       "can_edit_all_tasks,can_comment,can_assign_task," +
@@ -82,6 +83,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     job_titles: { code: string } | null;
     active: boolean;
     session_version: number;
+    must_change_password: boolean;
     avatar_path: string | null;
     preferences: unknown;
     roles: {
@@ -111,6 +113,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     role_level: row.roles.level,
     active: row.active,
     session_version: row.session_version,
+    must_change_password: row.must_change_password,
     is_department_manager: isDepartmentManager,
     permissions: normalizePermissions(row.roles.role_permissions),
     avatar_url: avatarResult?.data?.signedUrl ?? null,

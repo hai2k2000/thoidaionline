@@ -7,11 +7,12 @@ const constant = read("./defaultPassword.ts");
 const login = read("../app/api/auth/login/route.ts");
 const accountPassword = read("../app/api/account/password/route.ts");
 const users = read("../app/api/users/route.ts");
+const credentials = read("./authenticateCredentials.ts");
 const migration = read("../../supabase/migrations/20260911083000_fix_first_login_default_password.sql");
 
 test("web account flows share the documented first-login password", () => {
   assert.match(constant, /DEFAULT_FIRST_LOGIN_PASSWORD\s*=\s*"Thoidai@123456"/);
-  for (const source of [login, accountPassword, users]) {
+  for (const source of [credentials, accountPassword, users]) {
     assert.match(source, /DEFAULT_FIRST_LOGIN_PASSWORD/);
     assert.doesNotMatch(source, /["']123456["']/);
   }

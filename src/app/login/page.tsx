@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import PasswordInput from "@/components/PasswordInput";
 import AuthShell from "@/components/AuthShell";
+import { resolvePostLoginPath } from "@/lib/firstLoginPassword";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function LoginPage() {
       const res = await login(identifier.trim(), password);
       if (!res.ok) return setMessage(`Đăng nhập không thành công: ${res.error}`);
       setMessage("Đăng nhập thành công.");
-      router.replace("/tasks");
+      router.replace(resolvePostLoginPath(res.mustChangePassword === true));
     } catch {
       setMessage("Không kết nối được dữ liệu đăng nhập. Vui lòng thử lại.");
     }

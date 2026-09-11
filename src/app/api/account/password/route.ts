@@ -19,7 +19,7 @@ export async function PATCH(request: Request) {
   const valid = data.password_hash ? await verifyPassword(currentPassword, data.password_hash) : (data.password ?? DEFAULT_FIRST_LOGIN_PASSWORD) === currentPassword;
   if (!valid) return json({ error: "Mật khẩu hiện tại không đúng." }, 401);
   const passwordHash = await hashPassword(newPassword);
-  const updated = await serverSupabase.from("staff_users").update({ password_hash: passwordHash, password: null, session_version: data.session_version + 1 }).eq("id", actor.id).eq("session_version", data.session_version).select("id").maybeSingle();
+  const updated = await serverSupabase.from("staff_users").update({ password_hash: passwordHash, password: null, must_change_password: false, session_version: data.session_version + 1 }).eq("id", actor.id).eq("session_version", data.session_version).select("id").maybeSingle();
   if (updated.error || !updated.data) return json({ error: "Mật khẩu đã được thay đổi ở nơi khác. Vui lòng thử lại." }, 409);
   return json({ ok: true, message: "Đã đổi mật khẩu và thu hồi các phiên đăng nhập cũ." });
 }

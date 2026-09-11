@@ -22,7 +22,23 @@ test("new sessions preserve the database session version", () => {
     userId: "00000000-0000-4000-8000-000000000001",
     expiresAt: 28900,
     sessionVersion: 4,
+    mustChangePassword: false,
   });
+});
+
+test("new sessions preserve the first-login password requirement", () => {
+  const secret = signingSecret();
+  const token = createSignedSessionToken({
+    userId: "00000000-0000-4000-8000-000000000001",
+    sessionVersion: 4,
+    mustChangePassword: true,
+    secret,
+    nowSeconds: 100,
+  });
+  assert.equal(
+    verifySignedSessionToken({ token, secret, nowSeconds: 101 })?.mustChangePassword,
+    true,
+  );
 });
 
 test("legacy sessions without a version normalize to zero", () => {

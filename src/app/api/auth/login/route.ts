@@ -14,7 +14,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
   }
 
-  const response = NextResponse.json({ ok: true });
-  response.cookies.set(SESSION_COOKIE, createSessionToken(authenticated.userId, authenticated.sessionVersion), sessionCookieOptions);
+  const response = NextResponse.json({ ok: true, mustChangePassword: authenticated.mustChangePassword });
+  response.cookies.set(
+    SESSION_COOKIE,
+    createSessionToken(authenticated.userId, authenticated.sessionVersion, authenticated.mustChangePassword),
+    sessionCookieOptions,
+  );
   return response;
 }

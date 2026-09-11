@@ -6,12 +6,14 @@ export type SessionPayload = {
   userId: string;
   expiresAt: number;
   sessionVersion?: number;
+  mustChangePassword?: boolean;
 };
 
 export type VerifiedSessionPayload = {
   userId: string;
   expiresAt: number;
   sessionVersion: number;
+  mustChangePassword: boolean;
 };
 
 const signature = (payload: string, secret: string) =>
@@ -25,11 +27,13 @@ export function signSessionPayload(payload: SessionPayload, secret: string) {
 export function createSignedSessionToken({
   userId,
   sessionVersion,
+  mustChangePassword = false,
   secret,
   nowSeconds = Math.floor(Date.now() / 1000),
 }: {
   userId: string;
   sessionVersion: number;
+  mustChangePassword?: boolean;
   secret: string;
   nowSeconds?: number;
 }) {
@@ -37,6 +41,7 @@ export function createSignedSessionToken({
     userId,
     expiresAt: nowSeconds + SESSION_TTL_SECONDS,
     sessionVersion,
+    mustChangePassword,
   }, secret);
 }
 
@@ -62,7 +67,12 @@ export function verifySignedSessionToken({
     const sessionVersion = parsed.sessionVersion ?? 0;
     if (!parsed.userId || !Number.isFinite(parsed.expiresAt) || parsed.expiresAt <= nowSeconds) return null;
     if (!Number.isInteger(sessionVersion) || sessionVersion < 0) return null;
-    return { userId: parsed.userId, expiresAt: parsed.expiresAt, sessionVersion };
+    return {
+      userId: parsed.userId,
+      expiresAt: parsed.expiresAt,
+      sessionVersion,
+      mustChangePassword: parsed.mustChangePassword === true,
+    };
   } catch {
     return null;
   }

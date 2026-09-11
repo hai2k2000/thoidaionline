@@ -17,6 +17,7 @@ type AuthUser = {
   permissions: PermissionSet;
   avatar_url: string | null;
   preferences: AccountPreferences;
+  must_change_password: boolean;
 };
 
 type ModuleKey = "hr" | "assets" | "documents" | "performance";
@@ -24,7 +25,7 @@ type ModuleKey = "hr" | "assets" | "documents" | "performance";
 type AuthContextType = {
   loading: boolean;
   user: AuthUser | null;
-  login: (identifier: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (identifier: string, password: string) => Promise<{ ok: boolean; error?: string; mustChangePassword?: boolean }>;
   logout: () => Promise<void>;
   hasPermission: (key: PermissionKey) => boolean;
   canAccessModule: (module: ModuleKey) => boolean;
@@ -89,8 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     }
     localStorage.removeItem(SESSION_KEY);
+    const payload = await response.json().catch(() => null) as { mustChangePassword?: boolean } | null;
     await loadSession();
-    return { ok: true };
+    return { ok: true, mustChangePassword: payload?.mustChangePassword === true };
   };
 
   const logout = async () => {
