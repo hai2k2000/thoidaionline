@@ -12,3 +12,10 @@ test("leadership assignment accepts mapped department heads", () => {
   assert.match(sql, /u\.department_id=p_department_id/);
   assert.match(sql, /api_assign_task_v2/);
 });
+
+test("department deputy assignment migration enables scoped task assignment", () => {
+  const sql = read("../../supabase/migrations/20260911110000_enable_deputy_department_assignment.sql");
+  assert.match(sql, /lower\(code\) = 'pho_truong_phong'/i);
+  assert.match(sql, /can_assign_task = true/i);
+  assert.match(sql, /can_view_department_tasks = true/i);
+});
