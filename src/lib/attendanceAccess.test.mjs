@@ -25,7 +25,7 @@ test("personal attendance always filters by the signed-in actor", () => {
   assert.match(route, /if \(!organizationScope\)/);
   assert.match(route, /dayQuery = dayQuery\.eq\("user_id", guard\.actor\.id\)/);
   assert.match(route, /monthQuery = monthQuery\.eq\("user_id", guard\.actor\.id\)/);
-  assert.match(route, /if \(!organizationScope\) users = users\.filter\(\(user\) => user\.id === guard\.actor\.id\)/);
+  assert.doesNotMatch(route, /DEMO|generateDemoRangeRows/);
 });
 
 test("browser attendance page uses the guarded API instead of direct Supabase access", () => {

@@ -88,9 +88,6 @@ export async function GET(request: Request) {
 
   const [dayResult, monthResult] = await Promise.all([dayQuery, monthQuery]);
   if (isMissingAttendanceTable(dayResult.error) || isMissingAttendanceTable(monthResult.error)) {
-    // Keep the missing-schema path scoped to the signed-in user while reporting the service error.
-    let users: Array<{ id: string }> = [];
-    if (!organizationScope) users = users.filter((user) => user.id === guard.actor.id);
     return apiError("operation_failed", 503);
   }
 
