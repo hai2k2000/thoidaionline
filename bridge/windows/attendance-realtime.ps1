@@ -10,6 +10,7 @@ function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null)
   Invoke-RestMethod @params
 }
 function Send-Punch($row) { try { Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) | Out-Null; return $true } catch { Add-Content -Path $spoolPath -Value ($row | ConvertTo-Json -Compress); return $false } }
+function Test-RecentPunch($row) { try { $instant = [datetimeoffset]::Parse([string]$row.punched_at); $now = [datetimeoffset]::Now; return $instant -ge $now.AddMinutes(-10) -and $instant -le $now.AddMinutes(10) } catch { return $false } }
 function Read-DeviceData {
   $zk = New-Object -ComObject "zkemkeeper.ZKEM"; $connected = $false
   try {
@@ -65,7 +66,7 @@ while ($true) {
   try {
     foreach ($row in @(Read-DeviceData)) {
       $key = "$($row.enroll_number)|$($row.punched_at)"
-      if (-not $seen.ContainsKey($key)) { if (Send-Punch $row) { $seen[$key] = $true } }
+      if (Test-RecentPunch $row -and -not $seen.ContainsKey($key)) { if (Send-Punch $row) { $seen[$key] = $true } }
     }
     $snapshot = [ordered]@{}; $seen.Keys | Select-Object -Last 5000 | ForEach-Object { $snapshot[$_] = $true }
     $snapshot | ConvertTo-Json -Compress | Set-Content $statePath

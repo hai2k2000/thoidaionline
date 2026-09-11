@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const { data: existing } = await serverSupabase
     .from("attendance_sync_requests")
     .select("id,status,requested_at")
-    .in("status", ["pending", "running"])
+    .in("status", ["pending", "running", "completing"])
     .order("requested_at", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     .select("id,status,requested_at")
     .single();
   if (error?.code === "23505") {
-    const { data: active } = await serverSupabase.from("attendance_sync_requests").select("id,status,requested_at").in("status", ["pending", "running"]).order("requested_at", { ascending: true }).limit(1).maybeSingle();
+    const { data: active } = await serverSupabase.from("attendance_sync_requests").select("id,status,requested_at").in("status", ["pending", "running", "completing"]).order("requested_at", { ascending: true }).limit(1).maybeSingle();
     if (active) return apiJson({ request: active });
   }
   if (error || !data) return apiError("operation_failed", 500);

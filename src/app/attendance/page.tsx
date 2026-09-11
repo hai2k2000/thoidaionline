@@ -32,7 +32,7 @@ type LeaveRequest = {
 
 type SyncRequest = {
   id: string;
-  status: "pending" | "running" | "succeeded" | "failed";
+  status: "pending" | "running" | "completing" | "succeeded" | "failed";
   requested_at: string;
   completed_at: string | null;
   result?: { punches_received?: number; matched_users?: number; daily_logs?: number } | null;
@@ -130,6 +130,12 @@ export default function AttendancePage() {
         setSyncMessage(`Đồng bộ xong: ${latest.result.punches_received ?? 0} lượt chấm, ${latest.result.matched_users ?? 0} nhân sự khớp, ${latest.result.daily_logs ?? 0} ngày công.`);
       } else if (latest?.status === "failed") {
         setSyncMessage(`Đồng bộ thất bại: ${latest.error ?? "Không rõ nguyên nhân"}`);
+      } else if (latest?.status === "completing") {
+        setSyncMessage("Đang chốt dữ liệu chấm công...");
+      } else if (latest?.status === "running") {
+        setSyncMessage("Đang đọc dữ liệu từ máy chấm công...");
+      } else if (latest?.status === "pending") {
+        setSyncMessage("Đang chờ máy Windows xử lý...");
       }
     }
   }, [isOrganizationView]);
@@ -314,17 +320,17 @@ export default function AttendancePage() {
                 </p>
                 <p className="mt-1 text-xs font-semibold text-slate-700" role="status" aria-live="polite">
                   {syncMessage || (syncRequests[0]
-                    ? `Lần gần nhất: ${syncRequests[0].status === "succeeded" ? "Thành công" : syncRequests[0].status === "failed" ? "Thất bại" : syncRequests[0].status === "running" ? "Đang đọc dữ liệu" : "Đang chờ máy Windows"}`
+                    ? `Lần gần nhất: ${syncRequests[0].status === "succeeded" ? "Thành công" : syncRequests[0].status === "failed" ? "Thất bại" : syncRequests[0].status === "completing" ? "Đang chốt dữ liệu" : syncRequests[0].status === "running" ? "Đang đọc dữ liệu" : "Đang chờ máy Windows"}`
                     : "Chưa có lần đồng bộ nào.")}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => void requestSync()}
-                disabled={syncBusy || syncRequests[0]?.status === "pending" || syncRequests[0]?.status === "running"}
+                disabled={syncBusy || syncRequests[0]?.status === "pending" || syncRequests[0]?.status === "running" || syncRequests[0]?.status === "completing"}
                 className="min-h-11 shrink-0 rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {syncBusy ? "Đang gửi..." : syncRequests[0]?.status === "running" ? "Đang đồng bộ..." : "Đồng bộ ngay"}
+                {syncBusy ? "Đang gửi..." : syncRequests[0]?.status === "completing" ? "Đang chốt dữ liệu..." : syncRequests[0]?.status === "running" ? "Đang đồng bộ..." : "Đồng bộ ngay"}
               </button>
             </div>
           ) : null}

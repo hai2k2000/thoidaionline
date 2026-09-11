@@ -1,6 +1,6 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { bridgeAuthorized, configuredAttendanceDeviceId } from "@/lib/attendanceBridgeAuth";
+import { bridgeAuthorized, configuredAttendanceDeviceId, validateAttendanceRange } from "@/lib/attendanceBridgeAuth";
 
 const isAdmin = (actor: { role_code: string }) => actor.role_code === "admin";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const period = typeof body?.period === "string" ? body.period : "day";
   const rangeStart = typeof body?.range_start === "string" ? body.range_start : "";
   const rangeEnd = typeof body?.range_end === "string" ? body.range_end : "";
-  if (deviceId !== configuredDeviceId || !["day", "week", "month"].includes(period) || !DATE_PATTERN.test(rangeStart) || !DATE_PATTERN.test(rangeEnd) || rangeStart > rangeEnd) {
+  if (deviceId !== configuredDeviceId || !validateAttendanceRange(period, rangeStart, rangeEnd)) {
     return apiError("invalid_request", 400);
   }
   const { data, error } = await serverSupabase
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     .select("id,status,requested_at")
     .single();
   if (error?.code === "23505") {
-    const { data: active } = await serverSupabase.from("attendance_sync_requests").select("id,status,requested_at").in("status", ["pending", "running"]).order("requested_at", { ascending: true }).limit(1).maybeSingle();
+    const { data: active } = await serverSupabase.from("attendance_sync_requests").select("id,status,requested_at").in("status", ["pending", "running", "completing"]).order("requested_at", { ascending: true }).limit(1).maybeSingle();
     if (active) return apiJson({ request: active });
   }
   if (error || !data) return apiError("operation_failed", 500);

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   const configuredDeviceId = configuredAttendanceDeviceId();
   const instant = new Date(punchedAt);
   const localDate = vietnamDate(instant);
-  if (!enroll || enroll.length > 64 || deviceId !== configuredDeviceId || !Number.isFinite(instant.valueOf()) || localDate !== vietnamDate() || instant.getTime() > Date.now() + 10 * 60 * 1000) return apiError("invalid_request", 400);
+  if (!enroll || enroll.length > 64 || deviceId !== configuredDeviceId || !Number.isFinite(instant.valueOf()) || localDate !== vietnamDate() || Date.now() - instant.getTime() > 10 * 60 * 1000 || instant.getTime() > Date.now() + 10 * 60 * 1000) return apiError("invalid_request", 400);
   const { error: punchError } = await serverSupabase.from("attendance_punches").upsert({
     device_id: deviceId, enroll_number: enroll, punched_at: punchedAt,
     verify_mode: typeof body?.verify_mode === "number" ? body.verify_mode : null,

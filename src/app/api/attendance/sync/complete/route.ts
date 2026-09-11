@@ -1,6 +1,6 @@
 import { apiError, apiJson, readJsonObject } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { bridgeAuthorized, configuredAttendanceDeviceId } from "@/lib/attendanceBridgeAuth";
+import { bridgeAuthorized, configuredAttendanceDeviceId, validateAttendanceRange } from "@/lib/attendanceBridgeAuth";
 
 type Punch = {
   enroll_number: string;
@@ -14,6 +14,7 @@ const isPunch = (value: unknown): value is Punch => {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
   return typeof row.enroll_number === "string"
+    && row.enroll_number.trim().length > 0
     && row.enroll_number.length <= 64
     && typeof row.punched_at === "string"
     && Number.isFinite(Date.parse(row.punched_at));
@@ -35,11 +36,12 @@ export async function POST(request: Request) {
     .eq("id", requestId)
     .maybeSingle();
   const configuredDeviceId = configuredAttendanceDeviceId();
-  const requestResult = requestRow?.result as { device_id?: string; range_start?: string; range_end?: string } | null;
+  const requestResult = requestRow?.result as { device_id?: string; period?: string; range_start?: string; range_end?: string } | null;
   const requestDeviceId = requestResult?.device_id ?? "";
   const rangeStart = requestResult?.range_start ?? "";
   const rangeEnd = requestResult?.range_end ?? "";
-  if (requestError || !requestRow || requestRow.status !== "running" || requestDeviceId !== configuredDeviceId || deviceId !== configuredDeviceId || !/^\d{4}-\d{2}-\d{2}$/.test(rangeStart) || !/^\d{4}-\d{2}-\d{2}$/.test(rangeEnd)) return apiError("conflict", 409);
+  const period = requestResult?.period ?? "";
+  if (requestError || !requestRow || requestRow.status !== "running" || requestDeviceId !== configuredDeviceId || deviceId !== configuredDeviceId || !validateAttendanceRange(period, rangeStart, rangeEnd)) return apiError("conflict", 409);
   if (punches.some((punch) => {
     const punchDate = new Date(punch.punched_at).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
     return punchDate < rangeStart || punchDate > rangeEnd;
@@ -71,8 +73,21 @@ export async function POST(request: Request) {
     .eq("active", true);
   if (userError) return failRequest(requestId, userError.message);
   const userByCode = new Map((users ?? []).map((user) => [user.attendance_code, user]));
+  const rangeStartInstant = new Date(`${rangeStart}T00:00:00+07:00`);
+  const rangeEndExclusive = new Date(`${rangeEnd}T00:00:00+07:00`);
+  rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
+  const { data: canonicalPunches, error: canonicalError } = await serverSupabase
+    .from("attendance_punches")
+    .select("enroll_number,punched_at,verify_mode,in_out_mode,work_code")
+    .eq("device_id", configuredDeviceId)
+    .in("enroll_number", enrollments)
+    .gte("punched_at", rangeStartInstant.toISOString())
+    .lt("punched_at", rangeEndExclusive.toISOString())
+    .order("punched_at", { ascending: true })
+    .limit(20000);
+  if (canonicalError) return failRequest(requestId, canonicalError.message);
   const daily = new Map<string, { user_id: string; work_date: string; earliest: Date; latest: Date }>();
-  for (const punch of punches) {
+  for (const punch of (canonicalPunches ?? [])) {
     const user = userByCode.get(punch.enroll_number);
     if (!user) continue;
     const instant = new Date(punch.punched_at);
@@ -106,12 +121,14 @@ export async function POST(request: Request) {
     if (logError) return failRequest(requestId, logError.message);
   }
   const result = { punches_received: punches.length, matched_users: userByCode.size, daily_logs: logs.length };
-  const { error: doneError } = await serverSupabase
+  const { data: completed, error: doneError } = await serverSupabase
     .from("attendance_sync_requests")
     .update({ status: "succeeded", completed_at: new Date().toISOString(), result })
     .eq("id", requestId)
-    .eq("status", "completing");
-  if (doneError) return apiError("operation_failed", 500);
+    .eq("status", "completing")
+    .select("id,status")
+    .maybeSingle();
+  if (doneError || !completed || completed.status !== "succeeded") return failRequest(requestId, doneError?.message ?? "Sync completion was not committed");
   return apiJson({ ok: true, result });
 }
 
