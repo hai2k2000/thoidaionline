@@ -119,3 +119,5 @@ Follow Up:
 Next:
 - Monitor the first scheduled 18:30 reconciliation run and reconcile any additional device users if the hardware roster changes.
 - Existing dev-tooling audit findings, stale UI contract test, and non-root service follow-up remain separate tasks.
+
+Security milestone 2026-09-14: Supabase Kong, Mailpit, and PostgreSQL bindings restricted to 127.0.0.1. Rollback containers and inspect snapshots retained. Database readiness, schema dump, service health, and production login smoke checks passed. Dependency remediation passed npm audit with zero vulnerabilities; security tests 21/21.
