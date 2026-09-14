@@ -3,6 +3,8 @@ Current Task: COMPLETE — leave requests and attendance notes
 
 Latest Security Hardening: COMPLETE — web login attempts are rate-limited per client and account
 
+Latest Network Hardening: COMPLETE — Next.js binds to localhost behind Nginx
+
 Current Task Update: COMPLETE — department deputy task assignment enabled
 
 Latest Task: COMPLETE — approved leave and online work notes
@@ -16,6 +18,7 @@ Latest Attendance Workflow Update: COMPLETE — business-trip requests are clear
 Latest Work Schedule Privacy: COMPLETE — regular employees can only view their own plans
 
 Completed:
+- Bound the production Next.js listener to `127.0.0.1:3001`; Nginx remains the only public application entry point.
 - Added the same bounded request validation and five-attempt/15-minute throttle used by mobile login to the web login endpoint; successful authentication clears the counter and blocked requests return HTTP 429 with `Retry-After`.
 - Restricted employee work-schedule queries, pages, and navigation so regular employees only receive their own plan; organization and leadership schedules remain available to authorized leaders and admin.
 - Enabled task assignment for the `pho_truong_phong` role; department deputies are scoped to assigning within their own department.
@@ -66,6 +69,7 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Production binding contract test passed; after a backed-up unit change, direct port 3001 access was refused, public `/login` returned HTTP 200, protected attendance API returned HTTP 401, and all related services stayed active.
 - Web-login rate-limit test passed after a verified RED/GREEN cycle; targeted auth tests passed 5/5, changed-route ESLint passed, production build passed, and the sixth invalid login attempt returned HTTP 429 while the service and login page remained healthy.
 - Work-schedule privacy TypeScript check and 3 targeted authorization tests PASS; production employee smoke returned zero rows instead of four organization rows and direct `/work-schedule` access redirected to `/work-schedule/staff`.
 - Deputy assignment migration applied after a production database backup; `hongninh` and `leson` both resolve to Phòng Nội dung with `can_assign_task=true`, production build PASS, service active, and `/login` returns HTTP 200.
