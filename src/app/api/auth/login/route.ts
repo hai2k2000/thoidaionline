@@ -33,10 +33,10 @@ export async function POST(request: Request) {
   }
   clearLoginAttempts(throttleKey);
 
-  const response = NextResponse.json({ ok: true, mustChangePassword: authenticated.mustChangePassword });
+  const response = NextResponse.json({ ok: true, mustChangePassword: false });
   response.cookies.set(
     SESSION_COOKIE,
-    createSessionToken(authenticated.userId, authenticated.sessionVersion, authenticated.mustChangePassword),
+    createSessionToken(authenticated.userId, authenticated.sessionVersion, false),
     sessionCookieOptions,
   );
   return response;

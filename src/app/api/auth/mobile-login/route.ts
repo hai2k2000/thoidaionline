@@ -22,11 +22,5 @@ export async function POST(request: Request) {
   const authenticated = await authenticateCredentials(identifier, password);
   if (!authenticated) return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   clearLoginAttempts(throttleKey);
-  if (authenticated.mustChangePassword) {
-    return NextResponse.json(
-      { error: "Vui lòng đăng nhập trên trang web để đổi mật khẩu lần đầu.", mustChangePassword: true },
-      { status: 428, headers: { "Cache-Control": "no-store" } },
-    );
-  }
   return NextResponse.json({ token: createSessionToken(authenticated.userId, authenticated.sessionVersion, false) }, { headers: { "Cache-Control": "no-store" } });
 }

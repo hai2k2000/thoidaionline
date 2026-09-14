@@ -50,7 +50,6 @@ export async function authenticateCredentials(identifierInput: string, passwordI
   return {
     userId: row.id,
     sessionVersion: row.session_version,
-    mustChangePassword: row.must_change_password
-      || (password === DEFAULT_FIRST_LOGIN_PASSWORD && row.username?.toLowerCase() !== "admin"),
+    mustChangePassword: false,
   };
 }
