@@ -11,6 +11,8 @@ const auth = readFileSync("src/lib/attendanceBridgeAuth.ts", "utf8");
 const pending = readFileSync("src/app/api/attendance/sync/pending/route.ts", "utf8");
 const recovery = readFileSync("src/lib/attendanceSyncRecovery.ts", "utf8");
 const realtimeBridge = readFileSync("bridge/windows/attendance-realtime.ps1", "utf8");
+const taskInstaller = readFileSync("bridge/windows/install-tasks.ps1", "utf8");
+const watchdog = readFileSync("bridge/windows/run-attendance-watchdog.pyw", "utf8");
 
 test("realtime punches are bound to the configured device and current Vietnam date", () => {
   assert.match(realtime, /configuredAttendanceDeviceId/);
@@ -117,4 +119,18 @@ test("new sync requests recognize a request that is currently completing", () =>
   assert.match(dailyRequest, /\["pending", "running", "completing"\]/);
   assert.match(attendancePage, /status: "pending" \| "running" \| "completing"/);
   assert.match(attendancePage, /status === "completing"/);
+});
+
+test("realtime bridge is installed as a hidden logon task with restart recovery", () => {
+  assert.match(taskInstaller, /WiseEye Attendance Realtime/);
+  assert.match(taskInstaller, /attendance-realtime\.ps1/);
+  assert.match(taskInstaller, /New-ScheduledTaskTrigger -AtLogOn/);
+  assert.match(taskInstaller, /New-ScheduledTaskSettingsSet[\s\S]*RestartCount/);
+  assert.match(taskInstaller, /Register-ScheduledTask/);
+  assert.match(taskInstaller, /CurrentVersion\\Run/);
+  assert.match(taskInstaller, /catch/);
+  assert.match(taskInstaller, /Disable-ScheduledTask -TaskName "WiseEye Attendance Bridge Poll"/);
+  assert.match(watchdog, /while True/);
+  assert.match(watchdog, /CREATE_NO_WINDOW/);
+  assert.match(watchdog, /time\.sleep/);
 });
