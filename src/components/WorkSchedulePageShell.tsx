@@ -68,6 +68,7 @@ export default function WorkSchedulePageShell({
   const [createBusy, setCreateBusy] = useState(false);
   const [createMessage, setCreateMessage] = useState("");
   const [editingRow, setEditingRow] = useState<Row | null>(null);
+  const [planType, setPlanType] = useState<"business" | "event">("business");
 
   const weeks = useMemo(() => {
     const [year, monthNumber] = month.split("-").map(Number);
@@ -156,12 +157,14 @@ export default function WorkSchedulePageShell({
     setCreateBusy(true);
     setCreateMessage("");
     const form = new FormData(event.currentTarget);
+    const isEvent = planType === "event";
+    const workDate = String(form.get("workDate") ?? "");
     const payload = {
-      planType: form.get("planType"),
-      workDate: form.get("workDate"),
-      endDate: form.get("endDate"),
-      startTime: form.get("startTime") || null,
-      endTime: form.get("endTime") || null,
+      planType,
+      workDate,
+      endDate: isEvent ? workDate : form.get("endDate"),
+      startTime: null,
+      endTime: null,
       title: form.get("title"),
       location: form.get("location"),
       notes: form.get("notes"),
@@ -291,7 +294,7 @@ export default function WorkSchedulePageShell({
                   <p className="mt-1 text-xs text-slate-500">{viewAll ? "Hiển thị kế hoạch của nhân sự đang hoạt động." : "Chỉ hiển thị kế hoạch có liên quan đến bạn."}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" onClick={() => { setCreateMessage(""); setCreateOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-700">Tạo kế hoạch</button>
+                  <button type="button" onClick={() => { setPlanType("business"); setCreateMessage(""); setCreateOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-700">Tạo kế hoạch</button>
                   <button
                     type="button"
                     onClick={() => { setViewAll((current) => !current); setPeopleOpen(false); }}
@@ -428,14 +431,11 @@ export default function WorkSchedulePageShell({
                                 key={row.id}
                                 className="mb-1 rounded-lg border-l-4 border-orange-500 bg-orange-50 p-2 text-xs text-orange-950"
                               >
-                                <b>
-                                  {row.start_time?.slice(0, 5) ?? ""}
-                                  {row.end_time ? `-${row.end_time.slice(0, 5)}` : ""}
-                                </b>
+                                <b>{row.plan_type === "event" ? "Cả ngày" : row.start_time ? `${row.start_time.slice(0, 5)}${row.end_time ? `-${row.end_time.slice(0, 5)}` : ""}` : ""}</b>
                                 <p className="font-semibold">{row.plan_type === "business" ? "Công tác: " : row.plan_type === "event" ? "Sự kiện: " : ""}{row.title}</p>
                                 {row.location ? <p>{row.location}</p> : null}
                                 <p>{names(row.participant_ids)}</p>
-                                {currentUserId && row.created_by === currentUserId ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => void deletePlan(row.id)} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Xóa kế hoạch</button></div> : null}
+                                {currentUserId && row.created_by === currentUserId ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => void deletePlan(row.id)} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Xóa kế hoạch</button></div> : null}
                               </article>
                             ))}
                         </td>
@@ -450,12 +450,10 @@ export default function WorkSchedulePageShell({
               <div className="flex items-center justify-between"><h2 id="create-plan-title" className="text-lg font-semibold">{editingRow ? "Sửa kế hoạch cá nhân" : "Tạo kế hoạch cá nhân"}</h2><button type="button" onClick={() => { setEditingRow(null); setCreateOpen(false); }} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
               <p className="mt-1 text-sm text-slate-600">Kế hoạch được công khai cho các tài khoản đã đăng nhập. Bạn chỉ có thể tạo và quản lý kế hoạch của mình.</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="text-sm font-medium">Loại kế hoạch<select name="planType" defaultValue={editingRow?.plan_type ?? "work"} className="mt-1 min-h-11 w-full rounded border px-3 py-2"><option value="work">Công việc</option><option value="business">Đi công tác</option><option value="event">Sự kiện</option></select></label>
+                <label className="text-sm font-medium">Loại kế hoạch<select name="planType" value={planType} onChange={(event) => setPlanType(event.target.value as "business" | "event")} className="mt-1 min-h-11 w-full rounded border px-3 py-2"><option value="business">Đi công tác</option><option value="event">Sự kiện</option></select></label>
                 <label className="text-sm font-medium">Tiêu đề<input name="title" required maxLength={500} defaultValue={editingRow?.title ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                <label className="text-sm font-medium">Từ ngày<input name="workDate" type="date" required defaultValue={editingRow?.work_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                <label className="text-sm font-medium">Đến ngày<input name="endDate" type="date" required defaultValue={editingRow?.end_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                <label className="text-sm font-medium">Giờ bắt đầu<input name="startTime" type="time" defaultValue={editingRow?.start_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                <label className="text-sm font-medium">Giờ kết thúc<input name="endTime" type="time" defaultValue={editingRow?.end_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
+                <label className="text-sm font-medium">{planType === "event" ? "Ngày sự kiện" : "Từ ngày"}<input name="workDate" type="date" required defaultValue={editingRow?.work_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
+                {planType === "business" ? <label className="text-sm font-medium">Đến ngày<input name="endDate" type="date" required defaultValue={editingRow?.end_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label> : <p className="rounded-lg bg-orange-50 p-3 text-sm text-orange-900">Sự kiện áp dụng trọn ngày đã chọn.</p>}
               </div>
               <label className="mt-3 block text-sm font-medium">Địa điểm<input name="location" maxLength={500} defaultValue={editingRow?.location ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
               <label className="mt-3 block text-sm font-medium">Ghi chú<textarea name="notes" maxLength={2000} defaultValue={editingRow?.notes ?? ""} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>

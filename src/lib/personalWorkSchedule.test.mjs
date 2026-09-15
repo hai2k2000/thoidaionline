@@ -38,6 +38,26 @@ test("personal plan UI lets the creator edit or delete their own plan", () => {
   assert.match(shell, /viewAll/);
 });
 
+test("personal plan form only offers business trips and single-day events", () => {
+  const shell = read("../components/WorkSchedulePageShell.tsx");
+  assert.doesNotMatch(shell, /<option value="work">/);
+  assert.match(shell, /<option value="business">Đi công tác<\/option>/);
+  assert.match(shell, /<option value="event">Sự kiện<\/option>/);
+  assert.match(shell, /planType === "event"/);
+  assert.match(shell, /Ngày sự kiện/);
+  assert.match(shell, /row\.plan_type === "event" \? "Cả ngày"/);
+  assert.doesNotMatch(shell, /name="startTime"/);
+  assert.doesNotMatch(shell, /name="endTime"/);
+});
+
+test("work schedule API rejects work plans and enforces event dates without hours", () => {
+  const route = read("../app/api/work-schedule/route.ts");
+  assert.match(route, /body\.planType !== "business" && body\.planType !== "event"/);
+  assert.match(route, /planType === "event" && endDate !== workDate/);
+  assert.match(route, /startTime: null/);
+  assert.match(route, /endTime: null/);
+});
+
 test("work schedule storage supports plan type and date ranges", () => {
   const migration = readFileSync(new URL("../../supabase/migrations/20260915120000_personal_work_plans.sql", import.meta.url), "utf8");
   assert.match(migration, /add column if not exists end_date/);
