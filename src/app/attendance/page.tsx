@@ -484,8 +484,8 @@ export default function AttendancePage() {
             </thead>
             <tbody>
               {monthlySummary.map((r) => (
-                <tr key={`sum-${r.userId}`} className="border-t">
-                  <td className="px-3 py-2 font-semibold"><button type="button" className="text-left font-semibold text-orange-700 underline-offset-2 hover:underline" onClick={() => setSelectedSummaryEmployee({ userId: r.userId, name: r.name })}>{r.name}</button></td>
+                <tr key={`sum-${r.userId}`} className="border-t cursor-pointer" onClick={() => setSelectedSummaryEmployee({ userId: r.userId, name: r.name })} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedSummaryEmployee({ userId: r.userId, name: r.name }); } }} tabIndex={0} aria-label={`Xem chi tiết chấm công của ${r.name}`}>
+                  <td className="px-3 py-2 font-semibold text-orange-700 underline-offset-2 hover:underline">{r.name}</td>
                   <td className="px-3 py-2 text-right">{r.daysPresent}</td>
                   <td className="px-3 py-2 text-right">{r.leaveWithPermission}</td>
                   <td className="px-3 py-2 text-right">{r.leaveWithoutPermission}</td>

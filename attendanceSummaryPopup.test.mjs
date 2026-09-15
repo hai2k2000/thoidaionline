@@ -16,5 +16,6 @@ test("summary row opens a popup with only the selected employee's attendance det
   assert.match(page, /selectedSummaryEmployee/);
   assert.match(page, /role="dialog"/);
   assert.match(page, /Chi tiết chấm công/);
+  assert.match(page, /className="border-t cursor-pointer" onClick=\{\(\) => setSelectedSummaryEmployee/);
   assert.match(page, /onClick=\{\(\) => setSelectedSummaryEmployee/);
 });

@@ -5,6 +5,8 @@ Current Task Update: COMPLETE — employee leave history month/status filters
 
 Current Task Update: COMPLETE — attendance summary rows open employee detail popup
 
+Validation: Summary popup rows are clickable by mouse and keyboard; selected-employee detail is scoped to the active attendance range.
+
 Latest Security Hardening: COMPLETE — web login attempts are rate-limited per client and account
 
 Latest Network Hardening: COMPLETE — Next.js binds to localhost behind Nginx
