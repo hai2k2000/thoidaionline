@@ -29,6 +29,6 @@ test("Windows bridge emits signed requests", () => {
   assert.match(realtime, /x-attendance-bridge-signature/);
   assert.match(batch, /HMACSHA256/);
   assert.match(batch, /x-attendance-bridge-signature/);
-  assert.match(realtime, /x-attendance-bridge-token/);
-  assert.match(batch, /x-attendance-bridge-token/);
+  assert.doesNotMatch(realtime, /x-attendance-bridge-token/);
+  assert.doesNotMatch(batch, /x-attendance-bridge-token/);
 });

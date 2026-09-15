@@ -31,7 +31,7 @@ function New-BridgeHeaders([string]$Uri, [string]$Method, [string]$Body) {
   $path = ([Uri]$Uri).AbsolutePath
   $canonical = "$Method`n$path`n$timestamp`n$nonce`n$bodyHash"
   $hmac = [Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes([string]$config.bridgeToken)); $signature = ([BitConverter]::ToString($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonical))) -replace '-','').ToLowerInvariant(); $hmac.Dispose()
-  return @{ "x-attendance-bridge-token" = [string]$config.bridgeToken; "x-attendance-bridge-timestamp" = $timestamp; "x-attendance-bridge-nonce" = $nonce; "x-attendance-bridge-signature" = $signature }
+  return @{ "x-attendance-bridge-timestamp" = $timestamp; "x-attendance-bridge-nonce" = $nonce; "x-attendance-bridge-signature" = $signature }
 }
 
 function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null) {
