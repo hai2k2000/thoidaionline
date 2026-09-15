@@ -12,6 +12,7 @@ Latest Security Hardening: COMPLETE — web login attempts are rate-limited per 
 Latest Network Hardening: COMPLETE — Next.js binds to localhost behind Nginx
 
 Latest Remote Access Hardening: COMPLETE — WireGuard server provisioned with three independent peers
+Latest Supabase Exposure Hardening: COMPLETE — public pg-meta and analytics routes blocked at Nginx
 
 Current Task Update: COMPLETE — department deputy task assignment enabled
 
@@ -33,6 +34,7 @@ Completed:
 - Closed unused IPv6 ingress for WireGuard UDP 51820 because all provisioned peers use IPv4 endpoints.
 - Provisioned `wg0` on the VPS at `10.66.0.1/24` over UDP 51820 with three unique split-tunnel peers (`10.66.0.2`–`10.66.0.4`), persistent startup, and explicit firewall rules preserving WireGuard and SSH recovery access.
 - Bound the production Next.js listener to `127.0.0.1:3001`; Nginx remains the only public application entry point.
+- Blocked public `/supa/pg` (pg-meta) and `/supa/analytics` routes at Nginx with 404 responses; REST and Auth routes remain available for the application.
 - Added the same bounded request validation and five-attempt/15-minute throttle used by mobile login to the web login endpoint; successful authentication clears the counter and blocked requests return HTTP 429 with `Retry-After`.
 - Restricted employee work-schedule queries, pages, and navigation so regular employees only receive their own plan; organization and leadership schedules remain available to authorized leaders and admin.
 - Enabled task assignment for the `pho_truong_phong` role; department deputies are scoped to assigning within their own department.
@@ -138,7 +140,7 @@ Blockers:
 
 Follow Up:
 - Existing legacy HR files under `public/uploads/hr` should be migrated manually if any are found; new HR files use guarded runtime storage.
-- Service still runs as root and deploy process should be moved to an atomic non-root release workflow in a separate change.
+- Production service runs as the dedicated `thoidai-work` user with `NoNewPrivileges=yes` and `ProtectSystem=strict`; deploy process can be moved to an atomic non-root release workflow in a separate change.
 - The production database does not currently contain `attendance_logs`; the UI keeps the existing server-generated DEMO fallback until the attendance migration is provisioned.
 - Legacy seeded assigned tasks may remain in `new` status; they are outside the new assignment flow and should be triaged separately if users report them.
 - Four seeded assigned tasks remain `pending_review` without a completion score and require triage or a fresh assignee submission before approval.
