@@ -62,6 +62,12 @@ test("work schedule API rejects work plans and requires valid event hours", () =
   assert.match(route, /endTime: planType === "event" \? endTime : null/);
 });
 
+test("work schedule admin form sends a valid business plan payload", () => {
+  const adminShell = read("../components/WorkScheduleAdminShell.tsx");
+  assert.match(adminShell, /planType:\"business\"/);
+  assert.match(adminShell, /endDate:workDate/);
+});
+
 test("work schedule storage supports plan type and date ranges", () => {
   const migration = readFileSync(new URL("../../supabase/migrations/20260915120000_personal_work_plans.sql", import.meta.url), "utf8");
   assert.match(migration, /add column if not exists end_date/);
