@@ -8,10 +8,11 @@ test("personal plan page is public to authenticated users and is named correctly
   const page = read("../app/work-schedule/staff/page.tsx");
   const nav = read("../components/phase2Navigation.ts");
   const appNav = read("../components/AppNav.tsx");
-  assert.match(page, /scheduleScope="all"/);
+  assert.match(page, /scheduleScope="self"/);
   assert.match(page, /Kế hoạch cá nhân/);
   assert.match(nav, /work-schedule-staff/);
   assert.match(appNav, /work-schedule-staff": "Kế hoạch cá nhân"/);
+  assert.match(page, /Lịch làm việc, công tác và sự kiện của bạn/);
 });
 
 test("work schedule API allows authenticated users to create only their own plan", () => {
@@ -33,6 +34,8 @@ test("personal plan UI lets the creator edit or delete their own plan", () => {
   assert.match(shell, /Sửa kế hoạch/);
   assert.match(shell, /Xóa kế hoạch/);
   assert.match(shell, /method: "DELETE"/);
+  assert.match(shell, /Kế hoạch toàn cơ quan/);
+  assert.match(shell, /viewAll/);
 });
 
 test("work schedule storage supports plan type and date ranges", () => {

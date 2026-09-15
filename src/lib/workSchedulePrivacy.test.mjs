@@ -16,11 +16,13 @@ test("authenticated employees can view shared plans, with optional own-only comp
   assert.match(repository, /\.contains\("participant_ids", \[participantId\]\)/);
 });
 
-test("employee plan page receives all active people and shared scope", () => {
+test("employee plan page defaults to own plans and can switch to shared scope", () => {
   assert.match(staffPage, /workScheduleRepository\.allPeople\(\)/);
-  assert.match(staffPage, /scheduleScope="all"/);
+  assert.match(staffPage, /scheduleScope="self"/);
   assert.match(staffPage, /Kế hoạch cá nhân/);
-  assert.match(shell, /scheduleScope === "self"/);
+  assert.match(shell, /viewAll \? "" : "&scope=self"/);
+  assert.match(shell, /Kế hoạch toàn cơ quan/);
+  assert.match(shell, /viewAll/);
 });
 
 test("organization and leadership pages reject direct access by regular employees", () => {
