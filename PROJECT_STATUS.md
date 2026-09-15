@@ -3,6 +3,8 @@ Current Task: COMPLETE — leave requests and attendance notes
 
 Current Task Update: COMPLETE — employee leave history month/status filters
 
+Current Task Update: COMPLETE — attendance summary rows open employee detail popup
+
 Latest Security Hardening: COMPLETE — web login attempts are rate-limited per client and account
 
 Latest Network Hardening: COMPLETE — Next.js binds to localhost behind Nginx
@@ -22,6 +24,7 @@ Latest Attendance Workflow Update: COMPLETE — business-trip requests are clear
 Latest Work Schedule Privacy: COMPLETE — regular employees can only view their own plans
 
 Completed:
+- Attendance total-summary rows now open a detail popup for the selected employee using the active day/week/month range.
 - Employee leave history now has independent month/all-time and status filters, scoped to the authenticated user's own requests.
 - Closed unused IPv6 ingress for WireGuard UDP 51820 because all provisioned peers use IPv4 endpoints.
 - Provisioned `wg0` on the VPS at `10.66.0.1/24` over UDP 51820 with three unique split-tunnel peers (`10.66.0.2`–`10.66.0.4`), persistent startup, and explicit firewall rules preserving WireGuard and SSH recovery access.
@@ -76,6 +79,7 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Summary popup behavior test, attendance summary regression test, leave regression tests, TypeScript, ESLint, and production build pass.
 - Leave-history helper tests pass 3/3; TypeScript check, targeted ESLint, and production build pass before deployment.
 - IPv6 UDP 51820 is explicitly dropped by the persisted port guard; WireGuard IPv4 listener, three peers, SSH fallback, and public application smoke checks remain healthy.
 - WireGuard interface and UDP listener are active, three peers are loaded, server/client configuration permissions are restricted, firewall rules persist through `vps-port-guard`, public SSH 24700 remains available, and production `/login` remains HTTP 200.
