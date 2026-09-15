@@ -19,6 +19,7 @@ test("work schedule API allows authenticated users to create only their own plan
   const repository = read("./workScheduleRepository.ts");
   assert.doesNotMatch(route, /guard\.actor\.role_code !== "admin"/);
   assert.match(route, /guard\.actor\.id/);
+  assert.match(route, /requestedParticipants\.length > 0/);
   assert.match(route, /participantIds.*guard\.actor\.id|guard\.actor\.id.*participantIds/);
   assert.match(route, /endDate/);
   assert.match(route, /planType/);
