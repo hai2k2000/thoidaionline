@@ -303,10 +303,7 @@ export default function AttendancePage() {
 
   const leaveFormDays = useMemo(() => leaveDurationDays(leaveForm.startDate, leaveForm.endDate), [leaveForm.endDate, leaveForm.startDate]);
   const visibleLeaveRequests = leaveRequests;
-  const visibleLeaveApprovals = useMemo(() => {
-    const range = selectedRange(selectedDate, period);
-    return leaveApprovals.filter((item) => item.start_date <= range.end && item.end_date >= range.start);
-  }, [leaveApprovals, period, selectedDate]);
+  const visibleLeaveApprovals = leaveApprovals;
   const summaryDetailRange = useMemo(() => period === "day" ? { start: `${selectedDate.slice(0, 7)}-01`, end: selectedDate } : selectedRange(selectedDate, period), [period, selectedDate]);
   const selectedSummaryDetails = useMemo(() => selectedSummaryEmployee ? attendanceDetailsForEmployee(monthlyRows, selectedSummaryEmployee.userId, summaryDetailRange.start, summaryDetailRange.end) as AttendanceRow[] : [], [monthlyRows, selectedSummaryEmployee, summaryDetailRange]);
 
