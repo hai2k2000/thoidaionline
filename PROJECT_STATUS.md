@@ -1,6 +1,8 @@
 Current Phase: Attendance bridge operations
 Current Task: COMPLETE — leave requests and attendance notes
 
+Current Task Update: IN PROGRESS — employee leave history month/status filters
+
 Latest Security Hardening: COMPLETE — web login attempts are rate-limited per client and account
 
 Latest Network Hardening: COMPLETE — Next.js binds to localhost behind Nginx
@@ -20,6 +22,7 @@ Latest Attendance Workflow Update: COMPLETE — business-trip requests are clear
 Latest Work Schedule Privacy: COMPLETE — regular employees can only view their own plans
 
 Completed:
+- Employee leave history now has independent month/all-time and status filters, scoped to the authenticated user's own requests.
 - Closed unused IPv6 ingress for WireGuard UDP 51820 because all provisioned peers use IPv4 endpoints.
 - Provisioned `wg0` on the VPS at `10.66.0.1/24` over UDP 51820 with three unique split-tunnel peers (`10.66.0.2`–`10.66.0.4`), persistent startup, and explicit firewall rules preserving WireGuard and SSH recovery access.
 - Bound the production Next.js listener to `127.0.0.1:3001`; Nginx remains the only public application entry point.
@@ -73,6 +76,7 @@ Completed:
 - Leadership assignment now accepts mapped department heads consistently in UI/server/database.
 
 Validation:
+- Leave-history helper tests pass 3/3; TypeScript check, targeted ESLint, and production build pass before deployment.
 - IPv6 UDP 51820 is explicitly dropped by the persisted port guard; WireGuard IPv4 listener, three peers, SSH fallback, and public application smoke checks remain healthy.
 - WireGuard interface and UDP listener are active, three peers are loaded, server/client configuration permissions are restricted, firewall rules persist through `vps-port-guard`, public SSH 24700 remains available, and production `/login` remains HTTP 200.
 - Production binding contract test passed; after a backed-up unit change, direct port 3001 access was refused, public `/login` returned HTTP 200, protected attendance API returned HTTP 401, and all related services stayed active.

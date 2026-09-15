@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
+import { defaultLeaveRequestFilters, monthRange } from "@/lib/leaveRequestFilters.mjs";
 
 type AttendanceRow = {
   id: string;
@@ -27,6 +28,8 @@ type LeaveRequest = {
   reason: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
   review_note?: string | null;
+  reviewed_at?: string | null;
+  reviewer?: { full_name: string } | null;
   requester?: { full_name: string } | null;
 };
 
@@ -116,6 +119,10 @@ export default function AttendancePage() {
   const [leaveBusy, setLeaveBusy] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [leaveError, setLeaveError] = useState("");
+  const initialLeaveFilters = useMemo(() => defaultLeaveRequestFilters(), []);
+  const [leaveTimeScope, setLeaveTimeScope] = useState<"month" | "all">(initialLeaveFilters.timeScope as "month" | "all");
+  const [leaveMonth, setLeaveMonth] = useState(initialLeaveFilters.month);
+  const [leaveStatus, setLeaveStatus] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled">(initialLeaveFilters.status as "all" | "pending" | "approved" | "rejected" | "cancelled");
   const isOrganizationView = pathname === "/attendance" && user?.role_code === "admin";
 
   const loadSyncStatus = useCallback(async () => {
@@ -189,10 +196,14 @@ export default function AttendancePage() {
 
   const loadLeaveRequests = useCallback(async () => {
     const range = selectedRange(selectedDate, period);
-    const response = await fetch(`/api/leave-requests?from=${range.start}&to=${range.end}`, { cache: "no-store" });
+    const leaveRange = leaveTimeScope === "month" ? monthRange(leaveMonth) : null;
+    if (leaveTimeScope === "month" && !leaveRange) return;
+    const params = new URLSearchParams({ from: range.start, to: range.end, mineScope: leaveTimeScope, mineStatus: leaveStatus });
+    if (leaveRange) { params.set("mineFrom", leaveRange.start); params.set("mineTo", leaveRange.end); params.set("mineMonth", leaveMonth); }
+    const response = await fetch(`/api/leave-requests?${params.toString()}`, { cache: "no-store" });
     const payload = await response.json().catch(() => null) as { mine?: LeaveRequest[]; approvals?: LeaveRequest[]; management?: LeaveRequest[] } | null;
     if (response.ok && payload) { setLeaveRequests(payload.mine ?? []); setLeaveApprovals(payload.approvals ?? []); setLeaveManagement(payload.management ?? []); }
-  }, [period, selectedDate]);
+  }, [leaveMonth, leaveStatus, leaveTimeScope, period, selectedDate]);
 
   const submitLeave = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -277,11 +288,13 @@ export default function AttendancePage() {
       .sort((a, b) => a.name.localeCompare(b.name, "vi"));
   }, [monthlyRows]);
 
-  const leaveRange = useMemo(() => selectedRange(selectedDate, period), [period, selectedDate]);
   const leaveFormDays = useMemo(() => leaveDurationDays(leaveForm.startDate, leaveForm.endDate), [leaveForm.endDate, leaveForm.startDate]);
   const leaveFormActivity = leaveForm.leaveType === "business" ? "công tác" : "nghỉ";
-  const visibleLeaveRequests = useMemo(() => leaveRequests.filter((item) => item.start_date <= leaveRange.end && item.end_date >= leaveRange.start), [leaveRequests, leaveRange]);
-  const visibleLeaveApprovals = useMemo(() => leaveApprovals.filter((item) => item.start_date <= leaveRange.end && item.end_date >= leaveRange.start), [leaveApprovals, leaveRange]);
+  const visibleLeaveRequests = leaveRequests;
+  const visibleLeaveApprovals = useMemo(() => {
+    const range = selectedRange(selectedDate, period);
+    return leaveApprovals.filter((item) => item.start_date <= range.end && item.end_date >= range.start);
+  }, [leaveApprovals, period, selectedDate]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
@@ -415,11 +428,35 @@ export default function AttendancePage() {
         </section>
 
         <section className="mt-4 rounded-xl border bg-white p-4">
-          <h2 className="mb-2 text-lg font-semibold">Đơn nghỉ / công tác trong khoảng đã chọn</h2>
-          <p className="mb-3 text-sm text-slate-600">Danh sách được lọc theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"} và ngày làm mốc ở trên.</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="mb-1 text-lg font-semibold">Đơn nghỉ / công tác của tôi</h2>
+              <p className="text-sm text-slate-600">Danh sách các đơn bạn đã gửi, kèm trạng thái xử lý. Mặc định hiển thị các đơn giao với tháng hiện tại.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <label className="text-xs font-semibold text-slate-600">Phạm vi thời gian
+                <select id="leaveTimeScope" value={leaveTimeScope} onChange={(e) => setLeaveTimeScope(e.target.value as "month" | "all")} className="mt-1 min-h-10 w-full rounded border px-3 py-2 text-sm font-normal text-slate-900">
+                  <option value="month">Theo tháng</option>
+                  <option value="all">Tất cả thời gian</option>
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-slate-600">Tháng
+                <input id="leaveMonth" type="month" value={leaveMonth} disabled={leaveTimeScope === "all"} onChange={(e) => setLeaveMonth(e.target.value)} className="mt-1 min-h-10 w-full rounded border px-3 py-2 text-sm font-normal text-slate-900 disabled:bg-slate-100" />
+              </label>
+              <label className="text-xs font-semibold text-slate-600">Trạng thái
+                <select id="leaveStatus" value={leaveStatus} onChange={(e) => setLeaveStatus(e.target.value as "all" | "pending" | "approved" | "rejected" | "cancelled")} className="mt-1 min-h-10 w-full rounded border px-3 py-2 text-sm font-normal text-slate-900">
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="pending">Chờ duyệt</option>
+                  <option value="approved">Đã duyệt</option>
+                  <option value="rejected">Từ chối</option>
+                  <option value="cancelled">Đã hủy</option>
+                </select>
+              </label>
+            </div>
+          </div>
           <div className="space-y-2 text-sm">
-            {visibleLeaveRequests.map((item) => <div key={item.id} className="rounded border p-3"><div className="font-semibold">{leaveTypeLabel[item.leave_type] ?? "Đơn nghỉ"} · {leavePeriodLabel(item)} · {item.status === "pending" ? "Chờ duyệt" : item.status === "approved" ? "Đã duyệt" : item.status === "rejected" ? "Từ chối" : "Đã hủy"}</div>{leaveDurationDays(item.start_date, item.end_date) >= 3 ? <div className="mt-1 text-xs font-semibold text-amber-700">Cấp duyệt: Tổng biên tập</div> : null}<div className="text-slate-600">{item.reason}{item.review_note ? ` · ${item.review_note}` : ""}</div></div>)}
-            {!visibleLeaveRequests.length ? <p className="text-slate-500">Không có đơn nghỉ hoặc công tác trong khoảng này.</p> : null}
+            {visibleLeaveRequests.map((item) => <div key={item.id} className="rounded border p-3"><div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold"><span>{leaveTypeLabel[item.leave_type] ?? "Đơn nghỉ"}</span><span>·</span><span>{leavePeriodLabel(item)}</span><span className={`rounded-full px-2 py-0.5 text-xs ${item.status === "approved" ? "bg-emerald-100 text-emerald-800" : item.status === "rejected" ? "bg-red-100 text-red-800" : item.status === "cancelled" ? "bg-slate-200 text-slate-700" : "bg-amber-100 text-amber-800"}`}>{item.status === "pending" ? "Chờ duyệt" : item.status === "approved" ? "Đã duyệt" : item.status === "rejected" ? "Từ chối" : "Đã hủy"}</span></div>{leaveDurationDays(item.start_date, item.end_date) >= 3 ? <div className="mt-1 text-xs font-semibold text-amber-700">Cấp duyệt: Tổng biên tập</div> : null}<div className="mt-1 text-slate-600">Lý do: {item.reason}</div>{item.reviewer?.full_name ? <div className="mt-1 text-xs text-slate-500">Người xử lý: {item.reviewer.full_name}{item.reviewed_at ? ` · ${new Date(item.reviewed_at).toLocaleString("vi-VN")}` : ""}</div> : null}{item.review_note ? <div className="mt-1 text-xs text-slate-500">Ghi chú duyệt: {item.review_note}</div> : null}</div>)}
+            {!visibleLeaveRequests.length ? <p className="text-slate-500">Không có đơn nghỉ hoặc công tác phù hợp bộ lọc.</p> : null}
           </div>
         </section>
 

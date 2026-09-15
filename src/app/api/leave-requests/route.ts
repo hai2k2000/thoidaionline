@@ -1,5 +1,6 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
+import { parseMineLeaveFilters } from "@/lib/leaveRequestFilters.mjs";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const PERIODS = new Set(["full", "morning", "afternoon"]);
@@ -24,8 +25,13 @@ export async function GET(request: Request) {
   const from = params.get("from") ?? "";
   const to = params.get("to") ?? "";
   if (!isValidDate(from) || !isValidDate(to) || from > to) return apiError("invalid_request", 400);
+  const mineScope = parseMineLeaveFilters(params, from, to);
+  if (!mineScope) return apiError("invalid_request", 400);
   const fields = "id,requester_id,department_id,start_date,end_date,start_period,end_period,leave_type,reason,status,reviewed_by,reviewed_at,review_note,created_at,requester:staff_users!leave_requests_requester_id_fkey(full_name),reviewer:staff_users!leave_requests_reviewed_by_fkey(full_name)";
-  const mine = await serverSupabase.from("leave_requests").select(fields).eq("requester_id", guard.actor.id).lte("start_date", to).gte("end_date", from).order("created_at", { ascending: false }).limit(100);
+  let mineQuery = serverSupabase.from("leave_requests").select(fields).eq("requester_id", guard.actor.id).order("created_at", { ascending: false }).limit(1000);
+  if (mineScope.from && mineScope.to) mineQuery = mineQuery.lte("start_date", mineScope.to).gte("end_date", mineScope.from);
+  if (mineScope.status !== "all") mineQuery = mineQuery.eq("status", mineScope.status);
+  const mine = await mineQuery;
   if (mine.error) return apiError("operation_failed", 500);
   let approvals: unknown[] = [];
   if (canReview(guard.actor)) {
