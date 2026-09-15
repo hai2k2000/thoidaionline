@@ -55,6 +55,7 @@ export default function WorkSchedulePageShell({
   const [period, setPeriod] = useState<"day" | "week" | "month">("week");
   const [anchor, setAnchor] = useState(iso(new Date()));
   const [selected, setSelected] = useState(people.map((person) => person.id));
+  const [viewAll, setViewAll] = useState(scheduleScope === "all");
   const [personQuery, setPersonQuery] = useState("");
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
@@ -118,13 +119,17 @@ export default function WorkSchedulePageShell({
     const controller = new AbortController();
     setLoading(true);
     setLoadError(false);
-    fetch(`/api/work-schedule?from=${range.from}&to=${range.to}${scheduleScope === "self" ? "&scope=self" : ""}`, { signal: controller.signal })
+    fetch(`/api/work-schedule?from=${range.from}&to=${range.to}${viewAll ? "" : "&scope=self"}`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((body) => setRows(body.rows ?? []))
       .catch((error) => { if (error?.name !== "AbortError") setLoadError(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [range.from, range.to, retryToken, scheduleScope]);
+  }, [range.from, range.to, retryToken, viewAll]);
+
+  useEffect(() => {
+    setViewAll(scheduleScope === "all");
+  }, [scheduleScope]);
 
   const filteredPeople = useMemo(() => {
     const query = personQuery.trim().toLocaleLowerCase("vi-VN");
@@ -134,7 +139,10 @@ export default function WorkSchedulePageShell({
     );
   }, [people, personQuery]);
 
-  const selectedCount = people.filter((person) => selected.includes(person.id)).length;
+  const displayedPeople = viewAll || !currentUserId
+    ? people.filter((person) => selected.includes(person.id))
+    : people.filter((person) => person.id === currentUserId);
+  const selectedCount = displayedPeople.length;
   const names = (ids: string[]) =>
     ids
       .map((id) => people.find((person) => person.id === id)?.full_name)
@@ -267,32 +275,31 @@ export default function WorkSchedulePageShell({
               </button>
             </div>
 
-            {scheduleScope === "all" ? <div className="mt-5 border-t pt-4">
+            {viewAll || currentUserId ? <div className="mt-5 border-t pt-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-sm font-bold text-slate-900">Nhân sự trong lịch</h2>
+                    <h2 className="text-sm font-bold text-slate-900">{viewAll ? "Kế hoạch toàn cơ quan" : "Kế hoạch của tôi"}</h2>
                     <span
                       role="status"
                       aria-live="polite"
                       className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800"
                     >
-                      {selectedCount}/{people.length} đã chọn
+                      {viewAll ? `${selectedCount}/${people.length} đã chọn` : "Mặc định"}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">Hiển thị nhân sự đang hoạt động.</p>
+                  <p className="mt-1 text-xs text-slate-500">{viewAll ? "Hiển thị kế hoạch của nhân sự đang hoạt động." : "Chỉ hiển thị kế hoạch có liên quan đến bạn."}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button type="button" onClick={() => { setCreateMessage(""); setCreateOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-700">Tạo kế hoạch</button>
                   <button
                     type="button"
-                    onClick={() => setPeopleOpen((current) => !current)}
-                    aria-expanded={peopleOpen}
-                    aria-controls="work-schedule-people-panel"
+                    onClick={() => { setViewAll((current) => !current); setPeopleOpen(false); }}
                     className="min-h-10 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
                   >
-                    {peopleOpen ? "Ẩn danh sách" : "Chọn nhân sự"}
+                    {viewAll ? "Kế hoạch của tôi" : "Kế hoạch toàn cơ quan"}
                   </button>
+                  {viewAll ? <button type="button" onClick={() => setPeopleOpen((current) => !current)} aria-expanded={peopleOpen} aria-controls="work-schedule-people-panel" className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">{peopleOpen ? "Ẩn bộ lọc" : "Lọc nhân sự"}</button> : null}
                 </div>
               </div>
 
@@ -401,8 +408,7 @@ export default function WorkSchedulePageShell({
                 </tr>
               </thead>
               <tbody>
-                {people
-                  .filter((person) => selected.includes(person.id))
+                {displayedPeople
                   .map((person, index) => (
                     <tr key={person.id} className="border-b align-top">
                       <td className="p-2 text-center">{index + 1}</td>
