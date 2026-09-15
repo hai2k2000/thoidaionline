@@ -1,7 +1,7 @@
 Current Phase: Attendance bridge operations
 Current Task: COMPLETE — leave requests and attendance notes
 
-Current Task Update: IN PROGRESS — employee leave history month/status filters
+Current Task Update: COMPLETE — employee leave history month/status filters
 
 Latest Security Hardening: COMPLETE — web login attempts are rate-limited per client and account
 
