@@ -38,24 +38,28 @@ test("personal plan UI lets the creator edit or delete their own plan", () => {
   assert.match(shell, /viewAll/);
 });
 
-test("personal plan form only offers business trips and single-day events", () => {
+test("personal plan form only offers date-range trips and timed single-day events", () => {
   const shell = read("../components/WorkSchedulePageShell.tsx");
   assert.doesNotMatch(shell, /<option value="work">/);
   assert.match(shell, /<option value="business">Đi công tác<\/option>/);
   assert.match(shell, /<option value="event">Sự kiện<\/option>/);
   assert.match(shell, /planType === "event"/);
   assert.match(shell, /Ngày sự kiện/);
-  assert.match(shell, /row\.plan_type === "event" \? "Cả ngày"/);
-  assert.doesNotMatch(shell, /name="startTime"/);
-  assert.doesNotMatch(shell, /name="endTime"/);
+  assert.match(shell, /planType === "event"[\s\S]*name="startTime"/);
+  assert.match(shell, /planType === "event"[\s\S]*name="endTime"/);
+  assert.match(shell, /Từ giờ/);
+  assert.match(shell, /Đến giờ/);
 });
 
-test("work schedule API rejects work plans and enforces event dates without hours", () => {
+test("work schedule API rejects work plans and requires valid event hours", () => {
   const route = read("../app/api/work-schedule/route.ts");
   assert.match(route, /body\.planType !== "business" && body\.planType !== "event"/);
   assert.match(route, /planType === "event" && endDate !== workDate/);
-  assert.match(route, /startTime: null/);
-  assert.match(route, /endTime: null/);
+  assert.match(route, /time\.test\(startTime\)/);
+  assert.match(route, /time\.test\(endTime\)/);
+  assert.match(route, /endTime <= startTime/);
+  assert.match(route, /startTime: planType === "event" \? startTime : null/);
+  assert.match(route, /endTime: planType === "event" \? endTime : null/);
 });
 
 test("work schedule storage supports plan type and date ranges", () => {

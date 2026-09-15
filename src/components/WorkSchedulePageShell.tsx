@@ -163,8 +163,8 @@ export default function WorkSchedulePageShell({
       planType,
       workDate,
       endDate: isEvent ? workDate : form.get("endDate"),
-      startTime: null,
-      endTime: null,
+      startTime: isEvent ? form.get("startTime") : null,
+      endTime: isEvent ? form.get("endTime") : null,
       title: form.get("title"),
       location: form.get("location"),
       notes: form.get("notes"),
@@ -431,7 +431,7 @@ export default function WorkSchedulePageShell({
                                 key={row.id}
                                 className="mb-1 rounded-lg border-l-4 border-orange-500 bg-orange-50 p-2 text-xs text-orange-950"
                               >
-                                <b>{row.plan_type === "event" ? "Cả ngày" : row.start_time ? `${row.start_time.slice(0, 5)}${row.end_time ? `-${row.end_time.slice(0, 5)}` : ""}` : ""}</b>
+                                <b>{row.start_time ? `${row.start_time.slice(0, 5)}${row.end_time ? `-${row.end_time.slice(0, 5)}` : ""}` : ""}</b>
                                 <p className="font-semibold">{row.plan_type === "business" ? "Công tác: " : row.plan_type === "event" ? "Sự kiện: " : ""}{row.title}</p>
                                 {row.location ? <p>{row.location}</p> : null}
                                 <p>{names(row.participant_ids)}</p>
@@ -453,7 +453,10 @@ export default function WorkSchedulePageShell({
                 <label className="text-sm font-medium">Loại kế hoạch<select name="planType" value={planType} onChange={(event) => setPlanType(event.target.value as "business" | "event")} className="mt-1 min-h-11 w-full rounded border px-3 py-2"><option value="business">Đi công tác</option><option value="event">Sự kiện</option></select></label>
                 <label className="text-sm font-medium">Tiêu đề<input name="title" required maxLength={500} defaultValue={editingRow?.title ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
                 <label className="text-sm font-medium">{planType === "event" ? "Ngày sự kiện" : "Từ ngày"}<input name="workDate" type="date" required defaultValue={editingRow?.work_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                {planType === "business" ? <label className="text-sm font-medium">Đến ngày<input name="endDate" type="date" required defaultValue={editingRow?.end_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label> : <p className="rounded-lg bg-orange-50 p-3 text-sm text-orange-900">Sự kiện áp dụng trọn ngày đã chọn.</p>}
+                {planType === "business" ? <label className="text-sm font-medium">Đến ngày<input name="endDate" type="date" required defaultValue={editingRow?.end_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label> : <>
+                  <label className="text-sm font-medium">Từ giờ<input name="startTime" type="time" required defaultValue={editingRow?.start_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
+                  <label className="text-sm font-medium">Đến giờ<input name="endTime" type="time" required defaultValue={editingRow?.end_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
+                </>}
               </div>
               <label className="mt-3 block text-sm font-medium">Địa điểm<input name="location" maxLength={500} defaultValue={editingRow?.location ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
               <label className="mt-3 block text-sm font-medium">Ghi chú<textarea name="notes" maxLength={2000} defaultValue={editingRow?.notes ?? ""} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
