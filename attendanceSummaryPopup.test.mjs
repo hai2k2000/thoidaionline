@@ -18,4 +18,7 @@ test("summary row opens a popup with only the selected employee's attendance det
   assert.match(page, /Chi tiết chấm công/);
   assert.match(page, /className="border-t cursor-pointer" onClick=\{\(\) => setSelectedSummaryEmployee/);
   assert.match(page, /onClick=\{\(\) => setSelectedSummaryEmployee/);
+  assert.match(page, /event\.target === event\.currentTarget/);
+  assert.match(page, /window\.addEventListener\("keydown", closeOnEscape\)/);
+  assert.match(page, /onClick=\{\(event\) => \{ if \(event\.target === event\.currentTarget\) setSelectedSummaryEmployee\(null\)/);
 });

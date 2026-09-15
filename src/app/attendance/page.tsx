@@ -257,6 +257,15 @@ export default function AttendancePage() {
     return () => window.clearInterval(interval);
   }, [user, isOrganizationView, loadAttendance, loadSyncStatus]);
 
+  useEffect(() => {
+    if (!selectedSummaryEmployee) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedSummaryEmployee(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [selectedSummaryEmployee]);
+
   const stats = useMemo(() => {
     const total = rows.length;
     const checkedIn = rows.filter((r) => !!r.check_in).length;
@@ -500,7 +509,7 @@ export default function AttendancePage() {
           </div>
         </section>
 
-        {selectedSummaryEmployee ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="attendance-detail-title">
+        {selectedSummaryEmployee ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="attendance-detail-title" onClick={(event) => { if (event.target === event.currentTarget) setSelectedSummaryEmployee(null); }}>
           <section className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-4"><div><h2 id="attendance-detail-title" className="text-lg font-semibold">Chi tiết chấm công</h2><p className="mt-1 text-sm text-slate-600">{selectedSummaryEmployee.name} · {summaryDetailRange.start} đến {summaryDetailRange.end}</p></div><button type="button" onClick={() => setSelectedSummaryEmployee(null)} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
             <div className="mt-4 grid gap-2 sm:grid-cols-4"><div className="rounded border bg-slate-50 p-3"><p className="text-xs text-slate-500">Có công</p><p className="text-lg font-bold">{selectedSummaryDetails.filter((row) => row.status === "present" || row.status === "late").length}</p></div><div className="rounded border bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Nghỉ có phép</p><p className="text-lg font-bold text-emerald-700">{selectedSummaryDetails.filter((row) => row.status === "leave" || (row.note ?? "").toLocaleLowerCase("vi").startsWith("nghỉ")).length}</p></div><div className="rounded border bg-red-50 p-3"><p className="text-xs text-red-700">Nghỉ không phép</p><p className="text-lg font-bold text-red-700">{selectedSummaryDetails.filter((row) => row.status === "absent").length}</p></div><div className="rounded border bg-sky-50 p-3"><p className="text-xs text-sky-700">Công tác</p><p className="text-lg font-bold text-sky-700">{selectedSummaryDetails.filter((row) => (row.note ?? "").toLocaleLowerCase("vi").startsWith("công tác")).length}</p></div></div>
