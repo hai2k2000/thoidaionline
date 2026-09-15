@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { defaultLeaveRequestFilters, monthRange } from "@/lib/leaveRequestFilters.mjs";
+import { attendanceDetailsForEmployee } from "@/lib/attendanceSummaryDetails.mjs";
 
 type AttendanceRow = {
   id: string;
@@ -123,6 +124,7 @@ export default function AttendancePage() {
   const [leaveTimeScope, setLeaveTimeScope] = useState<"month" | "all">(initialLeaveFilters.timeScope as "month" | "all");
   const [leaveMonth, setLeaveMonth] = useState(initialLeaveFilters.month);
   const [leaveStatus, setLeaveStatus] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled">(initialLeaveFilters.status as "all" | "pending" | "approved" | "rejected" | "cancelled");
+  const [selectedSummaryEmployee, setSelectedSummaryEmployee] = useState<{ userId: string; name: string } | null>(null);
   const isOrganizationView = pathname === "/attendance" && user?.role_code === "admin";
 
   const loadSyncStatus = useCallback(async () => {
@@ -277,8 +279,9 @@ export default function AttendancePage() {
       else if (r.status === "present" || r.status === "late") current.presentDays.add(r.work_date);
     });
 
-    return Array.from(map.values())
-      .map((v) => ({
+    return Array.from(map.entries())
+      .map(([userId, v]) => ({
+        userId,
         name: v.name,
         daysPresent: v.presentDays.size,
         leaveWithPermission: v.leaveWithPermission.size,
@@ -295,6 +298,8 @@ export default function AttendancePage() {
     const range = selectedRange(selectedDate, period);
     return leaveApprovals.filter((item) => item.start_date <= range.end && item.end_date >= range.start);
   }, [leaveApprovals, period, selectedDate]);
+  const summaryDetailRange = useMemo(() => period === "day" ? { start: `${selectedDate.slice(0, 7)}-01`, end: selectedDate } : selectedRange(selectedDate, period), [period, selectedDate]);
+  const selectedSummaryDetails = useMemo(() => selectedSummaryEmployee ? attendanceDetailsForEmployee(monthlyRows, selectedSummaryEmployee.userId, summaryDetailRange.start, summaryDetailRange.end) as AttendanceRow[] : [], [monthlyRows, selectedSummaryEmployee, summaryDetailRange]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
@@ -479,8 +484,8 @@ export default function AttendancePage() {
             </thead>
             <tbody>
               {monthlySummary.map((r) => (
-                <tr key={`sum-${r.name}`} className="border-t">
-                  <td className="px-3 py-2 font-semibold">{r.name}</td>
+                <tr key={`sum-${r.userId}`} className="border-t">
+                  <td className="px-3 py-2 font-semibold"><button type="button" className="text-left font-semibold text-orange-700 underline-offset-2 hover:underline" onClick={() => setSelectedSummaryEmployee({ userId: r.userId, name: r.name })}>{r.name}</button></td>
                   <td className="px-3 py-2 text-right">{r.daysPresent}</td>
                   <td className="px-3 py-2 text-right">{r.leaveWithPermission}</td>
                   <td className="px-3 py-2 text-right">{r.leaveWithoutPermission}</td>
@@ -494,6 +499,14 @@ export default function AttendancePage() {
           </table>
           </div>
         </section>
+
+        {selectedSummaryEmployee ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="attendance-detail-title">
+          <section className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4"><div><h2 id="attendance-detail-title" className="text-lg font-semibold">Chi tiết chấm công</h2><p className="mt-1 text-sm text-slate-600">{selectedSummaryEmployee.name} · {summaryDetailRange.start} đến {summaryDetailRange.end}</p></div><button type="button" onClick={() => setSelectedSummaryEmployee(null)} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-4"><div className="rounded border bg-slate-50 p-3"><p className="text-xs text-slate-500">Có công</p><p className="text-lg font-bold">{selectedSummaryDetails.filter((row) => row.status === "present" || row.status === "late").length}</p></div><div className="rounded border bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Nghỉ có phép</p><p className="text-lg font-bold text-emerald-700">{selectedSummaryDetails.filter((row) => row.status === "leave" || (row.note ?? "").toLocaleLowerCase("vi").startsWith("nghỉ")).length}</p></div><div className="rounded border bg-red-50 p-3"><p className="text-xs text-red-700">Nghỉ không phép</p><p className="text-lg font-bold text-red-700">{selectedSummaryDetails.filter((row) => row.status === "absent").length}</p></div><div className="rounded border bg-sky-50 p-3"><p className="text-xs text-sky-700">Công tác</p><p className="text-lg font-bold text-sky-700">{selectedSummaryDetails.filter((row) => (row.note ?? "").toLocaleLowerCase("vi").startsWith("công tác")).length}</p></div></div>
+            <div className="mt-4 table-scroll rounded-lg border border-slate-200"><table className="data-table min-w-[720px] text-left text-sm"><thead className="bg-slate-50"><tr><th className="px-3 py-2">Ngày</th><th className="px-3 py-2">Giờ vào</th><th className="px-3 py-2">Giờ ra</th><th className="px-3 py-2">Trạng thái</th><th className="px-3 py-2">Ghi chú</th></tr></thead><tbody>{selectedSummaryDetails.map((row) => <tr key={row.id} className="border-t"><td className="whitespace-nowrap px-3 py-2">{row.work_date}</td><td className="whitespace-nowrap px-3 py-2">{row.check_in ?? "-"}</td><td className="whitespace-nowrap px-3 py-2">{row.check_out ?? "-"}</td><td className="px-3 py-2">{attendanceStatusLabel[(row.status ?? "").toLowerCase()] ?? row.status ?? "-"}</td><td className="px-3 py-2">{row.note ?? ""}</td></tr>)}{selectedSummaryDetails.length === 0 ? <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-500">Không có dữ liệu trong khoảng thời gian này.</td></tr> : null}</tbody></table></div>
+          </section>
+        </div> : null}
         </div>
       </div>
     </main>
