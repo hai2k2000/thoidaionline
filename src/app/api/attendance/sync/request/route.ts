@@ -3,7 +3,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { bridgeAuthorized, configuredAttendanceDeviceId } from "@/lib/attendanceBridgeAuth";
 
 export async function POST(request: Request) {
-  if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
+  if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
   const { data: existing } = await serverSupabase
     .from("attendance_sync_requests")
     .select("id,status,requested_at")

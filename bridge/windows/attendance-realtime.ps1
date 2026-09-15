@@ -2,13 +2,24 @@ param([string]$ConfigPath = "C:\WiseEyeOn39\bridge\config.json")
 $ErrorActionPreference = "Stop"
 $apiBase = "https://www.thoidai.online"; $deviceId = "wise-eye-on-39-machine-1"; $deviceIp = "192.168.79.201"; $devicePort = 4370; $machineNumber = 1
 $statePath = "C:\WiseEyeOn39\bridge\realtime-seen.json"; $spoolPath = "C:\WiseEyeOn39\bridge\realtime-spool.jsonl"; $deferredSpoolPath = "C:\WiseEyeOn39\bridge\realtime-deferred.jsonl"
-$config = Get-Content $ConfigPath -Raw | ConvertFrom-Json; $headers = @{ "x-attendance-bridge-token" = [string]$config.bridgeToken }
+$config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+function New-BridgeHeaders([string]$Uri, [string]$Method, [string]$Body) {
+  $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
+  $nonce = [Convert]::ToBase64String((1..16 | ForEach-Object { Get-Random -Maximum 256 }))
+  $nonce = $nonce.TrimEnd('=').Replace('+','-').Replace('/','_')
+  $sha = [Security.Cryptography.SHA256]::Create(); $bodyHash = ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Body))) -replace '-','').ToLowerInvariant(); $sha.Dispose()
+  $path = ([Uri]$Uri).AbsolutePath
+  $canonical = "$Method`n$path`n$timestamp`n$nonce`n$bodyHash"
+  $hmac = [Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes([string]$config.bridgeToken)); $signature = ([BitConverter]::ToString($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonical))) -replace '-','').ToLowerInvariant(); $hmac.Dispose()
+  return @{ "x-attendance-bridge-timestamp" = $timestamp; "x-attendance-bridge-nonce" = $nonce; "x-attendance-bridge-signature" = $signature }
+}
 $instanceMutex = [System.Threading.Mutex]::new($false, "Global\WiseEyeOn39AttendanceRealtime")
 if (-not $instanceMutex.WaitOne(0)) { exit 0 }
 $seen = @{}; if (Test-Path $statePath) { (Get-Content $statePath -Raw | ConvertFrom-Json).psobject.Properties | ForEach-Object { $seen[$_.Name] = $true } }
 function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null) {
-  $params = @{ Uri = "$apiBase$Path"; Method = $Method; Headers = $headers; ContentType = "application/json" }
-  if ($null -ne $Body) { $params.Body = ($Body | ConvertTo-Json -Depth 8 -Compress) }
+  $bodyText = if ($null -ne $Body) { $Body | ConvertTo-Json -Depth 8 -Compress } else { "" }
+  $params = @{ Uri = "$apiBase$Path"; Method = $Method; Headers = (New-BridgeHeaders "$apiBase$Path" $Method $bodyText); ContentType = "application/json" }
+  if ($null -ne $Body) { $params.Body = $bodyText }
   Invoke-RestMethod @params
 }
 function Punch-Key($row) { return "$($row.enroll_number)|$($row.punched_at)" }
@@ -46,7 +57,8 @@ function Write-SpoolRows([string]$Path, $rows) {
 }
 function Send-PunchCore($row) {
   try {
-    $response = Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers $headers -ContentType "application/json" -Body ($row | ConvertTo-Json -Compress) -TimeoutSec 3
+    $bodyText = $row | ConvertTo-Json -Compress
+    $response = Invoke-RestMethod -Uri "$apiBase/api/attendance/sync/realtime" -Method POST -Headers (New-BridgeHeaders "$apiBase/api/attendance/sync/realtime" "POST" $bodyText) -ContentType "application/json" -Body $bodyText -TimeoutSec 3
     if ($response.skipped -eq $true) { return $false }
     return $true
   } catch { return $false }

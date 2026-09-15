@@ -13,6 +13,7 @@ Latest Network Hardening: COMPLETE — Next.js binds to localhost behind Nginx
 
 Latest Remote Access Hardening: COMPLETE — WireGuard server provisioned with three independent peers
 Latest Supabase Exposure Hardening: COMPLETE — public pg-meta and analytics routes blocked at Nginx
+Latest Wise Eye Bridge Authentication: COMPLETE — HMAC signatures, timestamp/nonce replay protection, and bounded rate limiting
 
 Current Task Update: COMPLETE — department deputy task assignment enabled
 
@@ -35,6 +36,7 @@ Completed:
 - Provisioned `wg0` on the VPS at `10.66.0.1/24` over UDP 51820 with three unique split-tunnel peers (`10.66.0.2`–`10.66.0.4`), persistent startup, and explicit firewall rules preserving WireGuard and SSH recovery access.
 - Bound the production Next.js listener to `127.0.0.1:3001`; Nginx remains the only public application entry point.
 - Blocked public `/supa/pg` (pg-meta) and `/supa/analytics` routes at Nginx with 404 responses; REST and Auth routes remain available for the application.
+- Upgraded Wise Eye bridge requests to HMAC-SHA256 signatures over method, path, timestamp, nonce, and body hash; stale/replayed requests are rejected and per-client request rates are bounded.
 - Added the same bounded request validation and five-attempt/15-minute throttle used by mobile login to the web login endpoint; successful authentication clears the counter and blocked requests return HTTP 429 with `Retry-After`.
 - Restricted employee work-schedule queries, pages, and navigation so regular employees only receive their own plan; organization and leadership schedules remain available to authorized leaders and admin.
 - Enabled task assignment for the `pho_truong_phong` role; department deputies are scoped to assigning within their own department.
@@ -133,6 +135,7 @@ Validation:
 - Targeted lint: PASS (0 errors, 1 warning before dependency fix; PASS after dependency fix).
 - Migration `20260901095000_backend_security_hardening`: PASS with database backup and anon probes returning 401/42501.
 - Runtime dependency audit: PASS (`npm audit --omit=dev --audit-level=high`, 0 vulnerabilities) after upgrading Next.js to 16.3.4 and Supabase JS to 2.112.4.
+- Wise Eye HMAC tests: PASS (22/22 targeted bridge tests); production build PASS; signed request accepted once, replay rejected with HTTP 401, legacy token-only request rejected with HTTP 401; bridge process remains active.
 - Production dependency/build smoke: PASS (Next.js 16.3.4, service active, protected APIs return 401, security headers present).
 
 Blockers:

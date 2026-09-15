@@ -1,9 +1,40 @@
 import "server-only";
 
-export function bridgeAuthorized(request: Request): boolean {
-  const expected = process.env.ATTENDANCE_BRIDGE_TOKEN;
-  const provided = request.headers.get("x-attendance-bridge-token");
-  return Boolean(expected && expected.length >= 32 && provided && provided === expected);
+import { verifyAttendanceBridgeSignature } from "@/lib/attendanceBridgeSignature";
+
+const seenNonces = new Map<string, number>();
+const requestCounts = new Map<string, { startedAt: number; count: number }>();
+const MAX_CLOCK_SKEW_SECONDS = 300;
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 120;
+
+export async function bridgeAuthorized(request: Request): Promise<boolean> {
+  const secret = process.env.ATTENDANCE_BRIDGE_TOKEN;
+  const timestamp = request.headers.get("x-attendance-bridge-timestamp") ?? "";
+  const nonce = request.headers.get("x-attendance-bridge-nonce") ?? "";
+  const signature = request.headers.get("x-attendance-bridge-signature") ?? "";
+  if (!secret || secret.length < 32 || !/^\d{10}$/.test(timestamp) || !/^[A-Za-z0-9_-]{16,128}$/.test(nonce) || !/^[a-f0-9]{64}$/.test(signature)) return false;
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isSafeInteger(timestampSeconds) || Math.abs(nowSeconds - timestampSeconds) > MAX_CLOCK_SKEW_SECONDS) return false;
+
+  const clientKey = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const now = Date.now();
+  const rate = requestCounts.get(clientKey);
+  if (!rate || now - rate.startedAt >= RATE_WINDOW_MS) requestCounts.set(clientKey, { startedAt: now, count: 1 });
+  else if (rate.count >= RATE_LIMIT) return false;
+  else rate.count += 1;
+
+  for (const [key, expiresAt] of seenNonces) if (expiresAt <= now) seenNonces.delete(key);
+  const nonceKey = `${timestamp}:${nonce}`;
+  if (seenNonces.has(nonceKey)) return false;
+
+  const body = await request.clone().text();
+  const path = new URL(request.url).pathname;
+  if (!verifyAttendanceBridgeSignature(secret, { method: request.method, path, timestamp, nonce, body }, signature)) return false;
+  seenNonces.set(nonceKey, now + MAX_CLOCK_SKEW_SECONDS * 1000);
+  return true;
 }
 
 export function configuredAttendanceDeviceId() {
