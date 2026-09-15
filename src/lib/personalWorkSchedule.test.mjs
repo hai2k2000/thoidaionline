@@ -1,0 +1,48 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+
+const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+
+test("personal plan page is public to authenticated users and is named correctly", () => {
+  const page = read("../app/work-schedule/staff/page.tsx");
+  const nav = read("../components/phase2Navigation.ts");
+  const appNav = read("../components/AppNav.tsx");
+  assert.match(page, /scheduleScope="all"/);
+  assert.match(page, /Kế hoạch cá nhân/);
+  assert.match(nav, /work-schedule-staff/);
+  assert.match(appNav, /work-schedule-staff": "Kế hoạch cá nhân"/);
+});
+
+test("work schedule API allows authenticated users to create only their own plan", () => {
+  const route = read("../app/api/work-schedule/route.ts");
+  const repository = read("./workScheduleRepository.ts");
+  assert.doesNotMatch(route, /guard\.actor\.role_code !== "admin"/);
+  assert.match(route, /guard\.actor\.id/);
+  assert.match(route, /participantIds.*guard\.actor\.id|guard\.actor\.id.*participantIds/);
+  assert.match(route, /endDate/);
+  assert.match(route, /planType/);
+  assert.match(repository, /eq\("created_by", actorId\)/);
+});
+
+test("personal plan UI lets the creator edit or delete their own plan", () => {
+  const page = read("../app/work-schedule/staff/page.tsx");
+  const shell = read("../components/WorkSchedulePageShell.tsx");
+  assert.match(page, /currentUserId=\{user\.id\}/);
+  assert.match(shell, /Sửa kế hoạch/);
+  assert.match(shell, /Xóa kế hoạch/);
+  assert.match(shell, /method: "DELETE"/);
+});
+
+test("work schedule storage supports plan type and date ranges", () => {
+  const migration = readFileSync(new URL("../../supabase/migrations/20260915120000_personal_work_plans.sql", import.meta.url), "utf8");
+  assert.match(migration, /add column if not exists end_date/);
+  assert.match(migration, /add column if not exists plan_type/);
+});
+
+test("attendance leave form no longer offers business trips", () => {
+  const page = read("../app/attendance/page.tsx");
+  assert.match(page, /Gửi đơn xin nghỉ/);
+  assert.doesNotMatch(page, /Gửi đơn nghỉ \/ công tác/);
+  assert.doesNotMatch(page, /<option value="business">Công tác<\/option>/);
+});

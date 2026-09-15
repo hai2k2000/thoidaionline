@@ -1,5 +1,5 @@
 Current Phase: Attendance bridge operations
-Current Task: COMPLETE — leave requests and attendance notes
+Current Task: COMPLETE — public personal work plans and separated leave requests
 
 Current Task Update: COMPLETE — employee leave history month/status filters
 
@@ -25,6 +25,8 @@ Latest Attendance Workflow Update: COMPLETE — business-trip requests are clear
 
 Latest Work Schedule Privacy: COMPLETE — regular employees can only view their own plans
 
+Latest Personal Plan Update: COMPLETE — shared personal plans with work/business/event types, date ranges, creator controls, and separate leave submission UI
+
 Completed:
 - Attendance total-summary rows now open a detail popup for the selected employee using the active day/week/month range.
 - Employee leave history now has independent month/all-time and status filters, scoped to the authenticated user's own requests.
@@ -40,6 +42,9 @@ Completed:
 - Replaced the four-position duty roster with exactly three positions: Xuất bản, Biên tập, Phóng viên.
 - Added authenticated leave requests with leadership approval, conflict checks, cancellation, and audit history.
 - Attendance notes now derive from approved leave and active online-work schedules; no matching context leaves the note blank.
+- Personal plan page is shared by authenticated users, supports filtering by active staff, and lets each creator create, edit, or delete only their own work, business-trip, or event plans.
+- Work plans support inclusive start/end dates and optional start/end times; business trips and events remain visible in the shared plan calendar.
+- Attendance leave submission is now explicitly leave-only; business trips are recorded through the personal plan flow.
 - Added `/api/leave-requests` for authenticated employee submissions, leadership approvals/rejections, pending cancellation, conflict prevention, and audit history.
 - Attendance pages now include an employee leave form, personal request history, and a leadership approval queue.
 - Merged legacy Biên tập bước 1/2 rows into one Biên tập row, retaining the step 2 assignee when both existed and recording cancellation events for redundant rows.

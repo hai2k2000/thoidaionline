@@ -30,8 +30,8 @@ test("attendance notes combine approved leave and online work and remain blank o
   assert.match(attendance, /business: "Công tác"/);
   assert.match(attendance, /parts\.join\("; "\)/);
   assert.match(page, /leaveTypeLabel/);
-  assert.match(page, /value="business">Công tác/);
-  assert.match(page, /Gửi đơn nghỉ \/ công tác/);
+  assert.doesNotMatch(page, /value="business">Công tác/);
+  assert.match(page, /Gửi đơn xin nghỉ/);
   assert.match(page, /Duyệt đơn nghỉ \/ công tác/);
   assert.match(page, /r\.note \?\? ""/);
 });
