@@ -19,7 +19,7 @@ export async function bridgeAuthorized(request: Request): Promise<boolean> {
   const timestampSeconds = Number(timestamp);
   if (!Number.isSafeInteger(timestampSeconds) || Math.abs(nowSeconds - timestampSeconds) > MAX_CLOCK_SKEW_SECONDS) return false;
 
-  const clientKey = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const clientKey = request.headers.get("x-real-ip")?.trim() || "unknown";
   const now = Date.now();
   const rate = requestCounts.get(clientKey);
   if (!rate || now - rate.startedAt >= RATE_WINDOW_MS) requestCounts.set(clientKey, { startedAt: now, count: 1 });
