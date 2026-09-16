@@ -1,3 +1,5 @@
+RBAC Phase 1A Checkpoint 1: COMPLETE — additive permissions and role_permission_grants schema applied and verified on production; Checkpoint 2 is awaiting owner approval.
+
 Current Phase: Attendance bridge operations
 Current Task: COMPLETE — public personal work plans and separated leave requests
 
