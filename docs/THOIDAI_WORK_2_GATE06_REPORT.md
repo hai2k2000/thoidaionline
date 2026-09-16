@@ -79,7 +79,7 @@ Contains full custom dump (838 KB), schema dump (546 KB), ledger-before export (
 
 ## K. Open risks
 
-- Local main/remote has not been updated with reconciliation commit; merge/push requires an explicit release decision.
+- Source reconciliation is now fast-forwarded and pushed to GitHub `main` at `daedd51`; production was not deployed.
 - Four legacy migration histories remain unresolved and must never be bulk-replayed.
 - Full suite/lint debt remains.
 - Authenticated production smoke is still pending owner-provided safe test access.
@@ -88,8 +88,8 @@ Contains full custom dump (838 KB), schema dump (546 KB), ledger-before export (
 
 ## L. Phase 1A decision
 
-**NO-GO.** Gate 0.6 has stabilized metadata and critical tests, but GO criteria are not all satisfied: authenticated smoke is pending, trigger-grant revoke safety is unproven, full baseline debt remains, and the reconciliation commit is not yet merged to the remote `main`. Stop here and await owner review.
+**NO-GO.** Gate 0.6 has stabilized metadata and critical tests, but GO criteria are not all satisfied: authenticated smoke is pending, trigger-grant revoke safety is unproven, and full baseline debt remains. Stop here and await owner review.
 
 ## M. Starting baseline if later approved
 
-Current clean branch baseline: `9cb7f6d` plus this report commit. Live schema is unchanged by Gate 0.6; live ledger is 107 rows with exactly the 11 verified additions above and the four unresolved versions absent.
+Current GitHub `main` baseline: `daedd51`. Live schema is unchanged by Gate 0.6; live ledger is 107 rows with exactly the 11 verified additions above and the four unresolved versions absent.
