@@ -3,7 +3,7 @@
 Date: 2026-09-16
 Production source: `/opt/thoidai-work` (unchanged checkout, service active)
 Isolated VPS worktree: `/opt/worktrees/thoidai-phase1a-cp2`
-Branch: `phase1a-checkpoint2`
+Branch: `phase1a-checkpoint2` (implementation commit recorded below)
 Scope: TypeScript authorization layer, DB grant reader, and shadow mode only
 
 ## A. TypeScript RBAC architecture
@@ -20,7 +20,7 @@ Task server handlers invoke this observer for `view`, `comment`, and `assign`; l
 
 The helper evaluates permission plus scope plus canonical resource relationships. `task.create` has no implicit assignment authority. Legacy `canTaskAction()`, `canAssignToDepartment()`, `role_permissions`, and task RPCs remain production decision-makers.
 
-The task server boundary invokes shadow comparison for legacy `view`, `comment`, and `assign` checks while returning the legacy decision unchanged. Shadow loading is failure-isolated.
+The task server boundary invokes shadow comparison for legacy `view`, `comment`, and `assign` checks while returning the legacy decision unchanged. Assignment shadow receives the actual `canAssignToDepartment()` result for both allow and deny paths; deny returns before participant resolution or repository mutation. Shadow loading is failure-isolated.
 
 ## B. DB authorization helper
 
@@ -41,27 +41,31 @@ The implementation is wired only as a parallel observer. It does not replace tas
 
 ## E. Legacy vs RBAC comparison matrix
 
-Matrix coverage includes active roles `admin`, `tong_bien_tap`, `pho_tong_bien_tap`, `truong_phong`, `pho_truong_phong`, `phong_vien`, `nhan_vien`, compatibility role `tbt_read_only`, own/assigned/same-department/other-department resources, `task.view`, `task.comment`, and department assignment.
+Matrix coverage includes active roles `admin`, `tong_bien_tap`, `pho_tong_bien_tap`, `truong_phong`, `pho_truong_phong`, `phong_vien`, `nhan_vien`, and compatibility roles `tbt_read_only`, `bien_tap_vien`, `tri_su`. Resource cases include own, assigned, same-department, other-department, and organization-level assignment cases. `task.view`, `task.comment`, `task.assign`, and `task.create` are characterized; workflow-dependent actions are enumerated separately as `NEEDS_REVIEW`.
 
 | Result | Count | Evidence |
 |---|---:|---|
-| `MATCH` | 64 | `src/lib/phase1aShadowMatrix.test.mjs` |
-| `RESTRICTIVE_MISMATCH` | 0 | Same matrix |
-| `SECURITY_CRITICAL_MISMATCH` | 0 | Same matrix |
+| Matrix | Rows | MATCH | RESTRICTIVE_MISMATCH | SECURITY_CRITICAL_MISMATCH | Evidence |
+|---|---:|---:|---:|---:|---|
+| view/comment | 80 | 80 | 0 | 0 | `src/lib/phase1aShadowMatrix.test.mjs` |
+| assignment scope | 30 | 30 | 0 | 0 | `src/lib/phase1aShadowMatrix.test.mjs` |
+| workflow characterization | 90 | n/a | n/a | n/a | `src/lib/phase1aShadowMatrix.test.mjs` |
+
+`task.create` is separately verified for four create-capable non-assignment roles: create is allowed by the RBAC grant, while cross-department assignment remains denied by both legacy and RBAC scope checks.
 
 Workflow-dependent actions (`submit`, `return`, `approve`, `score`, `cancel`, deadline/update, attachment) remain `NEEDS_REVIEW`; no static RBAC grant is used to replace their legacy workflow checks.
 
 ## F. SECURITY_CRITICAL_MISMATCH
 
-Count: **0** in the required characterization matrix.
+Count: **0** across the 110 comparable view/comment and assignment rows.
 
 ## G. RESTRICTIVE_MISMATCH
 
-Count: **0** in the required characterization matrix.
+Count: **0** across the 110 comparable view/comment and assignment rows.
 
 ## H. Mismatch details
 
-No mismatch was found in the covered view/comment/department-assignment matrix. Workflow-dependent actions are intentionally not classified as mismatches because Checkpoint 2 does not grant or replace their stateful legacy authorization.
+No mismatch was found in the covered view/comment/assignment matrix. Workflow-dependent actions are intentionally classified as `NEEDS_REVIEW` because Checkpoint 2 does not grant or replace their stateful legacy authorization. `tbt_read_only` remains view-only; inactive compatibility roles do not gain active-user access.
 
 ## I. Migration/backup result
 
@@ -74,10 +78,12 @@ Checkpoint 1 tables remain present: 17 permissions and 116 compatibility grants.
 
 ## J. Test/typecheck/lint/build
 
-- RBAC, DB helper, Checkpoint 1, compatibility, authorization, shadow, wiring, and task tests: **37/37 PASS** on VPS worktree.
-- `npx tsc --noEmit`: **PASS** after correcting one import discovered by the first run.
-- ESLint on all new RBAC/security files: **PASS**.
-- VPS `npm run build`: compilation and TypeScript completed, but final build failed because the isolated VPS worktree could not fetch existing Google Fonts; this is an environment/network limitation unrelated to RBAC code. The same source builds successfully in the local fallback environment with non-secret dummy values. Existing dynamic HR upload tracing warnings remain non-blocking.
+- Exact test command: `node --test src/lib/rbacAuthorization.test.mjs src/lib/phase1aShadowMatrix.test.mjs src/lib/phase1aShadowWiring.test.mjs src/lib/phase1aRbacCompatibility.test.mjs src/lib/phase1aRbacDbHelper.test.mjs src/lib/phase1aRbacCore.test.mjs src/lib/authorization.test.mjs src/lib/taskHandlers.test.mjs src/lib/manager_assignment.test.mjs src/lib/taskAssignAccess.test.mjs src/lib/taskAssignmentGroup.test.mjs src/lib/taskCompletionScoresSecurity.test.mjs src/lib/taskScoreFreshness.test.mjs`
+- Test result: **52/52 PASS**, 0 failed, 0 skipped.
+- `npx tsc --noEmit`: **PASS** (exit 0).
+- ESLint command covered all changed RBAC/security/task wiring files: **PASS**, 0 errors and 0 warnings.
+- Build command used non-secret values only: `NEXT_PUBLIC_SUPABASE_URL=https://example.invalid NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-key SESSION_SECRET=dummy-session-secret npm run build`
+- `npm run build`: **PASS** (exit 0). Existing dynamic HR upload tracing warnings remain non-blocking.
 
 ## K. Security review
 
@@ -91,6 +97,14 @@ Checkpoint 1 tables remain present: 17 permissions and 116 compatibility grants.
 
 Application fallback is automatic because production still uses legacy authorization. For DB rollback, stop writes if required, restore the Checkpoint 2 custom dump, and remove only the helper function and its ledger row through a reviewed recovery procedure. Do not use `supabase db push`, `supabase db reset`, historical replay, or migration edits.
 
-## M. Checkpoint 3 decision
+## M. Interrupted-state resolution and branch
 
-**NO-GO pending production build verification.** Security-critical and restrictive mismatch counts are both zero, and all targeted tests/typecheck/lint pass. Before Checkpoint 3, rerun the production build in an environment with the existing font assets available (or use the already verified production build artifact) and obtain owner approval. Checkpoint 3 has not started.
+- Dirty-state patch preserved before edits at `/tmp/phase1a-cp2-interrupted-state.patch`; SHA-256: `b12a8847fc203ba3cc6ec19ad3fd41ff4c7231dfe0f24014a3fced1d4610865f`.
+- The assignment-shadow fix was reviewed with a RED test against commit `25b7641` (17 existing tests passed, new test failed) and then GREEN on the corrected worktree.
+- Line-ending-only noise in the interrupted TypeScript files was normalized without discarding semantic changes.
+- Implementation commit SHA: `57bb72f36a7e76ad9cd8c2a7b1df760ae872d0e4`.
+- Remote branch: `origin/phase1a-checkpoint2` created and pushed successfully; no force-push and no merge to `main`.
+
+## N. Checkpoint 3 decision
+
+**NO-GO.** Checkpoint 2 remains shadow-only. Production source was not changed or restarted. Checkpoint 3 must not start until owner review explicitly approves the sealed checkpoint artifact.
