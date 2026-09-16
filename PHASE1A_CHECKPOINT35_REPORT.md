@@ -79,7 +79,7 @@ Attachment upload by a legacy-authorized owner passed and storage architecture w
 - Changed-file ESLint: passed with 0 errors.
 - `git diff --check`: passed.
 - Build command: `NEXT_PUBLIC_SUPABASE_URL=https://example.invalid NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-key SESSION_SECRET=dummy-session-secret npx next build --webpack`.
-- Build result: **BLOCKED** by external Google Fonts network timeout while fetching `Geist Mono`; compilation did not complete. No production secrets were used.
+- Build recheck result: **PASS**, exit code `0`. The previous external Google Fonts/network timeout did not recur. No production secrets were used.
 
 ## I. Mismatch counts and decision
 
@@ -95,8 +95,12 @@ Attachment upload by a legacy-authorized owner passed and storage architecture w
 
 ## K. GO / NO-GO
 
-**NO-GO for controlled activation.**
+**GO for owner review of controlled production activation.**
 
-Authorization characterization itself is clean (`0` critical and `0` restrictive mismatch), but the required build gate is not green because the VPS could not reach Google Fonts. Re-run the exact non-secret build when network/font availability is restored; do not activate before it passes.
+Authorization: GO (`0` critical, `0` restrictive mismatch).
+Build: GO (Webpack build exit code `0`).
+Checkpoint 3.5: GO FOR OWNER REVIEW OF CONTROLLED ACTIVATION.
+
+This is not an activation command. Do not deploy, restart production, enable `TASK_RBAC_V2_ENABLED`, merge `main`, modify the database, or start Checkpoint 4 from this turn.
 
 Not a production activation approval: do not deploy, restart production, enable `TASK_RBAC_V2_ENABLED`, merge `main`, or modify the database in Checkpoint 3.5. Stop here and wait for owner review.
