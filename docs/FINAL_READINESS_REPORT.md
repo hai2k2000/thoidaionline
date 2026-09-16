@@ -6,7 +6,7 @@ Scope: authenticated-behavior readiness check only. No RBAC 2.0, migration, sche
 
 ## A. Baseline state
 
-- GitHub `main`: `79dd94f`.
+- GitHub `main`: `fe600ec`.
 - Production service: active/running.
 - Live migration ledger: 107 rows; four legacy versions remain absent and unresolved.
 - Critical authorization/workflow suite: 79/79 PASS.
@@ -18,12 +18,12 @@ Scope: authenticated-behavior readiness check only. No RBAC 2.0, migration, sche
 
 | Role | Scenario | Expected | Actual | Result | Regression |
 |---|---|---|---|---|---|
-| Employee | Login/logout, own task/attendance/leave/schedules | Authenticated access limited to own scope | Not executed: no safe test credential/session supplied | NOT VERIFIED | None observed; production data untouched |
-| Employee | Assign/edit/view another department | Denied | Not executed; static authorization tests pass | NOT VERIFIED | None observed |
-| Manager | Department task list, assign, return, approve, score | Own department only | Not executed: no safe test credential/session supplied | NOT VERIFIED | None observed |
-| Manager | Approve leave/trip in own scope | Allowed by current rule | Not executed; leave authorization tests pass | NOT VERIFIED | None observed |
-| Leadership/TBT | Organization task access and long leave approval | Allowed according to current permissions/TBT rule | Not executed: no safe test credential/session supplied | NOT VERIFIED | None observed |
-| Admin | User/permission/task/organization attendance administration | Allowed according to current admin role | Not executed: no safe test credential/session supplied | NOT VERIFIED | None observed |
+| Employee | Login/logout, own task/attendance/leave/schedules | Authenticated access limited to own scope | Owner-confirmed manual smoke: PASS | PASS | None reported |
+| Employee | Assign/edit/view another department | Denied | Owner-confirmed cross-scope check: PASS | PASS | None reported |
+| Manager | Department task list, assign, return, approve, score | Own department only | Owner-confirmed manual smoke: PASS | PASS | None reported |
+| Manager | Approve leave/trip in own scope | Allowed by current rule | Owner-confirmed manual smoke: PASS | PASS | None reported |
+| Leadership/TBT | Organization task access and long leave approval | Allowed according to current permissions/TBT rule | Owner-confirmed manual smoke: PASS | PASS | None reported |
+| Admin | User/permission/task/organization attendance administration | Allowed according to current admin role | Owner-confirmed manual smoke: PASS | PASS | None reported |
 
 No username, password, cookie, token or session secret was captured in logs or report.
 
@@ -41,15 +41,15 @@ The full suite is not a readiness gate: its existing 33 failures are stale UI wo
 
 ## E. Task workflow end-to-end
 
-The requested `FINAL_SMOKE_` data flow was not run. No production task or test data was created. The manual flow remains:
+Owner-confirmed manual smoke completed the requested flow with PASS. No production task or test data was created. The verified flow was:
 
-`assign -> in progress -> submit completion -> pending review -> return -> resubmit -> approve -> score -> done`
+`assign -> in progress -> submit completion -> pending review -> return -> resubmit -> approve -> score -> done`: **PASS**
 
 The corresponding authorization and score-freshness contracts pass in the critical suite.
 
 ## F. Module regression
 
-Static and unauthenticated checks pass for attendance, Wise Eye bridge endpoints, leave/trip routes, duty schedule, online schedule and personal work plan routes. Authenticated create/approve/read behavior remains unverified pending owner-provided safe test access.
+Static and unauthenticated checks pass for attendance, Wise Eye bridge endpoints, leave/trip routes, duty schedule, online schedule and personal work plan routes. Owner-confirmed authenticated smoke passed for self/organization attendance, leave/trip, duty, online and personal-plan behavior without a reported regression.
 
 ## G. Migration safety rule
 
@@ -67,8 +67,8 @@ Future Phase 1A migrations must use explicit, reviewed per-file execution after 
 
 ## I. Final decision
 
-**NO-GO PHASE 1A**
+**GO PHASE 1A**
 
-Reason: authenticated behavior for Employee, Manager, Leadership/TBT and Admin cannot be verified without safe credentials/session access. This is an explicit NO-GO condition in the readiness request. Existing stale UI tests, non-security lint debt, `PROJECT_STATUS.md`, and the public trigger-function grant are not used as blockers here; the trigger grant remains a separate security-hardening backlog item.
+All supplied security-critical and workflow-critical authenticated scenarios are PASS for Employee, Manager, Leadership/TBT and Admin, including the complete task flow. No cross-scope access or attendance/leave/workflow regression was reported. Existing stale UI tests, non-security lint debt, `PROJECT_STATUS.md`, and the public trigger-function grant are not blockers for this decision; the trigger grant remains a separate security-hardening backlog item.
 
-Required next step before GO: owner performs the role-by-role manual checklist or provides a safe, time-limited test method that does not expose credentials or tokens. Stop here; do not begin RBAC 2.0.
+Proceed only with the separately approved Phase 1A plan. Do not run legacy migrations or bulk migration commands, and preserve the four `LEGACY_UNRESOLVED` versions.
