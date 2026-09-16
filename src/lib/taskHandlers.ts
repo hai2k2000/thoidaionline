@@ -22,14 +22,13 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { loadRbacActor } from "@/lib/rbac/repository";
 import { can } from "@/lib/rbac/authorization";
 import { shadowAuthorize } from "@/lib/rbac/shadow";
+import { taskBasePermission } from "@/lib/taskAuthorization";
+import { isTaskRbacV2Enabled } from "@/lib/taskRbacFlag";
 
 const privateAttachments = serverSupabase.storage.from("task-private");
 
 const shadowPermission = (action: string) => {
-  if (action === "view") return "task.view";
-  if (action === "comment") return "task.comment";
-  if (action === "assign") return "task.assign";
-  return null;
+  return taskBasePermission(action);
 };
 
 const shadowTaskAction = async (
@@ -77,6 +76,21 @@ export const taskHandlers = createTaskApplication({
   resolveAssignmentParticipants: (actor, input) => taskAssignmentRepository.resolveParticipants(actor, input),
   canTaskAction,
   shadowTaskAction,
+  taskRbacEnabled: isTaskRbacV2Enabled(),
+  taskRbacBaseAllowed: async (user, action, task) => {
+    const rbacActor = await loadRbacActor(user);
+    const resource = task ? {
+      kind: "task" as const,
+      id: task.id,
+      departmentId: task.departmentId,
+      createdBy: task.createdBy,
+      ownerId: task.ownerId,
+      assigneeId: task.assigneeId,
+      reviewerId: task.reviewerId,
+      participantIds: task.participants.map((participant) => participant.userId),
+    } : undefined;
+    return can(rbacActor, taskBasePermission(action, user.role_code), resource);
+  },
   normalizeLegacyEvaluationInput,
   newUuid: randomUUID,
   uploadPrivateAttachment: async (path, data, mimeType) => {

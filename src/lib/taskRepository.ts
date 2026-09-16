@@ -8,6 +8,9 @@ import {
   type TaskParticipant,
 } from "@/lib/authorization";
 import { resolveTaskCompatibility } from "@/lib/taskCompatibility";
+import { isTaskRbacV2Enabled } from "@/lib/taskRbacFlag";
+import { buildTaskListScope } from "@/lib/taskAuthorization";
+import { loadRbacActor } from "@/lib/rbac/repository";
 import type {
   AssignedTaskInput,
   LegacyCreateTaskInput,
@@ -115,6 +118,21 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
 const scopeTerms = async (
   actor: AuthorizationActor,
 ): Promise<RepositoryResult<string[]>> => {
+  if (isTaskRbacV2Enabled()) {
+    const rbacActor = await loadRbacActor({ id: actor.id, department_id: actor.departmentId });
+    const assignments = await serverSupabase
+      .from("task_assignees")
+      .select("task_id")
+      .eq("user_id", actor.id);
+    if (assignments.error) return fail(assignments.error);
+    const scope = buildTaskListScope(
+      rbacActor,
+      (assignments.data ?? []).map((row) => row.task_id as string),
+    );
+    if (scope.all) return ok([]);
+    if (scope.terms.length === 0) return ok(["id.eq.00000000-0000-0000-0000-000000000000"]);
+    return ok(scope.terms);
+  }
   if (hasOrganizationTaskView(actor)) {
     return ok([]);
   }

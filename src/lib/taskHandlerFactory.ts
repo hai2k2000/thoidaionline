@@ -43,6 +43,12 @@ type Dependencies = {
     action: TaskAction,
     legacyResult: boolean,
   ) => Promise<void>;
+  taskRbacEnabled?: boolean;
+  taskRbacBaseAllowed?: (
+    user: ServerAuthUser,
+    action: TaskAction | "create",
+    task?: TaskAccessSnapshot,
+  ) => Promise<boolean>;
   normalizeLegacyEvaluationInput: (
     input: Record<string, unknown>,
   ) => Omit<LegacyEvaluationInput, "employeeId">;
@@ -99,7 +105,16 @@ export function createTaskApplication(deps: Dependencies) {
     if (!accessResult.data) return deps.error("not_found", 404);
     const legacyResult = deps.canTaskAction(toActor(user), accessResult.data, action);
     await deps.shadowTaskAction?.(user, accessResult.data, action, legacyResult);
+    let rbacBaseAllowed = true;
+    if (deps.taskRbacEnabled && deps.taskRbacBaseAllowed) {
+      try {
+        rbacBaseAllowed = await deps.taskRbacBaseAllowed(user, action, accessResult.data);
+      } catch {
+        rbacBaseAllowed = false;
+      }
+    }
     return legacyResult
+      && (!deps.taskRbacEnabled || rbacBaseAllowed)
       ? accessResult.data
       : deps.error("forbidden", 403);
   };
@@ -344,6 +359,11 @@ export function createTaskApplication(deps: Dependencies) {
         return deps.error("invalid_request", 400);
       }
       if (recurrenceFrequency === undefined || (body.recurrenceEndsOn !== null && !recurrenceEndsOn) || (recurrenceFrequency === null && recurrenceEndsOn !== null) || (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate)) return deps.error("invalid_request", 400);
+      if (deps.taskRbacEnabled && deps.taskRbacBaseAllowed) {
+        try {
+          if (!await deps.taskRbacBaseAllowed(actor, "create")) return deps.error("forbidden", 403);
+        } catch { return deps.error("forbidden", 403); }
+      }
       const result = await deps.repository.createPersonal(actor.id, {
         title, description, startDate, dueDate, evaluationCriteria, recurrenceFrequency, recurrenceEndsOn,
       });
@@ -541,6 +561,19 @@ export function createTaskApplication(deps: Dependencies) {
       );
       if (!legacyAssignmentResult) {
         return deps.error("forbidden", 403);
+      }
+      if (deps.taskRbacEnabled && deps.taskRbacBaseAllowed) {
+        try {
+          const rbacAssignmentResult = await deps.taskRbacBaseAllowed(guard.actor, "assign", {
+            id: "assignment-scope", departmentId, createdBy: guard.actor.id, ownerId: null,
+            assigneeId, reviewerId, departmentManagerId: null, selfClaimable: false,
+            taskType: "assigned", status: "new",
+            participants: [...collaboratorIds, ...watcherIds].map((userId) => ({ userId, assignmentRole: "watcher" })),
+          });
+          if (!rbacAssignmentResult) {
+            return deps.error("forbidden", 403);
+          }
+        } catch { return deps.error("forbidden", 403); }
       }
       const resolved = await deps.resolveAssignmentParticipants(actor, {
         departmentId, assigneeId, reviewerId, collaboratorIds, watcherIds,

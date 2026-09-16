@@ -83,6 +83,8 @@ const makeHarness = ({
   mutationActor = makeActor(),
   taskAccess = access(),
   shadowTaskAction = null,
+  taskRbacEnabled = false,
+  taskRbacBaseAllowed = undefined,
 } = {}) => {
   const calls = [];
   const shadowCalls = [];
@@ -136,11 +138,63 @@ const makeHarness = ({
       shadowCalls.push(args);
       await shadowTaskAction?.(...args);
     },
+    taskRbacEnabled,
+    taskRbacBaseAllowed,
     normalizeLegacyEvaluationInput,
     newUuid: () => "00000000-0000-4000-8000-000000000099",
   });
   return { app, calls, shadowCalls, participantResolutionCalls };
 };
+
+test("flag-on mutation denies when RBAC base access is denied even if legacy allows", async () => {
+  const harness = makeHarness({
+    taskRbacEnabled: true,
+    taskRbacBaseAllowed: async () => false,
+  });
+  const response = await harness.app.report(new Request("https://example.test/api/tasks/report", {
+    method: "POST",
+    body: JSON.stringify({ taskId, progress: 50, report: "progress" }),
+  }));
+  assert.equal(response.status, 403);
+  assert.equal(harness.calls.some(([name]) => name === "report"), false);
+});
+
+test("flag-on mutation still denies when workflow guard denies even if RBAC base allows", async () => {
+  const harness = makeHarness({
+    taskAccess: access({ ownerId: "other", assigneeId: "other", participants: [] }),
+    taskRbacEnabled: true,
+    taskRbacBaseAllowed: async () => true,
+  });
+  const response = await harness.app.report(new Request("https://example.test/api/tasks/report", {
+    method: "POST",
+    body: JSON.stringify({ taskId, progress: 50, report: "progress" }),
+  }));
+  assert.equal(response.status, 403);
+  assert.equal(harness.calls.some(([name]) => name === "report"), false);
+});
+
+test("task.create authority cannot satisfy flag-on assignment", async () => {
+  const manager = makeActor({
+    department_id: departmentId,
+    permissions: normalizePermissions({ can_assign_task: true }),
+  });
+  const harness = makeHarness({
+    mutationActor: manager,
+    taskRbacEnabled: true,
+    taskRbacBaseAllowed: async (_actor, action) => action === "create",
+  });
+  const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST",
+    body: JSON.stringify({
+      actorId: "forged", departmentId, assigneeId: employeeId,
+      title: "Task", requirements: ["Requirement"], dueDate: "2026-09-30",
+      dueTime: "17:30", collaboratorIds: [], watcherIds: [],
+      recurrenceFrequency: null, recurrenceEndsOn: null,
+    }),
+  }));
+  assert.equal(response.status, 403);
+  assert.equal(harness.calls.some(([name]) => name === "assign"), false);
+});
 
 const taskId = "00000000-0000-4000-8000-000000000010";
 const employeeId = "00000000-0000-4000-8000-000000000011";
