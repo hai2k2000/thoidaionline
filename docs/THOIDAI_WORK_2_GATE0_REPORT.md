@@ -44,7 +44,7 @@ Live ledger ends at `20260901095000`. Classification is based on object/data evi
 | Migration | Classification | Evidence / gap |
 |---|---|---|
 | `20260909110000_attendance_sync.sql` | APPLIED | `attendance_code` plus three attendance tables, unique/queue/date indexes, RLS and service-role ACLs exist; 24 codes mapped. |
-| `20260909121500_seed_online_work_september.sql` | NOT_APPLIED | Its six-person September seed is absent from the live schedule path; active September rows are from the normalized `online_work_schedules` table, not this seed result. |
+| `20260909121500_seed_online_work_september.sql` | PARTIALLY_APPLIED | The target RPC/table path exists and 72 September rows (24 active, 48 cancelled) are present, but the exact six-person seed payload and final status cannot be proven from current state after later weekend cancellation. |
 | `20260909143000_allow_hongninh_duty_editor.sql` | PARTIALLY_APPLIED | Duty editor function/index behavior is present, but later three-position migration superseded the function and the embedded seed cannot be attributed independently. Do not ledger-repair without historical evidence. |
 | `20260909170000_three_position_duty_roster.sql` | APPLIED | Live duty positions are exactly `Xuất bản`, `Biên tập`, `Phóng viên`; active duty tasks cover 30 dates and cancelled legacy rows remain auditable. |
 | `20260910090000_leave_requests.sql` | APPLIED | `leave_requests`, date/requester indexes, RLS, service-role ACLs, create/review/cancel RPCs and audit path exist. |
@@ -59,7 +59,7 @@ Live ledger ends at `20260901095000`. Classification is based on object/data evi
 | `20260911230000_atomic_attendance_log_merge.sql` | APPLIED | Live merge RPC is present with service-role-only execute ACL. |
 | `20260915120000_personal_work_plans.sql` | APPLIED | `work_schedules.end_date`, `plan_type`, range/type constraints and range index exist. Ledger is still missing. |
 
-`NOT_APPLIED` seed migration must not be run automatically because its assumptions/data may no longer match production. `PARTIALLY_APPLIED` items require new reconciliation migrations, never edits to historical files.
+No migration in this set is safe to replay automatically because seed/one-time assumptions and later superseding changes are present. `PARTIALLY_APPLIED` items require new reconciliation migrations, never edits to historical files.
 
 ## C. Schema live baseline
 
