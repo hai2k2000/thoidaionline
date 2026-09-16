@@ -1,4 +1,5 @@
-RBAC Phase 1A Checkpoint 1: COMPLETE — additive permissions and role_permission_grants schema applied and verified on production; Checkpoint 2 is awaiting owner approval.
+RBAC Phase 1A Checkpoint 1: COMPLETE — additive permissions and role_permission_grants schema applied and verified on production.
+RBAC Phase 1A Checkpoint 2: COMPLETE IN ISOLATED SHADOW WORKTREE — assignment shadow deny/allow fix, full characterization matrix, tests, typecheck, lint, and non-secret build verified; awaiting owner review. Production source unchanged.
 
 Current Phase: Attendance bridge operations
 Current Task: COMPLETE — public personal work plans and separated leave requests

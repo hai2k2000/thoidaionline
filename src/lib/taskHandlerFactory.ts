@@ -520,9 +520,7 @@ export function createTaskApplication(deps: Dependencies) {
         || (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate)) {
         return deps.error("invalid_request", 400);
       }
-      if (!deps.canAssignToDepartment(actor, departmentId)) {
-        return deps.error("forbidden", 403);
-      }
+      const legacyAssignmentResult = deps.canAssignToDepartment(actor, departmentId);
       await deps.shadowTaskAction?.(
         guard.actor,
         {
@@ -539,8 +537,11 @@ export function createTaskApplication(deps: Dependencies) {
           participants: [],
         },
         "assign",
-        true,
+        legacyAssignmentResult,
       );
+      if (!legacyAssignmentResult) {
+        return deps.error("forbidden", 403);
+      }
       const resolved = await deps.resolveAssignmentParticipants(actor, {
         departmentId, assigneeId, reviewerId, collaboratorIds, watcherIds,
         groupDepartmentId, excludedMemberIds,

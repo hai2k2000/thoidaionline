@@ -82,8 +82,11 @@ const makeHarness = ({
   readActor = makeActor(),
   mutationActor = makeActor(),
   taskAccess = access(),
+  shadowTaskAction = null,
 } = {}) => {
   const calls = [];
+  const shadowCalls = [];
+  const participantResolutionCalls = [];
   const result = (data) => Promise.resolve({ ok: true, data });
   const repository = {
     list: (actor, query) => {
@@ -120,22 +123,28 @@ const makeHarness = ({
       ? value
       : null,
     canAssignToDepartment,
-    resolveAssignmentParticipants: async (_actor, input) => ({
-      ok: true,
-      collaboratorIds: input.collaboratorIds.filter((id) => id !== input.assigneeId),
-      watcherIds: input.watcherIds,
-    }),
+    resolveAssignmentParticipants: async (_actor, input) => {
+      participantResolutionCalls.push(input);
+      return {
+        ok: true,
+        collaboratorIds: input.collaboratorIds.filter((id) => id !== input.assigneeId),
+        watcherIds: input.watcherIds,
+      };
+    },
     canTaskAction,
+    shadowTaskAction: async (...args) => {
+      shadowCalls.push(args);
+      await shadowTaskAction?.(...args);
+    },
     normalizeLegacyEvaluationInput,
     newUuid: () => "00000000-0000-4000-8000-000000000099",
   });
-  return { app, calls };
+  return { app, calls, shadowCalls, participantResolutionCalls };
 };
 
 const taskId = "00000000-0000-4000-8000-000000000010";
 const employeeId = "00000000-0000-4000-8000-000000000011";
 const departmentId = "00000000-0000-4000-8000-000000000012";
-const reviewerId = "00000000-0000-4000-8000-000000000013";
 
 test("Phase 6 assignment derives actor from session and enforces department permission", async () => {
   const body = {
@@ -168,6 +177,52 @@ test("Phase 6 assignment derives actor from session and enforces department perm
   assert.equal(allowed.calls[0][1], "actor");
   assert.equal(allowed.calls[0][2].recurrenceFrequency, "weekly");
   assert.equal(allowed.calls[0][2].dueTime, "17:30");
+});
+
+test("assignment shadow receives the actual legacy allow or deny result before mutation", async () => {
+  const body = {
+    title: "Công việc mới",
+    requirements: ["Nội dung"],
+    departmentId,
+    assigneeId: employeeId,
+    dueDate: "2026-08-30",
+    dueTime: "17:30",
+    collaboratorIds: [],
+    watcherIds: [],
+    recurrenceFrequency: null,
+    recurrenceEndsOn: null,
+  };
+
+  const denied = makeHarness({
+    mutationActor: makeActor({ department_id: "dep-b" }),
+  });
+  const deniedResponse = await denied.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }));
+  assert.equal(deniedResponse.status, 403);
+  assert.equal(denied.shadowCalls.length, 1);
+  assert.equal(denied.shadowCalls[0][2], "assign");
+  assert.equal(denied.shadowCalls[0][3], false);
+  assert.equal(denied.participantResolutionCalls.length, 0);
+  assert.equal(denied.calls.some(([name]) => name === "assign"), false);
+
+  const allowed = makeHarness({
+    mutationActor: makeActor({
+      department_id: departmentId,
+      permissions: normalizePermissions({ can_assign_task: true }),
+    }),
+  });
+  const allowedResponse = await allowed.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }));
+  assert.equal(allowedResponse.status, 201);
+  assert.equal(allowed.shadowCalls.length, 1);
+  assert.equal(allowed.shadowCalls[0][2], "assign");
+  assert.equal(allowed.shadowCalls[0][3], true);
+  assert.equal(allowed.participantResolutionCalls.length, 1);
+  assert.equal(allowed.calls.filter(([name]) => name === "assign").length, 1);
 });
 
 test("list requires a signed actor and delegates server-side pagination", async () => {

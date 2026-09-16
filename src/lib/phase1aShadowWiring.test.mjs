@@ -8,6 +8,10 @@ test("task server boundary runs shadow comparison while legacy result remains au
   assert.match(factory, /const legacyResult = deps\.canTaskAction/);
   assert.match(factory, /await deps\.shadowTaskAction\?\./);
   assert.match(factory, /return legacyResult[\s\S]*\? accessResult\.data/);
+  assert.match(
+    factory,
+    /const legacyAssignmentResult = deps\.canAssignToDepartment[\s\S]*await deps\.shadowTaskAction\?\.[\s\S]*if \(!legacyAssignmentResult\)/,
+  );
   assert.match(handlers, /loadRbacActor/);
   assert.match(handlers, /shadowAuthorize/);
   assert.match(handlers, /catch \{[\s\S]*Shadow failures never affect legacy authorization/);
