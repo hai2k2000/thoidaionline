@@ -7,7 +7,6 @@ import type { ServerAuthUser } from "./serverSession";
 import { parseTaskListSearchParams } from "./taskFilters.mjs";
 import type {
   AssignedTaskInput,
-  LegacyCreateTaskInput,
   LegacyEvaluationInput,
   TaskRepository,
 } from "./taskContracts";
@@ -38,6 +37,12 @@ type Dependencies = {
     task: TaskAccessSnapshot,
     action: TaskAction,
   ) => boolean;
+  shadowTaskAction?: (
+    user: ServerAuthUser,
+    task: TaskAccessSnapshot,
+    action: TaskAction,
+    legacyResult: boolean,
+  ) => Promise<void>;
   normalizeLegacyEvaluationInput: (
     input: Record<string, unknown>,
   ) => Omit<LegacyEvaluationInput, "employeeId">;
@@ -92,7 +97,9 @@ export function createTaskApplication(deps: Dependencies) {
     const accessResult = await deps.repository.access(taskId);
     if (!accessResult.ok) return deps.rpcFailure(accessResult.error);
     if (!accessResult.data) return deps.error("not_found", 404);
-    return deps.canTaskAction(toActor(user), accessResult.data, action)
+    const legacyResult = deps.canTaskAction(toActor(user), accessResult.data, action);
+    await deps.shadowTaskAction?.(user, accessResult.data, action, legacyResult);
+    return legacyResult
       ? accessResult.data
       : deps.error("forbidden", 403);
   };
@@ -418,7 +425,8 @@ export function createTaskApplication(deps: Dependencies) {
       return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
     },
 
-    async create(request: Request) {
+    async create(_request: Request) {
+      void _request;
       const guard = await deps.mutationActor();
       if (!guard.ok) return guard.response;
       // Legacy task creation accepted a client-selected reviewer and bypassed
@@ -515,6 +523,24 @@ export function createTaskApplication(deps: Dependencies) {
       if (!deps.canAssignToDepartment(actor, departmentId)) {
         return deps.error("forbidden", 403);
       }
+      await deps.shadowTaskAction?.(
+        guard.actor,
+        {
+          id: "assignment-scope",
+          departmentId,
+          createdBy: null,
+          ownerId: null,
+          assigneeId,
+          reviewerId,
+          departmentManagerId: null,
+          selfClaimable: false,
+          taskType: "assigned",
+          status: "new",
+          participants: [],
+        },
+        "assign",
+        true,
+      );
       const resolved = await deps.resolveAssignmentParticipants(actor, {
         departmentId, assigneeId, reviewerId, collaboratorIds, watcherIds,
         groupDepartmentId, excludedMemberIds,
