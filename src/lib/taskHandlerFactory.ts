@@ -105,7 +105,7 @@ export function createTaskApplication(deps: Dependencies) {
     if (!accessResult.data) return deps.error("not_found", 404);
     const legacyResult = deps.canTaskAction(toActor(user), accessResult.data, action);
     await deps.shadowTaskAction?.(user, accessResult.data, action, legacyResult);
-    let rbacBaseAllowed = true;
+    let rbacBaseAllowed = !deps.taskRbacEnabled;
     if (deps.taskRbacEnabled && deps.taskRbacBaseAllowed) {
       try {
         rbacBaseAllowed = await deps.taskRbacBaseAllowed(user, action, accessResult.data);
@@ -359,7 +359,8 @@ export function createTaskApplication(deps: Dependencies) {
         return deps.error("invalid_request", 400);
       }
       if (recurrenceFrequency === undefined || (body.recurrenceEndsOn !== null && !recurrenceEndsOn) || (recurrenceFrequency === null && recurrenceEndsOn !== null) || (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate)) return deps.error("invalid_request", 400);
-      if (deps.taskRbacEnabled && deps.taskRbacBaseAllowed) {
+      if (deps.taskRbacEnabled) {
+        if (!deps.taskRbacBaseAllowed) return deps.error("forbidden", 403);
         try {
           if (!await deps.taskRbacBaseAllowed(actor, "create")) return deps.error("forbidden", 403);
         } catch { return deps.error("forbidden", 403); }
@@ -562,7 +563,8 @@ export function createTaskApplication(deps: Dependencies) {
       if (!legacyAssignmentResult) {
         return deps.error("forbidden", 403);
       }
-      if (deps.taskRbacEnabled && deps.taskRbacBaseAllowed) {
+      if (deps.taskRbacEnabled) {
+        if (!deps.taskRbacBaseAllowed) return deps.error("forbidden", 403);
         try {
           const rbacAssignmentResult = await deps.taskRbacBaseAllowed(guard.actor, "assign", {
             id: "assignment-scope", departmentId, createdBy: guard.actor.id, ownerId: null,
