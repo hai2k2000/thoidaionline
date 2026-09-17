@@ -61,10 +61,10 @@ A Journalism Task is one assigned editorial work item or deliverable tracked thr
 The design distinguishes three concepts:
 
 1. **Task execution** — who is responsible, what is required, the due date, progress, review, score, and completion.
-2. **Journalism metadata** — work kind, content format, location, source/contact notes, and editorial relationships.
-3. **Publication lifecycle** — drafting, editing, approval, scheduling, publication, or withdrawal.
+2. **Journalism metadata** — work kind, location, and editorial notes in v1; content format, source/contact notes, and editorial relationships are future extensions.
+3. **Publication lifecycle** — not published, scheduled, published, or withdrawn.
 
-These concepts must not be collapsed into one status column. A task may be `pending_review` while its publication status is `drafting`; a completed editorial task may later be `published` or `withdrawn` without changing the historical execution status.
+These concepts must not be collapsed into one status column. A task may be `pending_review` while its publication status is `not_published`; a completed editorial task may later be `published` or `withdrawn` without changing the historical execution status.
 
 ### Unit of work
 
@@ -100,7 +100,7 @@ tasks
 
 Only a Journalism Task has a `journalism_task_details` row. Existing normal, personal, recurring, and duty tasks continue to work without one.
 
-The discriminator must be explicit and queryable. The implementation checkpoint should choose one canonical task-domain discriminator after confirming compatibility with current `task_type` and `task_category`; the preferred design is a small additive `task_kind`/domain marker whose journalism value is distinct from execution `task_type`. It must not repurpose `task_type` (`assigned`/`personal`) or `task_category` (`regular`/`duty`) because those fields already have established semantics.
+The canonical Journalism Task discriminator for v1 is the existence of a `journalism_task_details` row for the task. Do not add `task_domain` or `task_kind` to `tasks` in v1: a second discriminator would create two sources of truth. Journalism list/filter queries may use a join or `exists` predicate. Creation must create the task and required detail atomically so a partial task cannot be left behind.
 
 ### Controlled work kind master data
 
@@ -135,21 +135,20 @@ The detail table should reference `tasks.id` one-to-one and `journalism_work_kin
 |---|---|---|
 | `task_id` | REQUIRED | One-to-one FK to `tasks`; primary key. |
 | `work_kind_id` | REQUIRED | FK to controlled `journalism_work_kinds`; required for new Journalism Tasks. |
-| `content_format` | OPTIONAL | Article, photo, video, audio, infographic, or another reviewed format vocabulary. Do not use unbounded free text without an owner decision. |
 | `planned_publication_at` | OPTIONAL | Intended publication date/time; independent of task deadline. |
 | `published_at` | OPTIONAL | Actual publication time, when known. |
-| `publication_status` | REQUIRED for Journalism Tasks | Separate publication lifecycle; initial default `not_started` or equivalent must be finalized before implementation. |
+| `publication_status` | REQUIRED for Journalism Tasks | Separate publication lifecycle with default `not_published`. |
 | `location` | OPTIONAL | Coverage location or dateline. |
-| `source_contact_notes` | OPTIONAL | Editorial source/contact context; must follow privacy and retention policy. |
-| `article_url` | OPTIONAL | Provider-neutral public or preview URL. |
+| `article_url` | OPTIONAL | Public/published article URL only; never a confidential CMS preview URL. |
+| `editorial_notes` | OPTIONAL | Internal newsroom notes that are not source/contact data. |
+| `content_format` | FUTURE | Use controlled master data if later approved; no duplicate taxonomy in v1. |
+| `source_contact_notes` | FUTURE | Requires separate visibility, retention, and audit policy. |
 | `external_system` | FUTURE | Provider-neutral external system key; no MasterCMS coupling in v1. |
 | `external_content_id` | FUTURE | Provider-neutral CMS/content ID. |
 | `external_status` | FUTURE | Last known provider status, distinct from local publication status. |
 | `external_published_at` | FUTURE | Provider-reported publication time. |
-| `topic_id` | FUTURE | FK to a future Topics model; no table in this phase. |
-| `series_id` | FUTURE | FK to a future Series model; no table in this phase. |
-| `related_task_id` | OPTIONAL | Self-reference to another task for a bounded relation; implementation should confirm whether a generic relation table is preferable. |
-| `editorial_notes` | OPTIONAL | Internal newsroom notes not suitable for the general task description. |
+| `topic/series relation` | FUTURE | Use a proper relation model capable of many-to-many relationships. |
+| `related task relation` | FUTURE | Use a proper relation model; do not add a singular self-reference in v1. |
 
 The following should be reused from `tasks` and not duplicated in the detail table: article/topic title (`tasks.title`), assignment brief (`tasks.description` and existing requirements representation), reporter/owner/assignee (`tasks.owner_id`/`assignee_id`), editor/reviewer (`tasks.reviewer_id`), department (`tasks.department_id`), deadline (`tasks.due_date`/`due_time`), priority (`tasks.priority`), attachments, comments, progress, score, and audit history.
 
@@ -157,28 +156,26 @@ The following should be reused from `tasks` and not duplicated in the detail tab
 
 ### Required for v1
 
-- explicit Journalism Task domain marker
-- `work_kind_id`
+- `task_id`, `work_kind_id`, and `publication_status`
 - existing task title and assignment brief
 - existing owner/assignee/reviewer relationships
 - existing department and deadline
-- local publication status
 
 ### Optional for v1
 
-- content format
 - planned publication time
 - actual publication time
 - location
-- source/contact notes
 - article URL
-- related task
 - editorial notes
 
 ### Future
 
+- content-format taxonomy as controlled master data, if needed
+- source/contact notes under a separate restricted policy
 - external CMS identifiers and provider status
 - Topics and Series relationships
+- many-to-many related-task/topic/series relations
 - provider-synchronized author/editor fields
 - richer format taxonomy if newsroom requirements exceed a simple controlled value
 - publication scheduling integration
@@ -225,19 +222,13 @@ Publication metadata changes need a separate design and authorization review. Un
 
 ## F. Publication-status model
 
-Publication status is independent from task execution status. A minimal candidate state set is:
+Publication status is independent from task execution status. The v1 state set is:
 
-`not_started -> drafting -> editing -> approved -> scheduled -> published`,
+`not_published`, `scheduled`, `published`, and `withdrawn`.
 
-with `withdrawn` as a terminal or post-publication state subject to owner decision. `drafting`, `editing`, and `approved` are editorial states; `scheduled` and `published` are publication states.
+The default is `not_published`. `drafting`, `editing`, and `approved` are not publication states because they overlap the existing Task execution/review workflow. Detailed transition and authorization rules are defined in `JOURNALISM_TASKS_J1_CONTRACT.md` for owner review.
 
-The following must be decided before implementation:
-
-- whether `not_started` is stored or derived from absence of editorial activity;
-- whether `withdrawn` can transition back to `drafting`;
-- whether publication approval is the same actor/action as task review (recommended: keep them separate even if the UI presents them together);
-- whether publication status can be changed manually in v1 or is read-only until a CMS connector exists;
-- whether `published_at` is local-editorial time or provider-confirmed time.
+`planned_publication_at` and `published_at` are timezone-aware timestamps stored canonically as PostgreSQL `timestamptz`/UTC. The default UI presentation timezone is `Asia/Ho_Chi_Minh`; the system must not store ambiguous local timestamp values.
 
 No publication status should change the existing task status automatically in v1 without an explicit, tested contract.
 
@@ -269,15 +260,13 @@ Extend the existing Task Center, assignment form, and task detail page rather th
 
 ### Creation/assignment form
 
-Add a clear task-domain choice and a conditional Journalism section. The section should initially contain only:
+Add a Journalism creation choice that results in an atomic task-plus-detail operation. The conditional Journalism section should initially contain only:
 
 - controlled `work_kind` selector showing active kinds in `sort_order`;
-- content format if approved;
-- planned publication time if approved;
+- planned publication time;
 - location;
-- source/contact notes;
 - optional article URL;
-- optional related task reference.
+- optional editorial notes.
 
 Existing title, brief, assignee, reviewer, department, priority, deadline, collaborators/watchers, recurrence, and attachment controls remain the source of truth.
 
@@ -296,7 +285,7 @@ Filters must be applied after the same RBAC/legacy resource scope. They must not
 
 ### Detail page
 
-Add a newsroom metadata card containing work kind, format, planned/actual publication time, location, publication status, URL, and clearly marked future CMS/topic integration fields. Keep task status, progress, review, score, comments, attachments, and audit history in their existing sections.
+Add a newsroom metadata card containing work kind, planned/actual publication time, location, publication status, and public article URL. Keep task status, progress, review, score, comments, attachments, and audit history in their existing sections. Content format, source/contact data, CMS preview links, related tasks, Topics, and Series remain future work.
 
 ### Mobile
 
@@ -309,7 +298,7 @@ Design the local detail contract around provider-neutral fields:
 - `external_system`
 - `external_content_id`
 - `external_status`
-- `article_url`
+- `article_url` (public/published URL only)
 - `external_published_at`
 
 Do not name columns or APIs after MasterCMS. A later connector may map those fields to a provider adapter, but local task authorization and publication status must remain authoritative for local behavior until an explicit synchronization contract exists.
@@ -320,7 +309,7 @@ The connector, webhook handling, retry policy, conflict resolution, and service 
 
 The design reserves future many-to-many editorial organization without creating tables now. A Topic or Series may relate to many Journalism Tasks, and a Journalism Task may relate to multiple topics/series if the owner later approves that model.
 
-The preferred future shape is a relation model rather than a single denormalized text field. The exact cardinality, ordering, primary topic, and archive behavior require a separate design. Until then, `topic_id`/`series_id` are conceptual future fields only and must not be added by this phase.
+The preferred future shape is a relation model rather than a single denormalized text field or singular self-reference. The exact cardinality, ordering, primary topic, and archive behavior require a separate design. No Topic, Series, or related-task key is added in v1.
 
 ## K. Migration design (design only)
 
@@ -328,11 +317,12 @@ No migration is to be created or applied in this phase. A future migration seque
 
 1. Create `journalism_work_kinds` with unique `code`, active flag, ordering, timestamps, and protected references.
 2. Create `journalism_task_details` with `task_id` as a one-to-one FK to `tasks` and `work_kind_id` as an FK to the master table.
-3. Add the explicit task-domain discriminator only after confirming the final name and compatibility with existing task queries.
-4. Add indexes for detail lookup, work-kind filtering, publication status, and planned publication time.
+3. Treat detail-row existence as the only v1 discriminator; add no `task_domain`/`task_kind` column.
+4. Add indexes for work-kind filtering, publication status, and planned publication time; the detail primary key covers task lookup.
 5. Backfill no existing task as Journalism unless an owner-approved characterization identifies it; normal task behavior must remain unchanged.
-6. Add service-side read composition and validation before exposing new writes.
-7. Add UI only after read and authorization tests pass.
+6. Add an atomic database creation boundary so task and detail either both commit or both roll back.
+7. Add service-side read composition and validation before exposing new writes.
+8. Add UI only after read and authorization tests pass.
 
 Rollback should be metadata-safe: disable Journalism Task creation/read surfaces, retain existing normal task rows, and remove only newly created detail rows or tables in a separately approved rollback migration. Never drop or reinterpret existing task columns as part of Journalism rollback.
 
@@ -348,26 +338,20 @@ Rollback should be metadata-safe: disable Journalism Task creation/read surfaces
 | CMS coupling blocks future providers | Provider-neutral external fields and adapter boundary. |
 | Admin/edit permission bypasses workflow | Preserve legacy guards and require explicit mutation authorization. |
 | Existing normal tasks regress | Optional one-to-one detail row; no mandatory backfill or status reinterpretation. |
-| Sensitive source/contact notes leak | Server-side authorization, least-privilege DTOs, and no secrets in notes/reports. |
+| Sensitive source/contact notes leak | Exclude them from v1 and design restricted visibility, retention, and audit before storing them. |
 
 ## M. Open questions requiring owner decision
 
-1. Confirm the final task-domain discriminator name and whether it belongs on `tasks` or is represented by a separate domain relation.
-2. Confirm the initial controlled `journalism_work_kinds` seed catalog and ownership of future additions.
-3. Confirm whether `content_format` is a controlled master list in v1 or postponed.
-4. Confirm whether publication status is manually maintained in v1 or read-only until CMS integration.
-5. Confirm publication transition authority and whether approval is separate from task review.
-6. Confirm whether one task is always one deliverable; the recommendation is yes.
-7. Confirm whether related tasks are a single self-reference or a future relation table.
-8. Confirm handling and retention rules for source/contact notes.
-9. Confirm local timezone and authority for planned versus actual publication timestamps.
-10. Confirm whether `article_url` may be public, preview, or either, and who can see it.
+1. Confirm the initial controlled `journalism_work_kinds` seed names, ordering, and ownership of future additions.
+2. Approve the J1 publication transition and metadata-write authorization proposals before any grant or mutation implementation.
+3. Define restricted visibility, retention, and audit policy before future source/contact data is stored.
+4. Confirm whether and when work-kind administration enters a later checkpoint.
 
 ## N. Recommended implementation checkpoints
 
 ### Checkpoint J1 — Contract and characterization
 
-- finalize discriminator, work-kind seed codes, publication states, and role matrix;
+- finalize the detail-row discriminator, work-kind seed codes, publication states, and role matrix;
 - characterize existing task query/detail/mutation behavior;
 - define DTO and audit requirements;
 - no schema or production changes until owner approval.
