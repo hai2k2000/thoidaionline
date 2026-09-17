@@ -308,4 +308,3 @@ Rollback is additive: disable application surfaces, preserve existing `tasks`, a
 J2 scope should remain additive schema plus read path. It may create the two approved tables, constraints, approved seed rows, hardened read composition, and tests. It must not add `task_domain`/`task_kind`, enable Journalism mutations, change RBAC grants, implement UI, deploy production, or start CMS/Topics work.
 
 The atomic creation RPC and all metadata/publication write endpoints remain design-only until the corresponding implementation checkpoint has an approved permission/grant matrix and transaction tests.
-
