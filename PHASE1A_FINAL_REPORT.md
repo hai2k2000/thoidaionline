@@ -49,7 +49,9 @@ Approved source baseline: `77ad72d443bc58c964a890ecd0fe2f391e473738`
 - Anonymous `POST /api/permissions`: HTTP `405`.
 - Anonymous `/permissions` page: HTTP `307` to `/login`.
 - `.next/cache`: writable.
-- Recent service journal: `0` warning/error matches.
+- Owner smoke reported: PASS for admin `/permissions`, role/module/permission/scope matrix, active/inactive and compatibility roles, mobile usability, unauthorized denial, task, attendance, leave, schedule, and admin regression.
+- Owner-reported `SECURITY_CRITICAL_MISMATCH=0`, `RESTRICTIVE_MISMATCH=0`, and no new warning/error/HTTP 500.
+- A transient Next image-cache permission error was observed during smoke; `.next/cache` and `.next/cache/images` were corrected to `thoidai-work:thoidai-work`, image health returned HTTP `200`, and no new journal error was observed afterward.
 - Observed shadow mismatch counters: `SECURITY_CRITICAL_MISMATCH=0`, `RESTRICTIVE_MISMATCH=0`.
 
 ## Backup and Rollback
@@ -61,19 +63,25 @@ Approved source baseline: `77ad72d443bc58c964a890ecd0fe2f391e473738`
 
 ## Owner Smoke Gate
 
-Automated activation checks are complete. Authenticated admin smoke must be performed manually by the owner in a browser:
+Authenticated owner smoke is complete and PASS:
 
-- login and open `/permissions`;
-- verify role/module/permission/scope matrix and inactive compatibility roles;
-- verify unauthorized account is denied;
-- verify task, attendance, leave, schedule, and admin behavior has no regression;
-- review aggregate shadow counters.
+- Admin `/permissions`: PASS.
+- Role/module/permission/scope matrix: PASS.
+- Active/inactive and compatibility roles: PASS.
+- Responsive/mobile usability: PASS.
+- Unauthorized `/permissions` denial: PASS.
+- Task, attendance, leave, schedule, and admin screens: PASS.
+- Security mismatch counters: `0/0`.
 
 No credentials, password, cookie, session, token, or synthetic session was used or recorded.
 
 ## Status
 
-**READY FOR OWNER AUTHENTICATED SMOKE**
+**PHASE 1A = DONE**
+
+`TASK_RBAC_V2_ENABLED=true` remains enabled.
+
+Permission editing is not enabled. Journalism Tasks are not started.
 
 Do not start Journalism Tasks or permission editing until owner smoke is explicitly approved.
 
