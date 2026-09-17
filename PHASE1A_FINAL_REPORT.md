@@ -3,7 +3,7 @@
 Date: 2026-09-17
 Branch: `phase1a-permission-ui-readonly`
 Deployed source commit: `226f7749bc9b2260f148e8d65665a0871a092d5b`
-Final branch/report commit: `7e43ff0`
+Final branch/report commit: see pushed branch `phase1a-permission-ui-readonly`
 Approved source baseline: `77ad72d443bc58c964a890ecd0fe2f391e473738`
 
 ## Scope
