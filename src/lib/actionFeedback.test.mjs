@@ -14,7 +14,7 @@ const layout = read("src/app/layout.tsx");
 const users = read("src/app/users/page.tsx");
 const reset = read("src/app/reset-password/page.tsx");
 const forgot = read("src/app/forgot-password/page.tsx");
-const batch2 = ["departments/page.tsx", "permissions/page.tsx", "job-titles/page.tsx", "assets/new/page.tsx", "assets/[id]/page.tsx", "documents/new/page.tsx", "hr-profiles/[id]/page.tsx"].map((path) => read(`src/app/${path}`));
+const batch2 = ["departments/page.tsx", "job-titles/page.tsx", "assets/new/page.tsx", "assets/[id]/page.tsx", "documents/new/page.tsx", "hr-profiles/[id]/page.tsx"].map((path) => read(`src/app/${path}`));
 const batch3 = ["PersonalTaskForm.tsx", "PersonalTaskActions.tsx", "TaskAssignShell.tsx", "TaskDetailShell.tsx", "EmployeeEvaluationShell.tsx", "PersonnelEvaluationDetailShell.tsx", "EvaluationRubricShell.tsx", "DepartmentManagerShell.tsx"].map((path) => read(`src/components/${path}`));
 
 test("feedback reducer supports success, error, timeout and dismiss transitions", () => {

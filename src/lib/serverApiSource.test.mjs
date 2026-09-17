@@ -53,21 +53,14 @@ const permissionsRoute = readFileSync(
   "utf8",
 );
 
-test("permission API is Admin-only and exposes the five Phase-1 fields", () => {
-  assert.match(permissionsRoute, /actor\.role_code\s*!==\s*["']admin["']/);
-  assert.match(permissionsRoute, /PERMISSION_KEYS/);
-  for (const key of [
-    "can_assign_task",
-    "can_view_department_tasks",
-    "can_evaluate_step1",
-    "can_evaluate_step2",
-    "can_manage_rubrics",
-  ]) {
-    assert.match(permissionsRoute, new RegExp(key));
-  }
+test("permission API is server-grant authorized and read-only", () => {
+  assert.match(permissionsRoute, /loadRbacActor/);
+  assert.match(permissionsRoute, /permission\.manage/);
+  assert.match(permissionsRoute, /permissions/);
+  assert.match(permissionsRoute, /role_permission_grants/);
   assert.match(permissionsRoute, /requireReadActor/);
-  assert.match(permissionsRoute, /requireMutationActor/);
-  assert.doesNotMatch(permissionsRoute, /\["admin",\s*"tong_bien_tap"/);
-  assert.match(permissionsRoute, /logServerAudit/);
-  assert.doesNotMatch(permissionsRoute, /services\/audit/);
+  for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+    assert.match(permissionsRoute, new RegExp(`export async function ${method}`));
+    assert.match(permissionsRoute, new RegExp(`${method}[\\s\\S]{0,300}405`));
+  }
 });
