@@ -2,7 +2,9 @@
 
 ## Final Status
 
-**J2P = ACTIVATED / OWNER AUTHENTICATED SMOKE PENDING**
+**JOURNALISM J2 = DONE**
+
+**JOURNALISM J3 = READY FOR OWNER APPROVAL**
 
 The approved fixed source was rebuilt with the protected environment symlink fix and activated successfully. Readiness, stability, zero-data Journalism reads, and direct anonymous table denial pass. Authenticated owner role smoke has not been attempted automatically and remains the final owner-controlled gate.
 
@@ -81,7 +83,18 @@ The fixed source integration gate therefore passed all required filter, scope, c
 
 ## Authenticated Owner Smoke
 
-Pending owner browser verification for Admin, Tổng biên tập, Phó tổng biên tập, Trưởng phòng, Phó trưởng phòng, Phóng viên, Nhân viên, and attendance/leave/schedule/online-work/duty/evaluation modules. No credentials, tokens, cookies, or synthetic sessions were used.
+Owner completed authenticated production smoke successfully. No credentials, tokens, cookies, or synthetic sessions were recorded in this report.
+
+- Admin: task list/detail, users, departments, permissions — PASS
+- Tổng biên tập: organization visibility, assignment, evaluation — PASS
+- Phó tổng biên tập: existing task behavior — PASS
+- Trưởng phòng: own-department behavior — PASS
+- Phó trưởng phòng: own-department/reviewer behavior — PASS
+- Phóng viên: self/assigned task behavior — PASS
+- Nhân viên: self/assigned task behavior — PASS
+- Attendance, leave, schedule, online work, duty roster, evaluation — PASS
+- Existing normal tasks and Journalism J2 read compatibility — PASS
+- No unexpected HTTP 500, cross-department visibility regression, or authorization regression observed
 
 ## Environment Regression Guard
 
@@ -101,8 +114,8 @@ Installed as an ops-only artifact (not application source): `/opt/ops/thoidai-wo
 
 ## Required Disposition
 
-The release is active and healthy through automated gates. Await owner authenticated smoke and explicit completion review; do not start J3 or change permissions/grants.
+The release is active and healthy through automated and owner-authenticated gates. J2 is complete; do not start J3 or change permissions/grants until separately approved.
 
 **JOURNALISM J2P = ACTIVATED / OWNER SMOKE PENDING**
 
-Owner action required: complete authenticated smoke and report PASS/FAIL. Do not start J3.
+Owner action required: separately approve or reject starting J3. Do not start J3 automatically.
