@@ -125,7 +125,8 @@ No deploy, restart, systemd change, migration, schema/RPC/grant/RBAC change, pro
 ## Final verification
 
 - Feature/application commit: `1387efa4042d221c4e011d61b6c681e4cc9b22ec` (`feat: add journalism publication controls ui`).
-- Final report commit at report creation: `52c3567b9986cf03408dd2bad3bf1d80a1577bd2` (`docs: record journalism publication ui report`).
-- Local and remote branch matched `52c3567b9986cf03408dd2bad3bf1d80a1577bd2` immediately after push.
-- Worktree was clean immediately after push.
-- Later report-only provenance corrections, if any, must remain separate from the application baseline; no application tree changes are included after `1387efa...`.
+- Initial report commit: `52c3567b9986cf03408dd2bad3bf1d80a1577bd2` (`docs: record journalism publication ui report`).
+- Final report commit / branch HEAD: `a4e6eaebd34ef67abaf3caa573a6f3daf49d1e46` (`docs: finalize journalism publication ui provenance`).
+- Local and remote branch match `a4e6eaebd34ef67abaf3caa573a6f3daf49d1e46`.
+- Worktree is clean.
+- The only commits after application commit `1387efa...` are report-only; application tree is unchanged.
