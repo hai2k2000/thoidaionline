@@ -4,7 +4,7 @@
 
 J3A is complete as a design/contract/characterization checkpoint only. No application source, schema, migration, permission, grant, production release, or production data was changed.
 
-**Recommendation: NO-GO for J3 implementation until owner approves the proposed permission matrices, URL policy, withdrawal-reason policy, and the new migration/RPC plan.** The contract is technically ready for review; implementation must be a separate approved checkpoint.
+**Recommendation: GO FOR J3B IMPLEMENTATION, subject to the implementation and test gates in this review.** The owner has finalized the permission matrices, URL policy, withdrawal-reason policy, concurrency model, and migration/RPC plan. J3B still requires a separate explicit start approval.
 
 ## Inspected Baseline
 
@@ -57,11 +57,21 @@ J3A is complete as a design/contract/characterization checkpoint only. No applic
 6. Existing audit helper is not transaction-aware across separate calls; required J3 audit must be inside the DB wrapper/RPC.
 7. Permission catalog currently has no Journalism mutation entries; live baseline must remain 17/116 until owner approval.
 
+## Owner-Finalized Policy
+
+- Metadata grants: admin/all, tong_bien_tap/all, pho_tong_bien_tap/all, truong_phong/department, pho_truong_phong/department, phong_vien/assigned, nhan_vien/assigned.
+- Publication grants: admin/all, tong_bien_tap/all, pho_tong_bien_tap/all, truong_phong/department, pho_truong_phong/department.
+- Inactive compatibility roles receive no Journalism grants.
+- Article URL is publication-managed, required on publish, absolute HTTP(S), credential-free, immutable after publication, and preserved on withdrawal.
+- Withdrawal reason is required, audit-only, trimmed, and limited to 2000 Unicode characters; no new column.
+- Planned publication time is mutable only in `not_published` and `scheduled`; it is cleared on unschedule and preserved as history on publish.
+- Work kind, location, and editorial notes may remain metadata-editable after publication/withdrawal subject to authorization, validation, and audit.
+- Expected future catalog: 19 permissions / 128 grants.
+
 ## Blockers and Risks
 
-- Blocker: owner approval is required for exact metadata/publication role tuples before any catalog/grant migration.
-- Blocker: owner must approve whether publish requires an article URL and whether post-publish URL changes are forbidden.
-- Blocker: owner must approve audit-only withdrawal reason versus a future schema column.
+- No product-policy blocker remains for J3B design.
+- Implementation remains blocked until the owner gives a separate explicit J3B start approval.
 - Risk: calling the existing assignment RPC through a wrapper must be verified with a disposable transaction test before production implementation.
 - Risk: PostgREST relation aliases must preserve the corrected `journalism=is.null` exclusion behavior.
 - Risk: audit payloads can leak editorial text if not bounded/minimized; implementation must enforce the contract.
@@ -69,7 +79,7 @@ J3A is complete as a design/contract/characterization checkpoint only. No applic
 
 ## Proposed Future Counts
 
-Recommended matrix adds 2 permission catalog rows and 12 grant tuples: future 19 permissions / 128 grants. These are projections only; current production remains 17/116.
+The finalized matrix adds exactly 2 permission catalog rows and 12 grant tuples: future 19 permissions / 128 grants. These are approved implementation targets only; current production remains 17/116 during J3A-R1.
 
 ## Required Implementation Gates After Approval
 

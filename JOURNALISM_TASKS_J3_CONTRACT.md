@@ -71,7 +71,7 @@ Only these states exist: `not_published`, `scheduled`, `published`, `withdrawn`.
 | Current | Target | Rules |
 |---|---|---|
 | not_published | scheduled | `planned_publication_at` required; `published_at=NULL`; URL must be null |
-| not_published | published | server sets `published_at=now()`; URL required by recommended v1 policy |
+| not_published | published | server sets `published_at=now()`; URL required |
 | scheduled | not_published | clear `planned_publication_at`; `published_at=NULL`; URL null |
 | scheduled | published | server sets `published_at=now()`; URL required |
 | published | withdrawn | non-empty bounded reason required; preserve `published_at` and URL; reason stored in audit metadata |
@@ -186,7 +186,7 @@ Recommended metadata tuples (one per role):
 |---|---|---|
 | admin | all | system administration |
 | tong_bien_tap | all | organization editorial authority |
-| pho_tong_bien_tap | department | deputy editorial department authority |
+| pho_tong_bien_tap | all | organization-wide deputy editorial authority; leadership-unit membership must not restrict parent department |
 | truong_phong | department | department leadership |
 | pho_truong_phong | department | deputy department/reviewer authority |
 | phong_vien | assigned | own assigned Journalism work only |
@@ -198,7 +198,7 @@ Recommended publication tuples are narrower:
 |---|---|---|
 | admin | all | system administration |
 | tong_bien_tap | all | organization publication authority |
-| pho_tong_bien_tap | department | editorial leadership |
+| pho_tong_bien_tap | all | organization-wide deputy editorial authority |
 | truong_phong | department | department publication authority |
 | pho_truong_phong | department | deputy/reviewer publication authority |
 
@@ -206,7 +206,7 @@ No publication tuple is proposed for `phong_vien` or `nhan_vien` in v1. Inactive
 
 ## R. Expected Counts
 
-Current live baseline remains **17 permissions / 116 grants**. If the recommended matrix is approved exactly, future counts are **19 permissions / 128 grants** (7 metadata tuples + 5 publication tuples). No live count changes in J3A.
+Current live baseline remains **17 permissions / 116 grants**. The finalized matrix produces **19 permissions / 128 grants** (7 metadata tuples + 5 publication tuples) after J3B implementation. No live count changes in J3A-R1.
 
 ## S. Migration Plan
 
@@ -233,9 +233,23 @@ J3 v1 does not convert normal Tasks, add recurrence, add CMS/Topics/Series, chan
 
 ## V. Owner Decisions
 
-Recommended decisions for owner review:
+Owner decisions are final for J3B planning:
 
-1. Approve the metadata and publication matrices above (least privilege, no grants added yet).
-2. Approve URL required-on-publish, immutable-after-publish v1 policy.
-3. Approve audit-only withdrawal reason with 2000-character bound, without a schema column.
-4. Confirm no additional Task workflow restriction and no post-publication URL correction in v1.
+1. Metadata tuples are exactly: admin/all, tong_bien_tap/all, pho_tong_bien_tap/all, truong_phong/department, pho_truong_phong/department, phong_vien/assigned, nhan_vien/assigned.
+2. Publication tuples are exactly: admin/all, tong_bien_tap/all, pho_tong_bien_tap/all, truong_phong/department, pho_truong_phong/department.
+3. URL is required on publish, absolute HTTP(S), contains no credentials/userinfo, respects the existing DB maximum, is immutable after successful publication, and is preserved on withdrawal.
+4. Withdrawal reason is audit-only, trimmed, non-empty, and at most 2000 Unicode characters; no `withdrawal_reason` column is added in J3 v1.
+5. Publication and Task workflows remain independent; there is no post-publication URL correction workflow in J3 v1.
+
+## W. Final Planned-Publication Rules
+
+The metadata route may change `planned_publication_at` only while the current publication state is `not_published` or `scheduled`.
+
+- `not_published`: planned time may be null, set, changed, or cleared.
+- `scheduled`: planned time must be non-null and may be updated.
+- `scheduled -> not_published`: clear planned time to null.
+- `scheduled -> published`: preserve planned time as historical planned publication time.
+- `not_published -> published`: preserve an existing planned time; otherwise leave it null.
+- `published` and `withdrawn`: reject metadata attempts to change planned time.
+
+Publishing never silently clears planned time. `work_kind_id`, `location`, and `editorial_notes` remain metadata-editable after publication or withdrawal when parent authorization, permission, scope, validation, and audit all pass. A replacement work kind must be active. `article_url` is never accepted by the metadata route.
