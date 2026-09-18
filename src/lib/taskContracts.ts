@@ -18,11 +18,29 @@ export type JournalismWorkKindDto = {
   sort_order: number;
 };
 
+export type JournalismTopicDto = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  departmentId: string | null;
+};
+
+export type JournalismSeriesDto = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  departmentId: string | null;
+  topicId: string | null;
+  position: number;
+};
+
 export type JournalismTaskListSummaryDto = {
   publication_status: JournalismPublicationStatus;
   planned_publication_at: string | null;
   published_at: string | null;
   work_kind: Pick<JournalismWorkKindDto, "id" | "code" | "name" | "is_active">;
+  topicCount: number;
+  series: JournalismSeriesDto | null;
 };
 
 export type JournalismTaskDetailDto = JournalismTaskListSummaryDto & {
@@ -33,6 +51,7 @@ export type JournalismTaskDetailDto = JournalismTaskListSummaryDto & {
   created_at: string;
   updated_at: string;
   work_kind: JournalismWorkKindDto;
+  topics: JournalismTopicDto[];
 };
 
 export type TaskParticipantDto = {
@@ -155,6 +174,8 @@ export type TaskListQuery = {
   publicationStatus?: JournalismPublicationStatus | null;
   plannedPublicationFrom?: string | null;
   plannedPublicationTo?: string | null;
+  topicId?: string | null;
+  seriesId?: string | null;
   page: number;
   pageSize: number;
 };
