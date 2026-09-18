@@ -173,7 +173,10 @@ Production activation remains a separate owner-approved J4C checkpoint. CMS inte
 
 This is a GO for owner review of controlled J4 production activation only. Do not start J4C, deploy, restart production, or activate any feature flag from this checkpoint.
 
+Independent final review found no remaining P1/P2 issue. It confirmed the metadata in-flight guard, independent permission gates, state/action mapping, minimal payloads, URL safety, 409 refresh/no-retry behavior, timezone coverage, and absence of client secrets/backend changes.
+
 ## Final commits
 
 - Application commit: `e5f726dedd480929b6424db55fc083cd6a4afb26` (`chore: finalize journalism ui integration`).
-- Report commit: recorded after this validation; application tree remains unchanged after the report-only commit.
+- Initial report commit: `7171a54aaa11ed094099fa684e875cc9b2e9d597` (`docs: record journalism j4b5 final review`).
+- Final provenance update is report-only; application tree remains unchanged from `e5f726d...`.
