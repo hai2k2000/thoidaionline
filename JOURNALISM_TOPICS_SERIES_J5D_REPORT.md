@@ -27,6 +27,7 @@ J5B and J5C source, read model, structure management, and existing authorization
 
 - `supabase/migrations/20260918150000_journalism_topics_series_j5_associations.sql`
 - `supabase/tests/journalism_topics_series_j5d_associations.sql`
+- `supabase/tests/journalism_topics_series_j5d_concurrency.sh`
 - `src/lib/journalismAssociationHandlers.ts`
 - `src/app/api/tasks/[id]/journalism/topics/route.ts`
 - `src/app/api/tasks/[id]/journalism/topics/[topicId]/route.ts`
@@ -145,6 +146,8 @@ Continue the approved statement: `PRODUCTION DATA OBSERVATION REQUIRES RECONCILI
 - The broad suite retains the sealed 34 unrelated baseline failures listed in the J5D handoff.
 
 ## AD. Recommendation
+
+Application commits: `fca071cb1fb52e8b5b2f4d4969a0839ab50bed30` plus concurrency test commit `9e6fcd5e41b778949674331e785ad7d1004b5ed7`. Report/status commits are pushed on the same branch.
 
 `J5D = DONE`.
 
