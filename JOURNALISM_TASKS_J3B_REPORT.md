@@ -2,6 +2,8 @@
 
 Date: 2026-09-18 (Asia/Bangkok)
 
+Implementation commit: `8841fb3884654eaf61b2d578c654ae1b26ed62ce`.
+
 ## A. Scope and safety
 
 - Branch/worktree: `journalism-tasks-j3b-mutations` at `/opt/worktrees/journalism-tasks-j3b-mutations`.
