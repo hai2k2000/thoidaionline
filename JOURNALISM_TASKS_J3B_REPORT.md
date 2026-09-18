@@ -4,6 +4,8 @@ Date: 2026-09-18 (Asia/Bangkok)
 
 Implementation commit: `8841fb3884654eaf61b2d578c654ae1b26ed62ce`.
 
+Final contract-alignment fix: `expectedUpdatedAt` is not part of the J3 v1 client DTO; the metadata route now accepts only the four approved fields and passes `null` to the compatibility RPC parameter. Migration remains byte-identical.
+
 ## A. Scope and safety
 
 - Branch/worktree: `journalism-tasks-j3b-mutations` at `/opt/worktrees/journalism-tasks-j3b-mutations`.
