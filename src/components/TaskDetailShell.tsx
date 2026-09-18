@@ -10,9 +10,11 @@ import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import JournalismDetailSection from "@/components/JournalismDetailSection";
+import JournalismMetadataEditor from "@/components/JournalismMetadataEditor";
 
 type Capabilities = {
   report: boolean; completeAssigned: boolean; review: boolean; update: boolean; comment: boolean;
+  journalismMetadataUpdate: boolean;
   attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
 };
 const statusLabel: Record<string, string> = {
@@ -34,8 +36,10 @@ const dueText = (task: Pick<TaskDetailDto, "due_date" | "due_time">) =>
     ? dateText(task.due_time ? `${task.due_date}T${task.due_time}+07:00` : task.due_date)
     : "—";
 
-export default function TaskDetailShell({ task, capabilities, userLabel }: {
+export default function TaskDetailShell({ task, capabilities, userLabel, journalismWorkKinds, journalismWorkKindsLoadFailed }: {
   task: TaskDetailDto; capabilities: Capabilities; userLabel: string;
+  journalismWorkKinds: { id: string; name: string; is_active: boolean }[];
+  journalismWorkKindsLoadFailed: boolean;
 }) {
   const router = useRouter();
   const { logout } = useAuth();
@@ -156,6 +160,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel }: {
               </Section>
 
               {task.journalism ? <JournalismDetailSection journalism={task.journalism} /> : null}
+              {task.journalism && capabilities.journalismMetadataUpdate ? <JournalismMetadataEditor journalism={task.journalism} taskId={task.id} workKinds={journalismWorkKinds} workKindsLoadFailed={journalismWorkKindsLoadFailed} /> : null}
 
               {capabilities.review ? <Section title="Chấm điểm hoàn thành"><p className="mb-3 text-sm text-slate-600">Cơ cấu điểm: đáp ứng yêu cầu 60 điểm · thái độ và phối hợp 20 điểm · chủ động và trách nhiệm 20 điểm.</p>{task.status === "pending_review" ? <form id="task-scoring-form" onSubmit={submitScoreAndApprove} className="grid gap-4"><fieldset className="grid gap-2"><legend className="font-semibold">1. Mức độ đáp ứng yêu cầu · tối đa 60 điểm</legend>{requirements.length ? requirements.map((item, index) => <label key={index} className="flex items-start gap-2 rounded-lg border p-3"><input type="checkbox" checked={requirementResults[index]} onChange={(event) => { const next = requirementResults.map((value, itemIndex) => itemIndex === index ? event.target.checked : value); setRequirementResults(next); setRequirementScore(Number((next.filter(Boolean).length * 60 / requirements.length).toFixed(2))); }} className="mt-1" /><span>{item}</span></label>) : <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Công việc không có yêu cầu chi tiết; nhập điểm đáp ứng thủ công.</p>}</fieldset><label className="grid gap-1 text-sm font-semibold">Điểm đáp ứng yêu cầu · tự động tính, có thể điều chỉnh<input type="number" min={0} max={60} step={0.01} required value={requirementScore} onChange={(event) => setRequirementScore(Number(event.target.value))} className="rounded border p-2 font-normal" /></label><ScoreField label="2. Thái độ chuyên nghiệp và năng lực phối hợp" value={collaborationScore} onChange={setCollaborationScore} /><ScoreField label="3. Tinh thần chủ động, tiên phong và trách nhiệm" value={initiativeScore} onChange={setInitiativeScore} /><label className="grid gap-1 text-sm font-semibold">Nhận xét<textarea value={scoreNote} onChange={(event) => setScoreNote(event.target.value)} maxLength={2000} className="min-h-20 rounded border p-2 font-normal" /></label><p className="font-bold text-emerald-800">Tổng điểm dự kiến: {(requirementScore + collaborationScore + initiativeScore).toFixed(2)}/100</p><button disabled={busy} className="rounded bg-emerald-700 px-4 py-2 font-semibold text-white sm:justify-self-start">Lưu điểm và duyệt hoàn thành</button></form> : <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Chấm điểm sẽ mở khi người thực hiện gửi công việc để duyệt.</p>}</Section> : null}
               {task.completion_score ? <Section title="Kết quả chấm điểm"><div className="grid gap-2 sm:grid-cols-4"><Item label="Đáp ứng yêu cầu" value={`${task.completion_score.requirement_score}/60`} /><Item label="Thái độ & phối hợp" value={`${task.completion_score.collaboration_score}/20`} /><Item label="Chủ động & trách nhiệm" value={`${task.completion_score.initiative_score}/20`} /><Item label="Tổng điểm" value={`${task.completion_score.total_score}/100`} /></div>{task.completion_score.note ? <p className="mt-3 whitespace-pre-wrap text-sm">{task.completion_score.note}</p> : null}</Section> : null}

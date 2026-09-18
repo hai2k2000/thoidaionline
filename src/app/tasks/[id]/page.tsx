@@ -4,6 +4,8 @@ import { canTaskAction, type AuthorizationActor } from "@/lib/authorization";
 import { asUuid } from "@/lib/serverApi";
 import { getSessionUser } from "@/lib/serverSession";
 import { taskRepository } from "@/lib/taskRepository";
+import { authorizeJournalismPermission } from "@/lib/journalismAuthorization";
+import { listJournalismWorkKinds } from "@/lib/taskRepository";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -36,8 +38,13 @@ export default async function TaskDetailPage({ params }: Props) {
       ? detailResult.data.legacy_evaluations
       : detailResult.data.legacy_evaluations.filter((row) => row.employee_id === user.id),
   };
+  const workKindsResult = detailResult.data.journalism
+    ? await listJournalismWorkKinds(detailResult.data.journalism.work_kind.id)
+    : null;
 
-  return <TaskDetailShell task={task} userLabel={user.full_name} capabilities={{
+  const journalismMetadataUpdate = Boolean(detailResult.data.journalism)
+    && await authorizeJournalismPermission(user, accessResult.data, "journalism.metadata.update");
+  return <TaskDetailShell task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} capabilities={{
     report: action("report"),
     completeAssigned: action("complete_assigned"),
     review: action("review"),
@@ -51,5 +58,6 @@ export default async function TaskDetailPage({ params }: Props) {
     personalDeadline: action("personal_deadline"),
     assignedCancel: action("assigned_cancel"),
     adminEdit: action("admin_edit"),
+    journalismMetadataUpdate,
   }} />;
 }
