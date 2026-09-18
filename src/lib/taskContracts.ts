@@ -3,6 +3,38 @@ import type { CanonicalTaskStatus, CanonicalTaskType } from "./taskCompatibility
 
 export type AssignmentRole = "owner" | "assignee" | "watcher";
 
+export type JournalismPublicationStatus =
+  | "not_published"
+  | "scheduled"
+  | "published"
+  | "withdrawn";
+
+export type JournalismWorkKindDto = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+};
+
+export type JournalismTaskListSummaryDto = {
+  publication_status: JournalismPublicationStatus;
+  planned_publication_at: string | null;
+  published_at: string | null;
+  work_kind: Pick<JournalismWorkKindDto, "id" | "code" | "name" | "is_active">;
+};
+
+export type JournalismTaskDetailDto = JournalismTaskListSummaryDto & {
+  task_id: string;
+  location: string | null;
+  article_url: string | null;
+  editorial_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  work_kind: JournalismWorkKindDto;
+};
+
 export type TaskParticipantDto = {
   user_id: string;
   assignment_role: AssignmentRole;
@@ -43,6 +75,7 @@ export type TaskListItemDto = {
   description: string | null;
   evaluation_criteria: string | null;
   completion_score: { requirement_score: number; collaboration_score: number; initiative_score: number; total_score: number; note: string | null } | null;
+  journalism: JournalismTaskListSummaryDto | null;
 };
 
 export type TaskCommentDto = {
@@ -103,6 +136,7 @@ export type TaskDetailDto = TaskListItemDto & {
   status_events: TaskStatusEventDto[];
   attachments: TaskAttachmentDto[];
   completion_score: TaskCompletionScoreDto | null;
+  journalism: JournalismTaskDetailDto | null;
 };
 
 export type TaskListQuery = {
@@ -116,6 +150,11 @@ export type TaskListQuery = {
   toDate: string | null;
   deadlineState: "on_time" | "due_soon" | "overdue" | "no_deadline" | null;
   departmentId: string | null;
+  journalism?: "only" | "exclude" | null;
+  journalismWorkKindId?: string | null;
+  publicationStatus?: JournalismPublicationStatus | null;
+  plannedPublicationFrom?: string | null;
+  plannedPublicationTo?: string | null;
   page: number;
   pageSize: number;
 };

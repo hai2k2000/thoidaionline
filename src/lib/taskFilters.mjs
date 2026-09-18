@@ -6,6 +6,8 @@ const TASK_STATUSES = [
   "done", "rejected", "cancelled",
 ];
 const DEADLINE_STATES = ["on_time", "due_soon", "overdue", "no_deadline"];
+const JOURNALISM_FILTERS = ["only", "exclude"];
+const PUBLICATION_STATUSES = ["not_published", "scheduled", "published", "withdrawn"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const member = (values, value) => values.find((candidate) => candidate === value);
@@ -30,6 +32,7 @@ export function parseTaskListSearchParams(params) {
   const pageSize = Number(params.get("pageSize") ?? "25");
   const search = params.get("q")?.normalize("NFC").trim() ?? "";
   const departmentId = params.get("department");
+  const journalismWorkKindId = params.get("workKind");
   const category = params.get("category") === "duty" ? "duty" : null;
   return {
     search: search && [...search].length <= 200 ? search : null,
@@ -43,6 +46,13 @@ export function parseTaskListSearchParams(params) {
     toDate: validDate(params.get("to")),
     deadlineState: member(DEADLINE_STATES, params.get("deadline")) ?? null,
     departmentId: departmentId && UUID.test(departmentId) ? departmentId : null,
+    journalism: member(JOURNALISM_FILTERS, params.get("journalism")) ?? null,
+    journalismWorkKindId: journalismWorkKindId && UUID.test(journalismWorkKindId)
+      ? journalismWorkKindId
+      : null,
+    publicationStatus: member(PUBLICATION_STATUSES, params.get("publicationStatus")) ?? null,
+    plannedPublicationFrom: validDate(params.get("plannedFrom")),
+    plannedPublicationTo: validDate(params.get("plannedTo")),
     page: Number.isInteger(page) && page > 0 ? page : 1,
     pageSize: Number.isInteger(pageSize) && pageSize > 0 && pageSize <= 100
       ? pageSize
@@ -67,6 +77,11 @@ export function taskListHref(query, patch) {
   if (next.toDate) params.set("to", next.toDate);
   if (next.deadlineState) params.set("deadline", next.deadlineState);
   if (next.departmentId) params.set("department", next.departmentId);
+  if (next.journalism) params.set("journalism", next.journalism);
+  if (next.journalismWorkKindId) params.set("workKind", next.journalismWorkKindId);
+  if (next.publicationStatus) params.set("publicationStatus", next.publicationStatus);
+  if (next.plannedPublicationFrom) params.set("plannedFrom", next.plannedPublicationFrom);
+  if (next.plannedPublicationTo) params.set("plannedTo", next.plannedPublicationTo);
   if (next.page > 1) params.set("page", String(next.page));
   if (next.pageSize !== 25) params.set("pageSize", String(next.pageSize));
   const value = params.toString();
@@ -85,5 +100,10 @@ export function countTaskListFilters(query) {
     query.fromDate,
     query.toDate,
     query.departmentId,
+    query.journalism,
+    query.journalismWorkKindId,
+    query.publicationStatus,
+    query.plannedPublicationFrom,
+    query.plannedPublicationTo,
   ].filter(Boolean).length;
 }

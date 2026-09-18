@@ -19,12 +19,14 @@ import type {
   PersonalTaskEditInput,
   PersonalTaskInput,
   RepositoryResult,
+  JournalismTaskDetailDto,
+  JournalismTaskListSummaryDto,
   TaskDetailDto,
   TaskListItemDto,
   TaskRepository,
 } from "@/lib/taskContracts";
 
-const TASK_LIST_FIELDS = [
+const TASK_BASE_FIELDS = [
   "id",
   "title",
   "priority",
@@ -56,16 +58,34 @@ const TASK_LIST_FIELDS = [
   "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
   "created_by_user:staff_users!tasks_created_by_fkey(full_name)",
   "completion_score:task_completion_scores(requirement_score,collaboration_score,initiative_score,total_score,note)",
+];
+
+const journalismListFields = (inner = false) => [
+  ...TASK_BASE_FIELDS,
+  `journalism:journalism_task_details${inner ? "!inner" : ""}(publication_status,planned_publication_at,published_at,work_kind:journalism_work_kinds(id,code,name,is_active))`,
 ].join(",");
 
+const TASK_LIST_FIELDS = journalismListFields();
+
 const TASK_DETAIL_FIELDS = [
-  TASK_LIST_FIELDS,
+  ...TASK_BASE_FIELDS,
   "description",
   "effort_weight",
   "evaluation_criteria",
   "owner:staff_users!tasks_owner_id_fkey(full_name)",
   "reviewer:staff_users!tasks_reviewer_id_fkey(full_name)",
+  "journalism:journalism_task_details(task_id,publication_status,planned_publication_at,published_at,location,article_url,editorial_notes,created_at,updated_at,work_kind:journalism_work_kinds(id,code,name,description,is_active,sort_order))",
 ].join(",");
+
+const journalismValue = <T>(value: T | T[] | null | undefined): T | null =>
+  Array.isArray(value) ? value[0] ?? null : value ?? null;
+
+const withJournalismList = (item: TaskListItemDto): TaskListItemDto => ({
+  ...item,
+  journalism: journalismValue(
+    item.journalism as JournalismTaskListSummaryDto | JournalismTaskListSummaryDto[] | null,
+  ),
+});
 
 type TaskAccessRow = {
   id: string;
@@ -165,9 +185,16 @@ export const taskRepository: TaskRepository = {
     const scope = await scopeTerms(actor);
     if (!scope.ok) return scope;
 
+    const hasJournalismParentFilter = Boolean(
+      query.journalism === "only"
+      || query.journalismWorkKindId
+      || query.publicationStatus
+      || query.plannedPublicationFrom
+      || query.plannedPublicationTo,
+    );
     let dbQuery = serverSupabase
       .from("tasks")
-      .select(TASK_LIST_FIELDS, { count: "exact" })
+      .select(hasJournalismParentFilter ? journalismListFields(true) : TASK_LIST_FIELDS, { count: "exact" })
       .order("created_at", { ascending: false });
     if (scope.data.length > 0) dbQuery = dbQuery.or(scope.data.join(","));
     if (query.scope === "personal") {
@@ -226,6 +253,27 @@ export const taskRepository: TaskRepository = {
       }
       dbQuery = dbQuery.eq("department_id", query.departmentId);
     }
+    if (query.journalism === "exclude") {
+      dbQuery = dbQuery.is("journalism_task_details", null);
+    }
+    if (query.journalismWorkKindId) {
+      dbQuery = dbQuery.eq("journalism_task_details.work_kind_id", query.journalismWorkKindId);
+    }
+    if (query.publicationStatus) {
+      dbQuery = dbQuery.eq("journalism_task_details.publication_status", query.publicationStatus);
+    }
+    if (query.plannedPublicationFrom) {
+      dbQuery = dbQuery.gte(
+        "journalism_task_details.planned_publication_at",
+        `${query.plannedPublicationFrom}T00:00:00+07:00`,
+      );
+    }
+    if (query.plannedPublicationTo) {
+      dbQuery = dbQuery.lte(
+        "journalism_task_details.planned_publication_at",
+        `${query.plannedPublicationTo}T23:59:59.999+07:00`,
+      );
+    }
     const today = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
     }).format(new Date());
@@ -246,10 +294,10 @@ export const taskRepository: TaskRepository = {
     const { data, error, count } = await dbQuery.range(from, to);
     if (error) return fail(error);
     return ok({
-      items: ((data ?? []) as unknown as TaskListItemDto[]).map((item) => ({
-        ...item,
-        ...resolveTaskCompatibility(item),
-      })),
+      items: ((data ?? []) as unknown as TaskListItemDto[]).map((item) => {
+        const normalized = withJournalismList(item);
+        return { ...normalized, ...resolveTaskCompatibility(normalized) };
+      }),
       total: count ?? 0,
       page: query.page,
       pageSize: query.pageSize,
@@ -323,6 +371,9 @@ export const taskRepository: TaskRepository = {
       status_events: (statusResult.data ?? []) as unknown as TaskDetailDto["status_events"],
       attachments: (attachmentResult.data ?? []) as unknown as TaskDetailDto["attachments"],
       completion_score: completionScoreResult.data as unknown as TaskDetailDto["completion_score"],
+      journalism: journalismValue(
+        (taskResult.data as unknown as { journalism?: JournalismTaskDetailDto | JournalismTaskDetailDto[] | null }).journalism,
+      ),
     });
   },
 

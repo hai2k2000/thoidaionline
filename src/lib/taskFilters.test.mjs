@@ -34,6 +34,11 @@ test("Task Center filters round-trip through canonical URL state", () => {
     statusGroup: null,
     deadlineState: "overdue",
     departmentId: "11111111-1111-4111-8111-111111111111",
+    journalism: null,
+    journalismWorkKindId: null,
+    publicationStatus: null,
+    plannedPublicationFrom: null,
+    plannedPublicationTo: null,
     page: 3,
     pageSize: 25,
   });
@@ -64,6 +69,11 @@ test("invalid filters fall back safely without widening page size", () => {
     toDate: null,
     deadlineState: null,
     departmentId: null,
+    journalism: null,
+    journalismWorkKindId: null,
+    publicationStatus: null,
+    plannedPublicationFrom: null,
+    plannedPublicationTo: null,
     page: 1,
     pageSize: 25,
   });
