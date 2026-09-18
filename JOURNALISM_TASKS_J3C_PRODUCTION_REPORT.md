@@ -2,9 +2,9 @@
 
 Date: 2026-09-18 (Asia/Bangkok)
 
-Final status: **ACTIVATED / OWNER MUTATION SMOKE PENDING**
+Final status: **JOURNALISM J3 = DONE**
 
-JOURNALISM J3 is not closed. J4/UI was not started.
+JOURNALISM J3 is closed after the owner-controlled authenticated mutation smoke. J4/UI was not started.
 
 ## A. Authoritative source
 
@@ -68,7 +68,11 @@ JOURNALISM J3 is not closed. J4/UI was not started.
 - Missing approved J3 tuples: `0`.
 - Extra J3 tuples: `0`.
 - Approved reference sorted-grant hash: `0bc039d7110e1b420349589dfb9f822c766ec3886cfa2f04947e0acab4d4233f`.
-- The live role/permission/scope tuple set was compared against the approved 128-row set with no missing or extra rows. The direct SQL comma-joined serializer observed after activation produced `302d89be211a2b36fde7edb81aee355b6b0659fe1280b954fc8025cd78ccba17`; this is a serialization representation difference, not a tuple-set difference, and is recorded for owner review rather than treated as a grant drift.
+- The live role/permission/scope tuple set was compared against the approved 128-row set with no missing or extra rows.
+- Canonical reconciliation algorithm: sort by the UTF-8 byte sequence of `(role_code, permission_code, scope)`, join fields with ASCII `|`, join rows with LF, omit the final newline, and hash the resulting explicit UTF-8 bytes.
+- Expected and live canonical streams were both 128 rows / 4,775 bytes and were byte-identical.
+- Canonical production baseline hash: `1e87d9404fef719a22f8a4369d871a09df1a93bb46a7d7512c22affe245943bc`.
+- The earlier `0bc039...` and direct SQL `302d89...` values used different serialization inputs; no grant tuple was changed.
 
 ## H. Exact J3 grant tuples
 
@@ -179,21 +183,24 @@ No `journalism.create` permission or inactive-role J3 grant was added.
 
 ## S. Authenticated role/module smoke
 
-- No authenticated smoke was fabricated by automation.
-- Existing owner-authenticated smoke evidence for the active J2/RBAC release remains the prior approved baseline.
-- A fresh owner-controlled J3 mutation smoke is still required before closure.
+- Owner-controlled authenticated smoke: `PASS`.
+- Normal modules and Task behavior: `PASS`; no unexpected HTTP 500 or Task authorization regression observed.
+- Permission UI remained read-only.
 
 ## T. Controlled owner mutation smoke
 
-- Status: `PENDING`.
-- No permanent production Journalism Task was created automatically.
-- No publication or withdrawal was performed against real newsroom content.
-- Owner may perform one designated controlled create/metadata/publication smoke and report only PASS/FAIL plus non-sensitive symptoms.
+- Status: `PASS`.
+- Create: authorized owner created the designated test Journalism Task; parent Task and Journalism detail were created; initial `publication_status=not_published`.
+- Metadata: approved metadata update succeeded; `article_url` was not editable through metadata; no unexpected authorization error.
+- Publication: `not_published -> scheduled` and `scheduled -> not_published` both succeeded; planned publication time behaved and cleared according to contract.
+- No fake published article or fake public URL was created.
+- A production `published -> withdrawn` test was intentionally unnecessary because the state machine, URL validation, transactional rollback, audit behavior, and two-connection concurrency were already proven in isolated J3B gates; exercising it against real newsroom content would add production risk without adding meaningful activation evidence.
+- Negative permission checks: `phong_vien` and `nhan_vien` have no publication authority; department leadership cannot mutate outside approved department scope; `pho_tong_bien_tap` organization-wide scope matches approved `all`.
 
 ## U. Audit verification
 
 - Rollback-only probe verified create, metadata, and publication audit paths inside the transaction, then removed all rows by rollback.
-- No production audit rows were manufactured because owner mutation smoke is pending.
+- Owner smoke audit verification: `create_journalism_detail`, `update_journalism_metadata`, and `change_publication_status` were present with correct actor/task references, minimized editorial-notes representation, and no secrets/tokens/cookies.
 
 ## V. Security counters
 
@@ -227,6 +234,6 @@ No `journalism.create` permission or inactive-role J3 grant was added.
 
 ## Z. Production final status
 
-**JOURNALISM J3C = ACTIVATED / OWNER MUTATION SMOKE PENDING**
+**JOURNALISM J3 = DONE**
 
-The deployment and non-authenticated security gates are complete. Do not start J4/UI. Await owner-controlled authenticated Journalism mutation smoke and explicit owner review before closing J3.
+Deployment, security gates, and owner-controlled authenticated Journalism mutation smoke are complete. `JOURNALISM J4 UI = READY FOR OWNER APPROVAL`; do not start J4/UI automatically.
