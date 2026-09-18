@@ -113,6 +113,7 @@ No deploy, restart, systemd change, production data mutation, schema change, mig
 
 ## Final verification
 
+- Final commit: `3069f01e0b42dbf0b8b2e340e1f1970eab2335f0`.
 - Feature commit: `c34e292` (`feat: add journalism metadata editing ui`).
-- Branch was pushed to `origin/journalism-tasks-j4b3-metadata-ui`.
-- The report-update commit below records the final verification state.
+- Local and `origin/journalism-tasks-j4b3-metadata-ui` match this final SHA.
+- Worktree is clean after push.
