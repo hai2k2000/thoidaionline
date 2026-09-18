@@ -43,8 +43,8 @@ No UI, Task association, reorder, grant-editing UI, or unrelated module was chan
 
 ## E. Migration SHA / Blob
 
-- SHA-256: `7f63d84075130634087f21e81380c55fe3a2734a2584dd312e660ee1c205b8fe`
-- Git blob: `3619e959caad32b3cf9ff92d81a12e3c4e004d43`
+- SHA-256: `81bbdd399bda2adf1a9ac4205fd24aa41b9afc912daf0661b4146a8a402e1cb6`
+- Git blob: `fbb15bc95142fd2a6c658b94fb66afcd6a88b878`
 
 ## F. Permission Catalog Additions
 
@@ -182,3 +182,8 @@ Known baseline failures remain classified as pre-existing and outside J5C scope.
 **J5D = READY FOR OWNER APPROVAL**
 
 Production activation is not authorized by this report. Stop here and wait for owner review.
+
+## Commit Provenance
+
+- Application commits: `539b671` and contract hardening commit `9dbeecf0dd6d06d8b8813ad32c04b23f5d710b1a`
+- Final report commit: recorded after this application tree; it changes documentation only.
