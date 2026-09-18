@@ -194,6 +194,8 @@ export type AssignedTaskInput = {
   recurrenceEndsOn: string | null;
 };
 
+export type JournalismCreateInput = AssignedTaskInput & { workKindId: string; plannedPublicationAt: string | null; location: string | null; editorialNotes: string | null; };
+
 export type LegacyUpdateTaskInput = {
   status?: "new" | "in_progress";
   dueDate?: string | null;

@@ -57,7 +57,10 @@ export async function requireMutationActor(): Promise<ActorGuard> {
     : { ok: false, response: apiError("unauthenticated", 401) };
 }
 
-export function rpcFailure(error: { code?: string | null }): Response {
+export function rpcFailure(error: { code?: string | null; message?: string | null }): Response {
+  if (error.message === "Publication state conflict.") {
+    return apiError("publication_state_conflict", 409);
+  }
   switch (error.code) {
     case "42501":
       return apiError("forbidden", 403);

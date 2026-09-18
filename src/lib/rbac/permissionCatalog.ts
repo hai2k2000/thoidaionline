@@ -16,6 +16,8 @@ export const RBAC_PERMISSION_CODES = [
   "attendance.view_all",
   "leave.view_self",
   "schedule.view_self",
+  "journalism.metadata.update",
+  "journalism.publication.manage",
 ] as const;
 
 export type RbacPermissionCode = (typeof RBAC_PERMISSION_CODES)[number];
