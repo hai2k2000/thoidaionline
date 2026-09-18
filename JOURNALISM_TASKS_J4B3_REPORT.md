@@ -113,6 +113,6 @@ No deploy, restart, systemd change, production data mutation, schema change, mig
 
 ## Final verification
 
-- Final commit: to be recorded after commit.
-- Local/remote match: to be recorded after push.
-- Worktree clean: to be recorded after commit.
+- Feature commit: `c34e292` (`feat: add journalism metadata editing ui`).
+- Branch was pushed to `origin/journalism-tasks-j4b3-metadata-ui`.
+- The report-update commit below records the final verification state.
