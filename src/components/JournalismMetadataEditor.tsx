@@ -12,6 +12,7 @@ export default function JournalismMetadataEditor({ journalism, taskId, workKinds
   const router = useRouter();
   const { notify } = useActionFeedback();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const busyRef = useRef(false);
   const localDateTime = useMemo(() => journalismLocalDateTime(journalism.planned_publication_at), [journalism.planned_publication_at]);
   const initial = useMemo(() => ({ workKindId: journalism.work_kind.id, plannedPublicationAt: journalism.planned_publication_at ?? "", location: journalism.location ?? "", editorialNotes: journalism.editorial_notes ?? "" }), [journalism]);
   const [form, setForm] = useState(initial);
@@ -30,10 +31,12 @@ export default function JournalismMetadataEditor({ journalism, taskId, workKinds
   const close = () => { if (!busy) dialogRef.current?.close(); };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (busyRef.current) return;
     const validation = validateJournalismMetadataEdit(form, journalism.publication_status);
     if (Object.keys(validation).length) { setErrors({ ...validation }); return; }
     const patch = buildJournalismMetadataPatch(initial, form, journalism.publication_status);
     if (!patch) { dialogRef.current?.close(); return; }
+    busyRef.current = true;
     setBusy(true); setErrors({});
     try {
       const response = await fetch(`/api/tasks/${taskId}/journalism`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(patch) });
@@ -49,7 +52,7 @@ export default function JournalismMetadataEditor({ journalism, taskId, workKinds
     } catch (error) {
       const message = error instanceof Error ? error.message : "Không thể cập nhật thông tin nghiệp vụ. Vui lòng thử lại.";
       setErrors({ form: message }); notify("error", message);
-    } finally { setBusy(false); }
+    } finally { busyRef.current = false; setBusy(false); }
   };
 
   return <>
