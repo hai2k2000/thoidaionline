@@ -230,6 +230,7 @@ begin
   if not found then raise exception 'Series not found.' using errcode = 'P0002'; end if;
   perform public.api_assert_journalism_structure_scope(p_actor_id, 'journalism.structure.manage', v_row.department_id);
   if not v_row.is_active then raise exception 'Archived series cannot be updated.' using errcode = '23505'; end if;
+  if not p_update_name and not p_update_description and not p_update_topic then return v_row; end if;
   if p_update_topic and p_topic_id is not null then
     select * into v_topic from public.editorial_topics where id = p_topic_id for share;
     if not found then raise exception 'Topic not found.' using errcode = 'P0002'; end if;

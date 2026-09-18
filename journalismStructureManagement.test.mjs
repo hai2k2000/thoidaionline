@@ -21,6 +21,7 @@ test("J5C migration declares exact structure permissions and server-only atomic 
   ]) assert.match(sql, new RegExp("create or replace function public\\." + fn));
   assert.match(sql, /revoke all on function public\.%s from public, anon, authenticated/);
   assert.match(sql, /grant execute on function public\.%s to service_role/);
+  assert.match(sql, /if not p_update_name and not p_update_description and not p_update_topic then return v_row; end if;/);
   assert.doesNotMatch(sql, /reorder|append|detach|association/i);
 });
 
