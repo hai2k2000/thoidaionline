@@ -17,7 +17,7 @@ J4C was built from exact commit `e5f726dedd480929b6424db55fc083cd6a4afb26`; no d
 
 ## C. Report commit
 
-Initial production report commit: `0b10c25fef3e8f38846e4b795af10c8abc4c508a`. A final provenance-only update follows; application source remains unchanged.
+This report is a report-only commit on the approved J4B-5 branch. Application source remains unchanged.
 
 ## D. Previous / new release
 
@@ -93,7 +93,7 @@ Repeated loopback checks over approximately 30 seconds remained healthy. `NResta
 
 ## M. Read-only Task / J4 smoke
 
-Automated anonymous read gate passed. Authenticated browser smoke is intentionally pending owner action. No production Task was created or mutated by this activation step.
+Automated anonymous read gate passed. Owner-controlled authenticated browser smoke also passed. One designated internal Journalism UI test Task was created and retained; it was not deleted automatically.
 
 ## N. Filters / read-path regression
 
@@ -101,31 +101,33 @@ J4B-5 focused and J2 regression evidence remains `124/124 PASS`, including Journ
 
 ## O. Create-page smoke
 
-Anonymous page gate reached `/tasks/assign` and `/tasks/assign?kind=journalism` without 500 after authentication redirect. Owner must verify the rendered normal/Journalism forms in the browser; no submit was performed automatically.
+Anonymous page gate reached `/tasks/assign` and `/tasks/assign?kind=journalism` without 500 after authentication redirect. Owner authenticated smoke confirmed the Journalism form rendered correctly, active work kinds loaded, recurrence was absent, exactly one parent Task was created, the detail page rendered, and initial publication status was `not_published`.
 
 ## P. Owner authenticated create smoke
 
-**PENDING OWNER ACTION.** Use one clearly labelled internal test Journalism Task only. Do not send credentials, cookies, sessions, or tokens to Codex.
+**PASS.** Owner used one designated internal test Journalism Task. Exactly one parent Task was created through the Journalism create UI. No credentials, cookies, sessions, or tokens were sent to Codex.
 
 ## Q. Metadata smoke
 
-**PENDING OWNER ACTION.** Verify the authorized owner sees `Chỉnh sửa thông tin`, edits a safe field once, sees success feedback and refreshed value, and sees no URL/publication-status field.
+**PASS.** Authorized owner saw `Chỉnh sửa thông tin`, changed approved metadata once, saw success feedback and the refreshed server value, and confirmed there was no `articleUrl`, publication-status, or `publishedAt` field in the metadata form.
 
 ## R. Schedule / cancel smoke
 
-**PENDING OWNER ACTION.** Verify one future Vietnam-local schedule request, state `Đã lên lịch`, then one cancel request returning to `Chưa xuất bản` with cleared planned time. No fake publish/withdraw was performed.
+**PASS.** Owner scheduled a future Vietnam-local time exactly once; the state became `Đã lên lịch` and displayed correctly. Owner then cancelled the schedule exactly once; the state returned to `Chưa xuất bản` and planned time cleared.
+
+No fake publish/withdraw production smoke was performed. This was intentional: J4B/J3 isolated tests already cover publish URL validation, immutable URL behavior, published/withdrawn transitions, withdrawal reason, locking/concurrency, and 409 handling; creating a fake public URL or changing newsroom-like content in production would add unnecessary risk.
 
 ## S. Permission-aware UI smoke
 
-Automated server authorization and J4B-5 matrix evidence passed. Owner-controlled authenticated role smoke is pending; do not fabricate users or sessions.
+**PASS.** Automated server authorization and J4B-5 matrix evidence passed. Owner-controlled smoke confirmed metadata visibility matched effective permission, `phong_vien`/`nhan_vien` had no publication controls, department-scoped users did not gain cross-department authority, and TBT/PTBT/Admin behavior matched approved backend scope.
 
 ## T. Normal Task regression
 
-No production mutation was performed. J4B-5 focused compatibility evidence passed: normal Task remains normal, recurrence remains in normal create, and Journalism controls render only for Journalism Tasks.
+**PASS.** `/tasks/assign` remained normal Task by default, recurrence remained available, normal Task detail showed no Journalism UI, and normal list/filter/workflow behavior remained healthy. J4B-5 focused compatibility evidence also passed.
 
 ## U. Module smoke
 
-No broad production mutations were performed. Existing module regression evidence remains green within the approved focused suites; authenticated production smoke is pending owner review.
+No broad production mutations were performed. Existing attendance, leave, schedule, online work, duty roster, evaluation, users/admin, and read-only permissions evidence remained healthy; no new 500, fatal error, or authorization regression was reported during owner smoke.
 
 ## V. Client security scan
 
@@ -138,23 +140,33 @@ Read-only production checks:
 - permissions: `19`;
 - role grants: `128`;
 - Journalism work kinds: `10`;
-- Journalism detail rows before owner smoke: `0`;
+- Journalism detail rows before owner smoke: `0`; owner subsequently reported one designated test Journalism Task created through the UI (exact identifier was not included in the owner message).
 - canonical grant hash remains owner-approved `1e87d9404fef719a22f8a4369d871a09df1a93bb46a7d7512c22affe245943bc`;
 - `TASK_RBAC_V2_ENABLED=true`;
 - no migration, schema, RPC, RLS, permission, or grant command was run.
 
 ## X. Test Task disposition
 
-No owner smoke Task exists yet. If owner creates one, it will not be deleted automatically; owner may retain/archive it according to the existing workflow.
+One designated internal J4 UI test Journalism Task (owner-reported title: `[J4 UI TEST] Journalism production smoke`) was created during owner smoke. It remains retained and was not deleted automatically. Owner may retain, archive, or complete it through the normal Task workflow.
 
 ## Y. Rollback readiness
 
 Rollback is application-only and targets the preserved J3 release in section D. The pre-activation snapshot records the prior service state and drop-ins. No database rollback is required or permitted for J4C.
 
-## Z. Final release / status
+## Z. Final production health and status
 
-**J4C = ACTIVATED / OWNER UI SMOKE PENDING**
+- Active release: `/opt/releases/thoidai-work/e5f726dedd480929b6424db55fc083cd6a4afb26-j4c-20260918T134200Z`.
+- Application commit: `e5f726dedd480929b6424db55fc083cd6a4afb26`.
+- Service: active; `NRestarts=0`.
+- `/login=200`; anonymous `/api/tasks=401`; anonymous Journalism mutation APIs `401`.
+- `TASK_RBAC_V2_ENABLED=true`.
+- Permissions `19`; grants `128`; canonical grant hash unchanged.
+- No new 500, fatal error, or restart loop.
 
-**JOURNALISM J4 = NOT YET CLOSED**
+Owner authenticated UI smoke: **PASS**.
 
-Owner must complete authenticated create, metadata, schedule/cancel, permission-aware, and normal Task browser smoke before J4 can be marked DONE. No J5, CMS Connector, Topics/Series, KPI, AI, migration, grant, schema, RPC, or further deployment has been started.
+**J4C = CLOSED**
+
+**JOURNALISM J4 = DONE**
+
+J4 production activation is closed. No J5, CMS Connector, Topics/Series, KPI, AI, migration, grant, schema, RPC, or further deployment has been started.
