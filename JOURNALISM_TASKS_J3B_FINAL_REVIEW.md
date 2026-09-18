@@ -86,5 +86,5 @@ Unknown fields, including `expectedUpdatedAt`, are rejected with `400 invalid_re
 
 ## K. Final commit
 
-- New commit: to be recorded after verification and push.
+- Final contract-alignment commit: `b9c45b33987eeb6e8ebac65b1218660fdd9c80a6` (`fix: align journalism metadata mutation contract`).
 - Required next step: owner review only; do not deploy or start J3C automatically.
