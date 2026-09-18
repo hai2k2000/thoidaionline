@@ -17,7 +17,7 @@ J4C was built from exact commit `e5f726dedd480929b6424db55fc083cd6a4afb26`; no d
 
 ## C. Report commit
 
-This report is a report-only commit on the approved J4B-5 branch. Application source remains unchanged.
+Initial production report commit: `0b10c25fef3e8f38846e4b795af10c8abc4c508a`. A final provenance-only update follows; application source remains unchanged.
 
 ## D. Previous / new release
 
