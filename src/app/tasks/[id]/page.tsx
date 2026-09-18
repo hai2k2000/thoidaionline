@@ -44,6 +44,8 @@ export default async function TaskDetailPage({ params }: Props) {
 
   const journalismMetadataUpdate = Boolean(detailResult.data.journalism)
     && await authorizeJournalismPermission(user, accessResult.data, "journalism.metadata.update");
+  const journalismPublicationManage = Boolean(detailResult.data.journalism)
+    && await authorizeJournalismPermission(user, accessResult.data, "journalism.publication.manage");
   return <TaskDetailShell task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} capabilities={{
     report: action("report"),
     completeAssigned: action("complete_assigned"),
@@ -59,5 +61,6 @@ export default async function TaskDetailPage({ params }: Props) {
     assignedCancel: action("assigned_cancel"),
     adminEdit: action("admin_edit"),
     journalismMetadataUpdate,
+    journalismPublicationManage,
   }} />;
 }
