@@ -11,6 +11,7 @@ import { resolveTaskCompatibility } from "@/lib/taskCompatibility";
 import { isTaskRbacV2Enabled } from "@/lib/taskRbacFlag";
 import { buildTaskListScope } from "@/lib/taskAuthorization";
 import { loadRbacActor } from "@/lib/rbac/repository";
+import { applyJournalismExcludeFilter } from "@/lib/taskFilters.mjs";
 import type {
   AssignedTaskInput,
   LegacyCreateTaskInput,
@@ -254,7 +255,7 @@ export const taskRepository: TaskRepository = {
       dbQuery = dbQuery.eq("department_id", query.departmentId);
     }
     if (query.journalism === "exclude") {
-      dbQuery = dbQuery.is("journalism_task_details", null);
+      dbQuery = applyJournalismExcludeFilter(dbQuery);
     }
     if (query.journalismWorkKindId) {
       dbQuery = dbQuery.eq("journalism_task_details.work_kind_id", query.journalismWorkKindId);

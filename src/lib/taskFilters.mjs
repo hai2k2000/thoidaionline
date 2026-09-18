@@ -10,6 +10,10 @@ const JOURNALISM_FILTERS = ["only", "exclude"];
 const PUBLICATION_STATUSES = ["not_published", "scheduled", "published", "withdrawn"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+export function applyJournalismExcludeFilter(query) {
+  return query.is("journalism", null);
+}
+
 const member = (values, value) => values.find((candidate) => candidate === value);
 
 const validDate = (value) => {
