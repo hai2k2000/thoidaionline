@@ -37,7 +37,15 @@ export function parseTaskListSearchParams(params) {
   const search = params.get("q")?.normalize("NFC").trim() ?? "";
   const departmentId = params.get("department");
   const journalismWorkKindId = params.get("workKind");
+  const parsedJournalismWorkKindId = journalismWorkKindId && UUID.test(journalismWorkKindId)
+    ? journalismWorkKindId
+    : null;
+  const parsedPublicationStatus = member(PUBLICATION_STATUSES, params.get("publicationStatus")) ?? null;
+  const parsedPlannedPublicationFrom = validDate(params.get("plannedFrom"));
+  const parsedPlannedPublicationTo = validDate(params.get("plannedTo"));
+  const requestedJournalism = member(JOURNALISM_FILTERS, params.get("journalism")) ?? null;
   const category = params.get("category") === "duty" ? "duty" : null;
+  const isNormalOnly = requestedJournalism === "exclude";
   return {
     search: search && [...search].length <= 200 ? search : null,
     scope: member(TASK_SCOPES, params.get("scope")) ?? "all",
@@ -50,13 +58,12 @@ export function parseTaskListSearchParams(params) {
     toDate: validDate(params.get("to")),
     deadlineState: member(DEADLINE_STATES, params.get("deadline")) ?? null,
     departmentId: departmentId && UUID.test(departmentId) ? departmentId : null,
-    journalism: member(JOURNALISM_FILTERS, params.get("journalism")) ?? null,
-    journalismWorkKindId: journalismWorkKindId && UUID.test(journalismWorkKindId)
-      ? journalismWorkKindId
-      : null,
-    publicationStatus: member(PUBLICATION_STATUSES, params.get("publicationStatus")) ?? null,
-    plannedPublicationFrom: validDate(params.get("plannedFrom")),
-    plannedPublicationTo: validDate(params.get("plannedTo")),
+    journalism: requestedJournalism
+      ?? (parsedJournalismWorkKindId || parsedPublicationStatus || parsedPlannedPublicationFrom || parsedPlannedPublicationTo ? "only" : null),
+    journalismWorkKindId: isNormalOnly ? null : parsedJournalismWorkKindId,
+    publicationStatus: isNormalOnly ? null : parsedPublicationStatus,
+    plannedPublicationFrom: isNormalOnly ? null : parsedPlannedPublicationFrom,
+    plannedPublicationTo: isNormalOnly ? null : parsedPlannedPublicationTo,
     page: Number.isInteger(page) && page > 0 ? page : 1,
     pageSize: Number.isInteger(pageSize) && pageSize > 0 && pageSize <= 100
       ? pageSize
@@ -70,6 +77,20 @@ export function parseTaskListSearchParams(params) {
  */
 export function taskListHref(query, patch) {
   const next = { ...query, ...patch };
+  const journalismSubfilter = Boolean(
+    next.journalismWorkKindId
+    || next.publicationStatus
+    || next.plannedPublicationFrom
+    || next.plannedPublicationTo,
+  );
+  if (Object.hasOwn(patch, "journalism") && patch.journalism !== "only") {
+    next.journalismWorkKindId = null;
+    next.publicationStatus = null;
+    next.plannedPublicationFrom = null;
+    next.plannedPublicationTo = null;
+  } else if (!next.journalism && journalismSubfilter) {
+    next.journalism = "only";
+  }
   const params = new URLSearchParams();
   if (next.search) params.set("q", next.search);
   if (next.scope !== "all") params.set("scope", next.scope);

@@ -111,6 +111,29 @@ const fail = <T>(error: { code?: string | null }): RepositoryResult<T> => ({
   error: { code: error.code ?? null },
 });
 
+export type JournalismWorkKindOption = { id: string; name: string; is_active: boolean };
+
+export async function listJournalismWorkKinds(selectedId: string | null = null): Promise<RepositoryResult<JournalismWorkKindOption[]>> {
+  const activeResult = await serverSupabase
+    .from("journalism_work_kinds")
+    .select("id,name,is_active,sort_order")
+    .eq("is_active", true)
+    .order("sort_order")
+    .order("name");
+  if (activeResult.error) return fail(activeResult.error);
+  const options = (activeResult.data ?? []) as JournalismWorkKindOption[];
+  if (!selectedId || options.some((option) => option.id === selectedId)) return ok(options);
+  const historicalResult = await serverSupabase
+    .from("journalism_work_kinds")
+    .select("id,name,is_active,sort_order")
+    .eq("id", selectedId)
+    .maybeSingle();
+  if (historicalResult.error) return fail(historicalResult.error);
+  return historicalResult.data
+    ? ok([...options, historicalResult.data as JournalismWorkKindOption])
+    : ok(options);
+}
+
 const mutation = async <T>(
   name: string,
   args: Record<string, unknown>,

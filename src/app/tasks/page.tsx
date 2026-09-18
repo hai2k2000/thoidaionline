@@ -5,7 +5,7 @@ import { getSessionUser } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { resolveTaskCenterView } from "@/lib/taskCenterView";
 import { parseTaskListSearchParams } from "@/lib/taskFilters.mjs";
-import { taskRepository } from "@/lib/taskRepository";
+import { listJournalismWorkKinds, taskRepository } from "@/lib/taskRepository";
 import type { TaskListResult } from "@/lib/taskContracts";
 
 type TasksPageProps = {
@@ -41,6 +41,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   }
   const view = resolveTaskCenterView(rawParams.view, canViewEvaluations);
   const query = parseTaskListSearchParams(toUrlSearchParams(rawParams));
+  const workKindsResult = await listJournalismWorkKinds(query.journalismWorkKindId ?? null);
+  const journalismWorkKinds = workKindsResult.ok ? workKindsResult.data : [];
 
   let tasks: TaskListResult = {
     items: [], total: 0, page: query.page, pageSize: query.pageSize,
@@ -72,6 +74,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       canClaimTasks={!['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
       currentUserId={user.id}
       departments={departments}
+      journalismWorkKinds={journalismWorkKinds}
       listError={listError}
       query={query}
       tasks={tasks}
