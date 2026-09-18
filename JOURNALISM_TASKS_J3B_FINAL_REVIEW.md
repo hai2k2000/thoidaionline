@@ -13,7 +13,8 @@ Date: 2026-09-18 (Asia/Bangkok)
 ## B. Authoritative source
 
 - Authoritative pre-alignment J3B commit: `1e4ca1c93de18779a7a8205baafad4a8139cc112`.
-- After this contract correction, the authoritative J3B commit is the new fix commit recorded below.
+- Final authoritative branch HEAD: `959bbcc97c2a763658fc5ebfb485a46c01256e53`.
+- The source correction is in parent commit `b9c45b33987eeb6e8ebac65b1218660fdd9c80a6`; the final review report is recorded in `959bbcc97c2a763658fc5ebfb485a46c01256e53`.
 - The application tree remains the implementation tree from `8841fb3`, plus the narrow metadata route/test correction in this review.
 
 ## C. Metadata contract finding
@@ -87,4 +88,5 @@ Unknown fields, including `expectedUpdatedAt`, are rejected with `400 invalid_re
 ## K. Final commit
 
 - Final contract-alignment commit: `b9c45b33987eeb6e8ebac65b1218660fdd9c80a6` (`fix: align journalism metadata mutation contract`).
+- Final branch/report commit: `959bbcc97c2a763658fc5ebfb485a46c01256e53` (`docs: record J3B final review commit`).
 - Required next step: owner review only; do not deploy or start J3C automatically.
