@@ -168,3 +168,9 @@ JOURNALISM J5 IMPLEMENTATION = READY FOR OWNER PRODUCTION REVIEW
 ## AC. Recommendation
 
 GO for owner production review of J5E. Do not deploy or start J5F without separate explicit owner approval.
+
+## AD. Git handoff
+
+- Application commit: `078199d865a00ee216d429a1b1a3caad43da997d`
+- Report commit: recorded in the final docs-only follow-up commit after this report update.
+- Branch is pushed and clean after the final report commit.
