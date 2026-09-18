@@ -111,9 +111,24 @@ No deploy, restart, systemd change, production data mutation, schema change, mig
 
 **GO FOR OWNER REVIEW OF J4B-4 DESIGN ONLY.** J4B-3 metadata editing is complete on the isolated branch. Do not implement publication controls until separately approved.
 
-## Final verification
+## Final provenance verification
 
-- Final commit: `3069f01e0b42dbf0b8b2e340e1f1970eab2335f0`.
-- Feature commit: `c34e292` (`feat: add journalism metadata editing ui`).
-- Local and `origin/journalism-tasks-j4b3-metadata-ui` match this final SHA.
-- Worktree is clean after push.
+- Feature/application commit: `c34e292aa6aea5c0d4f32335a08c4fc4bf42f061` (`feat: add journalism metadata editing ui`).
+- First report commit: `3069f01e0b42dbf0b8b2e340e1f1970eab2335f0` (`docs: finalize journalism metadata ui report`).
+- Current report commit / branch HEAD: `586fab63fdd48d46d3f4281d73ceb5b288d11fa1` (`docs: record final j4b3 verification`).
+- `586fab...` is a direct descendant of `3069f...`, which is a direct descendant of `c34e292...`, based on the commit graph.
+- The diff from `3069f...` to `586fab...` contains only `JOURNALISM_TASKS_J4B3_REPORT.md`; application/runtime and test trees are byte-identical after `3069f...`.
+- Local HEAD: `586fab63fdd48d46d3f4281d73ceb5b288d11fa1`.
+- Remote HEAD (`origin/journalism-tasks-j4b3-metadata-ui`): `586fab63fdd48d46d3f4281d73ceb5b288d11fa1`.
+- Worktree: clean.
+- Authoritative J4B-3 application baseline: `c34e292aa6aea5c0d4f32335a08c4fc4bf42f061`.
+- Authoritative branch/report state: `586fab63fdd48d46d3f4281d73ceb5b288d11fa1`.
+
+## Final contract verification
+
+- Metadata edit only; no publication controls, schedule, publish, or withdraw UI.
+- No backend/schema/RPC/RBAC/grant changes; no direct Supabase/RPC browser call.
+- Partial PATCH sends only changed approved fields; true no-op sends no request.
+- Unchanged inactive historical work kind remains readable and is omitted from PATCH.
+- `not_published` planned time is optional/editable; `scheduled` is required/editable; `published` and `withdrawn` are locked and excluded from PATCH.
+- Article URL, publication status, published time, withdrawal reason, and optimistic concurrency token are absent from the metadata form/request.
