@@ -1,7 +1,7 @@
 # ORG/RBAC Reconciliation R3 Retry Report
 
 **Final state:** `ORG/RBAC RECONCILIATION = DONE`
-**Owner smoke:** `PENDING OWNER AUTHENTICATED SMOKE`
+**Owner smoke:** `PASS`
 **Journalism J2:** `READY FOR OWNER APPROVAL` (not started)
 
 ## Exact candidate
@@ -59,14 +59,20 @@
 
 ## Owner authenticated smoke
 
-Pending owner verification without sharing credentials, cookies, sessions, or tokens:
+Owner authenticated production smoke: **PASS**. No credentials, cookies, sessions, or tokens were provided to automation.
 
-- Admin: Users selectors, read-only Permissions, Departments.
-- Tổng biên tập: login, new display label, task behavior.
-- Phó Tổng biên tập: task behavior.
-- Trưởng/Phó trưởng phòng: own-department behavior.
-- Nhân viên/Phóng viên: own/assigned behavior and role separation.
-- Attendance, leave, work schedule, online work, duty roster, evaluation.
+- Admin: PASS.
+- `tong_bien_tap`: PASS; display label is `Tổng biên tập` and task behavior is unchanged.
+- `pho_tong_bien_tap`: PASS.
+- `truong_phong` / `pho_truong_phong`: PASS; own-department behavior unchanged.
+- `phong_vien`: PASS.
+- `nhan_vien`: PASS; `phong_vien` and `nhan_vien` remain distinct.
+- Active role/department selectors: PASS.
+- Inactive historical values are not selectable for new assignments: PASS.
+- Permission UI remains read-only: PASS.
+- Task authorization and cross-department visibility: PASS, no regression observed.
+- Attendance, leave, schedule, online work, duty roster and evaluation: PASS.
+- Unexpected HTTP 500 or authorization regression: none observed.
 
 ## Security health
 
@@ -86,6 +92,10 @@ Pending owner verification without sharing credentials, cookies, sessions, or to
 - Active release: `/opt/releases/thoidai-work/13067f564cd7c1988e0f189a00d3cac4c5ed8b1d-r3-retry-20260917T170751Z`.
 - Service: active.
 - `/login=200`; anonymous protected API `401`.
-- Migration applied; owner smoke is the remaining operational gate.
+- Migration applied and owner authenticated smoke passed.
 
-**Next action:** owner performs authenticated smoke and reports PASS/FAIL only. No Journalism J2 implementation starts automatically.
+## Final decision
+
+- `ORG/RBAC RECONCILIATION = DONE`
+- `JOURNALISM J2 = READY FOR OWNER APPROVAL`
+- Journalism J2 was not started automatically.
