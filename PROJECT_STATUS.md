@@ -158,8 +158,8 @@ Next:
 - Existing dev-tooling audit findings, stale UI contract test, and non-root service follow-up remain separate tasks.
 
 Security milestone 2026-09-14: Supabase Kong, Mailpit, and PostgreSQL bindings restricted to 127.0.0.1. Rollback containers and inspect snapshots retained. Database readiness, schema dump, service health, and production login smoke checks passed. Dependency remediation passed npm audit with zero vulnerabilities; security tests 21/21.
-Current Phase: Journalism J5D associations and atomic ordering
-Current Task: COMPLETE — Topic/Series attach-detach, atomic append, reorder, authorization, audit, routes, and disposable concurrency tests
+Current Phase: Journalism J5E Topics / Series UI integration
+Current Task: COMPLETE — scoped management UI, Task detail associations, Task Center filters, Series ordering view, permission-aware rendering, accessibility, and regression validation
 Completed:
 - J5D implementation commit `fca071cb1fb52e8b5b2f4d4969a0839ab50bed30`.
 - J5D report commit `fa1017a0f16359e15ca092dcc03d30238a87a7d0`.
@@ -167,4 +167,10 @@ Validation:
 - Contract, SQL mutation/security, concurrency, TypeScript, changed-file ESLint, diff check, and non-secret build PASS.
 - Full suite matches sealed 34-failure baseline with zero J5D regression.
 Blockers: none for J5D isolated completion.
-Next: J5E READY FOR OWNER APPROVAL; do not start UI or J5F production activation.
+Validation:
+- J5E focused tests PASS (5/5).
+- J5B/J5C/J5D and J3/J4 focused regressions PASS.
+- Full suite exact-name comparison: 472 tests / 438 pass / 34 sealed baseline failures; zero new J5E failures.
+- TypeScript, changed-file ESLint, diff check, and non-secret build PASS.
+Blockers: none for isolated J5E completion.
+Next: J5E READY FOR OWNER PRODUCTION REVIEW; do not start J5F production activation.

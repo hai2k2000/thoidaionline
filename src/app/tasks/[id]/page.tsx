@@ -6,6 +6,7 @@ import { getSessionUser } from "@/lib/serverSession";
 import { taskRepository } from "@/lib/taskRepository";
 import { authorizeJournalismPermission } from "@/lib/journalismAuthorization";
 import { listJournalismWorkKinds } from "@/lib/taskRepository";
+import { loadJournalismTaskStructureOptions } from "@/lib/journalismStructureRepository";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -46,7 +47,8 @@ export default async function TaskDetailPage({ params }: Props) {
     && await authorizeJournalismPermission(user, accessResult.data, "journalism.metadata.update");
   const journalismPublicationManage = Boolean(detailResult.data.journalism)
     && await authorizeJournalismPermission(user, accessResult.data, "journalism.publication.manage");
-  return <TaskDetailShell task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} capabilities={{
+  const structureOptions = detailResult.data.journalism ? await loadJournalismTaskStructureOptions(user, accessResult.data, actor) : { topics: [], series: [], canAssign: false };
+  return <TaskDetailShell task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} journalismStructureOptions={structureOptions} capabilities={{
     report: action("report"),
     completeAssigned: action("complete_assigned"),
     review: action("review"),

@@ -36,6 +36,7 @@ const labels = {
   "work-schedule-leader": "Lịch công tác lãnh đạo",
   "work-schedule-staff": "Kế hoạch cá nhân",
   "work-schedule-admin": "Quản trị lịch công tác",
+  "journalism-structures": "Chủ đề & Loạt bài",
 } as const;
 
 function NavIcon({ id, active }: { id: keyof typeof labels; active: boolean }) {
@@ -190,6 +191,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     canManageRubrics: hasPermission("can_manage_rubrics"),
     canManageUsers: hasPermission("can_manage_users"),
     canManagePermissions: hasPermission("can_manage_permissions"),
+    canManageJournalismStructures: hasPermission("journalism.structure.manage"),
   });
 
   const restoreMenuFocus = useCallback(() => {

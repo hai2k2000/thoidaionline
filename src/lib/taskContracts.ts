@@ -23,6 +23,7 @@ export type JournalismTopicDto = {
   name: string;
   isActive: boolean;
   departmentId: string | null;
+  description?: string | null;
 };
 
 export type JournalismSeriesDto = {
@@ -32,6 +33,7 @@ export type JournalismSeriesDto = {
   departmentId: string | null;
   topicId: string | null;
   position: number;
+  description?: string | null;
 };
 
 export type JournalismTaskListSummaryDto = {

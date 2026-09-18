@@ -6,6 +6,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { resolveTaskCenterView } from "@/lib/taskCenterView";
 import { parseTaskListSearchParams } from "@/lib/taskFilters.mjs";
 import { listJournalismWorkKinds, taskRepository } from "@/lib/taskRepository";
+import { listJournalismStructureFilters } from "@/lib/journalismStructureRepository";
 import type { TaskListResult } from "@/lib/taskContracts";
 
 type TasksPageProps = {
@@ -43,6 +44,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const query = parseTaskListSearchParams(toUrlSearchParams(rawParams));
   const workKindsResult = await listJournalismWorkKinds(query.journalismWorkKindId ?? null);
   const journalismWorkKinds = workKindsResult.ok ? workKindsResult.data : [];
+  const structureFilters = await listJournalismStructureFilters(user, query.topicId ?? null, query.seriesId ?? null);
 
   let tasks: TaskListResult = {
     items: [], total: 0, page: query.page, pageSize: query.pageSize,
@@ -75,6 +77,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       currentUserId={user.id}
       departments={departments}
       journalismWorkKinds={journalismWorkKinds}
+      journalismTopics={structureFilters.topics}
+      journalismSeries={structureFilters.series}
       listError={listError}
       query={query}
       tasks={tasks}
