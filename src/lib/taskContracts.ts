@@ -36,6 +36,19 @@ export type JournalismSeriesDto = {
   description?: string | null;
 };
 
+export type JournalismPublicationReportDto = {
+  id: string;
+  task_id: string;
+  publication_url: string;
+  published_title: string | null;
+  published_at: string;
+  note: string | null;
+  reported_by: string;
+  created_at: string;
+  updated_at: string;
+  reporter: { full_name: string | null } | null;
+};
+
 export type JournalismTaskListSummaryDto = {
   publication_status: JournalismPublicationStatus;
   planned_publication_at: string | null;
@@ -54,6 +67,7 @@ export type JournalismTaskDetailDto = JournalismTaskListSummaryDto & {
   updated_at: string;
   work_kind: JournalismWorkKindDto;
   topics: JournalismTopicDto[];
+  publication_report: JournalismPublicationReportDto | null;
 };
 
 export type TaskParticipantDto = {

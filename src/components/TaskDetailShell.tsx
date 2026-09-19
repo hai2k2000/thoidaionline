@@ -12,6 +12,7 @@ import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import JournalismDetailSection from "@/components/JournalismDetailSection";
 import JournalismMetadataEditor from "@/components/JournalismMetadataEditor";
 import JournalismPublicationControls from "@/components/JournalismPublicationControls";
+import JournalismManualPublicationReport from "@/components/JournalismManualPublicationReport";
 import JournalismAssociationControls from "@/components/JournalismAssociationControls";
 import type { JournalismStructureSeries, JournalismStructureTopic } from "@/lib/journalismStructureRepository";
 
@@ -165,6 +166,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel, journal
               </Section>
 
               {task.journalism ? <JournalismDetailSection journalism={task.journalism} /> : null}
+              {task.journalism ? <JournalismManualPublicationReport report={task.journalism.publication_report} taskId={task.id} canEdit={capabilities.journalismPublicationManage} /> : null}
               {task.journalism ? <JournalismAssociationControls taskId={task.id} journalism={task.journalism} topics={journalismStructureOptions.topics} series={journalismStructureOptions.series} canAssign={journalismStructureOptions.canAssign} /> : null}
               {task.journalism && capabilities.journalismMetadataUpdate ? <JournalismMetadataEditor journalism={task.journalism} taskId={task.id} workKinds={journalismWorkKinds} workKindsLoadFailed={journalismWorkKindsLoadFailed} /> : null}
               {task.journalism && capabilities.journalismPublicationManage ? <JournalismPublicationControls journalism={task.journalism} taskId={task.id} /> : null}

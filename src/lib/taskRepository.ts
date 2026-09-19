@@ -12,6 +12,7 @@ import { isTaskRbacV2Enabled } from "@/lib/taskRbacFlag";
 import { buildTaskListScope } from "@/lib/taskAuthorization";
 import { loadRbacActor } from "@/lib/rbac/repository";
 import { applyJournalismExcludeFilter } from "@/lib/taskFilters.mjs";
+import { publicationReportDto } from "@/lib/journalismManualPublicationValidation";
 import type {
   AssignedTaskInput,
   LegacyCreateTaskInput,
@@ -81,7 +82,7 @@ const TASK_DETAIL_FIELDS = [
   "evaluation_criteria",
   "owner:staff_users!tasks_owner_id_fkey(full_name)",
   "reviewer:staff_users!tasks_reviewer_id_fkey(full_name)",
-  "journalism:journalism_task_details(task_id,publication_status,planned_publication_at,published_at,location,article_url,editorial_notes,created_at,updated_at,work_kind:journalism_work_kinds(id,code,name,description,is_active,sort_order),topic_links:editorial_topic_tasks(topic:editorial_topics(id,name,is_active,department_id)),series_links:editorial_series_items(task_id,position,series:editorial_series(id,name,is_active,department_id,topic_id)))",
+  "journalism:journalism_task_details(task_id,publication_status,planned_publication_at,published_at,location,article_url,editorial_notes,created_at,updated_at,work_kind:journalism_work_kinds(id,code,name,description,is_active,sort_order),topic_links:editorial_topic_tasks(topic:editorial_topics(id,name,is_active,department_id)),series_links:editorial_series_items(task_id,position,series:editorial_series(id,name,is_active,department_id,topic_id)),publication_report:journalism_publication_reports(id,task_id,publication_url,published_title,published_at,note,reported_by,created_at,updated_at,reporter:staff_users!journalism_publication_reports_reported_by_fkey(full_name)))",
 ].join(",");
 
 const journalismValue = <T>(value: T | T[] | null | undefined): T | null =>
@@ -475,10 +476,12 @@ export const taskRepository: TaskRepository = {
         const detail = taskResult.data as unknown as { journalism?: JournalismTaskDetailDto & {
           topic_links?: Array<{ topic?: object | object[] | null }>;
           series_links?: Array<SeriesMembershipRow>;
+          publication_report?: object | object[] | null;
         } | JournalismTaskDetailDto[] | null };
         const rawJournalism = journalismValue(detail.journalism) as unknown as (JournalismTaskDetailDto & {
           topic_links?: Array<{ topic?: object | object[] | null }>;
           series_links?: Array<SeriesMembershipRow>;
+          publication_report?: object | object[] | null;
         }) | null;
         const topics = (rawJournalism?.topic_links ?? []).flatMap((row) => {
           const topic = journalismValue(row.topic as unknown as {
@@ -495,11 +498,15 @@ export const taskRepository: TaskRepository = {
         const baseJournalism = { ...(rawJournalism as unknown as Record<string, unknown>) };
         delete baseJournalism.topic_links;
         delete baseJournalism.series_links;
+        delete baseJournalism.publication_report;
         return {
           ...baseJournalism,
           topicCount: topics.length,
           topics,
           series: seriesDto(rawJournalism?.series_links?.[0]),
+          publication_report: publicationReportDto(
+            journalismValue(rawJournalism?.publication_report as object | object[] | null | undefined),
+          ),
         } as unknown as JournalismTaskDetailDto;
       })(),
     });
