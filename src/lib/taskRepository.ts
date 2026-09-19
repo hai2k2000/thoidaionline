@@ -220,7 +220,7 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
   })),
 });
 
-const scopeTerms = async (
+export const getTaskScopeTerms = async (
   actor: AuthorizationActor,
 ): Promise<RepositoryResult<string[]>> => {
   if (isTaskRbacV2Enabled()) {
@@ -267,7 +267,7 @@ const scopeTerms = async (
 
 export const taskRepository: TaskRepository = {
   async list(actor, query) {
-    const scope = await scopeTerms(actor);
+    const scope = await getTaskScopeTerms(actor);
     if (!scope.ok) return scope;
 
     const hasJournalismParentFilter = Boolean(
