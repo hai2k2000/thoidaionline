@@ -9,7 +9,7 @@ import { loadRbacActor } from "./rbac/repository";
 export async function authorizeJournalismPermission(
   user: ServerAuthUser,
   task: TaskAccessSnapshot,
-  permission: "journalism.metadata.update" | "journalism.publication.manage",
+  permission: "journalism.metadata.update" | "journalism.publication.manage" | "journalism.publication.verify",
 ) {
   if (!canTaskAction({
     id: user.id,

@@ -36,6 +36,21 @@ export type JournalismSeriesDto = {
   description?: string | null;
 };
 
+export type JournalismPublicationVerificationDecision = "verified" | "rejected";
+export type JournalismPublicationVerificationStatus = "unverified" | "verified" | "rejected" | "stale";
+
+export type JournalismPublicationVerificationDto = {
+  id: string;
+  publication_report_id: string;
+  decision: JournalismPublicationVerificationDecision;
+  note: string | null;
+  verified_by: string;
+  publication_report_updated_at: string;
+  created_at: string;
+  verifier: { full_name: string | null } | null;
+  isCurrent: boolean;
+};
+
 export type JournalismPublicationReportDto = {
   id: string;
   task_id: string;
@@ -47,6 +62,9 @@ export type JournalismPublicationReportDto = {
   created_at: string;
   updated_at: string;
   reporter: { full_name: string | null } | null;
+  verification_status: JournalismPublicationVerificationStatus;
+  current_verification: JournalismPublicationVerificationDto | null;
+  verification_history: JournalismPublicationVerificationDto[];
 };
 
 export type JournalismTaskListSummaryDto = {

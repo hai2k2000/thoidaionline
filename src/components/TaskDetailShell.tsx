@@ -20,6 +20,7 @@ type Capabilities = {
   report: boolean; completeAssigned: boolean; review: boolean; update: boolean; comment: boolean;
   journalismMetadataUpdate: boolean;
   journalismPublicationManage: boolean;
+  journalismPublicationVerify: boolean;
   attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
 };
 const statusLabel: Record<string, string> = {
@@ -166,7 +167,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel, journal
               </Section>
 
               {task.journalism ? <JournalismDetailSection journalism={task.journalism} /> : null}
-              {task.journalism ? <JournalismManualPublicationReport report={task.journalism.publication_report} taskId={task.id} canEdit={capabilities.journalismPublicationManage} /> : null}
+              {task.journalism ? <JournalismManualPublicationReport report={task.journalism.publication_report} taskId={task.id} canEdit={capabilities.journalismPublicationManage} canVerify={capabilities.journalismPublicationVerify} /> : null}
               {task.journalism ? <JournalismAssociationControls taskId={task.id} journalism={task.journalism} topics={journalismStructureOptions.topics} series={journalismStructureOptions.series} canAssign={journalismStructureOptions.canAssign} /> : null}
               {task.journalism && capabilities.journalismMetadataUpdate ? <JournalismMetadataEditor journalism={task.journalism} taskId={task.id} workKinds={journalismWorkKinds} workKindsLoadFailed={journalismWorkKindsLoadFailed} /> : null}
               {task.journalism && capabilities.journalismPublicationManage ? <JournalismPublicationControls journalism={task.journalism} taskId={task.id} /> : null}
