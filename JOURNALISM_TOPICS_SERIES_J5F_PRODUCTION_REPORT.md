@@ -1,8 +1,8 @@
 # Journalism Topics / Series J5F Production Report
 
-Status: **J5F = MIGRATED + ACTIVATED / OWNER UI SMOKE PENDING**
+Status: **J5F = DONE**
 
-Journalism J5 remains open until the owner completes an authenticated UI smoke. No production Topic, Series, membership, reorder, Task, or fabricated session was created by this run.
+Owner authenticated UI smoke has now passed. Journalism J5 is closed. No additional production data was created by this closure checkpoint.
 
 ## A. Approval and provenance
 
@@ -89,12 +89,38 @@ Thirty-second stability window passed: service remained active, `NRestarts` stay
 
 Application-only rollback is prepared by switching the systemd release drop-in back to the preserved J4C release. No automatic database rollback is indicated or performed. The database backup and evidence directory above are preserved for an approved recovery procedure if a real DB/security failure is later identified.
 
-## K. Owner UI smoke pending
+## K. Owner UI smoke scope
 
-The owner must perform the authenticated, clearly labelled production UI smoke for Topic/Series create/edit/archive, Task attach/detach, filters, permission-aware rendering, ordering (only with safe existing test Tasks), and J4 regressions. This run intentionally stopped before those mutations.
+The earlier activation checkpoint intentionally stopped before owner-authenticated mutations. The owner subsequently completed the approved UI smoke, recorded below, without any fabricated session.
+
+## L. Final owner authenticated UI smoke closure
+
+The owner reported PASS for the authenticated production UI smoke:
+
+- Topic management: `/journalism/structures` access, Topic create/edit, and scoped ownership behavior passed.
+- Series management: Series create/edit and compatible Topic parent behavior passed.
+- Task Topic association: attach, authoritative refresh, and detach passed.
+- Task Series association: attach, membership/position rendering, and detach passed.
+- Task Center filters: Topic and Series filters, server-side filtering, Journalism-only implication, and clearing when switching back to normal work passed.
+- Permission-aware UI: effective manage/assign permission rendering passed; no role-name-only client authorization was observed.
+- Normal Task regression: normal Task behavior, absence of Journalism structure controls, and normal `/tasks/assign` behavior passed.
+- J4 Journalism regression: Journalism create, metadata edit, publication scheduling/cancel behavior, and publication-status UI passed.
+- Series reorder production smoke: **DEFERRED BY OWNER**. The owner did not explicitly test production reorder with two safe Journalism Tasks; isolated order/concurrency coverage already passed, and no extra production data was created solely for reorder.
+- Owner-created test data disposition: final read-only counts are 0 Topics, 0 Series, 0 Topic-task associations, and 0 Series items, so no J5 structure test rows remain. This closure checkpoint performed no deletion or cleanup and does not infer the owner's earlier cleanup method.
+
+## M. Final closure decision
+
+Final read-only health and security checks remain green: service active, `NRestarts=0`, active J5E WorkingDirectory, `/login=200`, anonymous `/api/tasks=401`, no fatal/restart/500 loop, RBAC exactly 21 permissions / 140 grants / 5354 canonical bytes, and canonical hash `99b3a0991ffd411825e188a5acbc1b67390c96763ff86b58c7197347f0148c3a`. The four J5 tables remain RLS-protected and all J5C/J5D RPC ACLs/search paths remain correct. The migration ledger remains unchanged. Rollback artifacts remain preserved.
+
+Closure is report-only. No application source, migration, schema, RPC, permission, grant, systemd release, or production database change was made in this checkpoint.
 
 ## Final status
 
-**J5F = MIGRATED + ACTIVATED / OWNER UI SMOKE PENDING**
+**J5B = DONE**  
+**J5C = DONE**  
+**J5D = DONE**  
+**J5E = DONE**  
+**J5F = DONE**
 
-**JOURNALISM J5 = NOT YET CLOSED**
+**JOURNALISM J5 = DONE**  
+**JOURNALISM TOPICS / SERIES V1 = PRODUCTION COMPLETE**
