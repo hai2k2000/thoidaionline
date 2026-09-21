@@ -149,9 +149,8 @@ Personal Plan the new workflow.
                   +------------------+                |
                   |     APPROVED    | --edit--------+
                   +--------+---------+
-                           | reject is not valid from approved
+                           | (review action is not valid)
                            |
-                           v
                   +------------------+
                   |     REJECTED     | --edit/resubmit-->
                   +------------------+
@@ -245,6 +244,9 @@ New Personal Plan create/update requests require:
 ```
 
 The existing `id` field remains optional for create and identifies an edit.
+When `id` is present, `workflowRevision` is required and must match the row's
+current revision; a mismatch returns HTTP 409. The revision is never accepted
+from a client as an authority to bypass authorization.
 Participant ownership behavior remains unchanged: non-admin Personal Plans are
 owned by the authenticated creator; admin behavior remains as currently
 implemented.
@@ -396,6 +398,7 @@ the row's current department scope. The server remains authoritative.
 - review of non-pending row returns conflict;
 - rejection requires and persists a reason;
 - stale workflow revision returns 409;
+- stale edit revision returns 409 without changing the row;
 - concurrent/double review permits only one success and preserves the winning
   audit event;
 - unrelated calendar records remain unaffected.
