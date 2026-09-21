@@ -22,8 +22,10 @@ set -Eeuo pipefail
 : "${THOIDAI_ENV_VERIFY_BIN:=/opt/ops/thoidai-work/verify-release-env.sh}"
 : "${THOIDAI_TCP_HOST:=127.0.0.1}"
 : "${THOIDAI_TCP_PORT:=3001}"
-: "${THOIDAI_READY_TIMEOUT_SEC:=15}"
+: "${THOIDAI_READY_TIMEOUT_SEC:=30}"
 : "${THOIDAI_READY_OBSERVATION_SEC:=5}"
+: "${THOIDAI_READY_POLL_INTERVAL_SEC:=0.5}"
+: "${THOIDAI_TCP_PROBE_TIMEOUT_SEC:=1}"
 
 die() { echo "ERROR: $*" >&2; return 1; }
 log_event() { printf '%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
@@ -131,24 +133,61 @@ systemd_property() {
 
 tcp_ready() {
   if [[ -n "$THOIDAI_TCP_CHECK_BIN" ]]; then
-    "$THOIDAI_TCP_CHECK_BIN" "$THOIDAI_TCP_HOST" "$THOIDAI_TCP_PORT" "$THOIDAI_READY_TIMEOUT_SEC"
+    "$THOIDAI_TCP_CHECK_BIN" "$THOIDAI_TCP_HOST" "$THOIDAI_TCP_PORT" "$THOIDAI_TCP_PROBE_TIMEOUT_SEC"
     return
   fi
-  timeout "$THOIDAI_READY_TIMEOUT_SEC" bash -c "</dev/tcp/$THOIDAI_TCP_HOST/$THOIDAI_TCP_PORT"
+  timeout "$THOIDAI_TCP_PROBE_TIMEOUT_SEC" bash -c "</dev/tcp/$THOIDAI_TCP_HOST/$THOIDAI_TCP_PORT"
 }
 
 migration_readiness_check() {
   local expected_current actual_workdir expected_workdir before_restarts after_restarts login_code
+  local started_ms deadline_ms now_ms_value elapsed_ms active_state sub_state
+  local baseline_pid current_pid last_tcp='not-checked' last_http='not-checked'
   expected_current="$THOIDAI_RELEASE_ROOT/current"
+  started_ms=$(date +%s%3N)
+  deadline_ms=$((started_ms + THOIDAI_READY_TIMEOUT_SEC * 1000))
+  baseline_pid=$(systemd_property MainPID || printf '0')
+  before_restarts=$(systemd_property NRestarts || printf 'unknown')
 
-  [[ "$(systemd_property ActiveState)" == active ]] || { die "readiness: service is not active"; return 1; }
-  [[ "$(systemd_property SubState)" == running ]] || { die "readiness: service is not running"; return 1; }
+  while :; do
+    now_ms_value=$(date +%s%3N)
+    elapsed_ms=$((now_ms_value - started_ms))
+    active_state=$(systemd_property ActiveState || printf 'unknown')
+    sub_state=$(systemd_property SubState || printf 'unknown')
+    current_pid=$(systemd_property MainPID || printf '0')
+    after_restarts=$(systemd_property NRestarts || printf 'unknown')
 
-  tcp_ready || { die "readiness: TCP $THOIDAI_TCP_HOST:$THOIDAI_TCP_PORT is not ready"; return 1; }
-  login_code=$("$THOIDAI_CURL_BIN" -sS --max-time "$THOIDAI_READY_TIMEOUT_SEC" -o /dev/null -w '%{http_code}' "$THOIDAI_HEALTH_URL") || {
-    die "readiness: $THOIDAI_HEALTH_URL request failed"; return 1;
+    [[ "$active_state" == failed || "$sub_state" == failed ]] && {
+      die "readiness: service entered failed state active=$active_state sub=$sub_state elapsed_ms=$elapsed_ms MainPID=$current_pid NRestarts=$after_restarts"; return 1;
+    }
+    if [[ "$before_restarts" =~ ^[0-9]+$ && "$after_restarts" =~ ^[0-9]+$ ]] && (( after_restarts > before_restarts )); then
+      die "readiness: NRestarts increased during startup elapsed_ms=$elapsed_ms ($before_restarts -> $after_restarts)"; return 1;
+    fi
+
+    if [[ "$active_state" == active && "$sub_state" == running ]]; then
+      if tcp_ready; then
+        last_tcp=ready
+        login_code=$("$THOIDAI_CURL_BIN" -sS --max-time "$THOIDAI_TCP_PROBE_TIMEOUT_SEC" -o /dev/null -w '%{http_code}' "$THOIDAI_HEALTH_URL" 2>/dev/null) || login_code=connection-error
+        last_http=$login_code
+        [[ "$login_code" == 200 ]] && break
+      else
+        last_tcp=refused
+      fi
+    else
+      last_tcp="service-$active_state/$sub_state"
+      last_http=not-attempted
+    fi
+
+    (( now_ms_value >= deadline_ms )) && {
+      die "readiness: timeout elapsed_ms=$elapsed_ms last_tcp=$last_tcp last_http=$last_http active=$active_state sub=$sub_state MainPID=$current_pid NRestarts=$after_restarts"; return 1;
+    }
+    sleep "$THOIDAI_READY_POLL_INTERVAL_SEC"
+  done
+
+  [[ "$current_pid" =~ ^[1-9][0-9]*$ ]] || { die "readiness: MainPID is invalid after startup: $current_pid"; return 1; }
+  [[ "$baseline_pid" == 0 || "$baseline_pid" == "$current_pid" ]] || {
+    die "readiness: MainPID changed during startup ($baseline_pid -> $current_pid)"; return 1;
   }
-  [[ "$login_code" == 200 ]] || { die "readiness: $THOIDAI_HEALTH_URL returned HTTP $login_code, expected 200"; return 1; }
 
   actual_workdir=$(systemd_property WorkingDirectory)
   [[ "$actual_workdir" == "$expected_current" ]] || {
@@ -166,11 +205,14 @@ migration_readiness_check() {
   [[ "$(systemd_property TasksMax)" == 250 ]] || { die "readiness: TasksMax is not 250"; return 1; }
 
   before_restarts=$(systemd_property NRestarts)
+  baseline_pid=$current_pid
   sleep "$THOIDAI_READY_OBSERVATION_SEC"
   after_restarts=$(systemd_property NRestarts)
   [[ "$before_restarts" == "$after_restarts" ]] || {
     die "readiness: NRestarts changed during ${THOIDAI_READY_OBSERVATION_SEC}s observation ($before_restarts -> $after_restarts)"; return 1;
   }
+  current_pid=$(systemd_property MainPID)
+  [[ "$current_pid" == "$baseline_pid" ]] || { die "readiness: MainPID changed during stability observation ($baseline_pid -> $current_pid)"; return 1; }
   log_event "READINESS_PASS service=$THOIDAI_SERVICE current=$expected_workdir nrestarts=$after_restarts"
 }
 

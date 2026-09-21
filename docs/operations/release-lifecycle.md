@@ -118,7 +118,7 @@ test "$(wc -l < "$BACKUP/dropin-paths.txt")" -eq "$(cat "$BACKUP/dropin-count.tx
 
 Do not leave stable migration drop-ins beside the restored captured set: they must already have been moved to the failed-migration evidence directory before these restore commands. Then run `daemon-reload`, restart once, and execute the same readiness checks against the recorded pre-migration release path.
 
-After restart, run `scripts/production/migration-readiness.sh`. It must verify active/running state, bounded TCP readiness on `127.0.0.1:3001`, `/login` HTTP 200, unchanged `NRestarts` over the observation window, `WorkingDirectory` resolving through `/opt/releases/thoidai-work/current`, release environment validation, and effective `MemoryHigh=500M`, `MemoryMax=650M`, `TasksMax=250`.
+Because the service is `Type=simple`, `active/running` is not application readiness. After restart, run `scripts/production/migration-readiness.sh`. It records a timestamp, MainPID, and NRestarts baseline, then polls TCP and `/login` at a bounded interval (default total timeout 30 seconds in the migration window) instead of treating the first connection refusal as terminal. It fails immediately for a failed service state or restart-loop signal, and fails with elapsed time, last TCP/HTTP result, service state, MainPID, and NRestarts when the deadline expires. Once TCP and HTTP are healthy it verifies unchanged NRestarts/MainPID over the stability window, `WorkingDirectory` resolving through `/opt/releases/thoidai-work/current`, release environment validation, and effective `MemoryHigh=500M`, `MemoryMax=650M`, `TasksMax=250`.
 
 ## Legacy safe-deploy
 
