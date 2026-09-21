@@ -11,7 +11,8 @@ served by `/work-schedule/staff` and `/api/work-schedule`. Personal Plans are
 the creator-owned `work_schedules` records created through the staff flow. The
 existing organization calendar/leadership records and unrelated
 `work_schedules` consumers must not inherit the new approval requirement by
-accident.
+accident. Because the current table has no reliable discriminator, the
+implementation must add one before applying approval predicates.
 
 The implementation will:
 
@@ -48,6 +49,13 @@ The current Personal Plan flow uses:
 - leave-request RPCs and `audit_logs` as the closest existing approval/audit
   pattern.
 
+The current `work_schedules` table does **not** reliably distinguish a staff
+Personal Plan from an organization calendar record: `plan_type`,
+`participant_ids`, and `created_by` are insufficient because organization
+records can also have one participant or be created by a leader. Approval must
+therefore be gated by a new persisted discriminator, not inferred from those
+fields.
+
 The repository currently contains unrelated uncommitted changes. The feature
 branch must preserve them; implementation commits must include only files in
 the approved feature scope.
@@ -66,11 +74,29 @@ Add one migration with idempotent `add column if not exists` operations:
 | `reviewed_by` | `uuid` | nullable FK to `staff_users(id)` | Actor who approved/rejected the current submission |
 | `reviewed_at` | `timestamptz` | nullable | Review time for the current submission |
 | `review_note` | `text` | nullable | Mandatory rejection reason; optional approval note |
+| `schedule_scope` | `text` | nullable for legacy rows; new values `personal` or `organization` | Exact approval boundary |
+| `workflow_revision` | `bigint` | not null default `0` | Optimistic concurrency token for edits/reviews |
 
 Add a check constraint allowing exactly `PENDING_APPROVAL`, `APPROVED`, or
 `REJECTED`, plus indexes supporting creator/status and approver/status queues.
 The existing date/time columns remain SQL `date` and SQL `time`; no UTC
 timestamp column is introduced.
+
+`schedule_scope = 'personal'` is the only value subject to this approval
+workflow. `schedule_scope = 'organization'` is used by the existing leadership/
+admin calendar flow and never receives Personal Plan approval requirements.
+`NULL` means a legacy row whose historical origin cannot be proven from the
+existing schema; it remains readable/effective and is treated as approved for
+display, but is not placed in the Personal Plan approval queue. New routes must
+always write an explicit value and must never default a new row to NULL.
+
+The Personal Plan endpoint is the authoritative writer for
+`schedule_scope = 'personal'`; the existing organization-calendar writer must
+write `schedule_scope = 'organization'`. A client-supplied scope is ignored or
+rejected unless it matches the server route/operation. This explicit column
+and writer boundary are the discriminator that prevents unrelated
+`work_schedules`, office calendar records, and `online_work_schedules` from
+requiring approval.
 
 ### 3.2 Approval history
 
@@ -91,15 +117,23 @@ review fields because the previous review remains in `audit_logs`.
 
 The migration must:
 
-1. add nullable approval columns;
+1. add nullable approval columns and nullable `schedule_scope`;
 2. set existing rows with no approval metadata to `APPROVED`;
-3. leave existing dates, times, participants, creator, and notes unchanged;
-4. add defaults/constraints for future rows after the backfill;
-5. avoid rejecting or deleting existing rows.
+3. set `workflow_revision = 0` for every existing row;
+4. leave `schedule_scope` NULL for historical rows because the current data
+   cannot prove whether each row came from the staff or organization flow;
+5. leave existing dates, times, participants, creator, and notes unchanged;
+6. add approval/status constraints and indexes for future rows;
+7. avoid rejecting or deleting existing rows.
 
 Legacy rows are readable/effective immediately and do not require a new review.
-They may be edited by their existing authorized creator/admin rules; a material
-edit creates a new pending submission and a new audit event.
+They may be edited by their existing authorized creator/admin rules. A legacy
+row edited through the Personal Plan endpoint is explicitly promoted to
+`schedule_scope = 'personal'`; a material edit then creates a new pending
+submission and audit event. A legacy row edited through the organization
+endpoint remains NULL/legacy and does not enter approval. This avoids silently
+misclassifying historical organization rows while giving an explicitly opened
+Personal Plan the new workflow.
 
 ## 4. Approval state machine
 
@@ -137,6 +171,12 @@ Rules:
   approval action.
 - Self-approval is rejected even when the creator is a department manager.
 - Approval/rejection of a non-pending row returns a conflict response.
+- A review action must include the row's current `workflow_revision` observed by
+  the reviewer. The locked review operation compares it and returns conflict
+  on mismatch; a successful review increments the revision.
+- Every material edit increments the revision. If an edit and review race, row
+  locking plus the revision comparison makes exactly one operation win and the
+  stale operation returns conflict rather than approving an older snapshot.
 
 ## 5. Approver resolution and authorization
 
@@ -171,6 +211,19 @@ crafted request cannot bypass the UI scope.
 Audit events use the authenticated actor ID and include the action name,
 entity ID, previous state, and new state. Rejection reasons are retained in the
 audit payload even after a later resubmission.
+
+The minimum required action names are:
+
+- `create_personal_plan`;
+- `submit_personal_plan` for a new or resubmitted pending revision;
+- `edit_personal_plan` for a material or non-material edit;
+- `approve_personal_plan`;
+- `reject_personal_plan`;
+- `promote_legacy_personal_plan` when a NULL-scope legacy row is first edited
+  through the Personal Plan endpoint.
+
+Each event records the workflow revision before and after the operation,
+`schedule_scope`, approval status, actor ID, and any rejection/approval note.
 
 ## 6. Date/time model and validation
 
@@ -223,16 +276,22 @@ the client cannot create a row that the server would later reject.
 
 ### 7.1 Create/update
 
-Keep `POST /api/work-schedule` as the Personal Plan create/update endpoint.
-The route validates the request, identifies the authenticated creator, and
-delegates to a transactional repository/RPC operation that:
+Use an explicit Personal Plan writer boundary (for example
+`/api/work-schedule/personal`) for create/update. Keep the existing
+organization-calendar writer separate and unchanged except for writing
+`schedule_scope = 'organization'`. The Personal Plan route validates the
+request, identifies the authenticated creator, and delegates to a transactional
+repository/RPC operation that:
 
 1. verifies ownership/admin scope for edits;
 2. validates the date/time interval;
 3. determines whether material fields changed;
-4. resolves `approver_id` on new/resubmitted submissions;
-5. sets or preserves approval state according to the state machine;
-6. writes the row and audit event atomically.
+4. verifies/sets the explicit `schedule_scope = 'personal'` discriminator;
+5. resolves `approver_id` on new/resubmitted submissions;
+6. compares the caller's expected `workflow_revision` for edits and returns
+   conflict on mismatch;
+7. sets or preserves approval state according to the state machine;
+8. increments the revision and writes the row and audit event atomically.
 
 Successful responses continue returning `{ row }`, with approval fields
 included. Invalid input returns `{ code: "invalid_request" }` with HTTP 400.
@@ -242,7 +301,8 @@ conventions.
 
 ### 7.2 Review
 
-Add a focused review action without broadening the existing delete contract:
+Add a focused Personal Plan review action without broadening the existing
+delete contract:
 
 ```http
 PATCH /api/work-schedule
@@ -251,6 +311,7 @@ Content-Type: application/json
 {
   "id": "uuid",
   "action": "approve" | "reject",
+  "workflowRevision": 7,
   "note": "required for reject"
 }
 ```
@@ -264,10 +325,12 @@ scope, and global-role scope before updating and auditing.
 
 `GET /api/work-schedule` remains compatible with existing range/scope query
 parameters. Rows gain approval metadata and reviewer/approver display joins as
-available. The staff view continues to return the creator's own plans when
-`scope=self`; leadership views may receive a pending approval queue filtered by
-authorized department/global scope. No unrelated calendar record is hidden
-merely because it lacks Personal Plan approval metadata.
+available. The Personal Plan view uses an explicit personal scope/filter; the
+organization calendar view uses the organization scope/filter. The staff view
+continues to return the creator's own plans when `scope=self`; leadership views
+may receive a pending approval queue filtered by authorized
+department/global scope. No unrelated calendar record is hidden or made
+pending merely because it lacks Personal Plan approval metadata.
 
 ### 7.4 Error mapping
 
@@ -290,10 +353,10 @@ do not alter unrelated RPC error mappings.
 
 Each row displays a visible badge:
 
-- `Chờ duyệt` for `PENDING_APPROVAL`;
-- `Đã duyệt` for `APPROVED`;
-- `Từ chối` for `REJECTED`;
-- legacy rows render `Đã duyệt` after migration backfill.
+- `Ch? duy?t` for `PENDING_APPROVAL`;
+- `?? duy?t` for `APPROVED`;
+- `T? ch?i` for `REJECTED`;
+- legacy rows render `?? duy?t` after migration backfill.
 
 When present, show expected approver, reviewer, review time, and rejection
 reason. A rejected plan remains editable by its creator and can be resubmitted.
@@ -332,6 +395,9 @@ the row's current department scope. The server remains authoritative.
 - non-material edit leaves approval state unchanged;
 - review of non-pending row returns conflict;
 - rejection requires and persists a reason;
+- stale workflow revision returns 409;
+- concurrent/double review permits only one success and preserves the winning
+  audit event;
 - unrelated calendar records remain unaffected.
 
 ### UI/regression tests
@@ -364,3 +430,18 @@ drop approval columns automatically because audit history must remain
 recoverable. Existing legacy rows remain readable throughout.
 
 ## 11. Remaining design decisions
+
+No owner decision remains for the approved scope. The following are explicit
+implementation details to keep consistent with this specification:
+
+- use the existing `audit_logs` mechanism for durable approval history;
+- use `departments.manager_id` at submission time, with NULL allowed;
+- allow only the three approved global roles to bypass department scope;
+- gate approval exclusively on persisted `schedule_scope = 'personal'`; leave
+  ambiguous legacy rows NULL and effective-approved until explicitly opened in
+  the Personal Plan flow;
+- use `workflow_revision` compare-and-swap plus row locking for stale/double
+  review protection;
+- keep unrelated `work_schedules` records outside the Personal Plan workflow;
+- do not run migrations, deploy, or modify production as part of this spec
+  task.
