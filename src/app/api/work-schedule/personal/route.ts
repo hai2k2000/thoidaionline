@@ -1,12 +1,12 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
-import { validateLocalPlanInterval } from "@/lib/personalPlanValidation";
+import { isValidLocalDate, validateLocalPlanInterval } from "@/lib/personalPlanValidation";
 import { workScheduleRepository, type WorkScheduleInput } from "@/lib/workScheduleRepository";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 function validRange(from: string, to: string) {
-  return DATE.test(from) && DATE.test(to) && from <= to;
+  return isValidLocalDate(from) && isValidLocalDate(to) && from <= to;
 }
 
 function parsedInput(body: Record<string, unknown>): WorkScheduleInput | null {
@@ -94,4 +94,17 @@ export async function PATCH(request: Request) {
   }
   const result = await workScheduleRepository.reviewPersonal(guard.actor.id, id, action, note, workflowRevision);
   return result.ok ? apiJson({ row: result.row }) : rpcFailure(result.error);
+}
+
+export async function DELETE(request: Request) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return apiError("invalid_request", 400);
+  const result = await workScheduleRepository.removePersonal(
+    guard.actor.id,
+    id,
+    guard.actor.role_code === "admin",
+  );
+  return result.ok ? apiJson({ ok: true }) : rpcFailure(result.error);
 }

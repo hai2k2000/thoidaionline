@@ -70,6 +70,7 @@ declare
   v_status text;
   v_action text;
   v_revision bigint;
+  v_owner uuid;
 begin
   select u.department_id, lower(r.code)
   into v_department, v_role
@@ -91,9 +92,16 @@ begin
 
   select d.manager_id into v_manager
   from public.departments d
+  left join public.staff_users manager on manager.id=d.manager_id and manager.active=true
   where d.id=v_department and d.active=true;
+  if v_manager is not null and not exists (select 1 from public.staff_users where id=v_manager and active=true) then
+    v_manager := null;
+  end if;
 
   if p_id is null then
+    if p_participant_ids is distinct from array[p_actor]::uuid[] then
+      raise exception 'personal plans may only include the creator' using errcode='42501';
+    end if;
     insert into public.work_schedules(
       work_date,end_date,plan_type,start_time,end_time,title,location,notes,
       participant_ids,created_by,schedule_scope,approval_status,approver_id,
@@ -101,7 +109,7 @@ begin
     ) values (
       p_work_date,p_end_date,p_plan_type,p_start_time,p_end_time,trim(p_title),
       nullif(trim(p_location),''),nullif(trim(p_notes),''),
-      coalesce(p_participant_ids,'{}'),p_actor,'personal','PENDING_APPROVAL',
+      array[p_actor]::uuid[],p_actor,'personal','PENDING_APPROVAL',
       v_manager,now(),1,now()
     ) returning * into v_row;
     insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data)
@@ -121,6 +129,7 @@ begin
   if v_old.created_by <> p_actor and v_role <> 'admin' then
     raise exception 'forbidden' using errcode='42501';
   end if;
+  v_owner := v_old.created_by;
   if v_old.schedule_scope = 'organization' then
     raise exception 'forbidden' using errcode='42501';
   end if;
@@ -136,7 +145,7 @@ begin
     or v_old.title is distinct from trim(p_title)
     or v_old.location is distinct from nullif(trim(p_location),'')
     or v_old.notes is distinct from nullif(trim(p_notes),'')
-    or v_old.participant_ids is distinct from coalesce(p_participant_ids,'{}');
+    or v_old.participant_ids is distinct from array[v_owner]::uuid[];
 
   v_scope := 'personal';
   v_status := v_old.approval_status;
@@ -153,7 +162,7 @@ begin
   set work_date=p_work_date,end_date=p_end_date,plan_type=p_plan_type,
       start_time=p_start_time,end_time=p_end_time,title=trim(p_title),
       location=nullif(trim(p_location),''),notes=nullif(trim(p_notes),''),
-      participant_ids=coalesce(p_participant_ids,'{}'),schedule_scope=v_scope,
+      participant_ids=array[v_owner]::uuid[],schedule_scope=v_scope,
       approval_status=v_status,
       approver_id=case when v_status='PENDING_APPROVAL' then v_manager else v_old.approver_id end,
       submitted_at=case when v_status='PENDING_APPROVAL' then now() else v_old.submitted_at end,
@@ -215,8 +224,10 @@ begin
 
   select department_id into v_creator_department
   from public.staff_users where id=v_old.created_by and active=true;
-  select manager_id into v_manager
-  from public.departments where id=v_creator_department and active=true;
+  select d.manager_id into v_manager
+  from public.departments d
+  join public.staff_users manager on manager.id=d.manager_id and manager.active=true
+  where d.id=v_creator_department and d.active=true;
 
   if v_role not in ('admin','tong_bien_tap','pho_tong_bien_tap')
      and (v_manager is distinct from p_actor or v_actor_department is distinct from v_creator_department) then

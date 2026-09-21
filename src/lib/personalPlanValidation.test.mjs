@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { validateLocalPlanInterval, isMaterialPersonalPlanChange } from "./personalPlanValidation.ts";
+import { validateLocalPlanInterval, isMaterialPersonalPlanChange, isValidLocalDate } from "./personalPlanValidation.ts";
+
+test("validates standalone local calendar dates without UTC parsing", () => {
+  assert.equal(isValidLocalDate("2026-02-28"), true);
+  assert.equal(isValidLocalDate("2026-02-29"), false);
+  assert.equal(isValidLocalDate("2028-02-29"), true);
+});
 
 test("accepts a valid same-day Vietnam-local interval", () => {
   assert.deepEqual(validateLocalPlanInterval({

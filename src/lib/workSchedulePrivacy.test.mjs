@@ -20,7 +20,8 @@ test("employee plan page defaults to own plans and can switch to shared scope", 
   assert.match(staffPage, /workScheduleRepository\.allPeople\(\)/);
   assert.match(staffPage, /scheduleScope="self"/);
   assert.match(staffPage, /Kế hoạch cá nhân/);
-  assert.match(shell, /viewAll \? "" : "&scope=self"/);
+  assert.match(shell, /\/api\/work-schedule\/personal/);
+  assert.match(shell, /\/api\/work-schedule/);
   assert.match(shell, /Kế hoạch toàn cơ quan/);
   assert.match(shell, /viewAll/);
 });

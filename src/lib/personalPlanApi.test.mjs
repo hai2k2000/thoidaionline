@@ -21,6 +21,7 @@ test("Personal Plan API validates local date/time and maps stale review conflict
   assert.match(route, /invalid_request/);
   assert.match(route, /rpcFailure/);
   assert.doesNotMatch(route, /reviewed_by/);
+  assert.match(route, /isValidLocalDate/);
 });
 
 test("Personal Plan API never trusts client reviewer or scope fields", () => {

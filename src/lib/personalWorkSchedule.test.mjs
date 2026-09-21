@@ -15,16 +15,15 @@ test("personal plan page is public to authenticated users and is named correctly
   assert.match(page, /Lịch làm việc, công tác và sự kiện của bạn/);
 });
 
-test("work schedule API allows authenticated users to create only their own plan", () => {
-  const route = read("../app/api/work-schedule/route.ts");
+test("Personal Plan API allows authenticated users to create only their own plan", () => {
+  const route = read("../app/api/work-schedule/personal/route.ts");
   const repository = read("./workScheduleRepository.ts");
-  assert.doesNotMatch(route, /guard\.actor\.role_code !== "admin"/);
+  assert.match(route, /requireMutationActor/);
   assert.match(route, /guard\.actor\.id/);
-  assert.match(route, /requestedParticipants\.length > 0/);
-  assert.match(route, /participantIds.*guard\.actor\.id|guard\.actor\.id.*participantIds/);
+  assert.match(route, /input\.participantIds = \[guard\.actor\.id\]/);
   assert.match(route, /endDate/);
   assert.match(route, /planType/);
-  assert.match(repository, /eq\("created_by", actorId\)/);
+  assert.match(repository, /rpc\("api_create_personal_work_schedule"/);
 });
 
 test("personal plan UI lets the creator edit or delete their own plan", () => {
@@ -38,28 +37,26 @@ test("personal plan UI lets the creator edit or delete their own plan", () => {
   assert.match(shell, /viewAll/);
 });
 
-test("personal plan form only offers date-range trips and timed single-day events", () => {
+test("personal plan form offers date-range trips and single-day events with required times", () => {
   const shell = read("../components/WorkSchedulePageShell.tsx");
   assert.doesNotMatch(shell, /<option value="work">/);
   assert.match(shell, /<option value="business">Đi công tác<\/option>/);
   assert.match(shell, /<option value="event">Sự kiện<\/option>/);
   assert.match(shell, /planType === "event"/);
   assert.match(shell, /Ngày sự kiện/);
-  assert.match(shell, /planType === "event"[\s\S]*name="startTime"/);
-  assert.match(shell, /planType === "event"[\s\S]*name="endTime"/);
+  assert.match(shell, /name="startTime" type="time" required/);
+  assert.match(shell, /name="endTime" type="time" required/);
   assert.match(shell, /Từ giờ/);
   assert.match(shell, /Đến giờ/);
 });
 
-test("work schedule API rejects work plans and requires valid event hours", () => {
-  const route = read("../app/api/work-schedule/route.ts");
-  assert.match(route, /body\.planType !== "business" && body\.planType !== "event"/);
-  assert.match(route, /planType === "event" && endDate !== workDate/);
-  assert.match(route, /time\.test\(startTime\)/);
-  assert.match(route, /time\.test\(endTime\)/);
-  assert.match(route, /endTime <= startTime/);
-  assert.match(route, /startTime: planType === "event" \? startTime : null/);
-  assert.match(route, /endTime: planType === "event" \? endTime : null/);
+test("Personal Plan API requires valid local dates and HH:mm times for every plan", () => {
+  const route = read("../app/api/work-schedule/personal/route.ts");
+  assert.match(route, /validateLocalPlanInterval/);
+  assert.match(route, /TIME\.test\(startTime\)/);
+  assert.match(route, /TIME\.test\(endTime\)/);
+  assert.match(route, /startTime,/);
+  assert.match(route, /endTime,/);
 });
 
 test("work schedule admin form sends a valid business plan payload", () => {

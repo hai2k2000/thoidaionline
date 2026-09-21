@@ -25,6 +25,10 @@ function parseDate(value: string) {
   return { year, month, day };
 }
 
+export function isValidLocalDate(value: string) {
+  return parseDate(value) !== null;
+}
+
 function civilDayNumber(year: number, month: number, day: number) {
   const adjustedYear = year - (month <= 2 ? 1 : 0);
   const era = Math.floor(adjustedYear / 400);

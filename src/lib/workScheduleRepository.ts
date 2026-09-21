@@ -20,7 +20,7 @@ const fields = [
   "id,work_date,end_date,plan_type,start_time,end_time,title,location,notes",
   "participant_ids,created_by,schedule_scope,approval_status,approver_id",
   "reviewed_by,reviewed_at,review_note,submitted_at,workflow_revision",
-  "creator:staff_users!work_schedules_created_by_fkey(full_name,department_id)",
+  "creator:staff_users!work_schedules_created_by_fkey!inner(full_name,department_id)",
   "approver:staff_users!work_schedules_approver_id_fkey(full_name)",
   "reviewer:staff_users!work_schedules_reviewed_by_fkey(full_name)",
 ].join(",");
@@ -116,7 +116,7 @@ export const workScheduleRepository = {
       updated_at: new Date().toISOString(),
       ...(input.id ? {} : { created_by: actorId }),
     };
-    let query = input.id
+    const query = input.id
       ? serverSupabase.from("work_schedules").update(payload).eq("id", input.id)
         .or("schedule_scope.eq.organization,schedule_scope.is.null")
       : serverSupabase.from("work_schedules").insert({ ...payload, created_by: actorId });
