@@ -157,6 +157,30 @@ Next:
 - Monitor the first scheduled 18:30 reconciliation run and reconcile any additional device users if the hardware roster changes.
 - Existing dev-tooling audit findings, stale UI contract test, and non-root service follow-up remain separate tasks.
 
+## Bounded Release Lifecycle — Implementation Checkpoint
+
+Current Phase: COMPLETE — scripts, isolated tests, and production retention dry-run
+
+Completed:
+- Added shared release safety primitives, atomic lifecycle link handling, exclusive locking, disk headroom guard, release validation, and health checks.
+- Added locked deploy and rollback state machines with exact link snapshot restoration and failed-release forensic protection.
+- Added conservative release retention with dry-run default and explicit apply mode.
+- Added independent conservative Git worktree cleanup with dry-run default.
+- Added a stable future systemd service template and production migration/rollback runbook.
+- Ran production release retention in dry-run mode only; all legacy releases were classified REVIEW and no deletion was selected.
+
+Validation:
+- Focused shell lifecycle tests PASS.
+- Shell syntax checks PASS.
+- Production dry-run excludes `ops-backups` and `build-evidence` and returns no DELETE candidates.
+- Production remains active/running with MainPID 3387259, NRestarts 0, unchanged WorkingDirectory, 15 GB free, and `/login` HTTP 200.
+
+Blockers: none for implementation checkpoint.
+
+Next:
+- Owner review of implementation and the documented systemd migration/rollback plan.
+- Do not migrate systemd, restart/deploy production, create/rotate production lifecycle symlinks, or delete releases/worktrees until separately authorized.
+
 Security milestone 2026-09-14: Supabase Kong, Mailpit, and PostgreSQL bindings restricted to 127.0.0.1. Rollback containers and inspect snapshots retained. Database readiness, schema dump, service health, and production login smoke checks passed. Dependency remediation passed npm audit with zero vulnerabilities; security tests 21/21.
 Current Phase: Journalism J5E Topics / Series UI integration
 Current Task: COMPLETE — scoped management UI, Task detail associations, Task Center filters, Series ordering view, permission-aware rendering, accessibility, and regression validation

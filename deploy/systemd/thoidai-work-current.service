@@ -1,0 +1,50 @@
+[Unit]
+Description=Thoidai Work (Next.js, stable release pointer)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/releases/thoidai-work/current
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=HOME=/var/lib/thoidai-work
+Environment=NPM_CONFIG_CACHE=/var/cache/thoidai-work/npm
+Environment=TASK_RBAC_V2_ENABLED=true
+Environment=ROLE_LIFECYCLE_ENABLED=true
+Environment=TBT_DIRECT_EVALUATION_ENABLED=true
+ExecStartPre=/usr/bin/test -f /opt/releases/thoidai-work/current/.next/BUILD_ID
+ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 3001
+Restart=always
+RestartSec=3
+User=thoidai-work
+Group=thoidai-work
+UMask=0027
+StateDirectory=thoidai-work
+StateDirectoryMode=0750
+CacheDirectory=thoidai-work
+CacheDirectoryMode=0750
+RuntimeDirectory=thoidai-work
+RuntimeDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/opt/thoidai-work/storage /opt/releases/thoidai-work/current/.next/cache /var/lib/thoidai-work /var/cache/thoidai-work /run/thoidai-work
+
+[Install]
+WantedBy=multi-user.target
