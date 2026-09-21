@@ -22,6 +22,14 @@ type Row = {
   notes: string | null;
   participant_ids: string[];
   created_by: string;
+  schedule_scope: "personal" | "organization" | null;
+  approval_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | null;
+  approver?: { full_name?: string } | null;
+  reviewer?: { full_name?: string } | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  workflow_revision: number;
+  creator?: { full_name?: string } | null;
 };
 
 const iso = (date: Date) => date.toISOString().slice(0, 10);
@@ -36,6 +44,10 @@ const role = (person: Person) =>
         : person.job_titles?.code?.startsWith("phong_vien")
           ? "Phóng viên"
           : "Nhân sự";
+
+const approvalLabel = (status: Row["approval_status"]) => status === "PENDING_APPROVAL"
+  ? "Chờ phê duyệt"
+  : status === "REJECTED" ? "Từ chối" : "Đã duyệt";
 
 export default function WorkSchedulePageShell({
   people,
@@ -59,6 +71,7 @@ export default function WorkSchedulePageShell({
   const [personQuery, setPersonQuery] = useState("");
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const [approvalRows, setApprovalRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
@@ -120,13 +133,23 @@ export default function WorkSchedulePageShell({
     const controller = new AbortController();
     setLoading(true);
     setLoadError(false);
-    fetch(`/api/work-schedule?from=${range.from}&to=${range.to}${viewAll ? "" : "&scope=self"}`, { signal: controller.signal })
+    const endpoint = viewAll ? "/api/work-schedule" : "/api/work-schedule/personal";
+    const query = viewAll ? `?from=${range.from}&to=${range.to}` : `?from=${range.from}&to=${range.to}&scope=self`;
+    fetch(`${endpoint}${query}`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((body) => setRows(body.rows ?? []))
       .catch((error) => { if (error?.name !== "AbortError") setLoadError(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [range.from, range.to, retryToken, viewAll]);
+
+  useEffect(() => {
+    if (scheduleScope !== "all") return;
+    fetch("/api/work-schedule/personal?scope=approval")
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((body) => setApprovalRows(body.rows ?? []))
+      .catch(() => setApprovalRows([]));
+  }, [retryToken, scheduleScope]);
 
   useEffect(() => {
     setViewAll(scheduleScope === "all");
@@ -157,23 +180,25 @@ export default function WorkSchedulePageShell({
     setCreateBusy(true);
     setCreateMessage("");
     const form = new FormData(event.currentTarget);
-    const isEvent = planType === "event";
     const workDate = String(form.get("workDate") ?? "");
+    const personalMode = scheduleScope === "self";
     const payload = {
       planType,
       workDate,
-      endDate: isEvent ? workDate : form.get("endDate"),
-      startTime: isEvent ? form.get("startTime") : null,
-      endTime: isEvent ? form.get("endTime") : null,
+      endDate: planType === "event" ? workDate : form.get("endDate"),
+      startTime: form.get("startTime"),
+      endTime: form.get("endTime"),
       title: form.get("title"),
       location: form.get("location"),
       notes: form.get("notes"),
-      ...(editingRow ? { id: editingRow.id } : {}),
+      participantIds: personalMode ? [currentUserId] : selected,
+      ...(editingRow ? { id: editingRow.id, ...(personalMode ? { workflowRevision: editingRow.workflow_revision } : {}) } : {}),
     };
     try {
-      const response = await fetch("/api/work-schedule", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const endpoint = personalMode ? "/api/work-schedule/personal" : "/api/work-schedule";
+      const response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       if (!response.ok) throw new Error();
-      setCreateMessage("Đã tạo kế hoạch.");
+      setCreateMessage(personalMode ? "Đã gửi kế hoạch chờ phê duyệt." : "Đã lưu lịch công tác.");
       event.currentTarget.reset();
       setEditingRow(null);
       setTimeout(() => setCreateOpen(false), 500);
@@ -186,7 +211,18 @@ export default function WorkSchedulePageShell({
   };
   const deletePlan = async (id: string) => {
     if (!window.confirm("Xóa kế hoạch này?")) return;
-    const response = await fetch(`/api/work-schedule?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const endpoint = scheduleScope === "self" ? "/api/work-schedule/personal" : "/api/work-schedule";
+    const response = await fetch(`${endpoint}?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (response.ok) setRetryToken((value) => value + 1);
+  };
+  const reviewPlan = async (row: Row, action: "approve" | "reject") => {
+    const note = action === "reject" ? window.prompt("Lý do từ chối (bắt buộc):", "")?.trim() ?? "" : "";
+    if (action === "reject" && note.length < 3) return;
+    const response = await fetch("/api/work-schedule/personal", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: row.id, action, note, workflowRevision: row.workflow_revision }),
+    });
     if (response.ok) setRetryToken((value) => value + 1);
   };
 
@@ -383,6 +419,16 @@ export default function WorkSchedulePageShell({
               ) : null}
             </div> : null}
           </section>
+          {scheduleScope === "all" && approvalRows.length ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
+            <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ phê duyệt</h2>
+            <div className="mt-3 grid gap-2">
+              {approvalRows.filter((row) => row.created_by !== currentUserId).map((row) => <article key={row.id} className="rounded-lg border bg-white p-3 text-sm">
+                <p className="font-semibold">{row.title}</p>
+                <p className="text-slate-600">{row.work_date} {row.start_time?.slice(0, 5)}-{row.end_time?.slice(0, 5)} · {row.creator?.full_name ?? ""}</p>
+                <div className="mt-2 flex gap-2"><button type="button" onClick={() => void reviewPlan(row, "approve")} className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">Duyệt</button><button type="button" onClick={() => void reviewPlan(row, "reject")} className="rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white">Từ chối</button></div>
+              </article>)}
+            </div>
+          </section> : null}
 
           {loading ? <p className="mt-3 rounded-xl border bg-white p-5 text-sm text-slate-600 shadow-sm">Đang tải lịch công tác...</p> : null}
           {!loading && loadError ? <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><span>Không tải được lịch công tác. Dữ liệu cũ được giữ nguyên để tránh hiển thị nhầm là lịch trống.</span><button type="button" onClick={() => setRetryToken((value) => value + 1)} className="rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold">Thử lại</button></div> : null}
@@ -435,6 +481,14 @@ export default function WorkSchedulePageShell({
                                 <p className="font-semibold">{row.plan_type === "business" ? "Công tác: " : row.plan_type === "event" ? "Sự kiện: " : ""}{row.title}</p>
                                 {row.location ? <p>{row.location}</p> : null}
                                 <p>{names(row.participant_ids)}</p>
+                                {!viewAll ? <div className="mt-2 space-y-1">
+                                  <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${row.approval_status === "REJECTED" ? "bg-red-100 text-red-700" : row.approval_status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>{approvalLabel(row.approval_status)}</span>
+                                  {row.approval_status === "PENDING_APPROVAL" ? <p className="text-amber-800">Kế hoạch chưa có hiệu lực cho đến khi được duyệt.</p> : null}
+                                  {row.approver?.full_name ? <p>Người duyệt dự kiến: {row.approver.full_name}</p> : null}
+                                  {row.reviewer?.full_name ? <p>Người duyệt: {row.reviewer.full_name}</p> : null}
+                                  {row.reviewed_at ? <p>Thời gian duyệt: {new Date(row.reviewed_at).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</p> : null}
+                                  {row.approval_status === "REJECTED" && row.review_note ? <p className="text-red-700">Lý do từ chối: {row.review_note}</p> : null}
+                                </div> : null}
                                 {currentUserId && row.created_by === currentUserId ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => void deletePlan(row.id)} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Xóa kế hoạch</button></div> : null}
                               </article>
                             ))}
@@ -448,15 +502,14 @@ export default function WorkSchedulePageShell({
           {createOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="create-plan-title" onClick={(event) => { if (event.target === event.currentTarget) { setEditingRow(null); setCreateOpen(false); } }}>
             <form key={editingRow?.id ?? "new"} onSubmit={createPlan} className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
               <div className="flex items-center justify-between"><h2 id="create-plan-title" className="text-lg font-semibold">{editingRow ? "Sửa kế hoạch cá nhân" : "Tạo kế hoạch cá nhân"}</h2><button type="button" onClick={() => { setEditingRow(null); setCreateOpen(false); }} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
-              <p className="mt-1 text-sm text-slate-600">Kế hoạch được công khai cho các tài khoản đã đăng nhập. Bạn chỉ có thể tạo và quản lý kế hoạch của mình.</p>
+              <p className="mt-1 text-sm text-slate-600">Kế hoạch mới và kế hoạch đã duyệt sau khi sửa sẽ chuyển sang Chờ phê duyệt. Kế hoạch chờ duyệt chưa có hiệu lực.</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <label className="text-sm font-medium">Loại kế hoạch<select name="planType" value={planType} onChange={(event) => setPlanType(event.target.value as "business" | "event")} className="mt-1 min-h-11 w-full rounded border px-3 py-2"><option value="business">Đi công tác</option><option value="event">Sự kiện</option></select></label>
                 <label className="text-sm font-medium">Tiêu đề<input name="title" required maxLength={500} defaultValue={editingRow?.title ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
                 <label className="text-sm font-medium">{planType === "event" ? "Ngày sự kiện" : "Từ ngày"}<input name="workDate" type="date" required defaultValue={editingRow?.work_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                {planType === "business" ? <label className="text-sm font-medium">Đến ngày<input name="endDate" type="date" required defaultValue={editingRow?.end_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label> : <>
-                  <label className="text-sm font-medium">Từ giờ<input name="startTime" type="time" required defaultValue={editingRow?.start_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                  <label className="text-sm font-medium">Đến giờ<input name="endTime" type="time" required defaultValue={editingRow?.end_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                </>}
+                {planType === "business" ? <label className="text-sm font-medium">Đến ngày<input name="endDate" type="date" required defaultValue={editingRow?.end_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label> : null}
+                <label className="text-sm font-medium">Từ giờ<input name="startTime" type="time" required={scheduleScope === "self" || planType === "event"} defaultValue={editingRow?.start_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
+                <label className="text-sm font-medium">Đến giờ<input name="endTime" type="time" required={scheduleScope === "self" || planType === "event"} defaultValue={editingRow?.end_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
               </div>
               <label className="mt-3 block text-sm font-medium">Địa điểm<input name="location" maxLength={500} defaultValue={editingRow?.location ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
               <label className="mt-3 block text-sm font-medium">Ghi chú<textarea name="notes" maxLength={2000} defaultValue={editingRow?.notes ?? ""} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
