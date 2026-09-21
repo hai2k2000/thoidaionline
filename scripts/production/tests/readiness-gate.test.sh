@@ -5,9 +5,11 @@ ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 BIN="$TMP/bin"
-mkdir -p "$BIN" "$TMP/releases/current-release/.next" "$TMP/releases/current-release/node_modules"
+mkdir -p "$BIN" "$TMP/releases/current-release/.next" "$TMP/releases/current-release/node_modules/.bin"
 printf build-id > "$TMP/releases/current-release/.next/BUILD_ID"
 printf '{}' > "$TMP/releases/current-release/package.json"
+printf '#!/usr/bin/env bash\n' > "$TMP/releases/current-release/node_modules/.bin/next"
+chmod +x "$TMP/releases/current-release/node_modules/.bin/next"
 ln -s "$TMP/releases/current-release" "$TMP/releases/current"
 
 cat > "$BIN/systemctl" <<'EOF'

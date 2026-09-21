@@ -106,6 +106,7 @@ validate_release() {
 validate_bootstrap_release() {
   local release=${1:?release required}
   validate_release "$release" || return 1
+  [[ -x "$release/node_modules/.bin/next" ]] || { die "runtime dependency missing: $release/node_modules/.bin/next"; return 1; }
   [[ -x "$THOIDAI_ENV_VERIFY_BIN" ]] || { die "env verifier missing: $THOIDAI_ENV_VERIFY_BIN"; return 1; }
   "$THOIDAI_ENV_VERIFY_BIN" "$(realpath -m -- "$release")" || { die "release environment validation failed: $release"; return 1; }
 }

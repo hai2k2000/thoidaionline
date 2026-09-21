@@ -4,9 +4,11 @@ set -Eeuo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-mkdir -p "$TMP/releases/valid-release/.next" "$TMP/releases/valid-release/node_modules" "$TMP/outside/.next" "$TMP/outside/node_modules"
+mkdir -p "$TMP/releases/valid-release/.next" "$TMP/releases/valid-release/node_modules/.bin" "$TMP/outside/.next" "$TMP/outside/node_modules/.bin"
 printf build-id > "$TMP/releases/valid-release/.next/BUILD_ID"
 printf '{}' > "$TMP/releases/valid-release/package.json"
+printf '#!/usr/bin/env bash\n' > "$TMP/releases/valid-release/node_modules/.bin/next"
+chmod +x "$TMP/releases/valid-release/node_modules/.bin/next"
 printf build-id > "$TMP/outside/.next/BUILD_ID"
 printf '{}' > "$TMP/outside/package.json"
 
