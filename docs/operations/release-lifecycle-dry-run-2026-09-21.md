@@ -6,7 +6,7 @@ Mode: `release-retention.sh --dry-run`
 
 ## Result
 
-The production dry-run made no changes. All 15 unmanaged release directories were classified `REVIEW legacy-unmanaged` because the systemd migration that establishes `current`, `previous`, and `rollback-2` has not been executed. The scanner excluded `ops-backups` and `build-evidence` from candidates.
+The production dry-run made no changes. All 15 unmanaged release directories were classified `REVIEW legacy-unmanaged` because the systemd migration that establishes `current`, `previous`, and `rollback-2` has not been executed. The scanner excluded `ops-backups` and `build-evidence` from candidates. The release-directory count is distinct from the active systemd drop-in count: production currently has 16 drop-ins.
 
 No release or worktree was deleted. No symlink was created or rotated. No service, systemd unit, database, Docker object, backup, environment file, or credential changed.
 

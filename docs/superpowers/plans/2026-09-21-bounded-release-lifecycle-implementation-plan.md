@@ -57,7 +57,7 @@
 
   Run the same command and require all assertions to pass with no production path access.
 
-- [ ] **Step 5: Commit and push.**
+- [ ] **Step 6: Commit and push.**
 
   ```bash
   git add scripts/production/release-common.sh scripts/production/tests/test_helpers.sh scripts/production/tests/release-common.test.sh PROJECT_STATUS.md
@@ -194,7 +194,7 @@
 
 - [ ] **Step 1: Write a documentation/template contract test.**
 
-  Assert the template contains `current`, the expected stable writable paths, and no timestamped release identifier; assert the runbook includes all 15 current drop-ins in the backup/consolidation procedure and explicitly says migration is not part of this checkpoint.
+  Assert the template contains `current`, the expected stable writable paths, resource limits, hardening directives, and no timestamped release identifier; assert the runbook captures the exact `DropInPaths` set (currently 16) for backup/consolidation and explicitly says migration is not part of this checkpoint.
 
 - [ ] **Step 2: Run the contract test and confirm it fails before files exist.**
 
@@ -212,6 +212,10 @@
   bash scripts/production/tests/systemd-docs.test.sh
   systemd-analyze verify deploy/systemd/thoidai-work-current.service 2>/dev/null || true
   ```
+
+- [ ] **Step 5: Validate migration helpers.**
+
+  Run the focused bootstrap, systemd-capture, and readiness tests. The capture helper must fail closed on a missing captured file or count mismatch; the readiness helper must require TCP, HTTP, stable `NRestarts`, current-path resolution, environment validation, and resource limits.
 
 - [ ] **Step 5: Commit and push.**
 

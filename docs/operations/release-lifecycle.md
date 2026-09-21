@@ -44,9 +44,81 @@ Create a root-owned `.keep` file in a release with a one-line reason when it mus
 
 ## Systemd migration checkpoint
 
-The production migration is not part of the implementation checkpoint. The current production configuration contains 15 accumulated drop-ins. Migration must first back up the base unit, every drop-in, `systemctl cat`, `systemctl show`, checksums, and the current link mapping. It must then consolidate those 15 files into the stable template and one stable feature configuration, run `daemon-reload`, restart once under a controlled window, and verify service state, effective `WorkingDirectory`, symlink targets, and `/login`.
+The production migration is not part of the implementation checkpoint. The audited production configuration contains 16 accumulated drop-ins. Migration must first capture the actual `DropInPaths` from `systemctl show`, copy exactly that captured set plus the base unit, `systemctl cat`, `systemctl show`, checksums, and the current link mapping into a root-only backup outside release retention. The backup is complete only when every captured path exists in the manifest and the manifest count matches the captured count; do not rely on an assumed count. It must then consolidate the 16 files into the stable template and one stable feature configuration, run `daemon-reload`, restart once under a controlled window, and run the bounded readiness gate before accepting the migration.
 
-No release retention deletion occurs during migration. If migration health fails, restore the complete backed-up unit and all 15 drop-ins, daemon-reload, restart, and verify the pre-migration release. The migration backup remains outside release retention.
+The 16 paths active at owner review are:
+
+```text
+10-memory-guard.conf
+100-j6-release.conf
+20-role-lifecycle.conf
+30-checkpoint4-1-release.conf
+40-checkpoint-permission-ui-release.conf
+50-org-rbac-r3-retry-release.conf
+60-j2p-envretry-release.conf
+70-j3c-release.conf
+80-j4c-release.conf
+90-j5f-release.conf
+zz-j6-release.conf
+zzz-j6-auth-recovery-j5f.conf
+zzzz-j6-auth-recovery-corrected.conf
+zzzzz-j6-task-detail-hotfix-final.conf
+zzzzzz-j6-gate12-error-mapping.conf
+zzzzzzz-online-work-month-end.conf
+```
+
+This inventory is review evidence, not the migration source of truth. The captured runtime `DropInPaths` set is authoritative.
+
+No release retention deletion occurs during migration. If migration health fails, restore the complete backed-up unit and the exact captured drop-in set, daemon-reload, restart, and verify the pre-migration release. The migration backup remains outside release retention.
+
+### Approved bootstrap mapping
+
+Before mutation, fail closed unless every target passes path containment, directory, `.next/BUILD_ID`, `package.json`, `node_modules`, and environment-link validation:
+
+```text
+current -> 4e22ee6314ffd3e26ab94b0dbf74be14a4075c9d-online-work-month-end-20260921T031920Z
+previous -> e88d16942a78f416f2e6de27cad5cb94c3146d94-j6-gate12-error-mapping-20260921T014731Z
+rollback-2 -> d66f69898e63cde8ae4d9f1eff7adbc4c8028da2-j6-task-detail-hotfix-envlinks-20260920T183314Z
+```
+
+The bootstrap mapping is documentation/configuration readiness only in this checkpoint; it does not create production symlinks.
+
+The operator validation command accepts exactly three paths and validates all three before any symlink or systemd mutation:
+
+```bash
+scripts/production/validate-bootstrap.sh \
+  /opt/releases/thoidai-work/4e22ee6314ffd3e26ab94b0dbf74be14a4075c9d-online-work-month-end-20260921T031920Z \
+  /opt/releases/thoidai-work/e88d16942a78f416f2e6de27cad5cb94c3146d94-j6-gate12-error-mapping-20260921T014731Z \
+  /opt/releases/thoidai-work/d66f69898e63cde8ae4d9f1eff7adbc4c8028da2-j6-task-detail-hotfix-envlinks-20260920T183314Z
+```
+
+### Pre-migration capture and readiness gate
+
+The migration operator must run the fail-closed capture helper before any mutation. It records the actual service fragment and `DropInPaths`, copies them with absolute-path layout into a root-only backup, verifies every captured file, and writes checksums:
+
+```bash
+BACKUP=/opt/thoidai-backups/thoidai-work-lifecycle-<timestamp>
+scripts/production/capture-systemd-baseline.sh "$BACKUP"
+test "$(cat "$BACKUP/dropin-count.txt")" -eq 16
+```
+
+If the captured count is not 16 at this reviewed baseline, stop and re-review the changed production configuration. Rollback restores `rootfs$(cat fragment-path.txt)` and every absolute path in `dropin-paths.txt`; it must not restore from a manually reconstructed filename list.
+
+The rollback window must first move the newly installed stable unit/drop-ins into a separate failed-migration evidence directory, then restore only from the captured manifest:
+
+```bash
+FRAGMENT=$(cat "$BACKUP/fragment-path.txt")
+install -m 0644 "$BACKUP/rootfs$FRAGMENT" "$FRAGMENT"
+while IFS= read -r path; do
+  test -f "$BACKUP/rootfs$path" || { echo "backup incomplete: $path" >&2; exit 1; }
+  install -D -m 0644 "$BACKUP/rootfs$path" "$path"
+done < "$BACKUP/dropin-paths.txt"
+test "$(wc -l < "$BACKUP/dropin-paths.txt")" -eq "$(cat "$BACKUP/dropin-count.txt")"
+```
+
+Do not leave stable migration drop-ins beside the restored captured set: they must already have been moved to the failed-migration evidence directory before these restore commands. Then run `daemon-reload`, restart once, and execute the same readiness checks against the recorded pre-migration release path.
+
+After restart, run `scripts/production/migration-readiness.sh`. It must verify active/running state, bounded TCP readiness on `127.0.0.1:3001`, `/login` HTTP 200, unchanged `NRestarts` over the observation window, `WorkingDirectory` resolving through `/opt/releases/thoidai-work/current`, release environment validation, and effective `MemoryHigh=500M`, `MemoryMax=650M`, `TasksMax=250`.
 
 ## Legacy safe-deploy
 

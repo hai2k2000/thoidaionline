@@ -40,7 +40,7 @@ These audited paths are bootstrap inputs for the future migration only. They mus
 
 There is no canonical deploy command for immutable `thoidai-work` releases. Recent releases were produced by manual command sequences and activated by adding a new systemd drop-in whose filename sorts after earlier drop-ins.
 
-The installed service currently loads 15 drop-ins. Multiple drop-ins independently override:
+The installed service currently loads 16 drop-ins. Multiple drop-ins independently override:
 
 - `WorkingDirectory` with a historical immutable release path;
 - `ReadWritePaths` with that release's `.next/cache` path;
@@ -349,6 +349,8 @@ ReadWritePaths=/var/cache/thoidai-work
 ReadWritePaths=/run/thoidai-work
 ```
 
+The stable template also preserves the active resource and hardening policy: `MemoryHigh=500M`, `MemoryMax=650M`, `TasksMax=250`, `NoNewPrivileges=true`, `PrivateTmp=true`, `ProtectSystem=strict`, `ProtectHome=true`, empty capability sets, and `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6`.
+
 Feature flags remain in one stable feature configuration file. A deployment must never create a release-specific systemd drop-in.
 
 ## Systemd Migration Plan
@@ -363,14 +365,14 @@ Migration is a separate approval checkpoint after scripts are committed, pushed,
    - previous: the approved immediate rollback release;
    - rollback-2: the approved older rollback/reference release.
 3. Confirm all three contain valid builds, environment links, dependencies, and health-compatible configuration.
-4. Create a timestamped backup outside release retention containing the base unit, all 15 current drop-ins, `systemctl cat`, `systemctl show`, checksums, and the intended link mapping.
+4. Create a timestamped backup outside release retention containing the base unit, the exact `DropInPaths` captured from `systemctl show` (currently 16), `systemctl cat`, `systemctl show`, checksums, and the intended link mapping. Verify every captured path is backed up and the manifest count matches; never rely on an assumed count.
 5. Stage the consolidated unit/drop-ins in a temporary directory and run `systemd-analyze verify` where supported.
 
 ### Activation
 
 1. Create `current`, `previous`, and `rollback-2` symlinks atomically with the approved bootstrap targets.
 2. Replace the accumulated release-specific drop-ins as one filesystem transaction:
-   - move the 15 existing drop-ins into the timestamped migration backup;
+   - move the exact captured drop-in set into the timestamped migration backup;
    - install only stable resource/feature configuration and the stable current-symlink configuration;
    - do not add a sixteenth release-specific override.
 3. Run `systemctl daemon-reload`.
@@ -391,7 +393,7 @@ Migration is a separate approval checkpoint after scripts are committed, pushed,
 
 If any activation or health gate fails:
 
-1. Restore the base unit and all 15 drop-ins exactly from the timestamped backup.
+1. Restore the base unit and the exact captured drop-in set exactly from the timestamped backup.
 2. Run `systemctl daemon-reload`.
 3. Confirm effective WorkingDirectory equals the pre-migration release path.
 4. Perform one controlled restart.
@@ -516,4 +518,3 @@ This implementation checkpoint is complete when:
 4. The branch is clean, committed, and pushed.
 5. Production health remains unchanged.
 6. The systemd migration and rollback plans are documented but not executed.
-

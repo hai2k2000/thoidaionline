@@ -18,6 +18,12 @@ set -Eeuo pipefail
 : "${THOIDAI_LSOF_BIN:=lsof}"
 : "${THOIDAI_FINDMNT_BIN:=findmnt}"
 : "${THOIDAI_DOCKER_BIN:=docker}"
+: "${THOIDAI_TCP_CHECK_BIN:=}"
+: "${THOIDAI_ENV_VERIFY_BIN:=/opt/ops/thoidai-work/verify-release-env.sh}"
+: "${THOIDAI_TCP_HOST:=127.0.0.1}"
+: "${THOIDAI_TCP_PORT:=3001}"
+: "${THOIDAI_READY_TIMEOUT_SEC:=15}"
+: "${THOIDAI_READY_OBSERVATION_SEC:=5}"
 
 die() { echo "ERROR: $*" >&2; return 1; }
 log_event() { printf '%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
@@ -97,9 +103,74 @@ validate_release() {
   [[ -d "$release" && -f "$release/.next/BUILD_ID" && -f "$release/package.json" && -d "$release/node_modules" ]] || { die "invalid release: $release"; return 1; }
 }
 
+validate_bootstrap_release() {
+  local release=${1:?release required}
+  validate_release "$release" || return 1
+  [[ -x "$THOIDAI_ENV_VERIFY_BIN" ]] || { die "env verifier missing: $THOIDAI_ENV_VERIFY_BIN"; return 1; }
+  "$THOIDAI_ENV_VERIFY_BIN" "$(realpath -m -- "$release")" || { die "release environment validation failed: $release"; return 1; }
+}
+
+validate_bootstrap_mapping() {
+  [[ $# -eq 3 ]] || { die "bootstrap mapping requires current, previous, and rollback-2"; return 1; }
+  local release
+  for release in "$@"; do
+    validate_bootstrap_release "$release" || return 1
+  done
+}
+
 health_check() {
   "$THOIDAI_SYSTEMCTL_BIN" is-active --quiet "$THOIDAI_SERVICE" || return 1
   "$THOIDAI_CURL_BIN" -fsS --max-time 15 -o /dev/null "$THOIDAI_HEALTH_URL"
+}
+
+systemd_property() {
+  local property=${1:?property required}
+  "$THOIDAI_SYSTEMCTL_BIN" show -P "$property" "$THOIDAI_SERVICE"
+}
+
+tcp_ready() {
+  if [[ -n "$THOIDAI_TCP_CHECK_BIN" ]]; then
+    "$THOIDAI_TCP_CHECK_BIN" "$THOIDAI_TCP_HOST" "$THOIDAI_TCP_PORT" "$THOIDAI_READY_TIMEOUT_SEC"
+    return
+  fi
+  timeout "$THOIDAI_READY_TIMEOUT_SEC" bash -c "</dev/tcp/$THOIDAI_TCP_HOST/$THOIDAI_TCP_PORT"
+}
+
+migration_readiness_check() {
+  local expected_current actual_workdir expected_workdir before_restarts after_restarts login_code
+  expected_current="$THOIDAI_RELEASE_ROOT/current"
+
+  [[ "$(systemd_property ActiveState)" == active ]] || { die "readiness: service is not active"; return 1; }
+  [[ "$(systemd_property SubState)" == running ]] || { die "readiness: service is not running"; return 1; }
+
+  tcp_ready || { die "readiness: TCP $THOIDAI_TCP_HOST:$THOIDAI_TCP_PORT is not ready"; return 1; }
+  login_code=$("$THOIDAI_CURL_BIN" -sS --max-time "$THOIDAI_READY_TIMEOUT_SEC" -o /dev/null -w '%{http_code}' "$THOIDAI_HEALTH_URL") || {
+    die "readiness: $THOIDAI_HEALTH_URL request failed"; return 1;
+  }
+  [[ "$login_code" == 200 ]] || { die "readiness: $THOIDAI_HEALTH_URL returned HTTP $login_code, expected 200"; return 1; }
+
+  actual_workdir=$(systemd_property WorkingDirectory)
+  [[ "$actual_workdir" == "$expected_current" ]] || {
+    die "readiness: WorkingDirectory is $actual_workdir, expected $expected_current"; return 1;
+  }
+  expected_workdir=$(readlink -f -- "$expected_current") || { die "readiness: current link is missing or broken"; return 1; }
+  [[ "$(readlink -f -- "$actual_workdir")" == "$expected_workdir" ]] || {
+    die "readiness: WorkingDirectory does not resolve through $expected_current"; return 1;
+  }
+
+  validate_bootstrap_release "$expected_workdir" || { die "readiness: current release validation failed"; return 1; }
+
+  [[ "$(systemd_property MemoryHigh)" == 524288000 ]] || { die "readiness: MemoryHigh is not 500M"; return 1; }
+  [[ "$(systemd_property MemoryMax)" == 681574400 ]] || { die "readiness: MemoryMax is not 650M"; return 1; }
+  [[ "$(systemd_property TasksMax)" == 250 ]] || { die "readiness: TasksMax is not 250"; return 1; }
+
+  before_restarts=$(systemd_property NRestarts)
+  sleep "$THOIDAI_READY_OBSERVATION_SEC"
+  after_restarts=$(systemd_property NRestarts)
+  [[ "$before_restarts" == "$after_restarts" ]] || {
+    die "readiness: NRestarts changed during ${THOIDAI_READY_OBSERVATION_SEC}s observation ($before_restarts -> $after_restarts)"; return 1;
+  }
+  log_event "READINESS_PASS service=$THOIDAI_SERVICE current=$expected_workdir nrestarts=$after_restarts"
 }
 
 path_reference() {
