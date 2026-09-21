@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
+import EventAssignmentPanel from "@/components/EventAssignmentPanel";
 
 type Person = {
   id: string;
   full_name: string;
+  department_id?: string | null;
   roles?: { code?: string } | null;
   job_titles?: { code?: string } | null;
 };
@@ -30,6 +32,10 @@ type Row = {
   review_note: string | null;
   workflow_revision: number;
   creator?: { full_name?: string } | null;
+  event_assignment_kind?: "leadership" | null;
+  event_type?: string | null;
+  event_status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | null;
+  event_assignments?: { assigner?: { full_name?: string } | null }[] | null;
 };
 
 const iso = (date: Date) => date.toISOString().slice(0, 10);
@@ -57,6 +63,8 @@ export default function WorkSchedulePageShell({
   scheduleScope = "all",
   title = "Lịch công tác",
   description = "Lịch toàn cơ quan · TBT · Phó TBT · Trưởng phòng · Phóng viên",
+  enableEventAssignment = false,
+  eventPeople,
 }: {
   people: Person[];
   currentUserId?: string;
@@ -65,6 +73,8 @@ export default function WorkSchedulePageShell({
   scheduleScope?: "all" | "self";
   title?: string;
   description?: string;
+  enableEventAssignment?: boolean;
+  eventPeople?: Person[];
 }) {
   const [period, setPeriod] = useState<"day" | "week" | "month">("week");
   const [anchor, setAnchor] = useState(iso(new Date()));
@@ -421,6 +431,7 @@ export default function WorkSchedulePageShell({
               ) : null}
             </div> : null}
           </section>
+          {enableEventAssignment ? <EventAssignmentPanel people={eventPeople ?? people} /> : null}
           {scheduleScope === "all" && approvalRows.length ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
             <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ phê duyệt</h2>
             <div className="mt-3 grid gap-2">
@@ -483,6 +494,7 @@ export default function WorkSchedulePageShell({
                                 <p className="font-semibold">{row.plan_type === "business" ? "Công tác: " : row.plan_type === "event" ? "Sự kiện: " : ""}{row.title}</p>
                                 {row.location ? <p>{row.location}</p> : null}
                                 <p>{names(row.participant_ids)}</p>
+                                {row.event_assignment_kind === "leadership" ? <div className="mt-1 space-y-1"><span className="inline-flex rounded-full bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-800">Được phân công</span>{row.event_assignments?.[0]?.assigner?.full_name ? <p>Người phân công: {row.event_assignments[0].assigner.full_name}</p> : null}{row.event_status ? <p>Trạng thái: {row.event_status}</p> : null}</div> : null}
                                 {!viewAll ? <div className="mt-2 space-y-1">
                                   <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${row.approval_status === "REJECTED" ? "bg-red-100 text-red-700" : row.approval_status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>{approvalLabel(row.approval_status)}</span>
                                   {row.approval_status === "PENDING_APPROVAL" ? <p className="text-amber-800">Kế hoạch chưa có hiệu lực cho đến khi được duyệt.</p> : null}

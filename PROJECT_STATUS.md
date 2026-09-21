@@ -1,27 +1,29 @@
 # Event Assignment v1 Status
 
-Current Phase: Design and implementation
-Current Task: Spec and plan complete; implementation next
+Current Phase: Implementation complete; pre-production review
+Current Task: Event Assignment v1 implementation, tests, and immutable artifact prepared without activation
 
 Completed:
 - Read repository AGENTS.md and RuleCodex.
-- Inspected live schema read-only.
-- Created branch feature/event-assignment-v1 from 495c5fb.
-- Selected additive work_schedules plus normalized assignment architecture.
-
-In Progress:
-- Implementing migration, RPCs, API, tests, and focused UI.
+- Inspected live schema read-only and selected additive work_schedules plus normalized assignment architecture.
+- Created and pushed branch feature/event-assignment-v1.
+- Created design spec and implementation plan.
+- Implemented validator, additive migration/RPCs, dedicated API, repository reads/writes, leadership UI, reporter calendar projection, and audit actions.
 
 Validation:
-- Existing Personal Plan regression: 29/29 PASS.
-- Existing organization schedule regression: 11/11 PASS.
-- Existing Online Work regression: 17/17 PASS.
+- Event Assignment and existing focused regressions: 63/63 PASS.
+- TypeScript: PASS.
+- Scoped ESLint: PASS.
+- Production build: PASS.
+- Migration reviewed statically; production schema verified reverted to pre-feature state after an earlier transient smoke-test mutation.
+
+Artifact:
+- Pending immutable artifact creation from the verified worktree.
+- Artifact activation and migration application are explicitly out of scope.
 
 Blockers:
-- None.
-
-Follow Up:
-- Production migration and activation are out of scope.
+- No implementation blocker.
+- Production deployment requires separate owner authorization and migration review.
 
 Next:
-- Write failing Event Assignment tests, then implement migration/RPC/API/UI.
+- Create immutable artifact, commit and push the implementation, then stop before production deployment.
