@@ -100,7 +100,7 @@ export const workScheduleRepository = {
     return error ? { ok: false as const, error } : { ok: true as const, row: data };
   },
 
-  async saveOrganization(actorId: string, input: WorkScheduleInput) {
+  async saveOrganization(actorId: string, input: WorkScheduleInput, isAdmin = false) {
     const payload = {
       work_date: input.workDate,
       end_date: input.endDate,
@@ -116,10 +116,11 @@ export const workScheduleRepository = {
       updated_at: new Date().toISOString(),
       ...(input.id ? {} : { created_by: actorId }),
     };
-    const query = input.id
+    let query = input.id
       ? serverSupabase.from("work_schedules").update(payload).eq("id", input.id)
         .or("schedule_scope.eq.organization,schedule_scope.is.null")
       : serverSupabase.from("work_schedules").insert({ ...payload, created_by: actorId });
+    if (input.id && !isAdmin) query = query.eq("created_by", actorId);
     const { data, error } = await query.select().single();
     return error ? { ok: false as const, error } : { ok: true as const, row: data };
   },
@@ -132,9 +133,11 @@ export const workScheduleRepository = {
     return error ? { ok: false as const, error } : { ok: true as const };
   },
 
-  async removeOrganization(id: string) {
-    const { error } = await serverSupabase.from("work_schedules").delete().eq("id", id)
+  async removeOrganization(actorId: string, id: string, isAdmin = false) {
+    let query = serverSupabase.from("work_schedules").delete().eq("id", id)
       .or("schedule_scope.eq.organization,schedule_scope.is.null");
+    if (!isAdmin) query = query.eq("created_by", actorId);
+    const { error } = await query;
     return error ? { ok: false as const, error } : { ok: true as const };
   },
 

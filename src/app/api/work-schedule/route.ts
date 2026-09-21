@@ -22,34 +22,40 @@ export async function POST(request: Request) {
   const title = typeof body.title === "string" ? body.title.trim() : "";
   const workDate = typeof body.workDate === "string" ? body.workDate : "";
   const endDate = typeof body.endDate === "string" ? body.endDate : workDate;
-  const startTime = typeof body.startTime === "string" && time.test(body.startTime) ? body.startTime : null;
-  const endTime = typeof body.endTime === "string" && time.test(body.endTime) ? body.endTime : null;
+  const startTime = typeof body.startTime === "string" ? body.startTime : "";
+  const endTime = typeof body.endTime === "string" ? body.endTime : "";
   const requestedParticipants = Array.isArray(body.participantIds) && body.participantIds.every((id) => typeof id === "string")
     ? body.participantIds as string[] : [];
-  if (!title || title.length > 500 || !date.test(workDate) || !date.test(endDate) || endDate < workDate || requestedParticipants.length > 50) {
+  if (body.planType !== "business" && body.planType !== "event") return apiError("invalid_request", 400);
+  const planType = body.planType;
+  const participantIds = guard.actor.role_code === "admin" && requestedParticipants.length > 0
+    ? requestedParticipants : [guard.actor.id];
+  if (!title || title.length > 500 || !date.test(workDate) || !date.test(endDate) || endDate < workDate
+    || (planType === "event" && endDate !== workDate)
+    || (planType === "event" && (!time.test(startTime) || !time.test(endTime) || endTime <= startTime))
+    || participantIds.length > 50) {
     return apiError("invalid_request", 400);
   }
   const result = await workScheduleRepository.saveOrganization(guard.actor.id, {
     id: typeof body.id === "string" ? body.id : undefined,
     workDate,
     endDate,
-    planType: body.planType === "event" ? "event" : "business",
-    startTime,
-    endTime,
+    planType,
+    startTime: planType === "event" ? startTime : null,
+    endTime: planType === "event" ? endTime : null,
     title,
     location: typeof body.location === "string" ? body.location.trim().slice(0, 500) || null : null,
     notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 2000) || null : null,
-    participantIds: requestedParticipants.length ? requestedParticipants : [guard.actor.id],
-  });
+    participantIds,
+  }, guard.actor.role_code === "admin");
   return result.ok ? apiJson({ row: result.row }) : rpcFailure(result.error);
 }
 
 export async function DELETE(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return apiError("invalid_request", 400);
-  const result = await workScheduleRepository.removeOrganization(id);
+  const result = await workScheduleRepository.removeOrganization(guard.actor.id, id, guard.actor.role_code === "admin");
   return result.ok ? apiJson({ ok: true }) : rpcFailure(result.error);
 }
