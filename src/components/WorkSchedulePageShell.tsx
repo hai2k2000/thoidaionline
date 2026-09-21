@@ -52,6 +52,7 @@ const approvalLabel = (status: Row["approval_status"]) => status === "PENDING_AP
 export default function WorkSchedulePageShell({
   people,
   currentUserId,
+  approvalActorId,
   userLabel,
   scheduleScope = "all",
   title = "Lịch công tác",
@@ -59,6 +60,7 @@ export default function WorkSchedulePageShell({
 }: {
   people: Person[];
   currentUserId?: string;
+  approvalActorId?: string;
   userLabel: string;
   scheduleScope?: "all" | "self";
   title?: string;
@@ -422,7 +424,7 @@ export default function WorkSchedulePageShell({
           {scheduleScope === "all" && approvalRows.length ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
             <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ phê duyệt</h2>
             <div className="mt-3 grid gap-2">
-              {approvalRows.filter((row) => row.created_by !== currentUserId).map((row) => <article key={row.id} className="rounded-lg border bg-white p-3 text-sm">
+              {approvalRows.filter((row) => row.created_by !== approvalActorId).map((row) => <article key={row.id} className="rounded-lg border bg-white p-3 text-sm">
                 <p className="font-semibold">{row.title}</p>
                 <p className="text-slate-600">{row.work_date} {row.start_time?.slice(0, 5)}-{row.end_time?.slice(0, 5)} · {row.creator?.full_name ?? ""}</p>
                 <div className="mt-2 flex gap-2"><button type="button" onClick={() => void reviewPlan(row, "approve")} className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">Duyệt</button><button type="button" onClick={() => void reviewPlan(row, "reject")} className="rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white">Từ chối</button></div>

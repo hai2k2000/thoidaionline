@@ -23,9 +23,9 @@ test("Personal Plan UI renders all approval states and review details", () => {
 
 test("Personal Plan UI hides review actions from the plan creator", () => {
   const shell = read("../components/WorkSchedulePageShell.tsx");
-  assert.match(shell, /approvalRows\.filter\(\(row\) => row\.created_by !== currentUserId\)/);
-  assert.match(read("../app/work-schedule/page.tsx"), /currentUserId=\{user\.id\}/);
-  assert.match(read("../app/work-schedule/leadership/page.tsx"), /currentUserId=\{user\.id\}/);
+  assert.match(shell, /approvalRows\.filter\(\(row\) => row\.created_by !== approvalActorId\)/);
+  assert.match(read("../app/work-schedule/page.tsx"), /approvalActorId=\{user\.id\}/);
+  assert.match(read("../app/work-schedule/leadership/page.tsx"), /approvalActorId=\{user\.id\}/);
 });
 
 test("organization surfaces remain on the organization endpoint", () => {
