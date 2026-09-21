@@ -172,6 +172,7 @@ Completed:
 Validation:
 - Focused shell lifecycle tests PASS.
 - Shell syntax checks PASS.
+- The repository has no `npm test` script; the broad test command is unavailable in this script-only worktree. No dependency install or application build was run.
 - Production dry-run excludes `ops-backups` and `build-evidence` and returns no DELETE candidates.
 - Production remains active/running with MainPID 3387259, NRestarts 0, unchanged WorkingDirectory, 15 GB free, and `/login` HTTP 200.
 
