@@ -29,6 +29,7 @@ export function mapRpcError(error: RpcError): RpcErrorMapping {
       return { code: "not_found", status: 404 };
     case "22023":
     case "22007":
+    case "22008":
     case "23514":
       return { code: "invalid_request", status: 400 };
     case "23505":
