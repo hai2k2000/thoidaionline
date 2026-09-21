@@ -131,6 +131,42 @@ systemd_property() {
   "$THOIDAI_SYSTEMCTL_BIN" show -P "$property" "$THOIDAI_SERVICE"
 }
 
+systemd_property_required() {
+  local property=${1:?property required} line
+  line=$("$THOIDAI_SYSTEMCTL_BIN" show -p "$property" "$THOIDAI_SERVICE") || {
+    die "systemd property query failed: $property"
+    return 1
+  }
+  [[ "$line" == "$property="* ]] || {
+    die "systemd property missing: $property"
+    return 1
+  }
+  printf '%s\n' "${line#*=}"
+}
+
+validate_systemd_property() {
+  local property=${1:?property required} expected=${2:?expected value required} value
+  value=$(systemd_property_required "$property") || return 1
+  case "$expected" in
+    __EMPTY__)
+      [[ -z "$value" ]] || { die "systemd property $property is non-empty"; return 1; }
+      ;;
+    *)
+      [[ "$value" == "$expected" ]] || { die "systemd property $property is $value, expected $expected"; return 1; }
+      ;;
+  esac
+}
+
+validate_systemd_hardening() {
+  validate_systemd_property CapabilityBoundingSet __EMPTY__ || return 1
+  validate_systemd_property AmbientCapabilities __EMPTY__ || return 1
+  validate_systemd_property NoNewPrivileges yes || return 1
+  validate_systemd_property PrivateTmp yes || return 1
+  validate_systemd_property ProtectSystem strict || return 1
+  validate_systemd_property ProtectHome yes || return 1
+  validate_systemd_property RestrictAddressFamilies 'AF_INET AF_INET6 AF_UNIX' || return 1
+}
+
 tcp_ready() {
   if [[ -n "$THOIDAI_TCP_CHECK_BIN" ]]; then
     "$THOIDAI_TCP_CHECK_BIN" "$THOIDAI_TCP_HOST" "$THOIDAI_TCP_PORT" "$THOIDAI_TCP_PROBE_TIMEOUT_SEC"
@@ -203,6 +239,7 @@ migration_readiness_check() {
   [[ "$(systemd_property MemoryHigh)" == 524288000 ]] || { die "readiness: MemoryHigh is not 500M"; return 1; }
   [[ "$(systemd_property MemoryMax)" == 681574400 ]] || { die "readiness: MemoryMax is not 650M"; return 1; }
   [[ "$(systemd_property TasksMax)" == 250 ]] || { die "readiness: TasksMax is not 250"; return 1; }
+  validate_systemd_hardening || { die "readiness: systemd hardening validation failed"; return 1; }
 
   before_restarts=$(systemd_property NRestarts)
   baseline_pid=$current_pid

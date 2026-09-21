@@ -16,6 +16,21 @@ cat > "$BIN/systemctl" <<'EOF'
 #!/usr/bin/env bash
 if [[ "$1" == is-active ]]; then exit 0; fi
 if [[ "$1" == show ]]; then
+  if [[ "$2" == -p ]]; then
+    property=$3
+    case "$property" in
+      CapabilityBoundingSet) [[ "${TEST_CAPABILITY_BOUNDING_SET_MISSING-}" != 1 ]] || exit 1; printf 'CapabilityBoundingSet=%s\n' "${TEST_CAPABILITY_BOUNDING_SET-}" ;;
+      AmbientCapabilities) [[ "${TEST_AMBIENT_CAPABILITIES_MISSING-}" != 1 ]] || exit 1; printf 'AmbientCapabilities=%s\n' "${TEST_AMBIENT_CAPABILITIES-}" ;;
+      NoNewPrivileges) [[ "${TEST_NO_NEW_PRIVILEGES_MISSING-}" != 1 ]] || exit 1; printf 'NoNewPrivileges=%s\n' "${TEST_NO_NEW_PRIVILEGES-yes}" ;;
+      PrivateTmp) [[ "${TEST_PRIVATE_TMP_MISSING-}" != 1 ]] || exit 1; printf 'PrivateTmp=%s\n' "${TEST_PRIVATE_TMP-yes}" ;;
+      ProtectSystem) printf 'ProtectSystem=%s\n' "${TEST_PROTECT_SYSTEM-strict}" ;;
+      ProtectHome) printf 'ProtectHome=%s\n' "${TEST_PROTECT_HOME-yes}" ;;
+      RestrictAddressFamilies) printf 'RestrictAddressFamilies=%s\n' "${TEST_RESTRICT_ADDRESS_FAMILIES-AF_INET AF_INET6 AF_UNIX}" ;;
+      MissingProperty) exit 1 ;;
+      *) exit 1 ;;
+    esac
+    exit 0
+  fi
   case "${3:-}" in
     ActiveState) printf '%s\n' "${TEST_ACTIVE_STATE:-active}" ;;
     SubState) printf '%s\n' "${TEST_SUB_STATE:-running}" ;;
@@ -86,6 +101,38 @@ export THOIDAI_READY_TIMEOUT_SEC=1
 export THOIDAI_READY_POLL_INTERVAL_SEC=0.01
 export TEST_WORKING_DIRECTORY="$THOIDAI_RELEASE_ROOT/current"
 source "$ROOT/scripts/production/release-common.sh"
+
+validate_systemd_hardening
+
+export TEST_CAPABILITY_BOUNDING_SET=CAP_NET_BIND_SERVICE
+if validate_systemd_hardening >/dev/null 2>&1; then exit 1; fi
+unset TEST_CAPABILITY_BOUNDING_SET
+
+export TEST_CAPABILITY_BOUNDING_SET_MISSING=1
+if validate_systemd_hardening >/dev/null 2>&1; then exit 1; fi
+unset TEST_CAPABILITY_BOUNDING_SET_MISSING
+
+export TEST_AMBIENT_CAPABILITIES=CAP_NET_BIND_SERVICE
+if validate_systemd_hardening >/dev/null 2>&1; then exit 1; fi
+unset TEST_AMBIENT_CAPABILITIES
+
+export TEST_AMBIENT_CAPABILITIES_MISSING=1
+if validate_systemd_hardening >/dev/null 2>&1; then exit 1; fi
+unset TEST_AMBIENT_CAPABILITIES_MISSING
+
+export TEST_NO_NEW_PRIVILEGES=
+if validate_systemd_hardening >/dev/null 2>&1; then exit 1; fi
+unset TEST_NO_NEW_PRIVILEGES
+
+export TEST_NO_NEW_PRIVILEGES_MISSING=1
+if validate_systemd_hardening >/dev/null 2>&1; then exit 1; fi
+unset TEST_NO_NEW_PRIVILEGES_MISSING
+
+export TEST_PRIVATE_TMP=
+if validate_systemd_hardening >/dev/null 2>&1; then exit 1; fi
+unset TEST_PRIVATE_TMP
+
+if systemd_property_required MissingProperty >/dev/null 2>&1; then exit 1; fi
 
 migration_readiness_check
 
