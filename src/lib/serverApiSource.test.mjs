@@ -10,6 +10,10 @@ const responseSource = readFileSync(
   new URL("./apiResponse.ts", import.meta.url),
   "utf8",
 );
+const mappingSource = readFileSync(
+  new URL("./rpcErrorMapping.ts", import.meta.url),
+  "utf8",
+);
 
 test("mutation guard checks origin before signed session", () => {
   const mutationSource = source.slice(
@@ -38,6 +42,15 @@ test("API responses are private no-store and errors are stable", () => {
   }
   assert.doesNotMatch(`${source}\n${responseSource}`, /error\.message/);
   assert.doesNotMatch(`${source}\n${responseSource}`, /console\.(?:log|warn|error)/);
+});
+
+test("RPC failures use the focused mapper and keep raw database details private", () => {
+  assert.match(source, /mapRpcError/);
+  assert.match(mappingSource, /40001/);
+  assert.match(mappingSource, /Publication report changed before verification\./);
+  assert.match(mappingSource, /42501/);
+  assert.match(mappingSource, /operation_failed/);
+  assert.doesNotMatch(source, /error\.message/);
 });
 
 test("server API has no unrelated UUID or authorization imports", () => {
