@@ -3,7 +3,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { bridgeAuthorized } from "@/lib/attendanceBridgeAuth";
 
 export async function POST(request: Request) {
-  if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
+  if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
   const body = await readJsonObject(request);
   const requestId = typeof body?.request_id === "string" ? body.request_id : "";
   const error = typeof body?.error === "string" ? body.error.slice(0, 500) : "Bridge sync failed";

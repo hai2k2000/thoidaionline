@@ -6,7 +6,7 @@ const isAdmin = (actor: { role_code: string }) => actor.role_code === "admin";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request: Request) {
-  if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
+  if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
   const { data, error } = await serverSupabase
     .from("attendance_sync_requests")
     .select("id,status,requested_at,started_at,completed_at,result,error")

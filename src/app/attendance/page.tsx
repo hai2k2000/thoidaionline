@@ -200,8 +200,7 @@ export default function AttendancePage() {
     const range = selectedRange(selectedDate, period);
     const leaveRange = leaveTimeScope === "month" ? monthRange(leaveMonth) : null;
     if (leaveTimeScope === "month" && !leaveRange) return;
-    const approvalRange = leaveRange ?? range;
-    const params = new URLSearchParams({ from: approvalRange.start, to: approvalRange.end, mineScope: leaveTimeScope, mineStatus: leaveStatus });
+    const params = new URLSearchParams({ from: range.start, to: range.end, mineScope: leaveTimeScope, mineStatus: leaveStatus });
     if (leaveRange) { params.set("mineFrom", leaveRange.start); params.set("mineTo", leaveRange.end); params.set("mineMonth", leaveMonth); }
     const response = await fetch(`/api/leave-requests?${params.toString()}`, { cache: "no-store" });
     const payload = await response.json().catch(() => null) as { mine?: LeaveRequest[]; approvals?: LeaveRequest[]; management?: LeaveRequest[] } | null;
@@ -302,8 +301,12 @@ export default function AttendancePage() {
   }, [monthlyRows]);
 
   const leaveFormDays = useMemo(() => leaveDurationDays(leaveForm.startDate, leaveForm.endDate), [leaveForm.endDate, leaveForm.startDate]);
+  const leaveFormActivity = leaveForm.leaveType === "business" ? "công tác" : "nghỉ";
   const visibleLeaveRequests = leaveRequests;
-  const visibleLeaveApprovals = leaveApprovals;
+  const visibleLeaveApprovals = useMemo(() => {
+    const range = selectedRange(selectedDate, period);
+    return leaveApprovals.filter((item) => item.start_date <= range.end && item.end_date >= range.start);
+  }, [leaveApprovals, period, selectedDate]);
   const summaryDetailRange = useMemo(() => period === "day" ? { start: `${selectedDate.slice(0, 7)}-01`, end: selectedDate } : selectedRange(selectedDate, period), [period, selectedDate]);
   const selectedSummaryDetails = useMemo(() => selectedSummaryEmployee ? attendanceDetailsForEmployee(monthlyRows, selectedSummaryEmployee.userId, summaryDetailRange.start, summaryDetailRange.end) as AttendanceRow[] : [], [monthlyRows, selectedSummaryEmployee, summaryDetailRange]);
 
@@ -320,21 +323,21 @@ export default function AttendancePage() {
           </div>
 
           <div className="mb-4 flex items-center justify-between rounded-xl border bg-white p-4">
-            <div><h2 className="text-lg font-semibold">Đơn xin nghỉ</h2><p className="mt-1 text-sm text-slate-600">Đơn nghỉ đã duyệt sẽ tự động hiện trong cột Ghi chú của bảng chấm công. Nếu đi công tác hoặc tham dự sự kiện, hãy tạo tại Kế hoạch cá nhân.</p></div>
-            <button type="button" onClick={() => { setLeaveError(""); setLeaveModalOpen(true); }} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Gửi đơn xin nghỉ</button>
+            <div><h2 className="text-lg font-semibold">Đơn nghỉ / công tác</h2><p className="mt-1 text-sm text-slate-600">Đơn nghỉ hoặc công tác đã duyệt sẽ tự động hiện trong cột Ghi chú của bảng chấm công.</p></div>
+            <button type="button" onClick={() => { setLeaveError(""); setLeaveModalOpen(true); }} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Gửi đơn nghỉ / công tác</button>
           </div>
           {leaveModalOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="leave-dialog-title">
             <form onSubmit={submitLeave} className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
-              <div className="flex items-center justify-between"><h2 id="leave-dialog-title" className="text-lg font-semibold">Gửi đơn xin nghỉ</h2><button type="button" onClick={() => setLeaveModalOpen(false)} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
-              <p className="mt-1 text-sm text-slate-600">Chọn đầy đủ từ ngày đến ngày. Đơn nghỉ từ 3 ngày trở lên bắt buộc Tổng biên tập phê duyệt.</p>
+              <div className="flex items-center justify-between"><h2 id="leave-dialog-title" className="text-lg font-semibold">Gửi đơn nghỉ / công tác</h2><button type="button" onClick={() => setLeaveModalOpen(false)} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
+              <p className="mt-1 text-sm text-slate-600">Chọn đầy đủ từ ngày đến ngày. Đơn nghỉ hoặc công tác từ 3 ngày trở lên bắt buộc Tổng biên tập phê duyệt.</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <label className="text-sm font-medium">Từ ngày<input type="date" required value={leaveForm.startDate} onChange={(e) => { const startDate = e.target.value; setLeaveForm({ ...leaveForm, startDate, endDate: leaveForm.endDate < startDate ? startDate : leaveForm.endDate }); }} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
                 <label className="text-sm font-medium">Đến ngày<input type="date" required min={leaveForm.startDate} value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                <label className="text-sm">Loại nghỉ<select value={leaveForm.leaveType} onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })} className="mt-1 w-full rounded border px-3 py-2"><option value="annual">Phép năm</option><option value="sick">Nghỉ ốm</option><option value="unpaid">Không lương</option><option value="personal">Việc riêng</option></select></label>
+                <label className="text-sm">Loại đơn<select value={leaveForm.leaveType} onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })} className="mt-1 w-full rounded border px-3 py-2"><option value="annual">Phép năm</option><option value="sick">Nghỉ ốm</option><option value="unpaid">Không lương</option><option value="personal">Việc riêng</option><option value="business">Công tác</option></select></label>
                 <label className="text-sm">Thời gian<select value={leaveForm.startPeriod} onChange={(e) => setLeaveForm({ ...leaveForm, startPeriod: e.target.value, endPeriod: e.target.value })} className="mt-1 w-full rounded border px-3 py-2"><option value="full">Cả ngày</option><option value="morning">Buổi sáng</option><option value="afternoon">Buổi chiều</option></select></label>
               </div>
               <div className={`mt-3 rounded-lg border px-3 py-2 text-sm ${leaveFormDays >= 3 ? "border-amber-300 bg-amber-50 text-amber-900" : "border-slate-200 bg-slate-50 text-slate-700"}`} role="status">
-                {leaveFormDays > 0 ? `Thời gian nghỉ: ${leaveFormDays} ngày. ${leaveFormDays >= 3 ? "Đơn này sẽ chuyển Tổng biên tập phê duyệt." : "Đơn sẽ chuyển cấp quản lý có thẩm quyền phê duyệt."}` : "Vui lòng chọn khoảng ngày hợp lệ."}
+                {leaveFormDays > 0 ? `Thời gian ${leaveFormActivity}: ${leaveFormDays} ngày. ${leaveFormDays >= 3 ? "Đơn này sẽ chuyển Tổng biên tập phê duyệt." : "Đơn sẽ chuyển cấp quản lý có thẩm quyền phê duyệt."}` : "Vui lòng chọn khoảng ngày hợp lệ."}
               </div>
               <label className="mt-2 block text-sm">Lý do<textarea required minLength={3} maxLength={1000} value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
               {leaveError ? <p className="mt-2 text-sm font-medium text-red-700" role="alert">{leaveError}</p> : null}

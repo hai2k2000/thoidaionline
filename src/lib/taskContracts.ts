@@ -3,91 +3,6 @@ import type { CanonicalTaskStatus, CanonicalTaskType } from "./taskCompatibility
 
 export type AssignmentRole = "owner" | "assignee" | "watcher";
 
-export type JournalismPublicationStatus =
-  | "not_published"
-  | "scheduled"
-  | "published"
-  | "withdrawn";
-
-export type JournalismWorkKindDto = {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  is_active: boolean;
-  sort_order: number;
-};
-
-export type JournalismTopicDto = {
-  id: string;
-  name: string;
-  isActive: boolean;
-  departmentId: string | null;
-  description?: string | null;
-};
-
-export type JournalismSeriesDto = {
-  id: string;
-  name: string;
-  isActive: boolean;
-  departmentId: string | null;
-  topicId: string | null;
-  position: number;
-  description?: string | null;
-};
-
-export type JournalismPublicationVerificationDecision = "verified" | "rejected";
-export type JournalismPublicationVerificationStatus = "unverified" | "verified" | "rejected" | "stale";
-
-export type JournalismPublicationVerificationDto = {
-  id: string;
-  publication_report_id: string;
-  decision: JournalismPublicationVerificationDecision;
-  note: string | null;
-  verified_by: string;
-  publication_report_updated_at: string;
-  created_at: string;
-  verifier: { full_name: string | null } | null;
-  isCurrent: boolean;
-};
-
-export type JournalismPublicationReportDto = {
-  id: string;
-  task_id: string;
-  publication_url: string;
-  published_title: string | null;
-  published_at: string;
-  note: string | null;
-  reported_by: string;
-  created_at: string;
-  updated_at: string;
-  reporter: { full_name: string | null } | null;
-  verification_status: JournalismPublicationVerificationStatus;
-  current_verification: JournalismPublicationVerificationDto | null;
-  verification_history: JournalismPublicationVerificationDto[];
-};
-
-export type JournalismTaskListSummaryDto = {
-  publication_status: JournalismPublicationStatus;
-  planned_publication_at: string | null;
-  published_at: string | null;
-  work_kind: Pick<JournalismWorkKindDto, "id" | "code" | "name" | "is_active">;
-  topicCount: number;
-  series: JournalismSeriesDto | null;
-};
-
-export type JournalismTaskDetailDto = JournalismTaskListSummaryDto & {
-  task_id: string;
-  location: string | null;
-  article_url: string | null;
-  editorial_notes: string | null;
-  created_at: string;
-  updated_at: string;
-  work_kind: JournalismWorkKindDto;
-  topics: JournalismTopicDto[];
-  publication_report: JournalismPublicationReportDto | null;
-};
-
 export type TaskParticipantDto = {
   user_id: string;
   assignment_role: AssignmentRole;
@@ -128,7 +43,6 @@ export type TaskListItemDto = {
   description: string | null;
   evaluation_criteria: string | null;
   completion_score: { requirement_score: number; collaboration_score: number; initiative_score: number; total_score: number; note: string | null } | null;
-  journalism: JournalismTaskListSummaryDto | null;
 };
 
 export type TaskCommentDto = {
@@ -189,7 +103,6 @@ export type TaskDetailDto = TaskListItemDto & {
   status_events: TaskStatusEventDto[];
   attachments: TaskAttachmentDto[];
   completion_score: TaskCompletionScoreDto | null;
-  journalism: JournalismTaskDetailDto | null;
 };
 
 export type TaskListQuery = {
@@ -203,13 +116,6 @@ export type TaskListQuery = {
   toDate: string | null;
   deadlineState: "on_time" | "due_soon" | "overdue" | "no_deadline" | null;
   departmentId: string | null;
-  journalism?: "only" | "exclude" | null;
-  journalismWorkKindId?: string | null;
-  publicationStatus?: JournalismPublicationStatus | null;
-  plannedPublicationFrom?: string | null;
-  plannedPublicationTo?: string | null;
-  topicId?: string | null;
-  seriesId?: string | null;
   page: number;
   pageSize: number;
 };
@@ -248,8 +154,6 @@ export type AssignedTaskInput = {
   recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
   recurrenceEndsOn: string | null;
 };
-
-export type JournalismCreateInput = AssignedTaskInput & { workKindId: string; plannedPublicationAt: string | null; location: string | null; editorialNotes: string | null; };
 
 export type LegacyUpdateTaskInput = {
   status?: "new" | "in_progress";

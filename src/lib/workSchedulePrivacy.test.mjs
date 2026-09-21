@@ -11,18 +11,17 @@ const leadershipPage = read("../app/work-schedule/leadership/page.tsx");
 const shell = read("../components/WorkSchedulePageShell.tsx");
 const navigation = read("../components/phase2Navigation.ts");
 
-test("authenticated employees can view shared plans, with optional own-only compatibility", () => {
-  assert.match(route, /params\.get\("scope"\) === "self" \? guard\.actor\.id : undefined/);
+test("regular employees can only query their own work schedule", () => {
+  assert.match(route, /!canViewAllSchedules\(guard\.actor\)/);
+  assert.match(route, /selfOnly \? guard\.actor\.id : undefined/);
   assert.match(repository, /\.contains\("participant_ids", \[participantId\]\)/);
 });
 
-test("employee plan page defaults to own plans and can switch to shared scope", () => {
-  assert.match(staffPage, /workScheduleRepository\.allPeople\(\)/);
+test("employee plan page receives only the signed-in person and self scope", () => {
+  assert.match(staffPage, /workScheduleRepository\.person\(user\.id\)/);
   assert.match(staffPage, /scheduleScope="self"/);
-  assert.match(staffPage, /Kế hoạch cá nhân/);
-  assert.match(shell, /viewAll \? "" : "&scope=self"/);
-  assert.match(shell, /Kế hoạch toàn cơ quan/);
-  assert.match(shell, /viewAll/);
+  assert.match(staffPage, /Chỉ hiển thị kế hoạch làm việc của chính bạn/);
+  assert.match(shell, /scope=\$\{scheduleScope\}/);
 });
 
 test("organization and leadership pages reject direct access by regular employees", () => {

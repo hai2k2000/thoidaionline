@@ -4,7 +4,6 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { sortStaffRows } from "@/lib/staffOrdering";
 import { validateEmail, validatePhone } from "@/lib/userContactValidation";
 import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/defaultPassword";
-import { validateDepartmentTarget } from "@/lib/userReconciliationValidation.mjs";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,9 +24,10 @@ const canEditUsers = (roleCode: string) => roleCode === "admin";
 export async function GET() {
   const actor = await getSessionUser();
   if (!actor || !canViewUsers(actor.role_code)) return json({ error: "Không có quyền." }, { status: 403 });
-  const rolesQuery = serverSupabase.from("roles").select("id,code,name,level,active").order("level", { ascending: false });
+  const roleLifecycleEnabled = process.env.ROLE_LIFECYCLE_ENABLED === "true";
+  const rolesQuery = serverSupabase.from("roles").select(roleLifecycleEnabled ? "id,code,name,level,active" : "id,code,name,level").order("level", { ascending: false });
   const [roles, departments, jobTitles, users] = await Promise.all([
-    rolesQuery,
+    roleLifecycleEnabled ? rolesQuery.eq("active", true) : rolesQuery,
     serverSupabase.from("departments").select("id,code,name,active").order("name"),
     serverSupabase.from("job_titles").select("id,code,name,display_order,active").order("display_order").order("name"),
     serverSupabase.from("staff_users").select("id,full_name,username,email,phone,role_id,job_title_id,department_id,active,list_order,roles(code,name,level),job_titles(code,name,display_order,active),departments!staff_users_department_id_fkey(code,name)"),
@@ -82,13 +82,6 @@ async function mutate(request: Request, mode: "create" | "update") {
     if (body?.email && !email) return json({ error: "Email không hợp lệ." }, { status: 400 });
     if (body?.phone && !phone) return json({ error: "Số điện thoại không hợp lệ." }, { status: 400 });
     if (fullName.length < 2 || !username || !roleId || !jobTitleId || !departmentId) return json({ error: "Thiếu dữ liệu user." }, { status: 400 });
-    const { data: department, error: departmentError } = await serverSupabase.from("departments").select("id,active").eq("id", departmentId).maybeSingle();
-    if (departmentError) return json({ error: "Không thể kiểm tra phòng ban." }, { status: 500 });
-    const departmentValidation = validateDepartmentTarget(department);
-    if (!departmentValidation.ok) return json({
-      error: departmentValidation.code === "department_not_found" ? "Phòng ban không tồn tại." : "Không thể gán phòng ban đã ngừng sử dụng.",
-      code: departmentValidation.code,
-    }, { status: 400 });
     if (roleLifecycleEnabled) {
       const { data: role, error: roleError } = await serverSupabase.from("roles").select("id,active").eq("id", roleId).maybeSingle();
       if (roleError) return json({ error: "Không thể kiểm tra vai trò." }, { status: 500 });
@@ -117,7 +110,7 @@ async function mutate(request: Request, mode: "create" | "update") {
   if (!userId) return json({ error: "Thiếu user." }, { status: 400 });
   const { data: currentUser, error: currentUserError } = await serverSupabase
     .from("staff_users")
-    .select("id,role_id,job_title_id,department_id")
+    .select("id,role_id,job_title_id")
     .eq("id", userId)
     .maybeSingle();
   if (currentUserError) return json({ error: "Không thể kiểm tra user." }, { status: 500 });
@@ -150,15 +143,6 @@ async function mutate(request: Request, mode: "create" | "update") {
   if (body && Object.prototype.hasOwnProperty.call(body, "department_id")) {
     const departmentId = text(body.department_id);
     if (!departmentId) return json({ error: "Phòng ban không hợp lệ." }, { status: 400 });
-    if (departmentId !== currentUser.department_id) {
-      const { data: department, error: departmentError } = await serverSupabase.from("departments").select("id,active").eq("id", departmentId).maybeSingle();
-      if (departmentError) return json({ error: "Không thể kiểm tra phòng ban." }, { status: 500 });
-      const departmentValidation = validateDepartmentTarget(department);
-      if (!departmentValidation.ok) return json({
-        error: departmentValidation.code === "department_not_found" ? "Phòng ban không tồn tại." : "Không thể gán phòng ban đã ngừng sử dụng.",
-        code: departmentValidation.code,
-      }, { status: 400 });
-    }
     patch.department_id = departmentId;
   }
   if (body && Object.prototype.hasOwnProperty.call(body, "active")) {

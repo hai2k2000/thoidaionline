@@ -5,12 +5,6 @@ export type ApiErrorCode =
   | "invalid_request"
   | "not_found"
   | "conflict"
-  | "publication_state_conflict"
-  | "planned_publication_required"
-  | "publication_plan_locked"
-  | "invalid_article_url"
-  | "withdrawal_reason_required"
-  | "inactive_work_kind"
   | "service_unavailable"
   | "operation_failed";
 

@@ -7,12 +7,11 @@ export type Phase2NavigationAccess = {
   canManageRubrics: boolean;
   canManageUsers: boolean;
   canManagePermissions: boolean;
-  canManageJournalismStructures?: boolean;
 };
 
 export type Phase2NavigationItem = {
   id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "journalism-structures" | "journalism-reports";
+    | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin";
   href: string;
 };
 
@@ -35,7 +34,6 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
-      { id: "journalism-reports", href: "/journalism/reports" },
       { id: "attendance", href: "/my-attendance" },
       ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
@@ -73,7 +71,6 @@ export function getPhase2Navigation(
             href: "/configuration/evaluation-cycles",
           } as const]
         : []),
-      ...(access.canManageJournalismStructures ? [{ id: "journalism-structures", href: "/journalism/structures" } as const] : []),
     ],
     showEvaluationTab:
       access.canEvaluateStep1 || access.canEvaluateStep2,

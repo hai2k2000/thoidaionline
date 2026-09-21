@@ -12,7 +12,6 @@ import {
   isSameOriginRequest,
   type ServerAuthUser,
 } from "@/lib/serverSession";
-import { mapRpcError, type RpcError } from "@/lib/rpcErrorMapping";
 
 export { apiError, apiJson, type ApiErrorCode };
 
@@ -58,7 +57,20 @@ export async function requireMutationActor(): Promise<ActorGuard> {
     : { ok: false, response: apiError("unauthenticated", 401) };
 }
 
-export function rpcFailure(error: RpcError): Response {
-  const mapped = mapRpcError(error);
-  return apiError(mapped.code, mapped.status);
+export function rpcFailure(error: { code?: string | null }): Response {
+  switch (error.code) {
+    case "42501":
+      return apiError("forbidden", 403);
+    case "P0002":
+      return apiError("not_found", 404);
+    case "22023":
+    case "22007":
+    case "23514":
+      return apiError("invalid_request", 400);
+    case "23505":
+    case "40001":
+      return apiError("conflict", 409);
+    default:
+      return apiError("operation_failed", 500);
+  }
 }

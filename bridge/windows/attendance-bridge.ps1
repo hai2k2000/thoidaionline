@@ -23,21 +23,11 @@ if (-not $Daily -and -not (Test-AttendanceWindow (Get-Date))) { exit 0 }
 if (-not (Test-Path $ConfigPath)) { throw "Missing bridge config: $ConfigPath" }
 $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 if ([string]::IsNullOrWhiteSpace($config.bridgeToken)) { throw "bridgeToken is missing" }
-function New-BridgeHeaders([string]$Uri, [string]$Method, [string]$Body) {
-  $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
-  $nonce = [Convert]::ToBase64String((1..16 | ForEach-Object { Get-Random -Maximum 256 }))
-  $nonce = $nonce.TrimEnd('=').Replace('+','-').Replace('/','_')
-  $sha = [Security.Cryptography.SHA256]::Create(); $bodyHash = ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Body))) -replace '-','').ToLowerInvariant(); $sha.Dispose()
-  $path = ([Uri]$Uri).AbsolutePath
-  $canonical = "$Method`n$path`n$timestamp`n$nonce`n$bodyHash"
-  $hmac = [Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes([string]$config.bridgeToken)); $signature = ([BitConverter]::ToString($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonical))) -replace '-','').ToLowerInvariant(); $hmac.Dispose()
-  return @{ "x-attendance-bridge-timestamp" = $timestamp; "x-attendance-bridge-nonce" = $nonce; "x-attendance-bridge-signature" = $signature }
-}
+$headers = @{ "x-attendance-bridge-token" = [string]$config.bridgeToken }
 
 function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null) {
-  $bodyText = if ($null -ne $Body) { $Body | ConvertTo-Json -Depth 8 -Compress } else { "" }
-  $params = @{ Uri = "$apiBase$Path"; Method = $Method; Headers = (New-BridgeHeaders "$apiBase$Path" $Method $bodyText); ContentType = "application/json" }
-  if ($null -ne $Body) { $params.Body = $bodyText }
+  $params = @{ Uri = "$apiBase$Path"; Method = $Method; Headers = $headers; ContentType = "application/json" }
+  if ($null -ne $Body) { $params.Body = ($Body | ConvertTo-Json -Depth 8 -Compress) }
   Invoke-RestMethod @params
 }
 

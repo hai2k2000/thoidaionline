@@ -17,7 +17,7 @@ import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import PasswordInput from "@/components/PasswordInput";
 
-type Role = { id: string; code?: string; name: string; level?: number; active?: boolean };
+type Role = { id: string; code?: string; name: string; level?: number };
 type JobTitle = {
   id: string;
   code?: string;
@@ -26,7 +26,6 @@ type JobTitle = {
   active?: boolean;
 };
 type Department = { id: string; code?: string; name: string; active?: boolean };
-const labelWithCode = (item: { name: string; code?: string }) => item.code ? `${item.name} (${item.code})` : item.name;
 type User = {
   id: string;
   full_name: string;
@@ -416,7 +415,7 @@ export default function UsersPage() {
                   }
                 >
                   <option value="">Vai trò</option>
-                  {roles.filter((r) => r.active !== false).map((r) => (
+                  {roles.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
                     </option>
@@ -434,7 +433,7 @@ export default function UsersPage() {
                     .filter((d) => d.active !== false)
                     .map((d) => (
                       <option key={d.id} value={d.id}>
-                        {labelWithCode(d)}
+                        {d.name}
                       </option>
                     ))}
                 </select>
@@ -516,7 +515,7 @@ export default function UsersPage() {
                       <td className="px-3 py-2">{u.job_titles?.name ?? "-"}</td>
                       <td className="px-3 py-2">{u.roles?.name ?? "-"}</td>
                       <td className="px-3 py-2">
-                        {labelWithCode(deps.find((d) => d.id === u.department_id) ?? { name: "-" }) ??
+                        {deps.find((d) => d.id === u.department_id)?.name ??
                           "-"}
                       </td>
                       <td className="px-3 py-2">
@@ -614,13 +613,11 @@ export default function UsersPage() {
                       value={editRole}
                       onChange={(e) => setEditRole(e.target.value)}
                     >
-                      {roles
-                        .filter((r) => r.active !== false || r.id === editRole)
-                        .map((r) => (
-                          <option key={r.id} value={r.id} disabled={r.active === false}>
-                            {r.active === false ? labelWithCode(r) : r.name}{r.active === false ? " (INACTIVE / HISTORICAL)" : ""}
-                          </option>
-                        ))}
+                      {roles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className="block text-sm">
@@ -632,10 +629,10 @@ export default function UsersPage() {
                       onChange={(e) => setEditDep(e.target.value)}
                     >
                       {deps
-                        .filter((d) => d.active !== false || d.id === editDep)
+                        .filter((d) => d.active !== false)
                         .map((d) => (
-                          <option key={d.id} value={d.id} disabled={d.active === false}>
-                            {d.active === false ? labelWithCode(d) : d.name}{d.active === false ? " (INACTIVE / HISTORICAL)" : ""}
+                          <option key={d.id} value={d.id}>
+                            {d.name}
                           </option>
                         ))}
                     </select>

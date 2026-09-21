@@ -10,10 +10,6 @@ const responseSource = readFileSync(
   new URL("./apiResponse.ts", import.meta.url),
   "utf8",
 );
-const mappingSource = readFileSync(
-  new URL("./rpcErrorMapping.ts", import.meta.url),
-  "utf8",
-);
 
 test("mutation guard checks origin before signed session", () => {
   const mutationSource = source.slice(
@@ -44,15 +40,6 @@ test("API responses are private no-store and errors are stable", () => {
   assert.doesNotMatch(`${source}\n${responseSource}`, /console\.(?:log|warn|error)/);
 });
 
-test("RPC failures use the focused mapper and keep raw database details private", () => {
-  assert.match(source, /mapRpcError/);
-  assert.match(mappingSource, /40001/);
-  assert.match(mappingSource, /Publication report changed before verification\./);
-  assert.match(mappingSource, /42501/);
-  assert.match(mappingSource, /operation_failed/);
-  assert.doesNotMatch(source, /error\.message/);
-});
-
 test("server API has no unrelated UUID or authorization imports", () => {
   assert.doesNotMatch(source, /randomUUID|canAssignToDepartment|canTaskAction/);
 });
@@ -66,14 +53,21 @@ const permissionsRoute = readFileSync(
   "utf8",
 );
 
-test("permission API is server-grant authorized and read-only", () => {
-  assert.match(permissionsRoute, /loadRbacActor/);
-  assert.match(permissionsRoute, /permission\.manage/);
-  assert.match(permissionsRoute, /permissions/);
-  assert.match(permissionsRoute, /role_permission_grants/);
-  assert.match(permissionsRoute, /requireReadActor/);
-  for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
-    assert.match(permissionsRoute, new RegExp(`export async function ${method}`));
-    assert.match(permissionsRoute, new RegExp(`${method}[\\s\\S]{0,300}405`));
+test("permission API is Admin-only and exposes the five Phase-1 fields", () => {
+  assert.match(permissionsRoute, /actor\.role_code\s*!==\s*["']admin["']/);
+  assert.match(permissionsRoute, /PERMISSION_KEYS/);
+  for (const key of [
+    "can_assign_task",
+    "can_view_department_tasks",
+    "can_evaluate_step1",
+    "can_evaluate_step2",
+    "can_manage_rubrics",
+  ]) {
+    assert.match(permissionsRoute, new RegExp(key));
   }
+  assert.match(permissionsRoute, /requireReadActor/);
+  assert.match(permissionsRoute, /requireMutationActor/);
+  assert.doesNotMatch(permissionsRoute, /\["admin",\s*"tong_bien_tap"/);
+  assert.match(permissionsRoute, /logServerAudit/);
+  assert.doesNotMatch(permissionsRoute, /services\/audit/);
 });

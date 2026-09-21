@@ -11,7 +11,7 @@ const isRealtimeWindow = () => {
 };
 
 export async function POST(request: Request) {
-  if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
+  if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
   if (!isRealtimeWindow()) return apiJson({ ok: true, skipped: true, reason: "outside_realtime_window" });
   const body = await readJsonObject(request);
   const enroll = typeof body?.enroll_number === "string" ? body.enroll_number : "";
