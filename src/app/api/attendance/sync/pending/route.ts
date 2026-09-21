@@ -4,7 +4,7 @@ import { bridgeAuthorized } from "@/lib/attendanceBridgeAuth";
 import { buildAttendanceSyncClaimFilter } from "@/lib/attendanceSyncRecovery";
 
 export async function GET(request: Request) {
-  if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
+  if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
   const reclaimBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const { data: pending, error } = await serverSupabase
     .from("attendance_sync_requests")

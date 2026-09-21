@@ -8,6 +8,11 @@ import {
   type TaskParticipant,
 } from "@/lib/authorization";
 import { resolveTaskCompatibility } from "@/lib/taskCompatibility";
+import { isTaskRbacV2Enabled } from "@/lib/taskRbacFlag";
+import { buildTaskListScope } from "@/lib/taskAuthorization";
+import { loadRbacActor } from "@/lib/rbac/repository";
+import { applyJournalismExcludeFilter } from "@/lib/taskFilters.mjs";
+import { publicationReportDto } from "@/lib/journalismManualPublicationValidation";
 import type {
   AssignedTaskInput,
   LegacyCreateTaskInput,
@@ -16,12 +21,16 @@ import type {
   PersonalTaskEditInput,
   PersonalTaskInput,
   RepositoryResult,
+  JournalismTaskDetailDto,
+  JournalismTaskListSummaryDto,
+  JournalismSeriesDto,
+  JournalismTopicDto,
   TaskDetailDto,
   TaskListItemDto,
   TaskRepository,
 } from "@/lib/taskContracts";
 
-const TASK_LIST_FIELDS = [
+const TASK_BASE_FIELDS = [
   "id",
   "title",
   "priority",
@@ -53,16 +62,92 @@ const TASK_LIST_FIELDS = [
   "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
   "created_by_user:staff_users!tasks_created_by_fkey(full_name)",
   "completion_score:task_completion_scores(requirement_score,collaboration_score,initiative_score,total_score,note)",
+];
+
+const journalismListFields = (
+  inner = false,
+  topicInner = false,
+  seriesInner = false,
+) => [
+  ...TASK_BASE_FIELDS,
+  `journalism:journalism_task_details${inner ? "!inner" : ""}(publication_status,planned_publication_at,published_at,work_kind:journalism_work_kinds(id,code,name,is_active)${topicInner ? ",topic_filter:editorial_topic_tasks!inner(topic_id)" : ""}${seriesInner ? ",series_filter:editorial_series_items!inner(series_id)" : ""})`,
 ].join(",");
 
+const TASK_LIST_FIELDS = journalismListFields();
+
 const TASK_DETAIL_FIELDS = [
-  TASK_LIST_FIELDS,
+  ...TASK_BASE_FIELDS,
   "description",
   "effort_weight",
   "evaluation_criteria",
   "owner:staff_users!tasks_owner_id_fkey(full_name)",
   "reviewer:staff_users!tasks_reviewer_id_fkey(full_name)",
+  "journalism:journalism_task_details(task_id,publication_status,planned_publication_at,published_at,location,article_url,editorial_notes,created_at,updated_at,work_kind:journalism_work_kinds(id,code,name,description,is_active,sort_order),topic_links:editorial_topic_tasks(topic:editorial_topics(id,name,is_active,department_id)),series_links:editorial_series_items(task_id,position,series:editorial_series(id,name,is_active,department_id,topic_id)),publication_report:journalism_publication_reports(id,task_id,publication_url,published_title,published_at,note,reported_by,created_at,updated_at,reporter:staff_users!journalism_publication_reports_reported_by_fkey(full_name),verification_history:journalism_publication_verifications(id,publication_report_id,decision,note,verified_by,publication_report_updated_at,created_at,verifier:staff_users!journalism_publication_verifications_verified_by_fkey(full_name))))",
 ].join(",");
+
+const journalismValue = <T>(value: T | T[] | null | undefined): T | null =>
+  Array.isArray(value) ? value[0] ?? null : value ?? null;
+
+const withJournalismList = (item: TaskListItemDto): TaskListItemDto => ({
+  ...item,
+  journalism: journalismValue(
+    item.journalism as JournalismTaskListSummaryDto | JournalismTaskListSummaryDto[] | null,
+  ),
+});
+
+type SeriesMembershipRow = {
+  task_id: string;
+  position: number;
+  series: {
+    id: string;
+    name: string;
+    is_active: boolean;
+    department_id: string | null;
+    topic_id: string | null;
+  } | null;
+};
+
+const seriesDto = (row: SeriesMembershipRow | undefined): JournalismSeriesDto | null =>
+  row?.series ? {
+    id: row.series.id,
+    name: row.series.name,
+    isActive: row.series.is_active,
+    departmentId: row.series.department_id,
+    topicId: row.series.topic_id,
+    position: row.position,
+  } : null;
+
+const enrichJournalismList = async (
+  items: TaskListItemDto[],
+): Promise<RepositoryResult<TaskListItemDto[]>> => {
+  const journalismIds = items.filter((item) => item.journalism).map((item) => item.id);
+  if (journalismIds.length === 0) return ok(items);
+  const [topicResult, seriesResult] = await Promise.all([
+    serverSupabase.from("editorial_topic_tasks").select("task_id").in("task_id", journalismIds),
+    serverSupabase.from("editorial_series_items")
+      .select("task_id,position,series:editorial_series(id,name,is_active,department_id,topic_id)")
+      .in("task_id", journalismIds),
+  ]);
+  const error = topicResult.error ?? seriesResult.error;
+  if (error) return fail(error);
+  const topicCounts = new Map<string, number>();
+  for (const row of topicResult.data ?? []) {
+    const taskId = row.task_id as string;
+    topicCounts.set(taskId, (topicCounts.get(taskId) ?? 0) + 1);
+  }
+  const seriesByTask = new Map(
+    ((seriesResult.data ?? []) as unknown as SeriesMembershipRow[])
+      .map((row) => [row.task_id, row] as const),
+  );
+  return ok(items.map((item) => item.journalism ? {
+    ...item,
+    journalism: {
+      ...item.journalism,
+      topicCount: topicCounts.get(item.id) ?? 0,
+      series: seriesDto(seriesByTask.get(item.id)),
+    },
+  } : item));
+};
 
 type TaskAccessRow = {
   id: string;
@@ -86,6 +171,29 @@ const fail = <T>(error: { code?: string | null }): RepositoryResult<T> => ({
   ok: false,
   error: { code: error.code ?? null },
 });
+
+export type JournalismWorkKindOption = { id: string; name: string; is_active: boolean };
+
+export async function listJournalismWorkKinds(selectedId: string | null = null): Promise<RepositoryResult<JournalismWorkKindOption[]>> {
+  const activeResult = await serverSupabase
+    .from("journalism_work_kinds")
+    .select("id,name,is_active,sort_order")
+    .eq("is_active", true)
+    .order("sort_order")
+    .order("name");
+  if (activeResult.error) return fail(activeResult.error);
+  const options = (activeResult.data ?? []) as JournalismWorkKindOption[];
+  if (!selectedId || options.some((option) => option.id === selectedId)) return ok(options);
+  const historicalResult = await serverSupabase
+    .from("journalism_work_kinds")
+    .select("id,name,is_active,sort_order")
+    .eq("id", selectedId)
+    .maybeSingle();
+  if (historicalResult.error) return fail(historicalResult.error);
+  return historicalResult.data
+    ? ok([...options, historicalResult.data as JournalismWorkKindOption])
+    : ok(options);
+}
 
 const mutation = async <T>(
   name: string,
@@ -112,9 +220,24 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
   })),
 });
 
-const scopeTerms = async (
+export const getTaskScopeTerms = async (
   actor: AuthorizationActor,
 ): Promise<RepositoryResult<string[]>> => {
+  if (isTaskRbacV2Enabled()) {
+    const rbacActor = await loadRbacActor({ id: actor.id, department_id: actor.departmentId });
+    const assignments = await serverSupabase
+      .from("task_assignees")
+      .select("task_id")
+      .eq("user_id", actor.id);
+    if (assignments.error) return fail(assignments.error);
+    const scope = buildTaskListScope(
+      rbacActor,
+      (assignments.data ?? []).map((row) => row.task_id as string),
+    );
+    if (scope.all) return ok([]);
+    if (scope.terms.length === 0) return ok(["id.eq.00000000-0000-0000-0000-000000000000"]);
+    return ok(scope.terms);
+  }
   if (hasOrganizationTaskView(actor)) {
     return ok([]);
   }
@@ -144,12 +267,26 @@ const scopeTerms = async (
 
 export const taskRepository: TaskRepository = {
   async list(actor, query) {
-    const scope = await scopeTerms(actor);
+    const scope = await getTaskScopeTerms(actor);
     if (!scope.ok) return scope;
 
+    const hasJournalismParentFilter = Boolean(
+      query.journalism === "only"
+      || query.journalismWorkKindId
+      || query.publicationStatus
+      || query.plannedPublicationFrom
+      || query.plannedPublicationTo
+      || query.topicId
+      || query.seriesId,
+    );
     let dbQuery = serverSupabase
       .from("tasks")
-      .select(TASK_LIST_FIELDS, { count: "exact" })
+      .select(
+        hasJournalismParentFilter
+          ? journalismListFields(true, Boolean(query.topicId), Boolean(query.seriesId))
+          : TASK_LIST_FIELDS,
+        { count: "exact" },
+      )
       .order("created_at", { ascending: false });
     if (scope.data.length > 0) dbQuery = dbQuery.or(scope.data.join(","));
     if (query.scope === "personal") {
@@ -208,6 +345,29 @@ export const taskRepository: TaskRepository = {
       }
       dbQuery = dbQuery.eq("department_id", query.departmentId);
     }
+    if (query.journalism === "exclude") {
+      dbQuery = applyJournalismExcludeFilter(dbQuery);
+    }
+    if (query.journalismWorkKindId) {
+      dbQuery = dbQuery.eq("journalism_task_details.work_kind_id", query.journalismWorkKindId);
+    }
+    if (query.publicationStatus) {
+      dbQuery = dbQuery.eq("journalism_task_details.publication_status", query.publicationStatus);
+    }
+    if (query.plannedPublicationFrom) {
+      dbQuery = dbQuery.gte(
+        "journalism_task_details.planned_publication_at",
+        `${query.plannedPublicationFrom}T00:00:00+07:00`,
+      );
+    }
+    if (query.plannedPublicationTo) {
+      dbQuery = dbQuery.lte(
+        "journalism_task_details.planned_publication_at",
+        `${query.plannedPublicationTo}T23:59:59.999+07:00`,
+      );
+    }
+    if (query.topicId) dbQuery = dbQuery.eq("journalism_task_details.topic_filter.topic_id", query.topicId);
+    if (query.seriesId) dbQuery = dbQuery.eq("journalism_task_details.series_filter.series_id", query.seriesId);
     const today = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
     }).format(new Date());
@@ -227,11 +387,14 @@ export const taskRepository: TaskRepository = {
     const to = from + query.pageSize - 1;
     const { data, error, count } = await dbQuery.range(from, to);
     if (error) return fail(error);
+    const normalizedItems = ((data ?? []) as unknown as TaskListItemDto[]).map((item) => {
+        const normalized = withJournalismList(item);
+        return { ...normalized, ...resolveTaskCompatibility(normalized) };
+      });
+    const enriched = await enrichJournalismList(normalizedItems);
+    if (!enriched.ok) return enriched;
     return ok({
-      items: ((data ?? []) as unknown as TaskListItemDto[]).map((item) => ({
-        ...item,
-        ...resolveTaskCompatibility(item),
-      })),
+      items: enriched.data,
       total: count ?? 0,
       page: query.page,
       pageSize: query.pageSize,
@@ -305,6 +468,47 @@ export const taskRepository: TaskRepository = {
       status_events: (statusResult.data ?? []) as unknown as TaskDetailDto["status_events"],
       attachments: (attachmentResult.data ?? []) as unknown as TaskDetailDto["attachments"],
       completion_score: completionScoreResult.data as unknown as TaskDetailDto["completion_score"],
+      journalism: (() => {
+        const journalism = journalismValue(
+          (taskResult.data as unknown as { journalism?: JournalismTaskDetailDto | JournalismTaskDetailDto[] | null }).journalism,
+        );
+        if (!journalism) return null;
+        const detail = taskResult.data as unknown as { journalism?: JournalismTaskDetailDto & {
+          topic_links?: Array<{ topic?: object | object[] | null }>;
+          series_links?: Array<SeriesMembershipRow>;
+          publication_report?: object | object[] | null;
+        } | JournalismTaskDetailDto[] | null };
+        const rawJournalism = journalismValue(detail.journalism) as unknown as (JournalismTaskDetailDto & {
+          topic_links?: Array<{ topic?: object | object[] | null }>;
+          series_links?: Array<SeriesMembershipRow>;
+          publication_report?: object | object[] | null;
+        }) | null;
+        const topics = (rawJournalism?.topic_links ?? []).flatMap((row) => {
+          const topic = journalismValue(row.topic as unknown as {
+            id: string; name: string; is_active: boolean; department_id: string | null;
+          } | Array<{ id: string; name: string; is_active: boolean; department_id: string | null }> | null);
+          return topic ? [{
+            id: topic.id,
+            name: topic.name,
+            isActive: topic.is_active,
+            departmentId: topic.department_id,
+          } satisfies JournalismTopicDto] : [];
+        }).sort((left, right) => left.name.localeCompare(right.name, "vi", { sensitivity: "base" })
+          || left.id.localeCompare(right.id));
+        const baseJournalism = { ...(rawJournalism as unknown as Record<string, unknown>) };
+        delete baseJournalism.topic_links;
+        delete baseJournalism.series_links;
+        delete baseJournalism.publication_report;
+        return {
+          ...baseJournalism,
+          topicCount: topics.length,
+          topics,
+          series: seriesDto(rawJournalism?.series_links?.[0]),
+          publication_report: publicationReportDto(
+            journalismValue(rawJournalism?.publication_report as object | object[] | null | undefined),
+          ),
+        } as unknown as JournalismTaskDetailDto;
+      })(),
     });
   },
 

@@ -1,6 +1,7 @@
 import "server-only";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { FOREIGN_REPORTERS } from "@/lib/onlineWorkLanguage.mjs";
+import { lastDayOfMonth } from "@/lib/onlineWorkMonth";
 
 export const onlineWorkRepository = {
   async reporters() {
@@ -12,7 +13,7 @@ export const onlineWorkRepository = {
   async month(month: string) {
     const { data, error } = await serverSupabase.from("online_work_schedules")
       .select("id,work_date,staff_id,status").eq("status", "active")
-      .gte("work_date", `${month}-01`).lte("work_date", `${month}-31`).order("work_date");
+      .gte("work_date", `${month}-01`).lte("work_date", lastDayOfMonth(month)).order("work_date");
     return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
   },
   async range(from: string, to: string) {

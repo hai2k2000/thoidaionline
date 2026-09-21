@@ -1,5 +1,8 @@
+RBAC Phase 1A Checkpoint 1: COMPLETE — additive permissions and role_permission_grants schema applied and verified on production.
+RBAC Phase 1A Checkpoint 2: COMPLETE IN ISOLATED SHADOW WORKTREE — assignment shadow deny/allow fix, full characterization matrix, tests, typecheck, lint, and non-secret build verified; awaiting owner review. Production source unchanged.
+
 Current Phase: Attendance bridge operations
-Current Task: COMPLETE — leave requests and attendance notes
+Current Task: COMPLETE — public personal work plans and separated leave requests
 
 Current Task Update: COMPLETE — employee leave history month/status filters
 
@@ -12,6 +15,8 @@ Latest Security Hardening: COMPLETE — web login attempts are rate-limited per 
 Latest Network Hardening: COMPLETE — Next.js binds to localhost behind Nginx
 
 Latest Remote Access Hardening: COMPLETE — WireGuard server provisioned with three independent peers
+Latest Supabase Exposure Hardening: COMPLETE — public pg-meta and analytics routes blocked at Nginx
+Latest Wise Eye Bridge Authentication: COMPLETE — HMAC signatures, timestamp/nonce replay protection, and bounded rate limiting
 
 Current Task Update: COMPLETE — department deputy task assignment enabled
 
@@ -25,12 +30,16 @@ Latest Attendance Workflow Update: COMPLETE — business-trip requests are clear
 
 Latest Work Schedule Privacy: COMPLETE — regular employees can only view their own plans
 
+Latest Personal Plan Update: COMPLETE — shared personal plans with work/business/event types, date ranges, creator controls, and separate leave submission UI
+
 Completed:
 - Attendance total-summary rows now open a detail popup for the selected employee using the active day/week/month range.
 - Employee leave history now has independent month/all-time and status filters, scoped to the authenticated user's own requests.
 - Closed unused IPv6 ingress for WireGuard UDP 51820 because all provisioned peers use IPv4 endpoints.
 - Provisioned `wg0` on the VPS at `10.66.0.1/24` over UDP 51820 with three unique split-tunnel peers (`10.66.0.2`–`10.66.0.4`), persistent startup, and explicit firewall rules preserving WireGuard and SSH recovery access.
 - Bound the production Next.js listener to `127.0.0.1:3001`; Nginx remains the only public application entry point.
+- Blocked public `/supa/pg` (pg-meta) and `/supa/analytics` routes at Nginx with 404 responses; REST and Auth routes remain available for the application.
+- Upgraded Wise Eye bridge requests to HMAC-SHA256 signatures over method, path, timestamp, nonce, and body hash; stale/replayed requests are rejected and per-client request rates are bounded.
 - Added the same bounded request validation and five-attempt/15-minute throttle used by mobile login to the web login endpoint; successful authentication clears the counter and blocked requests return HTTP 429 with `Retry-After`.
 - Restricted employee work-schedule queries, pages, and navigation so regular employees only receive their own plan; organization and leadership schedules remain available to authorized leaders and admin.
 - Enabled task assignment for the `pho_truong_phong` role; department deputies are scoped to assigning within their own department.
@@ -40,6 +49,9 @@ Completed:
 - Replaced the four-position duty roster with exactly three positions: Xuất bản, Biên tập, Phóng viên.
 - Added authenticated leave requests with leadership approval, conflict checks, cancellation, and audit history.
 - Attendance notes now derive from approved leave and active online-work schedules; no matching context leaves the note blank.
+- Personal plan page is shared by authenticated users, supports filtering by active staff, and lets each creator create, edit, or delete only their own work, business-trip, or event plans.
+- Work plans support inclusive start/end dates and optional start/end times; business trips and events remain visible in the shared plan calendar.
+- Attendance leave submission is now explicitly leave-only; business trips are recorded through the personal plan flow.
 - Added `/api/leave-requests` for authenticated employee submissions, leadership approvals/rejections, pending cancellation, conflict prevention, and audit history.
 - Attendance pages now include an employee leave form, personal request history, and a leadership approval queue.
 - Merged legacy Biên tập bước 1/2 rows into one Biên tập row, retaining the step 2 assignee when both existed and recording cancellation events for redundant rows.
@@ -126,6 +138,7 @@ Validation:
 - Targeted lint: PASS (0 errors, 1 warning before dependency fix; PASS after dependency fix).
 - Migration `20260901095000_backend_security_hardening`: PASS with database backup and anon probes returning 401/42501.
 - Runtime dependency audit: PASS (`npm audit --omit=dev --audit-level=high`, 0 vulnerabilities) after upgrading Next.js to 16.3.4 and Supabase JS to 2.112.4.
+- Wise Eye HMAC tests: PASS (22/22 targeted bridge tests); production build PASS; signed request accepted once, replay rejected with HTTP 401, legacy token-only request rejected with HTTP 401; bridge process remains active.
 - Production dependency/build smoke: PASS (Next.js 16.3.4, service active, protected APIs return 401, security headers present).
 
 Blockers:
@@ -133,7 +146,7 @@ Blockers:
 
 Follow Up:
 - Existing legacy HR files under `public/uploads/hr` should be migrated manually if any are found; new HR files use guarded runtime storage.
-- Service still runs as root and deploy process should be moved to an atomic non-root release workflow in a separate change.
+- Production service runs as the dedicated `thoidai-work` user with `NoNewPrivileges=yes` and `ProtectSystem=strict`; deploy process can be moved to an atomic non-root release workflow in a separate change.
 - The production database does not currently contain `attendance_logs`; the UI keeps the existing server-generated DEMO fallback until the attendance migration is provisioned.
 - Legacy seeded assigned tasks may remain in `new` status; they are outside the new assignment flow and should be triaged separately if users report them.
 - Four seeded assigned tasks remain `pending_review` without a completion score and require triage or a fresh assignee submission before approval.
@@ -145,3 +158,19 @@ Next:
 - Existing dev-tooling audit findings, stale UI contract test, and non-root service follow-up remain separate tasks.
 
 Security milestone 2026-09-14: Supabase Kong, Mailpit, and PostgreSQL bindings restricted to 127.0.0.1. Rollback containers and inspect snapshots retained. Database readiness, schema dump, service health, and production login smoke checks passed. Dependency remediation passed npm audit with zero vulnerabilities; security tests 21/21.
+Current Phase: Journalism J5E Topics / Series UI integration
+Current Task: COMPLETE — scoped management UI, Task detail associations, Task Center filters, Series ordering view, permission-aware rendering, accessibility, and regression validation
+Completed:
+- J5D implementation commit `fca071cb1fb52e8b5b2f4d4969a0839ab50bed30`.
+- J5D report commit `fa1017a0f16359e15ca092dcc03d30238a87a7d0`.
+Validation:
+- Contract, SQL mutation/security, concurrency, TypeScript, changed-file ESLint, diff check, and non-secret build PASS.
+- Full suite matches sealed 34-failure baseline with zero J5D regression.
+Blockers: none for J5D isolated completion.
+Validation:
+- J5E focused tests PASS (5/5).
+- J5B/J5C/J5D and J3/J4 focused regressions PASS.
+- Full suite exact-name comparison: 472 tests / 438 pass / 34 sealed baseline failures; zero new J5E failures.
+- TypeScript, changed-file ESLint, diff check, and non-secret build PASS.
+Blockers: none for isolated J5E completion.
+Next: J5E READY FOR OWNER PRODUCTION REVIEW; do not start J5F production activation.

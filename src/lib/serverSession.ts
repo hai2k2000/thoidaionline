@@ -12,6 +12,7 @@ import {
   type PermissionSet,
 } from "@/lib/permissions";
 import { normalizeAccountPreferences, type AccountPreferences } from "@/lib/accountPreferences";
+import { loadRbacActor } from "@/lib/rbac/repository";
 
 export const SESSION_COOKIE = "thoidai_work_session";
 
@@ -32,6 +33,7 @@ export type ServerAuthUser = {
   permissions: PermissionSet;
   avatar_url: string | null;
   preferences: AccountPreferences;
+  rbacPermissions: string[];
 };
 
 function secret() {
@@ -101,6 +103,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     ? await serverSupabase.storage.from("profile-avatars").createSignedUrl(row.avatar_path, 3600)
     : null;
 
+  const rbacActor = await loadRbacActor({ id: row.id, department_id: row.department_id });
   return {
     id: row.id,
     full_name: row.full_name,
@@ -118,6 +121,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     permissions: normalizePermissions(row.roles.role_permissions),
     avatar_url: avatarResult?.data?.signedUrl ?? null,
     preferences: normalizeAccountPreferences(row.preferences),
+    rbacPermissions: [...new Set(rbacActor.grants.map((grant) => grant.permissionCode))],
   };
 }
 

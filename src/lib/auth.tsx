@@ -18,6 +18,7 @@ type AuthUser = {
   avatar_url: string | null;
   preferences: AccountPreferences;
   must_change_password: boolean;
+  rbacPermissions?: string[];
 };
 
 type ModuleKey = "hr" | "assets" | "documents" | "performance";
@@ -27,7 +28,7 @@ type AuthContextType = {
   user: AuthUser | null;
   login: (identifier: string, password: string) => Promise<{ ok: boolean; error?: string; mustChangePassword?: boolean }>;
   logout: () => Promise<void>;
-  hasPermission: (key: PermissionKey) => boolean;
+  hasPermission: (key: PermissionKey | string) => boolean;
   canAccessModule: (module: ModuleKey) => boolean;
   isReadOnly: () => boolean;
   canViewAllWorkHr: () => boolean;
@@ -36,7 +37,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 const SESSION_KEY = "thoidai_work_user_id";
-const PHASE2_PERMISSION_KEYS = new Set<PermissionKey>([
+const PHASE2_PERMISSION_KEYS = new Set<string>([
   "can_assign_task",
   "can_view_department_tasks",
   "can_evaluate_step1",
@@ -104,10 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const hasPermission = (key: PermissionKey) => {
+  const hasPermission = (key: PermissionKey | string) => {
     if (!user) return false;
+    if (user.rbacPermissions?.includes(key)) return true;
     if (PHASE2_PERMISSION_KEYS.has(key)) {
-      return user.permissions[key] === true;
+      return user.permissions[key as PermissionKey] === true;
     }
     if (getRoleAccessPolicy(user.role_code).readOnly) return false;
     if (user.role_code === "admin") return true;
@@ -121,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (key === "can_create_task" || key === "can_edit_all_tasks") {
       return assignmentRoles.has(user.role_code);
     }
-    return user.permissions[key] === true;
+    return user.permissions[key as PermissionKey] === true;
   };
 
   const canAccessModule = (module: ModuleKey) => {

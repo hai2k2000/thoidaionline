@@ -21,7 +21,7 @@ const isPunch = (value: unknown): value is Punch => {
 };
 
 export async function POST(request: Request) {
-  if (!bridgeAuthorized(request)) return apiError("unauthenticated", 401);
+  if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
   const body = await readJsonObject(request);
   const requestId = typeof body?.request_id === "string" ? body.request_id : "";
   const deviceId = typeof body?.device_id === "string" ? body.device_id : "";
