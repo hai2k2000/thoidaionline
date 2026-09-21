@@ -19,9 +19,9 @@ if [[ "$1" == show ]]; then
   if [[ "$2" == -p ]]; then
     property=$3
     case "$property" in
-      CapabilityBoundingSet) [[ "${TEST_CAPABILITY_BOUNDING_SET_MISSING-}" != 1 ]] || exit 1; printf 'CapabilityBoundingSet=%s\n' "${TEST_CAPABILITY_BOUNDING_SET-}" ;;
-      AmbientCapabilities) [[ "${TEST_AMBIENT_CAPABILITIES_MISSING-}" != 1 ]] || exit 1; printf 'AmbientCapabilities=%s\n' "${TEST_AMBIENT_CAPABILITIES-}" ;;
-      NoNewPrivileges) [[ "${TEST_NO_NEW_PRIVILEGES_MISSING-}" != 1 ]] || exit 1; printf 'NoNewPrivileges=%s\n' "${TEST_NO_NEW_PRIVILEGES-yes}" ;;
+      CapabilityBoundingSet) [[ "${TEST_CAPABILITY_BOUNDING_SET_MISSING-}" == 1 ]] || printf 'CapabilityBoundingSet=%s\n' "${TEST_CAPABILITY_BOUNDING_SET-}" ;;
+      AmbientCapabilities) [[ "${TEST_AMBIENT_CAPABILITIES_MISSING-}" == 1 ]] || printf 'AmbientCapabilities=%s\n' "${TEST_AMBIENT_CAPABILITIES-}" ;;
+      NoNewPrivileges) [[ "${TEST_NO_NEW_PRIVILEGES_MISSING-}" == 1 ]] || printf 'NoNewPrivileges=%s\n' "${TEST_NO_NEW_PRIVILEGES-yes}" ;;
       PrivateTmp) [[ "${TEST_PRIVATE_TMP_MISSING-}" != 1 ]] || exit 1; printf 'PrivateTmp=%s\n' "${TEST_PRIVATE_TMP-yes}" ;;
       ProtectSystem) printf 'ProtectSystem=%s\n' "${TEST_PROTECT_SYSTEM-strict}" ;;
       ProtectHome) printf 'ProtectHome=%s\n' "${TEST_PROTECT_HOME-yes}" ;;
