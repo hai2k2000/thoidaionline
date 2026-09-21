@@ -18,7 +18,8 @@ Validation:
 - Migration reviewed statically; production schema verified reverted to pre-feature state after an earlier transient smoke-test mutation.
 
 Artifact:
-- Pending immutable artifact creation from the verified worktree.
+- Created `/opt/releases/thoidai-work/3e84274-event-assignment-v1-20260921T150918Z`.
+- BUILD_ID, package.json, node_modules, runtime environment links, and release metadata validated.
 - Artifact activation and migration application are explicitly out of scope.
 
 Blockers:
@@ -26,4 +27,4 @@ Blockers:
 - Production deployment requires separate owner authorization and migration review.
 
 Next:
-- Create immutable artifact, commit and push the implementation, then stop before production deployment.
+- Owner review of migration and artifact before a separately authorized production deployment.
