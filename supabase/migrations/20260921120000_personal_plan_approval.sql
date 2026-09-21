@@ -130,6 +130,13 @@ begin
     raise exception 'forbidden' using errcode='42501';
   end if;
   v_owner := v_old.created_by;
+  select department_id into v_department
+  from public.staff_users
+  where id=v_owner and active=true;
+  select d.manager_id into v_manager
+  from public.departments d
+  left join public.staff_users manager on manager.id=d.manager_id and manager.active=true
+  where d.id=v_department and d.active=true;
   if v_old.schedule_scope = 'organization' then
     raise exception 'forbidden' using errcode='42501';
   end if;

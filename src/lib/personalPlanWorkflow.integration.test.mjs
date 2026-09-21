@@ -32,6 +32,11 @@ test("approver resolution ignores an inactive department manager", () => {
   assert.match(migration, /join public\.staff_users manager on manager\.id=d\.manager_id and manager\.active=true/i);
 });
 
+test("resubmission resolves the creator department even when an admin edits", () => {
+  assert.match(migration, /select department_id into v_department[\s\S]*where id=v_owner and active=true/i);
+  assert.match(migration, /v_old\.created_by <> p_actor and v_role <> 'admin'[\s\S]*v_owner := v_old\.created_by[\s\S]*select department_id into v_department/i);
+});
+
 test("pending manager queue applies department filtering at the embedded relation", () => {
   assert.match(repository, /creator:staff_users!work_schedules_created_by_fkey!inner\(full_name,department_id\)/);
   assert.match(repository, /eq\("creator\.department_id", departmentId\)/);
