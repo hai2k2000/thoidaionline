@@ -40,9 +40,9 @@ test("verification states and zero-data behavior stay explicit", () => {
 
 test("department reporting filters fail closed outside the actor's Task scope", () => {
   const permissions = { can_view_department_tasks: true };
-  assert.equal(canUseReportingDepartment({ roleCode: "truong_phong", departmentId: "department-a", departmentCode: "content", permissions }, "department-a"), true);
+  assert.equal(canUseReportingDepartment({ roleCode: "truong_phong", departmentId: "department-a", departmentCode: "editorial", permissions }, "department-a"), true);
   assert.equal(canUseReportingDepartment({ roleCode: "truong_phong", departmentId: "department-a", departmentCode: "other", permissions }, "department-a"), false);
-  assert.equal(canUseReportingDepartment({ roleCode: "phong_vien", departmentId: "department-a", departmentCode: "content", permissions: { can_view_department_tasks: false } }, "department-a"), false);
+  assert.equal(canUseReportingDepartment({ roleCode: "phong_vien", departmentId: "department-a", departmentCode: "editorial", permissions: { can_view_department_tasks: false } }, "department-a"), false);
   assert.equal(canUseReportingDepartment({ roleCode: "admin", departmentId: null, departmentCode: null, permissions: {} }, "department-b"), true);
 });
 
@@ -55,7 +55,7 @@ test("reporting repository reuses Task scope and has bounded server-side read ar
   assert.match(repository, /journalism_publication_reports/);
   assert.match(repository, /journalism_publication_verifications/);
   assert.match(repository, /department:departments!inner\(code,name\)/);
-  assert.match(repository, /eq\("departments\.code", "content"\)/);
+  assert.match(repository, /eq\("departments\.code", "editorial"\)/);
   assert.match(repository, /REPORTING_DEFAULT_LIMIT - 1/);
   assert.match(repository, /created_at/);
   assert.doesNotMatch(repository, /insert\(|update\(|delete\(|\.rpc\(/);

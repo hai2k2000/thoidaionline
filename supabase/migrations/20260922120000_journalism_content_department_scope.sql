@@ -24,7 +24,7 @@ begin
     raise exception 'Invalid actor.' using errcode = '42501';
   end if;
   if v_role_code not in ('admin', 'tong_bien_tap', 'pho_tong_bien_tap')
-     and v_actor_department_code is distinct from 'content' then
+     and v_actor_department_code is distinct from 'editorial' then
     raise exception 'Journalism is limited to Content department.' using errcode = '42501';
   end if;
 
@@ -32,7 +32,7 @@ begin
     select d.code into v_target_department_code
     from public.departments d
     where d.id = p_department_id and d.active = true;
-    if v_target_department_code is distinct from 'content' then
+    if v_target_department_code is distinct from 'editorial' then
       raise exception 'Journalism target must be Content department.' using errcode = '42501';
     end if;
   end if;

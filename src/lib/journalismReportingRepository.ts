@@ -129,7 +129,7 @@ export async function loadJournalismReporting(
     .gte("created_at", `${query.fromDate}T00:00:00+07:00`)
     .lte("created_at", `${query.toDate}T23:59:59.999+07:00`)
     .neq("task_category", "duty")
-    .eq("departments.code", "content")
+    .eq("departments.code", "editorial")
     .range(0, REPORTING_DEFAULT_LIMIT - 1);
   if (scope.data.length > 0) dbQuery = dbQuery.or(scope.data.join(","));
   if (query.status !== "cancelled") dbQuery = dbQuery.neq("status", "cancelled");
