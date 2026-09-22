@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
+import EventAssignmentPanel from "@/components/EventAssignmentPanel";
 import { useAuth } from "@/lib/auth";
 import type { AssignmentDepartment, AssignmentPerson } from "@/lib/taskAssignmentRepository";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
@@ -12,10 +13,11 @@ import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVi
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
-export default function TaskAssignShell({ departments, people, userLabel, journalismMode, journalismWorkKinds, journalismWorkKindsLoaded }: {
+export default function TaskAssignShell({ departments, people, userLabel, eventPeople, journalismMode, journalismWorkKinds, journalismWorkKindsLoaded }: {
   departments: AssignmentDepartment[];
   people: AssignmentPerson[];
   userLabel: string;
+  eventPeople: { id: string; full_name: string }[];
   journalismMode: boolean;
   journalismWorkKinds: { id: string; name: string; is_active: boolean }[];
   journalismWorkKindsLoaded: boolean;
@@ -121,7 +123,10 @@ export default function TaskAssignShell({ departments, people, userLabel, journa
       <AppNav currentPath="/tasks/assign" userLabel={userLabel} onLogout={() => { logout(); router.replace("/login"); }} />
       <main className="min-w-0 flex-1">
         <header className="rounded-2xl border bg-white p-4 shadow-sm">
-          <h1 className="text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
+            <EventAssignmentPanel people={eventPeople} compact />
+          </div>
           <nav aria-label="Loại công việc cần tạo" className="mt-4 flex flex-wrap gap-2">
             <Link href="/tasks/assign" aria-current={!journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${!journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc thường</Link>
             <Link href="/tasks/assign?kind=journalism" aria-current={journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc nghiệp vụ báo chí</Link>

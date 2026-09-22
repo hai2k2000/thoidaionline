@@ -3,6 +3,7 @@ import TaskAssignShell from "@/components/TaskAssignShell";
 import { getSessionUser } from "@/lib/serverSession";
 import { canAccessTaskAssignment } from "@/lib/taskAssignAccess";
 import { taskAssignmentRepository } from "@/lib/taskAssignmentRepository";
+import { workScheduleRepository } from "@/lib/workScheduleRepository";
 import { listJournalismWorkKinds } from "@/lib/taskRepository";
 import { canUseJournalism } from "@/lib/journalismScope.mjs";
 
@@ -11,7 +12,7 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 export default async function TaskAssignPage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (!canAccessTaskAssignment({ can_assign_task: user.permissions.can_assign_task, role_code: user.role_code })) {
+  if (!canAccessTaskAssignment({ can_assign_task: user.permissions.can_assign_task, role_code: user.role_code, is_department_manager: user.is_department_manager })) {
     redirect("/tasks");
   }
   const rawParams = await searchParams;
@@ -27,6 +28,13 @@ export default async function TaskAssignPage({ searchParams }: Props) {
     permissions: user.permissions,
   });
   if (!options.ok) throw new Error("Không thể tải dữ liệu giao việc.");
+  const peopleResult = await workScheduleRepository.allPeople();
+  if (!peopleResult.ok) throw new Error("Không thể tải danh sách phóng viên.");
+  const globalEventScope = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(user.role_code);
+  const eventPeople = peopleResult.people.filter((person) =>
+    ((person.roles as { code?: string } | null)?.code === "phong_vien" || (person.job_titles as { code?: string } | null)?.code?.startsWith("phong_vien"))
+    && (globalEventScope || person.department_id === user.department_id),
+  ).map((person) => ({ id: person.id, full_name: person.full_name }));
   return <TaskAssignShell
     departments={options.departments}
     people={options.people}
@@ -34,5 +42,6 @@ export default async function TaskAssignPage({ searchParams }: Props) {
     journalismMode={journalismMode}
     journalismWorkKinds={journalismWorkKinds}
     journalismWorkKindsLoaded={Boolean(workKindsResult?.ok)}
+    eventPeople={eventPeople}
   />;
 }

@@ -8,6 +8,7 @@ test("assignment shell requires the explicit canonical permission", () => {
   assert.equal(canAccessTaskAssignment({ can_assign_task: true }), true);
   assert.equal(canAccessTaskAssignment({ can_assign_task: false }), false);
   assert.equal(canAccessTaskAssignment({}), false);
+  assert.equal(canAccessTaskAssignment({ is_department_manager: true }), true);
 });
 
 test("assignment page uses server session and redirects denied users", () => {

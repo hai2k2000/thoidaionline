@@ -18,7 +18,7 @@ type EventRow = {
   participant_ids: string[];
 };
 
-export default function EventAssignmentPanel({ people }: { people: Person[] }) {
+export default function EventAssignmentPanel({ people, compact = false }: { people: Person[]; compact?: boolean }) {
   const [rows, setRows] = useState<EventRow[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -81,16 +81,15 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
   };
 
   return (
-    <section className="mt-3 rounded-xl border border-orange-200 bg-orange-50/40 p-4 shadow-sm">
+    <section className={compact ? "relative" : "mt-3 rounded-xl border border-orange-200 bg-orange-50/40 p-4 shadow-sm"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-bold text-orange-950">Phân công sự kiện</h2>
-          <p className="mt-1 text-xs text-slate-600">Sự kiện có hiệu lực ngay, không tạo Giao việc.</p>
+          {!compact ? <><h2 className="font-bold text-orange-950">Phân công sự kiện</h2><p className="mt-1 text-xs text-slate-600">Sự kiện có hiệu lực ngay, không tạo Giao việc.</p></> : null}
         </div>
         <button type="button" onClick={() => { setEditing(null); setSelected([]); setMessage(""); setOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white">Tạo sự kiện / Phân công sự kiện</button>
       </div>
       {message ? <p role="status" className="mt-2 text-sm text-slate-700">{message}</p> : null}
-      <div className="mt-3 grid gap-2">
+      {!compact ? <div className="mt-3 grid gap-2">
         {rows.map((row) => (
           <article key={row.id} className="rounded-lg border bg-white p-3 text-sm">
             <p className="font-semibold">{row.title}</p>
@@ -107,7 +106,7 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
             </div>
           </article>
         ))}
-      </div>
+      </div> : null}
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true">
         <form onSubmit={submit} className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
           <h3 className="text-lg font-semibold">{editing ? "Sửa sự kiện" : "Tạo sự kiện / Phân công sự kiện"}</h3>

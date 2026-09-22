@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
-import EventAssignmentPanel from "@/components/EventAssignmentPanel";
 
 type Person = {
   id: string;
@@ -63,8 +62,6 @@ export default function WorkSchedulePageShell({
   scheduleScope = "all",
   title = "Lịch công tác",
   description = "Lịch toàn cơ quan · TBT · Phó TBT · Trưởng phòng · Phóng viên",
-  enableEventAssignment = false,
-  eventPeople,
 }: {
   people: Person[];
   currentUserId?: string;
@@ -73,8 +70,6 @@ export default function WorkSchedulePageShell({
   scheduleScope?: "all" | "self";
   title?: string;
   description?: string;
-  enableEventAssignment?: boolean;
-  eventPeople?: Person[];
 }) {
   const [period, setPeriod] = useState<"day" | "week" | "month">("week");
   const [anchor, setAnchor] = useState(iso(new Date()));
@@ -431,7 +426,6 @@ export default function WorkSchedulePageShell({
               ) : null}
             </div> : null}
           </section>
-          {enableEventAssignment ? <EventAssignmentPanel people={eventPeople ?? people} /> : null}
           {scheduleScope === "all" && approvalRows.length ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
             <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ phê duyệt</h2>
             <div className="mt-3 grid gap-2">

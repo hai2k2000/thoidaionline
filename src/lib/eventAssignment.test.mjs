@@ -114,19 +114,21 @@ test("repository projects assignments and reporter reads without changing organi
   assert.match(repository, /event_assignments:work_schedule_event_assignments/);
 });
 
-test("leadership UI exposes assignment action and reporter badge", () => {
+test("event assignment UI is placed in Task Assign, not Work Schedule", () => {
   const panel = read("../components/EventAssignmentPanel.tsx");
-  const shell = read("../components/WorkSchedulePageShell.tsx");
+  const taskAssignShell = read("../components/TaskAssignShell.tsx");
+  const workScheduleShell = read("../components/WorkSchedulePageShell.tsx");
   assert.match(panel, /Tạo sự kiện \/ Phân công sự kiện/);
   assert.match(panel, /type="time"/);
   assert.match(panel, /participantIds|reporterIds/);
   assert.match(panel, /Được phân công/);
-  assert.match(shell, /EventAssignmentPanel/);
+  assert.match(taskAssignShell, /EventAssignmentPanel/);
+  assert.match(taskAssignShell, /compact/);
+  assert.doesNotMatch(workScheduleShell, /<EventAssignmentPanel/);
   assert.doesNotMatch(panel, /api\/work-schedule\/personal/);
 });
 
 test("Personal Plan, Online Work, and Task boundaries remain explicit", () => {
-  const personalRoute = read("../app/api/work-schedule/personal/route.ts");
   const onlineRepository = read("./onlineWorkRepository.ts");
   assert.match(read("./workScheduleRepository.ts"), /api_create_personal_work_schedule/);
   assert.doesNotMatch(onlineRepository, /event_assignment/);
