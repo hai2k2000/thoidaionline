@@ -29,6 +29,8 @@ export function getPhase2Navigation(
   access: Phase2NavigationAccess,
 ): Phase2Navigation {
   const canViewAllSchedules = access.isDepartmentManager === true || ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode);
+  const canAccessJournalism = access.canAccessJournalism === true
+    && (["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode) || access.departmentCode === "editorial");
   return {
     primary: [
       ...(access.canAssignTask || ["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
@@ -37,7 +39,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
-      ...(access.canAccessJournalism ? [{ id: "journalism-reports", href: "/journalism/reports" } as const] : []),
+      ...(canAccessJournalism ? [{ id: "journalism-reports", href: "/journalism/reports" } as const] : []),
       { id: "attendance", href: "/my-attendance" },
       ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
@@ -75,7 +77,7 @@ export function getPhase2Navigation(
             href: "/configuration/evaluation-cycles",
           } as const]
         : []),
-      ...(access.canAccessJournalism && access.canManageJournalismStructures ? [{ id: "journalism-structures", href: "/journalism/structures" } as const] : []),
+      ...(canAccessJournalism && access.canManageJournalismStructures ? [{ id: "journalism-structures", href: "/journalism/structures" } as const] : []),
     ],
     showEvaluationTab:
       access.canEvaluateStep1 || access.canEvaluateStep2,
