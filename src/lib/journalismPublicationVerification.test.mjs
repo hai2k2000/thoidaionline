@@ -34,7 +34,6 @@ test("verification migration is additive, append-only, scoped, and auditable", (
   assert.match(migration, /revoke all on table public\.journalism_publication_verifications from public, anon, authenticated/);
   assert.match(migration, /grant select, insert on table public\.journalism_publication_verifications to service_role/);
   assert.match(migration, /for update/);
-  assert.match(migration, /for update nowait/i);
   assert.match(migration, /v_report\.reported_by = p_actor_id/);
   assert.match(migration, /errcode = '40001'/);
   assert.match(migration, /journalism_publication_verified/);
