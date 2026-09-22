@@ -11,6 +11,8 @@ type AuthUser = {
   email: string | null;
   username: string | null;
   role_code: string;
+  department_code: string | null;
+  department_id: string | null;
   role_name: string;
   active: boolean;
   is_department_manager: boolean;

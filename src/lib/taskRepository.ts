@@ -267,6 +267,9 @@ export const getTaskScopeTerms = async (
 
 export const taskRepository: TaskRepository = {
   async list(actor, query) {
+    if (actor.canAccessJournalism === false && (query.journalism === "only" || query.journalismWorkKindId || query.publicationStatus || query.plannedPublicationFrom || query.plannedPublicationTo || query.topicId || query.seriesId)) {
+      return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
+    }
     const scope = await getTaskScopeTerms(actor);
     if (!scope.ok) return scope;
 
@@ -284,7 +287,7 @@ export const taskRepository: TaskRepository = {
       .select(
         hasJournalismParentFilter
           ? journalismListFields(true, Boolean(query.topicId), Boolean(query.seriesId))
-          : TASK_LIST_FIELDS,
+          : actor.canAccessJournalism === false ? TASK_BASE_FIELDS.join(",") : TASK_LIST_FIELDS,
         { count: "exact" },
       )
       .order("created_at", { ascending: false });
@@ -345,7 +348,7 @@ export const taskRepository: TaskRepository = {
       }
       dbQuery = dbQuery.eq("department_id", query.departmentId);
     }
-    if (query.journalism === "exclude") {
+    if (query.journalism === "exclude" || actor.canAccessJournalism === false) {
       dbQuery = applyJournalismExcludeFilter(dbQuery);
     }
     if (query.journalismWorkKindId) {
@@ -414,11 +417,17 @@ export const taskRepository: TaskRepository = {
     return ok(data ? toAccess(data as unknown as TaskAccessRow) : null);
   },
 
-  async detail(taskId) {
+  async detail(taskId, actor) {
+    const journalismScopeResult = actor?.canAccessJournalism === false
+      ? await serverSupabase.from("journalism_task_details").select("task_id").eq("task_id", taskId).maybeSingle()
+      : null;
+    const isJournalism = Boolean(journalismScopeResult?.data);
+    if (journalismScopeResult?.error) return fail(journalismScopeResult.error);
+    if (isJournalism) return ok(null);
     const [taskResult, commentResult, legacyProgressResult, evaluationResult,
       progressResult, qualitativeEvaluationResult, deadlineResult, statusResult,
       attachmentResult, completionScoreResult] = await Promise.all([
-      serverSupabase.from("tasks").select(TASK_DETAIL_FIELDS).eq("id", taskId).maybeSingle(),
+      serverSupabase.from("tasks").select(actor?.canAccessJournalism === false ? TASK_BASE_FIELDS.concat(["effort_weight", "owner:staff_users!tasks_owner_id_fkey(full_name)", "reviewer:staff_users!tasks_reviewer_id_fkey(full_name)"]).join(",") : TASK_DETAIL_FIELDS).eq("id", taskId).maybeSingle(),
       serverSupabase.from("task_comments")
         .select("id,content,created_at,user_id,staff_users(full_name)")
         .eq("task_id", taskId).order("created_at", { ascending: false }),

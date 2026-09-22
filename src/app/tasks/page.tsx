@@ -8,6 +8,7 @@ import { parseTaskListSearchParams } from "@/lib/taskFilters.mjs";
 import { listJournalismWorkKinds, taskRepository } from "@/lib/taskRepository";
 import { listJournalismStructureFilters } from "@/lib/journalismStructureRepository";
 import type { TaskListResult } from "@/lib/taskContracts";
+import { canUseJournalism } from "@/lib/journalismScope.mjs";
 
 type TasksPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -25,9 +26,12 @@ const toUrlSearchParams = (input: Record<string, string | string[] | undefined>)
 export default async function TasksPage({ searchParams }: TasksPageProps) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  const journalismAllowed = canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions });
   const actor = {
     id: user.id,
     departmentId: user.department_id,
+    departmentCode: user.department_code,
+    canAccessJournalism: journalismAllowed,
     roleCode: user.role_code,
     roleLevel: user.role_level,
     permissions: user.permissions,
@@ -42,9 +46,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   }
   const view = resolveTaskCenterView(rawParams.view, canViewEvaluations);
   const query = parseTaskListSearchParams(toUrlSearchParams(rawParams));
-  const workKindsResult = await listJournalismWorkKinds(query.journalismWorkKindId ?? null);
-  const journalismWorkKinds = workKindsResult.ok ? workKindsResult.data : [];
-  const structureFilters = await listJournalismStructureFilters(user, query.topicId ?? null, query.seriesId ?? null);
+  const workKindsResult = journalismAllowed ? await listJournalismWorkKinds(query.journalismWorkKindId ?? null) : null;
+  const journalismWorkKinds = workKindsResult?.ok ? workKindsResult.data : [];
+  const structureFilters = journalismAllowed ? await listJournalismStructureFilters(user, query.topicId ?? null, query.seriesId ?? null) : { topics: [], series: [] };
 
   let tasks: TaskListResult = {
     items: [], total: 0, page: query.page, pageSize: query.pageSize,

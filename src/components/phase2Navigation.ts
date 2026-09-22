@@ -1,5 +1,7 @@
 export type Phase2NavigationAccess = {
   roleCode: string;
+  departmentCode?: string | null;
+  canAccessJournalism?: boolean;
   canAssignTask: boolean;
   canEvaluateStep1: boolean;
   canEvaluateStep2: boolean;
@@ -35,7 +37,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
-      { id: "journalism-reports", href: "/journalism/reports" },
+      ...(access.canAccessJournalism ? [{ id: "journalism-reports", href: "/journalism/reports" } as const] : []),
       { id: "attendance", href: "/my-attendance" },
       ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
@@ -73,7 +75,7 @@ export function getPhase2Navigation(
             href: "/configuration/evaluation-cycles",
           } as const]
         : []),
-      ...(access.canManageJournalismStructures ? [{ id: "journalism-structures", href: "/journalism/structures" } as const] : []),
+      ...(access.canAccessJournalism && access.canManageJournalismStructures ? [{ id: "journalism-structures", href: "/journalism/structures" } as const] : []),
     ],
     showEvaluationTab:
       access.canEvaluateStep1 || access.canEvaluateStep2,

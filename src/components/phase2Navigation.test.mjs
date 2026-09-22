@@ -9,6 +9,8 @@ import {
 
 const employee = {
   roleCode: "nhan_vien",
+  departmentCode: null,
+  canAccessJournalism: false,
   canAssignTask: false,
   canEvaluateStep1: false,
   canEvaluateStep2: false,
@@ -28,6 +30,33 @@ test("employee navigation exposes only Task Center and account", () => {
   ]);
   assert.equal(navigation.showEvaluationTab, false);
   assert.deepEqual(navigation.configuration, []);
+});
+
+test("journalism navigation is limited to Content scope or editorial leadership", () => {
+  const content = getPhase2Navigation({
+    ...employee,
+    departmentCode: "content",
+    canAccessJournalism: true,
+    canManageJournalismStructures: true,
+  });
+  const unrelatedManager = getPhase2Navigation({
+    ...employee,
+    roleCode: "truong_phong",
+    departmentCode: "business",
+    canAccessJournalism: true,
+    canManageJournalismStructures: true,
+  });
+  const editorialLead = getPhase2Navigation({
+    ...employee,
+    roleCode: "pho_tong_bien_tap",
+    canAccessJournalism: true,
+  });
+
+  assert.deepEqual(content.primary.find((item) => item.id === "journalism-reports"), { id: "journalism-reports", href: "/journalism/reports" });
+  assert.deepEqual(content.configuration.find((item) => item.id === "journalism-structures"), { id: "journalism-structures", href: "/journalism/structures" });
+  assert.equal(unrelatedManager.primary.some((item) => item.id === "journalism-reports"), false);
+  assert.equal(unrelatedManager.configuration.some((item) => item.id === "journalism-structures"), false);
+  assert.deepEqual(editorialLead.primary.find((item) => item.id === "journalism-reports"), { id: "journalism-reports", href: "/journalism/reports" });
 });
 
 test("manager and TBT see assignment while read-only TBT does not", () => {

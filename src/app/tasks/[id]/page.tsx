@@ -7,24 +7,29 @@ import { taskRepository } from "@/lib/taskRepository";
 import { authorizeJournalismPermission } from "@/lib/journalismAuthorization";
 import { listJournalismWorkKinds } from "@/lib/taskRepository";
 import { loadJournalismTaskStructureOptions } from "@/lib/journalismStructureRepository";
+import { canUseJournalism } from "@/lib/journalismScope.mjs";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function TaskDetailPage({ params }: Props) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  const journalismAllowed = canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions });
   const taskId = asUuid((await params).id);
   if (!taskId) redirect("/tasks");
 
+
+  const repositoryActor: AuthorizationActor = { id: user.id, departmentId: user.department_id, departmentCode: user.department_code, canAccessJournalism: journalismAllowed, roleCode: user.role_code, roleLevel: user.role_level, permissions: user.permissions };
   const [accessResult, detailResult] = await Promise.all([
     taskRepository.access(taskId),
-    taskRepository.detail(taskId),
+    taskRepository.detail(taskId, repositoryActor),
   ]);
   if (!accessResult.ok || !detailResult.ok || !accessResult.data || !detailResult.data) redirect("/tasks");
 
   const actor: AuthorizationActor = {
     id: user.id,
     departmentId: user.department_id,
+    departmentCode: user.department_code,
     roleCode: user.role_code,
     roleLevel: user.role_level,
     permissions: user.permissions,
@@ -35,22 +40,23 @@ export default async function TaskDetailPage({ params }: Props) {
     canTaskAction(actor, accessResult.data!, name);
   const task = {
     ...detailResult.data,
+    journalism: journalismAllowed ? detailResult.data.journalism : null,
     legacy_evaluations: action("legacy_evaluate")
       ? detailResult.data.legacy_evaluations
       : detailResult.data.legacy_evaluations.filter((row) => row.employee_id === user.id),
   };
-  const workKindsResult = detailResult.data.journalism
+  const workKindsResult = journalismAllowed && detailResult.data.journalism
     ? await listJournalismWorkKinds(detailResult.data.journalism.work_kind.id)
     : null;
 
-  const journalismMetadataUpdate = Boolean(detailResult.data.journalism)
+  const journalismMetadataUpdate = journalismAllowed && Boolean(detailResult.data.journalism)
     && await authorizeJournalismPermission(user, accessResult.data, "journalism.metadata.update");
-  const journalismPublicationManage = Boolean(detailResult.data.journalism)
+  const journalismPublicationManage = journalismAllowed && Boolean(detailResult.data.journalism)
     && await authorizeJournalismPermission(user, accessResult.data, "journalism.publication.manage");
-  const journalismPublicationVerify = Boolean(detailResult.data.journalism?.publication_report)
+  const journalismPublicationVerify = journalismAllowed && Boolean(detailResult.data.journalism?.publication_report)
     && detailResult.data.journalism?.publication_report?.reported_by !== user.id
     && await authorizeJournalismPermission(user, accessResult.data, "journalism.publication.verify");
-  const structureOptions = detailResult.data.journalism ? await loadJournalismTaskStructureOptions(user, accessResult.data, actor) : { topics: [], series: [], canAssign: false };
+  const structureOptions = journalismAllowed && detailResult.data.journalism ? await loadJournalismTaskStructureOptions(user, accessResult.data, actor) : { topics: [], series: [], canAssign: false };
   return <TaskDetailShell task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} journalismStructureOptions={structureOptions} capabilities={{
     report: action("report"),
     completeAssigned: action("complete_assigned"),

@@ -1,6 +1,7 @@
 import { requireMutationActor, apiError, apiJson, asUuid, readJsonObject, rpcFailure } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { canAssignToDepartment } from "@/lib/authorization";
+import { canUseJournalism } from "@/lib/journalismScope.mjs";
 
 const text = (value: unknown, max: number) => typeof value === "string" && [...value.trim()].length <= max ? value.trim() : null;
 const date = (value: unknown) => typeof value === "string" && Number.isFinite(new Date(value).getTime()) ? new Date(value).toISOString() : null;
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
   if (!body || !journalism || !departmentId || !assigneeId || !reviewerId || !workKindId || !title || !description || !dueDate || !dueTime || hasRecurrence || hasInvalidPlannedPublicationAt) {
     return apiError("invalid_request", 400);
   }
+  if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
   const actor = { id: guard.actor.id, departmentId: guard.actor.department_id, roleCode: guard.actor.role_code, roleLevel: guard.actor.role_level, permissions: guard.actor.permissions };
   if (!guard.actor.permissions.can_create_task || !canAssignToDepartment(actor, departmentId)) return apiError("forbidden", 403);
   const collaboratorIds = Array.isArray(body.collaboratorIds) ? body.collaboratorIds.map(asUuid).filter(Boolean) : [];

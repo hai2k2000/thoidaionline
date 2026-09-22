@@ -5,12 +5,14 @@ import type { TaskAccessSnapshot } from "./authorization";
 import { canTaskAction } from "./authorization";
 import { can } from "./rbac/authorization";
 import { loadRbacActor } from "./rbac/repository";
+import { canUseJournalism } from "./journalismScope.mjs";
 
 export async function authorizeJournalismPermission(
   user: ServerAuthUser,
   task: TaskAccessSnapshot,
   permission: "journalism.metadata.update" | "journalism.publication.manage" | "journalism.publication.verify",
 ) {
+  if (!canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions })) return false;
   if (!canTaskAction({
     id: user.id,
     departmentId: user.department_id,

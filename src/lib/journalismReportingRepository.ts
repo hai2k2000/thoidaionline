@@ -36,7 +36,7 @@ export type JournalismReportingTaskRow = {
   assignee_id: string | null;
   department_id: string | null;
   assignee: { full_name: string | null } | null;
-  department: { name: string } | null;
+  department: { code: string; name: string } | null;
   topics: Array<{ id: string; name: string }>;
   series: Array<{ id: string; name: string }>;
   report: JournalismPublicationReportDto | null;
@@ -65,7 +65,7 @@ function reportingFields(query: JournalismReportingQuery) {
   const topicFilter = query.topicId ? ",topic_filter:editorial_topic_tasks!inner(topic_id)" : "";
   const seriesFilter = query.seriesId ? ",series_filter:editorial_series_items!inner(series_id)" : "";
   return [
-    "id,title,status,due_date,due_time,created_at,assignee_id,department_id,assignee:staff_users!tasks_assignee_id_fkey(full_name),department:departments(name)",
+    "id,title,status,due_date,due_time,created_at,assignee_id,department_id,assignee:staff_users!tasks_assignee_id_fkey(full_name),department:departments!inner(code,name)",
     `journalism:journalism_task_details!inner(task_id,publication_status,published_at,topic_links:editorial_topic_tasks(topic:editorial_topics(id,name)),series_links:editorial_series_items(task_id,position,series:editorial_series(id,name)),publication_report:journalism_publication_reports(id,task_id,publication_url,published_title,published_at,note,reported_by,created_at,updated_at,reporter:staff_users!journalism_publication_reports_reported_by_fkey(full_name),verification_history:journalism_publication_verifications(id,publication_report_id,decision,note,verified_by,publication_report_updated_at,created_at,verifier:staff_users!journalism_publication_verifications_verified_by_fkey(full_name)))${topicFilter}${seriesFilter})`,
   ].join(",");
 }
@@ -89,7 +89,7 @@ function normalizeTask(value: unknown): JournalismReportingTaskRow | null {
   });
   const report = publicationReportDto(one(journalism?.publication_report));
   const assignee = one(row.assignee as { full_name?: string | null } | Array<{ full_name?: string | null }> | null);
-  const department = one(row.department as { name?: string } | Array<{ name?: string }> | null);
+  const department = one(row.department as { code?: string; name?: string } | Array<{ code?: string; name?: string }> | null);
   return {
     id: row.id,
     title: row.title,
@@ -100,7 +100,7 @@ function normalizeTask(value: unknown): JournalismReportingTaskRow | null {
     assignee_id: typeof row.assignee_id === "string" ? row.assignee_id : null,
     department_id: typeof row.department_id === "string" ? row.department_id : null,
     assignee: assignee ? { full_name: assignee.full_name ?? null } : null,
-    department: department?.name ? { name: department.name } : null,
+    department: department?.name && department.code ? { code: department.code, name: department.name } : null,
     topics: [...new Map(topics.map((topic) => [topic.id, topic] as const)).values()],
     series: [...new Map(series.map((item) => [item.id, item] as const)).values()],
     report,
@@ -129,6 +129,7 @@ export async function loadJournalismReporting(
     .gte("created_at", `${query.fromDate}T00:00:00+07:00`)
     .lte("created_at", `${query.toDate}T23:59:59.999+07:00`)
     .neq("task_category", "duty")
+    .eq("departments.code", "content")
     .range(0, REPORTING_DEFAULT_LIMIT - 1);
   if (scope.data.length > 0) dbQuery = dbQuery.or(scope.data.join(","));
   if (query.status !== "cancelled") dbQuery = dbQuery.neq("status", "cancelled");

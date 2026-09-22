@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPhase2Navigation, type Phase2Navigation } from "@/components/phase2Navigation";
 import { useAuth } from "@/lib/auth";
+import { canUseJournalism } from "@/lib/journalismScope.mjs";
 import NotificationBell from "@/components/NotificationBell";
 import HelpBot from "@/components/HelpBot";
 
@@ -185,6 +186,8 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
 
   const navigation = getPhase2Navigation({
     roleCode: user?.role_code ?? "",
+    departmentCode: user?.department_code,
+    canAccessJournalism: user ? canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions }) : false,
     canAssignTask: hasPermission("can_assign_task"),
     canEvaluateStep1: hasPermission("can_evaluate_step1"),
     canEvaluateStep2: hasPermission("can_evaluate_step2"),

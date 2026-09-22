@@ -10,6 +10,7 @@ import {
   rpcFailure,
 } from "@/lib/serverApi";
 import { canCreateJournalismStructure, canManageJournalismStructure, loadJournalismStructureActor } from "@/lib/journalismStructureAuthorization";
+import { canUseJournalism } from "@/lib/journalismScope.mjs";
 
 const text = (value: unknown, max: number) => {
   if (typeof value !== "string") return null;
@@ -27,6 +28,7 @@ export const journalismStructureHandlers = {
   async createTopic(request: Request) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const body = await readJsonObject(request);
     if (!only(body, new Set(["name", "description", "departmentId"]))) return apiError("invalid_request", 400);
     const name = text(body?.name, 200);
@@ -43,6 +45,7 @@ export const journalismStructureHandlers = {
   async updateTopic(request: Request, topicId: string) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const id = asUuid(topicId);
     const body = await readJsonObject(request);
     if (!id || !only(body, new Set(["name", "description"]))) return apiError("invalid_request", 400);
@@ -64,6 +67,7 @@ export const journalismStructureHandlers = {
   async archiveTopic(_request: Request, topicId: string) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const id = asUuid(topicId);
     if (!id) return apiError("invalid_request", 400);
     const result = await serverSupabase.rpc("api_archive_editorial_topic_v1", { p_actor_id: guard.actor.id, p_topic_id: id });
@@ -72,6 +76,7 @@ export const journalismStructureHandlers = {
   async createSeries(request: Request) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const body = await readJsonObject(request);
     if (!only(body, new Set(["name", "description", "departmentId", "topicId"]))) return apiError("invalid_request", 400);
     const name = text(body?.name, 200);
@@ -89,6 +94,7 @@ export const journalismStructureHandlers = {
   async updateSeries(request: Request, seriesId: string) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const id = asUuid(seriesId);
     const body = await readJsonObject(request);
     if (!id || !only(body, new Set(["name", "description", "topicId"]))) return apiError("invalid_request", 400);

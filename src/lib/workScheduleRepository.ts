@@ -145,6 +145,31 @@ export const workScheduleRepository = {
     return error ? { ok: false as const, error } : { ok: true as const, row: data };
   },
 
+  async list(from: string, to: string, participantId?: string) {
+    let query = serverSupabase.from("work_schedules").select("id,work_date,end_date,plan_type,start_time,end_time,title,location,notes,participant_ids,created_by,creator:staff_users!work_schedules_created_by_fkey(full_name)")
+      .lte("work_date", to).gte("end_date", from);
+    if (participantId) query = query.contains("participant_ids", [participantId]);
+    const { data, error } = await query.order("work_date").order("start_time");
+    return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
+  },
+
+  async save(actorId: string, input: WorkScheduleInput, isAdmin = false) {
+    const payload = { work_date: input.workDate, end_date: input.endDate, plan_type: input.planType, start_time: input.startTime, end_time: input.endTime, title: input.title, location: input.location, notes: input.notes, participant_ids: input.participantIds, ...(input.id ? {} : { created_by: actorId }), updated_at: new Date().toISOString() };
+    let query = input.id
+      ? serverSupabase.from("work_schedules").update(payload).eq("id", input.id)
+      : serverSupabase.from("work_schedules").insert({ ...payload, created_by: actorId });
+    if (input.id && !isAdmin) query = query.eq("created_by", actorId);
+    const { data, error } = await query.select().single();
+    return error ? { ok: false as const, error } : { ok: true as const, row: data };
+  },
+
+  async remove(actorId: string, id: string, isAdmin = false) {
+    let query = serverSupabase.from("work_schedules").delete().eq("id", id);
+    if (!isAdmin) query = query.eq("created_by", actorId);
+    const { error } = await query;
+    return error ? { ok: false as const, error } : { ok: true as const };
+  },
+
   async savePersonal(actorId: string, input: WorkScheduleInput, expectedRevision: number | null) {
     const { data, error } = await serverSupabase.rpc("api_create_personal_work_schedule", {
       p_actor: actorId,

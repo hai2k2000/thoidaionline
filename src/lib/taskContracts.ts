@@ -297,7 +297,7 @@ export interface TaskRepository {
     query: TaskListQuery,
   ): Promise<RepositoryResult<TaskListResult>>;
   access(taskId: string): Promise<RepositoryResult<TaskAccessSnapshot | null>>;
-  detail(taskId: string): Promise<RepositoryResult<TaskDetailDto | null>>;
+  detail(taskId: string, actor?: AuthorizationActor): Promise<RepositoryResult<TaskDetailDto | null>>;
   create(
     actorId: string,
     input: LegacyCreateTaskInput,

@@ -2,6 +2,7 @@ import "server-only";
 
 import { apiError, apiJson, asUuid, readJsonObject, requireMutationActor, rpcFailure } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
+import { canUseJournalism } from "@/lib/journalismScope.mjs";
 
 const only = (body: Record<string, unknown> | null, allowed: Set<string>) =>
   body !== null && Object.keys(body).every((key) => allowed.has(key));
@@ -10,6 +11,7 @@ export const journalismAssociationHandlers = {
   async attachTopic(request: Request, taskIdValue: string) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const taskId = asUuid(taskIdValue);
     const body = await readJsonObject(request);
     const topicId = asUuid(body?.topicId);
@@ -22,6 +24,7 @@ export const journalismAssociationHandlers = {
   async detachTopic(request: Request, taskIdValue: string, topicIdValue: string) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const taskId = asUuid(taskIdValue);
     const topicId = asUuid(topicIdValue);
     if (!taskId || !topicId) return apiError("invalid_request", 400);
@@ -35,6 +38,7 @@ export const journalismAssociationHandlers = {
   async attachSeries(request: Request, taskIdValue: string) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const taskId = asUuid(taskIdValue);
     const body = await readJsonObject(request);
     const seriesId = asUuid(body?.seriesId);
@@ -47,6 +51,7 @@ export const journalismAssociationHandlers = {
   async detachSeries(request: Request, taskIdValue: string) {
     const guard = await requireMutationActor();
     if (!guard.ok) return guard.response;
+    if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
     const taskId = asUuid(taskIdValue);
     if (!taskId) return apiError("invalid_request", 400);
     const body = await readJsonObject(request).catch(() => null);

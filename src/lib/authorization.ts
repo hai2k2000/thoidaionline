@@ -4,6 +4,8 @@ import { isLeadershipAssignmentReviewer } from "./taskReviewerPolicy.mjs";
 export type AuthorizationActor = {
   id: string;
   departmentId: string | null;
+  departmentCode?: string | null;
+  canAccessJournalism?: boolean;
   roleCode: string;
   roleLevel: number;
   permissions: PermissionSet;

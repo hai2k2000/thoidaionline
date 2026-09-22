@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/serverSession";
 import { canAccessTaskAssignment } from "@/lib/taskAssignAccess";
 import { taskAssignmentRepository } from "@/lib/taskAssignmentRepository";
 import { listJournalismWorkKinds } from "@/lib/taskRepository";
+import { canUseJournalism } from "@/lib/journalismScope.mjs";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -15,6 +16,7 @@ export default async function TaskAssignPage({ searchParams }: Props) {
   }
   const rawParams = await searchParams;
   const journalismMode = rawParams.kind === "journalism";
+  if (journalismMode && !canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions })) redirect("/tasks");
   const workKindsResult = journalismMode ? await listJournalismWorkKinds() : null;
   const journalismWorkKinds = workKindsResult?.ok ? workKindsResult.data.filter((kind) => kind.is_active) : [];
   const options = await taskAssignmentRepository.options({
