@@ -1,3 +1,25 @@
+# Journalism J6G Status
+
+Current Phase: J6G implementation complete; pre-production validation
+Current Task: Manual Publication Reconciliation, focused tests, and immutable artifact without activation
+
+Completed:
+- Added scoped reconciliation route/RPC with mandatory reason and optimistic report version.
+- Preserved report identity, original reporter, and append-only J6E verification history.
+- Added dedicated audit action and Journalism Task detail action; MasterCMS and unrelated modules remain disconnected.
+
+Validation:
+- J6G + J6D/J6E/J6F/task-detail focused regression: 31/31 PASS.
+- TypeScript: PASS.
+- ESLint: PASS.
+- Production build: PASS (existing HR upload tracing warnings only).
+
+Blockers:
+- No implementation blocker; production migration/deploy intentionally not performed.
+
+Next:
+- Owner review and separately authorized production deployment.
+
 # Event Assignment v1 Status
 
 Current Phase: Implementation complete; pre-production review
