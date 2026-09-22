@@ -118,7 +118,8 @@ test("event assignment UI is placed in Task Assign, not Work Schedule", () => {
   const panel = read("../components/EventAssignmentPanel.tsx");
   const taskAssignShell = read("../components/TaskAssignShell.tsx");
   const workScheduleShell = read("../components/WorkSchedulePageShell.tsx");
-  assert.match(panel, /Tạo sự kiện \/ Phân công sự kiện/);
+  assert.match(panel, /Phân công sự kiện/);
+  assert.doesNotMatch(panel, /Tạo sự kiện \/ Phân công sự kiện/);
   assert.match(panel, /type="time"/);
   assert.match(panel, /participantIds|reporterIds/);
   assert.match(panel, /Được phân công/);

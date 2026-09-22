@@ -15,7 +15,27 @@ test("task assignment shell mounts event assignment beside the heading", () => {
   const panel = read("../components/EventAssignmentPanel.tsx");
   assert.match(shell, /EventAssignmentPanel/);
   assert.match(shell, /compact/);
-  assert.match(panel, /Tạo sự kiện \/ Phân công sự kiện/);
+  assert.match(panel, /Phân công sự kiện/);
+  assert.doesNotMatch(panel, /Tạo sự kiện \/ Phân công sự kiện/);
+});
+
+test("event assignment action shares the work-type navigation row", () => {
+  const shell = read("../components/TaskAssignShell.tsx");
+  const navStart = shell.indexOf('<nav aria-label="Loại công việc cần tạo"');
+  const navEnd = shell.indexOf("</nav>", navStart);
+  const navigation = shell.slice(navStart, navEnd);
+  assert.notEqual(navStart, -1);
+  assert.match(navigation, /Công việc thường/);
+  assert.match(navigation, /Công việc nghiệp vụ báo chí/);
+  assert.match(navigation, /EventAssignmentPanel/);
+});
+
+test("Journalism mode fixes assignment to the editorial department", () => {
+  const shell = read("../components/TaskAssignShell.tsx");
+  assert.match(shell, /departments\.find\(\(department\) => department\.code === "editorial"\)/);
+  assert.match(shell, /useState\(journalismMode \? editorialDepartment\?\.id \?\? "" : ""\)/);
+  assert.match(shell, /Phòng Nội dung/);
+  assert.match(shell, /name="departmentId" type="hidden"/);
 });
 
 test("work schedule keeps event assignment out of its create flow", () => {

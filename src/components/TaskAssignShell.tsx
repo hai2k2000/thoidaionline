@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
@@ -25,7 +25,8 @@ export default function TaskAssignShell({ departments, people, userLabel, eventP
   const router = useRouter();
   const { logout } = useAuth();
   const { notify } = useActionFeedback();
-  const [departmentId, setDepartmentId] = useState("");
+  const editorialDepartment = departments.find((department) => department.code === "editorial");
+  const [departmentId, setDepartmentId] = useState(journalismMode ? editorialDepartment?.id ?? "" : "");
   const [assigneeId, setAssigneeId] = useState("");
   const [assignmentMode, setAssignmentMode] = useState<"individual" | "department_group">("individual");
   const [excludedMemberIds, setExcludedMemberIds] = useState<string[]>([]);
@@ -38,6 +39,13 @@ export default function TaskAssignShell({ departments, people, userLabel, eventP
   const [message, setMessage] = useState("");
   const [journalismErrors, setJournalismErrors] = useState<Record<string, string>>({});
   const selectedDepartment = departments.find((department) => department.id === departmentId);
+  useEffect(() => {
+    setDepartmentId(journalismMode ? editorialDepartment?.id ?? "" : "");
+    setAssigneeId("");
+    setExcludedMemberIds([]);
+    setCollaboratorIds([]);
+    setWatcherIds([]);
+  }, [editorialDepartment?.id, journalismMode]);
   const scopedPeople = useMemo(
     () => people.filter((person) => person.departmentId === departmentId),
     [departmentId, people],
@@ -123,19 +131,19 @@ export default function TaskAssignShell({ departments, people, userLabel, eventP
       <AppNav currentPath="/tasks/assign" userLabel={userLabel} onLogout={() => { logout(); router.replace("/login"); }} />
       <main className="min-w-0 flex-1">
         <header className="rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
-            <EventAssignmentPanel people={eventPeople} compact />
           </div>
-          <nav aria-label="Loại công việc cần tạo" className="mt-4 flex flex-wrap gap-2">
+          <nav aria-label="Loại công việc cần tạo" className="mt-4 flex flex-wrap items-center gap-2">
             <Link href="/tasks/assign" aria-current={!journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${!journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc thường</Link>
             <Link href="/tasks/assign?kind=journalism" aria-current={journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc nghiệp vụ báo chí</Link>
+            <EventAssignmentPanel people={eventPeople} compact />
           </nav>
         </header>
         <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
             <div className="grid gap-3 lg:col-span-2 lg:grid-cols-3">
             <Field label="Tên công việc"><input name="title" required maxLength={500} className={controlClass} /></Field>
-            <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); setCollaboratorIds([]); setWatcherIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
+                {journalismMode ? <Field label="Phòng ban"><input name="departmentId" type="hidden" value={editorialDepartment?.id ?? ""} /><div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2.5 text-orange-900">{editorialDepartment?.name ?? "Phòng Nội dung"}</div>{!editorialDepartment ? <span role="alert" className="font-normal text-red-700">Không tìm thấy Phòng Nội dung; không thể tạo công việc.</span> : null}</Field> : <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); setCollaboratorIds([]); setWatcherIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>}
             {isEditorialBoard ? <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 lg:col-span-2">Ban Biên tập mặc định: Tổng biên tập là trưởng phòng; thành viên gồm Phó Tổng biên tập và các Trưởng phòng.</p> : null}
               <Field label="Cách chọn người"><select value={assignmentMode} disabled={journalismMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); setCollaboratorIds([]); }} className={controlClass}><option value="individual">Cá nhân</option>{!journalismMode ? <option value="department_group">Nhóm phòng ban</option> : null}</select>{journalismMode ? <span className="font-normal text-slate-500">Journalism v1 dùng người thực hiện cá nhân; cộng tác viên và người theo dõi vẫn giữ nguyên.</span> : null}</Field>
           </div>
