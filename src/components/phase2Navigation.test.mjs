@@ -35,7 +35,7 @@ test("employee navigation exposes only Task Center and account", () => {
 test("journalism navigation is limited to Content scope or editorial leadership", () => {
   const content = getPhase2Navigation({
     ...employee,
-    departmentCode: "content",
+    departmentCode: "editorial",
     canAccessJournalism: true,
     canManageJournalismStructures: true,
   });
