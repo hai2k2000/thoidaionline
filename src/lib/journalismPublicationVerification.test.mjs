@@ -20,6 +20,8 @@ test("verification route authenticates, checks scoped permission, and derives ac
   assert.match(route, /journalism\.publication\.verify/);
   assert.match(route, /p_actor_id: guard\.actor\.id/);
   assert.match(route, /api_record_journalism_publication_verification_v1/);
+  assert.match(route, /journalism_publication_reports/);
+  assert.match(route, /apiError\("conflict", 409\)/);
   assert.doesNotMatch(route, /verified_by|reviewer_id|actor_id:\s*value/);
 });
 

@@ -15,6 +15,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const parsed = parsePublicationVerification(await readJsonObject(request));
   if (!parsed.ok) return apiError("invalid_request", 400);
   const { value } = parsed;
+  const { data: currentReport, error: reportError } = await serverSupabase
+    .from("journalism_publication_reports")
+    .select("updated_at")
+    .eq("task_id", taskId)
+    .maybeSingle();
+  if (reportError) return rpcFailure(reportError);
+  if (!currentReport) return apiError("not_found", 404);
+  if (new Date(currentReport.updated_at).getTime() !== new Date(value.expectedReportUpdatedAt).getTime()) {
+    return apiError("conflict", 409);
+  }
   const { data, error } = await serverSupabase.rpc("api_record_journalism_publication_verification_v1", {
     p_actor_id: guard.actor.id,
     p_task_id: taskId,
