@@ -133,3 +133,12 @@ test("Personal Plan, Online Work, and Task boundaries remain explicit", () => {
   assert.match(read("./workScheduleRepository.ts"), /api_create_personal_work_schedule/);
   assert.doesNotMatch(onlineRepository, /event_assignment/);
 });
+
+test("Work Schedule keeps its Personal Plan API route", () => {
+  const route = read("../app/api/work-schedule/personal/route.ts");
+  assert.match(route, /requireReadActor/);
+  assert.match(route, /listPersonal/);
+  assert.match(route, /savePersonal/);
+  assert.match(route, /reviewPersonal/);
+  assert.match(route, /removePersonal/);
+});
