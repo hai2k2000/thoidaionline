@@ -12,6 +12,11 @@ test("serialization failures map to HTTP 409 across Supabase error shapes", () =
   );
 });
 
+test("PostgreSQL lock-not-available failures map to conflict", () => {
+  assert.deepEqual(mapRpcError({ code: "55P03" }), { code: "conflict", status: 409 });
+  assert.deepEqual(mapRpcError({ details: "55P03" }), { code: "conflict", status: 409 });
+});
+
 test("self-verification and validation keep their existing status codes", () => {
   assert.deepEqual(mapRpcError({ code: "42501" }), { code: "forbidden", status: 403 });
   assert.deepEqual(mapRpcError({ code: "22023" }), { code: "invalid_request", status: 400 });

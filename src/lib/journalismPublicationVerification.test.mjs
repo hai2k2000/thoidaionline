@@ -34,12 +34,20 @@ test("verification migration is additive, append-only, scoped, and auditable", (
   assert.match(migration, /revoke all on table public\.journalism_publication_verifications from public, anon, authenticated/);
   assert.match(migration, /grant select, insert on table public\.journalism_publication_verifications to service_role/);
   assert.match(migration, /for update/);
+  assert.match(migration, /for update nowait/i);
   assert.match(migration, /v_report\.reported_by = p_actor_id/);
   assert.match(migration, /errcode = '40001'/);
   assert.match(migration, /journalism_publication_verified/);
   assert.match(migration, /journalism_publication_rejected/);
   assert.doesNotMatch(migration, /grant .*update.*journalism_publication_verifications/);
   assert.doesNotMatch(migration, /grant .*delete.*journalism_publication_verifications/);
+});
+
+test("NOWAIT concurrency fix is delivered as a minimal replacement migration", () => {
+  const migration = read("../../supabase/migrations/20260922150000_journalism_publication_verification_nowait.sql");
+  assert.match(migration, /create or replace function public\.api_record_journalism_publication_verification_v1/);
+  assert.match(migration, /for update nowait/i);
+  assert.doesNotMatch(migration, /create table|drop table|truncate|delete from/i);
 });
 
 test("current, stale, and append-only history states are derived from report versions", () => {
@@ -74,6 +82,8 @@ test("verification UI renders labels/history, sends expected version, and refres
   assert.match(component, /verification_history/);
   assert.match(component, /expectedReportUpdatedAt: report\.updated_at/);
   assert.match(component, /response\.status === 409/);
+  assert.match(component, /verificationBusyRef\.current/);
+  assert.match(component, /disabled=\{verificationBusy\}/);
   assert.match(component, /router\.refresh\(\)/);
   assert.doesNotMatch(component, /MasterCMS|cms_content_id|fetch\(report\.publication_url/);
 });
