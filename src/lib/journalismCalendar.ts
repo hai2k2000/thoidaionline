@@ -44,7 +44,8 @@ export function classifyCalendarTask(
   return "scheduled";
 }
 
-const normalizeToken = (value: string | null) => value && value.trim().length > 0 ? value.trim() : null;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const normalizeToken = (value: string | null) => value && UUID_PATTERN.test(value.trim()) ? value.trim() : null;
 
 export function parseCalendarQuery(params: URLSearchParams): JournalismCalendarQuery {
   const requestedView = params.get("view");

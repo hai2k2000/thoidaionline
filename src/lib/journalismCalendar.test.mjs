@@ -22,9 +22,16 @@ test("calendar status classification distinguishes planned, overdue and publicat
 });
 
 test("query parser accepts only safe J7 filters", () => {
-  const query = parseCalendarQuery(new URLSearchParams("view=week&date=2026-09-23&reporter=r1&status=scheduled&topic=t1&series=s1"));
-  assert.deepEqual(query, { view: "week", anchorDate: "2026-09-23", reporterId: "r1", publicationStatus: "scheduled", topicId: "t1", seriesId: "s1" });
-  assert.equal(parseCalendarQuery(new URLSearchParams("view=bad&date=nope&status=bad")).view, "month");
+  const reporter = "11111111-1111-4111-8111-111111111111";
+  const topic = "22222222-2222-4222-8222-222222222222";
+  const series = "33333333-3333-4333-8333-333333333333";
+  const query = parseCalendarQuery(new URLSearchParams(`view=week&date=2026-09-23&reporter=${reporter}&status=scheduled&topic=${topic}&series=${series}`));
+  assert.deepEqual(query, { view: "week", anchorDate: "2026-09-23", reporterId: reporter, publicationStatus: "scheduled", topicId: topic, seriesId: series });
+  const invalid = parseCalendarQuery(new URLSearchParams("view=bad&date=2026-02-30&status=bad&reporter=bad&topic=bad&series=bad"));
+  assert.equal(invalid.view, "month");
+  assert.equal(invalid.reporterId, null);
+  assert.equal(invalid.topicId, null);
+  assert.equal(invalid.seriesId, null);
 });
 
 test("calendar scope is content department or approved journalism leadership", () => {
