@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  outputFileTracingExcludes: {
+    "*": ["src/**", "docs/**", "mobile/**", "supabase/**", "bridge/**", "work/**", "sql/**", "deploy/**", "**/*.test.*", "AGENTS.md", "*.md"],
+  },
   async headers() {
     return [
       {

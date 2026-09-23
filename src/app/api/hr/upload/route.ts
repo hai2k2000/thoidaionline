@@ -83,10 +83,10 @@ export async function GET(req: Request) {
   const base = path.basename(fileName);
   const match = new RegExp(`^${userId.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}-[0-9a-f-]{36}\\.(pdf|jpg|png|docx|xlsx|doc)$`, "i").exec(base);
   if (!match) return json({ error: "Không tìm thấy tệp." }, 404);
-  const filePath = path.join(uploadDir(), base);
-  const file = await readFile(filePath).catch(() => null);
+  const filePath = path.join(/* turbopackIgnore: true */ uploadDir(), base);
+  const file = await readFile(/* turbopackIgnore: true */ filePath).catch(() => null);
   if (!file) return json({ error: "Không tìm thấy tệp." }, 404);
-  const info = await stat(filePath).catch(() => null);
+  const info = await stat(/* turbopackIgnore: true */ filePath).catch(() => null);
   if (!info || info.size > MAX_BYTES) return json({ error: "Không tìm thấy tệp." }, 404);
   const contentType = {
     pdf: "application/pdf", jpg: "image/jpeg", png: "image/png", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", doc: "application/msword",

@@ -10,7 +10,10 @@
     "lint": "eslint",
     "check:routes": "node scripts/check-required-routes.mjs",
     "check:release": "npm run check:baseline && npm run check:routes",
-    "check:baseline": "node scripts/check-release-baseline.mjs"
+    "check:baseline": "node scripts/check-release-baseline.mjs",
+    "package:standalone": "node scripts/package-standalone.mjs",
+    "verify:standalone": "node scripts/verify-standalone-artifact.mjs",
+    "retention:dry-run": "bash scripts/production/release-retention.sh --dry-run"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.112.4",
