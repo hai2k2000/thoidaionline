@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type NotificationItem = {
   key: string;
@@ -29,9 +29,22 @@ export default function NotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const sessionExpired = useRef(false);
+  const redirectToLogin = () => {
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.replace("/login?reason=session_expired");
+    }
+  };
 
   const load = useCallback(async () => {
+    if (sessionExpired.current) return;
     const response = await fetch("/api/notifications", { cache: "no-store" }).catch(() => null);
+    if (response?.status === 401) {
+      sessionExpired.current = true;
+      setLoading(false);
+      redirectToLogin();
+      return;
+    }
     if (!response?.ok) return setLoading(false);
     const payload = await response.json() as { items?: NotificationItem[]; unreadCount?: number };
     setItems(payload.items ?? []);
@@ -53,6 +66,11 @@ export default function NotificationBell() {
     setUnreadCount((count) => Math.max(0, count - keys.filter((key) => items.some((item) => item.key === key && item.unread)).length));
     await fetch("/api/notifications", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ keys }),
+    }).then((response) => {
+      if (response.status === 401) {
+        sessionExpired.current = true;
+        redirectToLogin();
+      }
     }).catch(() => null);
   };
 

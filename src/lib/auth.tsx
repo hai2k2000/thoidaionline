@@ -52,8 +52,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
   const loadSession = async () => {
-    const response = await fetch("/api/auth/session", { cache: "no-store" });
-    if (!response.ok) {
+    const response = await fetch("/api/auth/session", { cache: "no-store" }).catch(() => null);
+    if (response?.status === 401) {
+      setUser(null);
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.replace("/login?reason=session_expired");
+      }
+      return;
+    }
+    if (!response?.ok) {
       setUser(null);
       return;
     }

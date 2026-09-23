@@ -7,7 +7,7 @@ function validRange(from: string, to: string) {
 }
 
 function canManage(actor: { role_code: string; is_department_manager: boolean }) {
-  return ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.role_code) || actor.is_department_manager;
+  return ["admin", "tong_bien_tap", "pho_tong_bien_tap", "truong_phong"].includes(actor.role_code) || actor.is_department_manager;
 }
 
 function parsed(body: Record<string, unknown>) {

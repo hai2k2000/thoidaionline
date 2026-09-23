@@ -12,10 +12,11 @@ import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVi
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
-export default function TaskAssignShell({ departments, people, userLabel, journalismMode, journalismWorkKinds, journalismWorkKindsLoaded }: {
+export default function TaskAssignShell({ departments, people, userLabel, canManageEventAssignment, journalismMode, journalismWorkKinds, journalismWorkKindsLoaded }: {
   departments: AssignmentDepartment[];
   people: AssignmentPerson[];
   userLabel: string;
+  canManageEventAssignment: boolean;
   journalismMode: boolean;
   journalismWorkKinds: { id: string; name: string; is_active: boolean }[];
   journalismWorkKindsLoaded: boolean;
@@ -126,6 +127,10 @@ export default function TaskAssignShell({ departments, people, userLabel, journa
             <Link href="/tasks/assign" aria-current={!journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${!journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc thường</Link>
             <Link href="/tasks/assign?kind=journalism" aria-current={journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc nghiệp vụ báo chí</Link>
           </nav>
+          {canManageEventAssignment ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-3" role="region" aria-label="Phân công sự kiện">
+            <div><p className="font-semibold text-orange-950">Phân công sự kiện</p><p className="text-xs text-orange-900">Tạo và phân công sự kiện trong khu vực lịch công tác.</p></div>
+            <a href="/work-schedule" className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Tạo sự kiện / Phân công sự kiện</a>
+          </div> : null}
         </header>
         <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
             <div className="grid gap-3 lg:col-span-2 lg:grid-cols-3">

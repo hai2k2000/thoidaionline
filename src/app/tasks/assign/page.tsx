@@ -31,6 +31,7 @@ export default async function TaskAssignPage({ searchParams }: Props) {
     departments={options.departments}
     people={options.people}
     userLabel={user.full_name}
+    canManageEventAssignment={user.role_code === "admin" || user.role_code === "tong_bien_tap" || user.role_code === "pho_tong_bien_tap" || user.role_code === "truong_phong" || user.is_department_manager}
     journalismMode={journalismMode}
     journalismWorkKinds={journalismWorkKinds}
     journalismWorkKindsLoaded={Boolean(workKindsResult?.ok)}

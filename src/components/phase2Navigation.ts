@@ -28,7 +28,7 @@ export type Phase2Navigation = {
 export function getPhase2Navigation(
   access: Phase2NavigationAccess,
 ): Phase2Navigation {
-  const canViewAllSchedules = access.isDepartmentManager === true || ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode);
+  const canViewAllSchedules = access.isDepartmentManager === true || ["admin", "tong_bien_tap", "pho_tong_bien_tap", "truong_phong"].includes(access.roleCode);
   const canAccessJournalism = access.canAccessJournalism === true
     && (["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode) || access.departmentCode === "editorial");
   return {
