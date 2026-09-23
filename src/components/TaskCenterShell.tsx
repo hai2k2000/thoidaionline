@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import AppNav from "@/components/AppNav";
 import PersonalTaskActions from "@/components/PersonalTaskActions";
 import WorkScheduleSummary from "@/components/WorkScheduleSummary";
@@ -73,19 +73,7 @@ const participantNames = (task: TaskListResult["items"][number], role: "assignee
 
 const assigneeDisplay = (task: TaskListResult["items"][number]) => { const owner = task.task_assignees.find((row) => row.assignment_role === "owner")?.staff_users?.full_name; const assignees = task.task_assignees.filter((row) => row.assignment_role === "assignee").map((row) => row.staff_users?.full_name).filter(Boolean); return <>{owner ? <><strong>{owner}</strong>{assignees.length ? ", " : ""}</> : null}{assignees.join(", ") || (!owner ? "—" : "")}</>; };
 function FilterFields({ query, departments, journalismWorkKinds, journalismTopics, journalismSeries, canAccessJournalism, basePath = "/tasks" }: Pick<Props, "query" | "departments" | "journalismWorkKinds" | "journalismTopics" | "journalismSeries" | "canAccessJournalism" | "basePath">) {
-  const [journalismFilter, setJournalismFilter] = useState(query.journalism ?? "");
-  const clearJournalismFields = (event: ChangeEvent<HTMLSelectElement>) => {
-    setJournalismFilter(event.currentTarget.value);
-    const form = event.currentTarget.form;
-    if (!form) return;
-    for (const name of ["workKind", "publicationStatus", "plannedFrom", "plannedTo", "topicId", "seriesId"]) {
-      const field = form.elements.namedItem(name);
-      if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
-        field.value = "";
-        field.disabled = event.currentTarget.value !== "only";
-      }
-    }
-  };
+  const journalismFilter = query.journalism ?? "exclude";
   return (
     <>
       {basePath === "/duty-schedule" ? <input type="hidden" name="scope" value="personal" /> : query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
@@ -104,13 +92,9 @@ function FilterFields({ query, departments, journalismWorkKinds, journalismTopic
           <option value="">Phòng</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
         </select>
       ) : null}
-      {basePath === "/tasks" && canAccessJournalism ? <>
-        <label className="grid gap-1 text-xs font-semibold text-slate-600">Loại công việc<select name="journalism" value={journalismFilter} onChange={clearJournalismFields} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal">
-          <option value="">Loại công việc · Tất cả</option>
-          <option value="exclude">Công việc thường</option>
-          <option value="only">Nghiệp vụ báo chí</option>
-        </select></label>
-        {journalismFilter === "only" ? <>
+      {basePath === "/tasks" ? <>
+        <input type="hidden" name="journalism" value={journalismFilter} />
+        {canAccessJournalism && journalismFilter === "only" ? <>
           <label className="grid gap-1 text-xs font-semibold text-slate-600">Loại nghiệp vụ<select name="workKind" defaultValue={query.journalismWorkKindId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal">
             <option value="">Loại nghiệp vụ · Tất cả</option>
             {journalismWorkKinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.name}{kind.is_active ? "" : " (Ngừng sử dụng)"}</option>)}
@@ -165,6 +149,11 @@ export default function TaskCenterShell(props: Props) {
 
           <>
               {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : <div className="mt-3 rounded-xl border bg-white p-3"><label className="flex items-center gap-2 text-sm font-semibold">Phạm vi công việc<select value={query.scope ?? "all"} onChange={(e)=>{window.location.href=listHref({scope:e.target.value as TaskListQuery["scope"],page:1});}} className="rounded border px-3 py-2 font-normal"><option value="all">Tất cả</option><option value="assigned">Được giao cho tôi</option><option value="personal">Nhiệm vụ cá nhân</option><option value="watching">Tôi theo dõi</option><option value="cancelled">Đã hủy</option></select></label></div>}
+
+              {!taskMode && basePath === "/tasks" ? <nav aria-label="Loại công việc" className="mt-3 flex flex-wrap gap-2 rounded-xl border bg-white p-3">
+                <Link href={listHref({ journalism: "exclude", page: 1 })} className={tabClass(query.journalism !== "only")}>Công việc thường</Link>
+                {canAccessJournalism ? <Link href={listHref({ journalism: "only", page: 1 })} className={tabClass(query.journalism === "only")}>Công việc nghiệp vụ báo chí</Link> : null}
+              </nav> : null}
 
               <details className="mt-3 rounded-xl border bg-white p-3 shadow-sm md:hidden">
                 <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>

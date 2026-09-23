@@ -45,7 +45,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     redirect(`/evaluations${params.toString() ? `?${params.toString()}` : ""}`);
   }
   const view = resolveTaskCenterView(rawParams.view, canViewEvaluations);
-  const query = parseTaskListSearchParams(toUrlSearchParams(rawParams));
+  const query = parseTaskListSearchParams(toUrlSearchParams(rawParams), { defaultJournalism: "exclude" });
+  if (query.journalism === "only" && !journalismAllowed) redirect("/tasks");
   const workKindsResult = journalismAllowed ? await listJournalismWorkKinds(query.journalismWorkKindId ?? null) : null;
   const journalismWorkKinds = workKindsResult?.ok ? workKindsResult.data : [];
   const structureFilters = journalismAllowed ? await listJournalismStructureFilters(user, query.topicId ?? null, query.seriesId ?? null) : { topics: [], series: [] };

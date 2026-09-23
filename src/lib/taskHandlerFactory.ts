@@ -5,6 +5,7 @@ import type {
 } from "./authorization";
 import type { ServerAuthUser } from "./serverSession";
 import { parseTaskListSearchParams } from "./taskFilters.mjs";
+import { canUseJournalism } from "./journalismScope.mjs";
 import type {
   AssignedTaskInput,
   LegacyEvaluationInput,
@@ -144,7 +145,14 @@ export function createTaskApplication(deps: Dependencies) {
       const guard = await deps.readActor();
       if (!guard.ok) return guard.response;
       const url = new URL(request.url);
-      const query = parseTaskListSearchParams(url.searchParams);
+      const query = parseTaskListSearchParams(url.searchParams, { defaultJournalism: "exclude" });
+      if (query.journalism === "only" && !canUseJournalism({
+        roleCode: guard.actor.role_code,
+        departmentCode: guard.actor.department_code,
+        rbacPermissions: guard.actor.rbacPermissions,
+      })) {
+        return deps.error("forbidden", 403);
+      }
       if (query.fromDate && query.toDate && query.fromDate > query.toDate) {
         return deps.error("invalid_request", 400);
       }

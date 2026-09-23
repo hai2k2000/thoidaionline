@@ -29,9 +29,10 @@ const validDate = (value) => {
 
 /**
  * @param {URLSearchParams} params
+ * @param {{ defaultJournalism?: "only" | "exclude" | null }} [options]
  * @returns {import("./taskContracts").TaskListQuery}
  */
-export function parseTaskListSearchParams(params) {
+export function parseTaskListSearchParams(params, options = {}) {
   const page = Number(params.get("page") ?? "1");
   const pageSize = Number(params.get("pageSize") ?? "25");
   const search = params.get("q")?.normalize("NFC").trim() ?? "";
@@ -48,6 +49,7 @@ export function parseTaskListSearchParams(params) {
   const parsedTopicId = topicId && UUID.test(topicId) ? topicId : null;
   const parsedSeriesId = seriesId && UUID.test(seriesId) ? seriesId : null;
   const requestedJournalism = member(JOURNALISM_FILTERS, params.get("journalism")) ?? null;
+  const defaultJournalism = options.defaultJournalism ?? null;
   const category = params.get("category") === "duty" ? "duty" : null;
   const isNormalOnly = requestedJournalism === "exclude";
   return {
@@ -63,7 +65,7 @@ export function parseTaskListSearchParams(params) {
     deadlineState: member(DEADLINE_STATES, params.get("deadline")) ?? null,
     departmentId: departmentId && UUID.test(departmentId) ? departmentId : null,
     journalism: requestedJournalism
-      ?? (parsedJournalismWorkKindId || parsedPublicationStatus || parsedPlannedPublicationFrom || parsedPlannedPublicationTo || parsedTopicId || parsedSeriesId ? "only" : null),
+      ?? (parsedJournalismWorkKindId || parsedPublicationStatus || parsedPlannedPublicationFrom || parsedPlannedPublicationTo || parsedTopicId || parsedSeriesId ? "only" : defaultJournalism),
     journalismWorkKindId: isNormalOnly ? null : parsedJournalismWorkKindId,
     publicationStatus: isNormalOnly ? null : parsedPublicationStatus,
     plannedPublicationFrom: isNormalOnly ? null : parsedPlannedPublicationFrom,

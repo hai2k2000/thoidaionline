@@ -273,25 +273,25 @@ export const getTaskScopeTerms = async (
 
 export const taskRepository: TaskRepository = {
   async list(actor, query) {
-    if (actor.canAccessJournalism === false && (query.journalism === "only" || query.journalismWorkKindId || query.publicationStatus || query.plannedPublicationFrom || query.plannedPublicationTo || query.topicId || query.seriesId)) {
-      return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
-    }
-    const scope = await getTaskScopeTerms(actor);
-    if (!scope.ok) return scope;
-
-    const hasJournalismParentFilter = Boolean(
-      query.journalism === "only"
-      || query.journalismWorkKindId
+    const hasJournalismSubfilter = Boolean(
+      query.journalismWorkKindId
       || query.publicationStatus
       || query.plannedPublicationFrom
       || query.plannedPublicationTo
       || query.topicId
       || query.seriesId,
     );
+    const journalismOnly = query.journalism === "only" || hasJournalismSubfilter;
+    if (journalismOnly && actor.canAccessJournalism === false) {
+      return fail({ code: "42501" });
+    }
+    const scope = await getTaskScopeTerms(actor);
+    if (!scope.ok) return scope;
+
     let dbQuery = serverSupabase
       .from("tasks")
       .select(
-        hasJournalismParentFilter
+        journalismOnly
           ? journalismListFields(true, Boolean(query.topicId), Boolean(query.seriesId))
           : actor.canAccessJournalism === false ? NON_JOURNALISM_TASK_FIELDS : TASK_LIST_FIELDS,
         { count: "exact" },
@@ -354,7 +354,7 @@ export const taskRepository: TaskRepository = {
       }
       dbQuery = dbQuery.eq("department_id", query.departmentId);
     }
-    if (query.journalism === "exclude" || actor.canAccessJournalism === false) {
+    if (!journalismOnly || actor.canAccessJournalism === false) {
       dbQuery = applyJournalismExcludeFilter(dbQuery);
     }
     if (query.journalismWorkKindId) {

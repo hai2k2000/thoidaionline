@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import test from "node:test";
+import { parseTaskListSearchParams, taskListHref } from "./taskFilters.mjs";
+const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
+test("Task Summary defaults to the normal-task mode", () => { const query = parseTaskListSearchParams(new URLSearchParams(), { defaultJournalism: "exclude" }); assert.equal(query.journalism, "exclude"); assert.equal(taskListHref(query, {}), "/tasks?journalism=exclude"); });
+test("Task Summary modes keep independent URLs and reset pagination when switching tabs", () => { const normal = parseTaskListSearchParams(new URLSearchParams("journalism=exclude&page=4")); const journalismHref = taskListHref(normal, { journalism: "only", page: 1 }); assert.match(journalismHref, /journalism=only/); assert.doesNotMatch(journalismHref, /page=4/); const journalism = parseTaskListSearchParams(new URLSearchParams("journalism=only&page=3&publicationStatus=published")); const normalHref = taskListHref(journalism, { journalism: "exclude", page: 1 }); assert.match(normalHref, /journalism=exclude/); assert.doesNotMatch(normalHref, /publicationStatus=|page=3/); });
+test("Task Summary source renders separate normal and Journalism tabs", () => { const shell = read("../components/TaskCenterShell.tsx"); assert.match(shell, /Công việc thường/); assert.match(shell, /Công việc nghiệp vụ báo chí/); assert.match(shell, /query\.journalism === "only"/); assert.match(shell, /canAccessJournalism/); });
+test("Task list API rejects an unauthorized Journalism query", () => { const handler = read("./taskHandlerFactory.ts"); assert.match(handler, /query\.journalism === "only"/); assert.match(handler, /canUseJournalism/); assert.match(handler, /deps\.error\("forbidden", 403\)/); });
+test("Task repository explicitly separates both Journalism modes", () => { const repository = read("./taskRepository.ts"); assert.match(repository, /query\.journalism === "only"/); assert.match(repository, /!journalismOnly/); assert.match(repository, /applyJournalismExcludeFilter/); assert.match(repository, /journalismListFields\(true/); });
