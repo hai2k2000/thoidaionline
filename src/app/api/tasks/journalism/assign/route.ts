@@ -47,6 +47,17 @@ export async function POST(request: Request) {
   if (!guard.actor.permissions.can_create_task || !canAssignToDepartment(actor, departmentId)) return apiError("forbidden", 403);
   const collaboratorIds = Array.isArray(body.collaboratorIds) ? body.collaboratorIds.map(asUuid).filter(Boolean) : [];
   const watcherIds = Array.isArray(body.watcherIds) ? body.watcherIds.map(asUuid).filter(Boolean) : [];
+  const participantIds = [...new Set([assigneeId, ...collaboratorIds, ...watcherIds].filter((id): id is string => Boolean(id)))];
+  const { data: participants, error: participantsError } = await serverSupabase
+    .from("staff_users")
+    .select("id,departments!staff_users_department_id_fkey(code)")
+    .in("id", participantIds)
+    .eq("active", true);
+  if (participantsError) return rpcFailure(participantsError);
+  if ((participants ?? []).length !== participantIds.length || (participants ?? []).some((participant) => {
+    const department = participant.departments as unknown as { code?: string } | null;
+    return department?.code !== "editorial";
+  })) return apiError("invalid_request", 400);
   const { data, error } = await serverSupabase.rpc("api_assign_journalism_task_v1", {
     p_actor_id: guard.actor.id, p_title: title, p_description: description, p_department_id: departmentId,
     p_assignee_id: assigneeId, p_reviewer_id: reviewerId, p_due_date: dueDate, p_due_time: dueTime,

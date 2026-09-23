@@ -12,6 +12,7 @@ Completed:
 - Journalism create mode resolves the `editorial` department automatically.
 - The department control is disabled in Journalism mode and submits only the resolved Content department id.
 - Assignee and collaborator lists are scoped to the Content department; the database Content-scope guard remains authoritative.
+- Watchers are also scoped to active Content staff in the UI and API.
 
 Validation:
 - Journalism UI, create-payload, scope, and database-scope tests: 12/12 PASS.

@@ -38,12 +38,17 @@ test("Journalism mode never sends recurrence configuration", () => {
 
 test("Journalism assignment is locked to the Content department", () => {
   const shell = read("../components/TaskAssignShell.tsx");
+  const route = read("../app/api/tasks/journalism/assign/route.ts");
   assert.match(shell, /getJournalismDepartment\(departments\)/);
   assert.match(shell, /journalismMode \? journalismDepartment\?\.id \?\? "" : departmentId/);
   assert.match(shell, /disabled=\{journalismMode\}/);
   assert.match(shell, /name=\{journalismMode \? undefined : "departmentId"\}/);
   assert.match(shell, /name="departmentId" type="hidden" value=\{journalismDepartment\?\.id \?\? ""\}/);
   assert.match(shell, /journalismMode \? departments\.filter\(\(department\) => department\.code === "editorial"\)/);
+  assert.match(shell, /const watcherPeople = journalismMode \? scopedPeople : people/);
+  assert.match(shell, /<CheckGroup name="watcherIds" people=\{watcherPeople/);
+  assert.match(route, /staff_users[\s\S]*departments!staff_users_department_id_fkey\(code\)/);
+  assert.match(route, /department\?\.code !== "editorial"/);
 });
 
 test("Journalism department resolution ignores every non-Content department", () => {
