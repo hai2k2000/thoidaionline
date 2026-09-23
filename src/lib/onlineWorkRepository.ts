@@ -10,9 +10,13 @@ export const onlineWorkRepository = {
     return error ? { ok: false as const, error } : { ok: true as const, people: data ?? [] };
   },
   async month(month: string) {
+    const [year, monthNumber] = month.split("-").map(Number);
+    const nextMonth = monthNumber === 12
+      ? `${year + 1}-01-01`
+      : `${year}-${String(monthNumber + 1).padStart(2, "0")}-01`;
     const { data, error } = await serverSupabase.from("online_work_schedules")
       .select("id,work_date,staff_id,status").eq("status", "active")
-      .gte("work_date", `${month}-01`).lte("work_date", `${month}-31`).order("work_date");
+      .gte("work_date", `${month}-01`).lt("work_date", nextMonth).order("work_date");
     return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
   },
   async range(from: string, to: string) {

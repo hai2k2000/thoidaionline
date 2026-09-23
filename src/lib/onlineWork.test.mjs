@@ -10,3 +10,11 @@ test("language role labels are explicit",()=>{ const language=readFileSync("src/
 test("reporter job titles map language accounts",()=>{ const sql=readFileSync("supabase/migrations/20260822150000_reporter_language_job_titles.sql","utf8"); const duty=readFileSync("supabase/migrations/20260822130000_duty_vietnamese_reporters_only.sql","utf8"); for (const code of ["phong_vien_tieng_anh","phong_vien_tieng_trung","phong_vien_tieng_lao","phong_vien_tieng_khmer","phong_vien_tieng_nga"]) assert.match(sql,new RegExp(code)); assert.match(sql,/phong_vien_tieng_anh/); assert.match(duty,/thuphuong.*thithuy.*ngocanh/); });
 
 test("online work supports multiple foreign reporters per date",()=>{const sql=readFileSync("supabase/migrations/20260822160000_online_work_multiple_staff.sql","utf8");const admin=readFileSync("src/components/OnlineWorkAdminShell.tsx","utf8");const viewer=readFileSync("src/components/OnlineWorkViewer.tsx","utf8");assert.match(sql,/online_work_schedules\(work_date,staff_id\)/);assert.match(sql,/primary key\(work_date,staff_id\)/);assert.match(sql,/staffIds/);assert.match(admin,/\+ Thêm người/);assert.match(viewer,/new Map<string,Row\[\]>/);assert.match(viewer,/assignments\.map/);});
+
+test("online work month query uses an exclusive next-month boundary",()=>{
+  const repo=readFileSync("src/lib/onlineWorkRepository.ts","utf8");
+  assert.match(repo,/const \[year, monthNumber\] = month\.split\("-"\)\.map\(Number\);/);
+  assert.match(repo,/\.gte\("work_date", `\$\{month\}-01`\)/);
+  assert.match(repo,/\.lt\("work_date", nextMonth\)/);
+  assert.doesNotMatch(repo,/\.lte\("work_date", `\$\{month\}-31`\)/);
+});
