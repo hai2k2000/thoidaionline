@@ -15,6 +15,7 @@ import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
 
 type Props = {
   canAssignTask: boolean;
+  canAccessJournalism: boolean;
   canClaimTasks: boolean;
   currentUserId: string;
   departments: { id: string; name: string }[];
@@ -71,7 +72,7 @@ const participantNames = (task: TaskListResult["items"][number], role: "assignee
   task.task_assignees.filter((row) => row.assignment_role === role).map((row) => row.staff_users?.full_name).filter(Boolean).join(", ") || "—";
 
 const assigneeDisplay = (task: TaskListResult["items"][number]) => { const owner = task.task_assignees.find((row) => row.assignment_role === "owner")?.staff_users?.full_name; const assignees = task.task_assignees.filter((row) => row.assignment_role === "assignee").map((row) => row.staff_users?.full_name).filter(Boolean); return <>{owner ? <><strong>{owner}</strong>{assignees.length ? ", " : ""}</> : null}{assignees.join(", ") || (!owner ? "—" : "")}</>; };
-function FilterFields({ query, departments, journalismWorkKinds, journalismTopics, journalismSeries, basePath = "/tasks" }: Pick<Props, "query" | "departments" | "journalismWorkKinds" | "journalismTopics" | "journalismSeries" | "basePath">) {
+function FilterFields({ query, departments, journalismWorkKinds, journalismTopics, journalismSeries, canAccessJournalism, basePath = "/tasks" }: Pick<Props, "query" | "departments" | "journalismWorkKinds" | "journalismTopics" | "journalismSeries" | "canAccessJournalism" | "basePath">) {
   const [journalismFilter, setJournalismFilter] = useState(query.journalism ?? "");
   const clearJournalismFields = (event: ChangeEvent<HTMLSelectElement>) => {
     setJournalismFilter(event.currentTarget.value);
@@ -103,7 +104,7 @@ function FilterFields({ query, departments, journalismWorkKinds, journalismTopic
           <option value="">Phòng</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
         </select>
       ) : null}
-      {basePath === "/tasks" ? <>
+      {basePath === "/tasks" && canAccessJournalism ? <>
         <label className="grid gap-1 text-xs font-semibold text-slate-600">Loại công việc<select name="journalism" value={journalismFilter} onChange={clearJournalismFields} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal">
           <option value="">Loại công việc · Tất cả</option>
           <option value="exclude">Công việc thường</option>
@@ -137,7 +138,7 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
 }
 
 export default function TaskCenterShell(props: Props) {
-  const { canClaimTasks, currentUserId, departments, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "BẢNG TỔNG HỢP CÔNG VIỆC", taskMode = false } = props;
+  const { canAccessJournalism, canClaimTasks, currentUserId, departments, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "BẢNG TỔNG HỢP CÔNG VIỆC", taskMode = false } = props;
   const router = useRouter();
   const tableRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -167,10 +168,10 @@ export default function TaskCenterShell(props: Props) {
 
               <details className="mt-3 rounded-xl border bg-white p-3 shadow-sm md:hidden">
                 <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>
-                <form action={basePath} className="mt-3 grid gap-3"><FilterFields key={JSON.stringify([query.journalism, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} departments={departments} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} basePath={basePath} /></form>
+                <form action={basePath} className="mt-3 grid gap-3"><FilterFields key={JSON.stringify([query.journalism, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} departments={departments} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} /></form>
               </details>
               <form action={basePath} className="mt-3 hidden gap-2.5 rounded-xl border bg-white p-3 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-7">
-                <FilterFields key={JSON.stringify([query.journalism, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} departments={departments} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} basePath={basePath} />
+                <FilterFields key={JSON.stringify([query.journalism, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} departments={departments} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} />
               </form>
 
               <section className="mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">

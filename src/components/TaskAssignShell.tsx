@@ -12,11 +12,12 @@ import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVi
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
-export default function TaskAssignShell({ departments, people, userLabel, canManageEventAssignment, journalismMode, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
+export default function TaskAssignShell({ departments, people, userLabel, canManageEventAssignment, canAccessJournalism, journalismMode, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
   departments: AssignmentDepartment[];
   people: AssignmentPerson[];
   userLabel: string;
   canManageEventAssignment: boolean;
+  canAccessJournalism: boolean;
   journalismMode: boolean;
   journalismDepartment: AssignmentDepartment | null;
   journalismWorkKinds: { id: string; name: string; is_active: boolean }[];
@@ -130,7 +131,7 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <nav aria-label="Loại công việc cần tạo" className="flex flex-wrap gap-2">
               <Link href="/tasks/assign" aria-current={!journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${!journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc thường</Link>
-              <Link href="/tasks/assign?kind=journalism" aria-current={journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc nghiệp vụ báo chí</Link>
+              {canAccessJournalism ? <Link href="/tasks/assign?kind=journalism" aria-current={journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc nghiệp vụ báo chí</Link> : null}
             </nav>
             {canManageEventAssignment ? <a href="/work-schedule" className="ml-auto rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</a> : null}
           </div>

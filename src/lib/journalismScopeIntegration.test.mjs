@@ -31,9 +31,14 @@ test("Journalism assignment backend hard-locks the editorial department", () => 
 test("Task list and detail do not expose Journalism outside authorized scope", () => {
   assert.match(read("../app/tasks/page.tsx"), /canUseJournalism/);
   assert.match(read("../app/tasks/[id]/page.tsx"), /canUseJournalism/);
+  assert.match(read("../app/tasks/page.tsx"), /<TaskCenterShell[\s\S]*canAccessJournalism=/);
+  assert.match(read("../app/tasks/assign/page.tsx"), /<TaskAssignShell[\s\S]*canAccessJournalism=/);
+  assert.match(read("../components/TaskCenterShell.tsx"), /canAccessJournalism: boolean/);
+  assert.match(read("../components/TaskAssignShell.tsx"), /canAccessJournalism: boolean/);
   const repository = read("./taskRepository.ts");
   assert.match(repository, /actor\.canAccessJournalism/);
   assert.match(repository, /applyJournalismExcludeFilter\(dbQuery\)/);
+  assert.match(repository, /journalism:journalism_task_details!left\(task_id\)/);
   assert.match(repository, /isJournalism/);
   assert.match(repository, /if \(isJournalism\) return ok\(null\)/);
 });

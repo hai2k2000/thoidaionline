@@ -77,6 +77,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   return (
     <TaskCenterShell
       canAssignTask={user.permissions.can_assign_task}
+      canAccessJournalism={journalismAllowed}
       canClaimTasks={!['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
       currentUserId={user.id}
       departments={departments}

@@ -16,7 +16,8 @@ export default async function TaskAssignPage({ searchParams }: Props) {
   }
   const rawParams = await searchParams;
   const journalismMode = rawParams.kind === "journalism";
-  if (journalismMode && !canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions })) redirect("/tasks");
+  const journalismAllowed = canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions });
+  if (journalismMode && !journalismAllowed) redirect("/tasks");
   const workKindsResult = journalismMode ? await listJournalismWorkKinds() : null;
   const journalismWorkKinds = workKindsResult?.ok ? workKindsResult.data.filter((kind) => kind.is_active) : [];
   const options = await taskAssignmentRepository.options({
@@ -34,6 +35,7 @@ export default async function TaskAssignPage({ searchParams }: Props) {
     people={options.people}
     userLabel={user.full_name}
     canManageEventAssignment={user.role_code === "admin" || user.role_code === "tong_bien_tap" || user.role_code === "pho_tong_bien_tap" || user.role_code === "truong_phong" || user.is_department_manager}
+    canAccessJournalism={journalismAllowed}
     journalismMode={journalismMode}
     journalismDepartment={journalismDepartment}
     journalismWorkKinds={journalismWorkKinds}

@@ -74,6 +74,12 @@ const journalismListFields = (
 ].join(",");
 
 const TASK_LIST_FIELDS = journalismListFields();
+// Keep a minimal relation embedded so PostgREST can exclude Journalism rows
+// for actors outside the approved Journalism scope.
+const NON_JOURNALISM_TASK_FIELDS = [
+  ...TASK_BASE_FIELDS,
+  "journalism:journalism_task_details!left(task_id)",
+].join(",");
 
 const TASK_DETAIL_FIELDS = [
   ...TASK_BASE_FIELDS,
@@ -287,7 +293,7 @@ export const taskRepository: TaskRepository = {
       .select(
         hasJournalismParentFilter
           ? journalismListFields(true, Boolean(query.topicId), Boolean(query.seriesId))
-          : actor.canAccessJournalism === false ? TASK_BASE_FIELDS.join(",") : TASK_LIST_FIELDS,
+          : actor.canAccessJournalism === false ? NON_JOURNALISM_TASK_FIELDS : TASK_LIST_FIELDS,
         { count: "exact" },
       )
       .order("created_at", { ascending: false });
