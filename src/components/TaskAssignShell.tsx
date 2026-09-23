@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth";
 import type { AssignmentDepartment, AssignmentPerson } from "@/lib/taskAssignmentRepository";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
-import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVietnamPlannedPublication, validateJournalismCreateFields } from "@/lib/journalismCreateUi.mjs";
+import { buildJournalismCreatePayload, getJournalismDepartment, journalismCreateErrorMessage, serializeVietnamPlannedPublication, validateJournalismCreateFields } from "@/lib/journalismCreateUi.mjs";
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
@@ -24,6 +24,7 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
   const router = useRouter();
   const { logout } = useAuth();
   const { notify } = useActionFeedback();
+  const journalismDepartment = getJournalismDepartment(departments);
   const [departmentId, setDepartmentId] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [assignmentMode, setAssignmentMode] = useState<"individual" | "department_group">("individual");
@@ -36,10 +37,11 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
   const submittingRef = useRef(false);
   const [message, setMessage] = useState("");
   const [journalismErrors, setJournalismErrors] = useState<Record<string, string>>({});
-  const selectedDepartment = departments.find((department) => department.id === departmentId);
+  const effectiveDepartmentId = journalismMode ? journalismDepartment?.id ?? "" : departmentId;
+  const selectedDepartment = departments.find((department) => department.id === effectiveDepartmentId);
   const scopedPeople = useMemo(
-    () => people.filter((person) => person.departmentId === departmentId),
-    [departmentId, people],
+    () => people.filter((person) => person.departmentId === effectiveDepartmentId),
+    [effectiveDepartmentId, people],
   );
   const isEditorialBoard = selectedDepartment?.code === "leadership";
   const managerLabel = selectedDepartment?.managerId
@@ -49,6 +51,10 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submittingRef.current) return;
+    if (journalismMode && !journalismDepartment) {
+      const text = "Không tìm thấy Phòng Nội dung để tạo công việc nghiệp vụ báo chí."; setMessage(text); notify("error", text);
+      return;
+    }
     if (!selectedDepartment?.managerId) {
       const text = "Phòng ban đã chọn chưa có Trưởng phòng chính. Hãy cấu hình trước khi giao việc."; setMessage(text); notify("error", text);
       return;
@@ -135,11 +141,11 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
         <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
             <div className="grid gap-3 lg:col-span-2 lg:grid-cols-3">
             <Field label="Tên công việc"><input name="title" required maxLength={500} className={controlClass} /></Field>
-            <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); setCollaboratorIds([]); setWatcherIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>
+            <Field label="Phòng ban / nhóm"><select name={journalismMode ? undefined : "departmentId"} required value={effectiveDepartmentId} disabled={journalismMode} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); setCollaboratorIds([]); setWatcherIds([]); }} className={controlClass}><option value="">{journalismMode ? "Không tìm thấy Phòng Nội dung" : "Chọn phòng ban"}</option>{(journalismMode ? departments.filter((department) => department.code === "editorial") : departments).map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select>{journalismMode ? <input name="departmentId" type="hidden" value={journalismDepartment?.id ?? ""} /> : null}</Field>
             {isEditorialBoard ? <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 lg:col-span-2">Ban Biên tập mặc định: Tổng biên tập là trưởng phòng; thành viên gồm Phó Tổng biên tập và các Trưởng phòng.</p> : null}
               <Field label="Cách chọn người"><select value={assignmentMode} disabled={journalismMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); setCollaboratorIds([]); }} className={controlClass}><option value="individual">Cá nhân</option>{!journalismMode ? <option value="department_group">Nhóm phòng ban</option> : null}</select>{journalismMode ? <span className="font-normal text-slate-500">Journalism v1 dùng người thực hiện cá nhân; cộng tác viên và người theo dõi vẫn giữ nguyên.</span> : null}</Field>
           </div>
-          {departmentId ? <div role={managerLabel ? "status" : "alert"} className={`rounded-lg border px-3 py-2 text-sm lg:col-span-2 ${managerLabel ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
+          {effectiveDepartmentId ? <div role={managerLabel ? "status" : "alert"} className={`rounded-lg border px-3 py-2 text-sm lg:col-span-2 ${managerLabel ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
             {managerLabel
               ? `Theo dõi mặc định: ${managerLabel}. Hệ thống kiểm tra lại Trưởng phòng chính hiện hành khi lưu.`
               : "Phòng ban này chưa có Trưởng phòng chính; không thể giao việc."}
@@ -156,7 +162,7 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
               {assignmentMode === "individual" ? <Field label="Người phối hợp"><CheckGroup name="collaboratorIds" people={scopedPeople.filter((person) => person.id !== assigneeId)} selected={collaboratorIds} onChange={setCollaboratorIds} empty="Không còn người phù hợp trong phòng." /></Field> : <Field label="Danh sách thành viên active" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên active.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành khi lưu. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field>}
           <Field label="Người theo dõi bổ sung"><CheckGroup name="watcherIds" people={people.filter((person) => person.id !== assigneeId && !collaboratorIds.includes(person.id))} selected={watcherIds} onChange={setWatcherIds} empty="Không còn người phù hợp." /><span className="font-normal text-slate-500">Trưởng phòng chính được thêm tự động; lựa chọn trùng sẽ được gộp.</span></Field>
           <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className={controlClass} /></Field>
-          <div className="flex items-end"><button disabled={busy || !departmentId || !selectedDepartment?.managerId || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : "Giao việc"}</button></div>
+          <div className="flex items-end"><button disabled={busy || !effectiveDepartmentId || !selectedDepartment?.managerId || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : "Giao việc"}</button></div>
           {message ? <p role="alert" className="text-sm text-red-700 lg:col-span-2">{message}</p> : null}
         </form>
       </main>

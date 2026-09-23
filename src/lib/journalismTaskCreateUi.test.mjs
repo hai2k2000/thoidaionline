@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import { getJournalismDepartment } from "./journalismCreateUi.mjs";
 
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 
@@ -33,4 +34,24 @@ test("Journalism mode never sends recurrence configuration", () => {
   assert.match(shell, /journalismMode \? \{\} : \{ recurrenceFrequency/);
   assert.match(shell, /const payload = journalismMode[\s\S]*buildJournalismCreatePayload/);
   assert.match(shell, /submittingRef/);
+});
+
+test("Journalism assignment is locked to the Content department", () => {
+  const shell = read("../components/TaskAssignShell.tsx");
+  assert.match(shell, /getJournalismDepartment\(departments\)/);
+  assert.match(shell, /journalismMode \? journalismDepartment\?\.id \?\? "" : departmentId/);
+  assert.match(shell, /disabled=\{journalismMode\}/);
+  assert.match(shell, /name=\{journalismMode \? undefined : "departmentId"\}/);
+  assert.match(shell, /name="departmentId" type="hidden" value=\{journalismDepartment\?\.id \?\? ""\}/);
+  assert.match(shell, /journalismMode \? departments\.filter\(\(department\) => department\.code === "editorial"\)/);
+});
+
+test("Journalism department resolution ignores every non-Content department", () => {
+  const departments = [
+    { id: "general", code: "general", name: "Phòng Tổng hợp" },
+    { id: "editorial", code: "editorial", name: "Phòng Nội dung" },
+    { id: "communications", code: "communications", name: "Phòng Truyền thông" },
+  ];
+  assert.deepEqual(getJournalismDepartment(departments), departments[1]);
+  assert.equal(getJournalismDepartment(departments.filter((department) => department.code !== "editorial")), null);
 });
