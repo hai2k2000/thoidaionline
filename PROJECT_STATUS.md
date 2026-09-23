@@ -3,6 +3,27 @@
 Current Phase: J6G implementation complete; pre-production validation
 Current Task: Manual Publication Reconciliation, focused tests, and immutable artifact without activation
 
+# Work Schedule Personal API 404 Status
+
+Current Phase: Implementation complete; pre-production validation
+Current Task: Restore `/api/work-schedule/personal`
+
+Completed:
+- Restored the personal schedule API route and local date/time validation used by the staff schedule page.
+- Added a regression test proving the page's `/api/work-schedule/personal` endpoint exists and lists personal rows.
+
+Validation:
+- Personal schedule and event assignment focused tests: 18/18 PASS.
+- TypeScript: PASS.
+- Scoped ESLint: PASS.
+- Full production build not run because the VPS filesystem had only about 108 MB free; no production state was changed.
+
+Blockers:
+- Production activation requires owner authorization.
+
+Next:
+- Review and separately authorized production deployment.
+
 Completed:
 - Added scoped reconciliation route/RPC with mandatory reason and optimistic report version.
 - Preserved report identity, original reporter, and append-only J6E verification history.
