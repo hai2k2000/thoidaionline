@@ -36,6 +36,7 @@ test("query parser accepts only safe J7 filters", () => {
 
 test("calendar scope is content department or approved journalism leadership", () => {
   assert.equal(canViewCalendar({ roleCode: "phong_vien", departmentCode: "editorial" }), true);
+  assert.equal(canViewCalendar({ roleCode: "truong_phong", departmentCode: "editorial" }), true);
   assert.equal(canViewCalendar({ roleCode: "admin", departmentCode: "hr" }), false);
   assert.equal(canViewCalendar({ roleCode: "staff", departmentCode: "hr" }), false);
 });

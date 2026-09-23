@@ -9,6 +9,9 @@ test("calendar scope is always content department and reporter scope is assigned
   assert.deepEqual(calendarActorScope({ id: "u2", departmentId: "d1", departmentCode: "editorial", roleCode: "tong_bien_tap" }), {
     departmentId: "d1", scope: "all",
   });
+  assert.deepEqual(calendarActorScope({ id: "u4", departmentId: "d1", departmentCode: "editorial", roleCode: "truong_phong" }), {
+    departmentId: "d1", scope: "all",
+  });
   assert.equal(calendarActorScope({ id: "u3", departmentId: "d2", departmentCode: "hr", roleCode: "admin" }), null);
 });
 
