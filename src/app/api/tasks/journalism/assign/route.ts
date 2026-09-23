@@ -43,6 +43,8 @@ export async function POST(request: Request) {
     return apiError("invalid_request", 400);
   }
   if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
+  const department = await serverSupabase.from("departments").select("id,code").eq("id", departmentId).eq("active", true).maybeSingle();
+  if (department.error || !department.data || department.data.code !== "editorial") return apiError("forbidden", 403);
   const actor = { id: guard.actor.id, departmentId: guard.actor.department_id, roleCode: guard.actor.role_code, roleLevel: guard.actor.role_level, permissions: guard.actor.permissions };
   if (!guard.actor.permissions.can_create_task || !canAssignToDepartment(actor, departmentId)) return apiError("forbidden", 403);
   const collaboratorIds = Array.isArray(body.collaboratorIds) ? body.collaboratorIds.map(asUuid).filter(Boolean) : [];

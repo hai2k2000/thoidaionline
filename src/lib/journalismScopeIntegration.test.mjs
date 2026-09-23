@@ -22,6 +22,12 @@ test("Journalism mutations enforce Content scope before RBAC permission", () => 
   assert.match(read("./journalismStructureHandlers.ts"), /canUseJournalism/);
 });
 
+test("Journalism assignment backend hard-locks the editorial department", () => {
+  const route = read("../app/api/tasks/journalism/assign/route.ts");
+  assert.match(route, /code.*editorial|editorial.*code/);
+  assert.match(route, /departmentId/);
+});
+
 test("Task list and detail do not expose Journalism outside authorized scope", () => {
   assert.match(read("../app/tasks/page.tsx"), /canUseJournalism/);
   assert.match(read("../app/tasks/[id]/page.tsx"), /canUseJournalism/);

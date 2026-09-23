@@ -27,12 +27,15 @@ export default async function TaskAssignPage({ searchParams }: Props) {
     permissions: user.permissions,
   });
   if (!options.ok) throw new Error("Không thể tải dữ liệu giao việc.");
+  const journalismDepartment = options.departments.find((department) => department.code === "editorial") ?? null;
+  if (journalismMode && !journalismDepartment) redirect("/tasks");
   return <TaskAssignShell
     departments={options.departments}
     people={options.people}
     userLabel={user.full_name}
     canManageEventAssignment={user.role_code === "admin" || user.role_code === "tong_bien_tap" || user.role_code === "pho_tong_bien_tap" || user.role_code === "truong_phong" || user.is_department_manager}
     journalismMode={journalismMode}
+    journalismDepartment={journalismDepartment}
     journalismWorkKinds={journalismWorkKinds}
     journalismWorkKindsLoaded={Boolean(workKindsResult?.ok)}
   />;

@@ -1,5 +1,5 @@
 export const CONTENT_DEPARTMENT_CODE = "editorial";
-export const GLOBAL_JOURNALISM_ROLES = new Set(["admin", "tong_bien_tap", "pho_tong_bien_tap"]);
+export const GLOBAL_JOURNALISM_ROLES = new Set(["tong_bien_tap", "pho_tong_bien_tap"]);
 
 export function canAccessJournalismScope(actor) {
   return GLOBAL_JOURNALISM_ROLES.has(actor?.roleCode ?? "")

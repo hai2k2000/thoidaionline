@@ -20,6 +20,7 @@ test("leadership task assignment screen exposes Event Assignment", () => {
   for (const role of ["admin", "tong_bien_tap", "pho_tong_bien_tap"]) assert.match(page, new RegExp(role));
   assert.match(page, /is_department_manager/);
   assert.match(shell, /canManageEventAssignment/);
-  assert.match(shell, /Tạo sự kiện \/ Phân công sự kiện/);
+  assert.doesNotMatch(shell, /Tạo sự kiện \/ Phân công sự kiện/);
+  assert.match(shell, /Phân công sự kiện/);
   assert.match(shell, /work-schedule/);
 });

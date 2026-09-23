@@ -34,3 +34,11 @@ test("Journalism mode never sends recurrence configuration", () => {
   assert.match(shell, /const payload = journalismMode[\s\S]*buildJournalismCreatePayload/);
   assert.match(shell, /submittingRef/);
 });
+
+test("Journalism mode fixes the department to Phòng Nội dung", () => {
+  const page = read("../app/tasks/assign/page.tsx");
+  const shell = read("../components/TaskAssignShell.tsx");
+  assert.match(page, /journalismDepartment/);
+  assert.match(shell, /Phòng Nội dung/);
+  assert.doesNotMatch(shell, /journalismMode \? null : <select name="departmentId"/);
+});

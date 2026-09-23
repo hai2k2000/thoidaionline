@@ -87,7 +87,7 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
           <h2 className="font-bold text-orange-950">Phân công sự kiện</h2>
           <p className="mt-1 text-xs text-slate-600">Sự kiện có hiệu lực ngay, không tạo Giao việc.</p>
         </div>
-        <button type="button" onClick={() => { setEditing(null); setSelected([]); setMessage(""); setOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white">Tạo sự kiện / Phân công sự kiện</button>
+        <button type="button" onClick={() => { setEditing(null); setSelected([]); setMessage(""); setOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white">Phân công sự kiện</button>
       </div>
       {message ? <p role="status" className="mt-2 text-sm text-slate-700">{message}</p> : null}
       <div className="mt-3 grid gap-2">
@@ -110,7 +110,7 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
       </div>
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true">
         <form onSubmit={submit} className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
-          <h3 className="text-lg font-semibold">{editing ? "Sửa sự kiện" : "Tạo sự kiện / Phân công sự kiện"}</h3>
+          <h3 className="text-lg font-semibold">{editing ? "Sửa sự kiện" : "Phân công sự kiện"}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-medium">Loại sự kiện<input name="eventType" required maxLength={100} defaultValue={editing?.event_type ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
             <label className="text-sm font-medium">Tiêu đề<input name="title" required maxLength={500} defaultValue={editing?.title ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>

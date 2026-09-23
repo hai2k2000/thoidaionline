@@ -117,12 +117,15 @@ test("repository projects assignments and reporter reads without changing organi
 test("leadership UI exposes assignment action and reporter badge", () => {
   const panel = read("../components/EventAssignmentPanel.tsx");
   const shell = read("../components/WorkSchedulePageShell.tsx");
-  assert.match(panel, /Tạo sự kiện \/ Phân công sự kiện/);
+  const assignShell = read("../components/TaskAssignShell.tsx");
+  assert.doesNotMatch(panel, /Tạo sự kiện \/ Phân công sự kiện/);
   assert.match(panel, /type="time"/);
   assert.match(panel, /participantIds|reporterIds/);
   assert.match(panel, /Được phân công/);
   assert.match(shell, /EventAssignmentPanel/);
   assert.doesNotMatch(panel, /api\/work-schedule\/personal/);
+  assert.match(assignShell, /Phân công sự kiện/);
+  assert.doesNotMatch(assignShell, /role="region" aria-label="Phân công sự kiện"/);
 });
 
 test("Personal Plan, Online Work, and Task boundaries remain explicit", () => {

@@ -39,7 +39,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
-      ...(canAccessJournalism && access.departmentCode === "editorial" ? [{ id: "journalism-calendar", href: "/journalism/calendar" } as const] : []),
+      ...(canAccessJournalism ? [{ id: "journalism-calendar", href: "/journalism/calendar" } as const] : []),
       ...(canAccessJournalism ? [{ id: "journalism-reports", href: "/journalism/reports" } as const] : []),
       { id: "attendance", href: "/my-attendance" },
       ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),

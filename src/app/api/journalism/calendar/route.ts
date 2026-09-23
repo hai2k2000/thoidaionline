@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const guard = await requireReadActor();
   if (!guard.ok) return guard.response;
   const user = guard.actor;
-  if (user.department_code !== "editorial" || !canUseJournalism({
+  if (!canUseJournalism({
     roleCode: user.role_code,
     departmentCode: user.department_code,
     rbacPermissions: user.rbacPermissions,

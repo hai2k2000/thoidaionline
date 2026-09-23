@@ -9,7 +9,7 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 export default async function JournalismCalendarPage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (user.department_code !== "editorial" || !canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions })) redirect("/tasks");
+  if (!canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions })) redirect("/tasks");
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(await searchParams)) params.set(key, Array.isArray(value) ? value[0] ?? "" : value ?? "");
   const query = parseCalendarQuery(params);
