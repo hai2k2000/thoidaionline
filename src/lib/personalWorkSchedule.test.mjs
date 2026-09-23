@@ -1,8 +1,31 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+
+test("personal work schedule route exists", () => {
+  assert.equal(existsSync(new URL("../app/api/work-schedule/personal/route.ts", import.meta.url)), true);
+  assert.match(read("../app/api/work-schedule/personal/route.ts"), /export async function GET/);
+});
+
+test("personal schedule read path authenticates and preserves legacy rows", () => {
+  const route = read("../app/api/work-schedule/personal/route.ts");
+  const repository = read("./workScheduleRepository.ts");
+  const serverApi = read("./serverApi.ts");
+  assert.match(route, /requireReadActor/);
+  assert.match(route, /workScheduleRepository\.listPersonal\(from, to, guard\.actor\.id\)/);
+  assert.match(serverApi, /apiError\("unauthenticated", 401\)/);
+  assert.match(repository, /schedule_scope\.eq\.personal,schedule_scope\.is\.null/);
+  assert.match(repository, /listPendingPersonal/);
+});
+
+test("adjacent production routes remain isolated", () => {
+  assert.match(read("../app/api/work-schedule/route.ts"), /workScheduleRepository/);
+  assert.match(read("../app/api/work-schedule/events/route.ts"), /listEventAssignments/);
+  assert.match(read("../app/api/online-work/route.ts"), /onlineWorkRepository/);
+  assert.match(read("../app/api/tasks/[id]/journalism/route.ts"), /authorizeJournalismPermission/);
+});
 
 test("personal plan page is public to authenticated users and is named correctly", () => {
   const page = read("../app/work-schedule/staff/page.tsx");

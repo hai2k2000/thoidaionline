@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run check:routes",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:routes": "node scripts/check-required-routes.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.112.4",
