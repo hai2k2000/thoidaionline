@@ -27,6 +27,8 @@ for (const name of [".env.local", ".env.production"]) {
 }
 await cp(join(root, "scripts", "start-standalone.mjs"), join(output, "start-standalone.mjs"));
 await cp(join(root, "scripts", "verify-standalone-artifact.mjs"), join(output, "verify-standalone-artifact.mjs"));
+await rm(join(output, "scripts", "check-required-routes.mjs"), { force: true });
+await cp(join(root, "scripts", "check-release-baseline.mjs"), join(output, "scripts", "check-release-baseline.mjs"));
 await writeFile(join(output, "RELEASE_BASELINE_COMMIT"), `${canonicalBaseline}\n`);
 await writeFile(join(output, "required-route-manifest.json"), `${JSON.stringify(REQUIRED_PRODUCTION_ROUTES, null, 2)}\n`);
 await writeFile(join(output, "package.json"), `${JSON.stringify({ name: "thoidai-work-runtime", version: "0.1.0", private: true, scripts: { start: "node start-standalone.mjs" } }, null, 2)}\n`);
