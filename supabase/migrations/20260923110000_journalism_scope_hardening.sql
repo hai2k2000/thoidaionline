@@ -20,7 +20,7 @@ begin
   left join public.departments d on d.id = u.department_id and d.active = true
   where u.id = p_actor_id and u.active = true;
   if v_role_code is null then raise exception 'Invalid actor.' using errcode = '42501'; end if;
-  if v_role_code not in ('tong_bien_tap', 'pho_tong_bien_tap')
+  if v_role_code not in ('admin', 'tong_bien_tap', 'pho_tong_bien_tap')
      and v_actor_department_code is distinct from 'editorial' then
     raise exception 'Journalism is limited to Content department.' using errcode = '42501';
   end if;

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 
 const migration = ["20260922120000_journalism_content_department_scope.sql", "20260922123000_journalism_department_code_alignment.sql", "20260923110000_journalism_scope_hardening.sql", "20260923150000_journalism_admin_scope.sql"].map((name) => fs.readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), "utf8")).join("\n");
-const hardening = fs.readFileSync(new URL("../../supabase/migrations/20260923150000_journalism_admin_scope.sql", import.meta.url), "utf8");
+const hardening = fs.readFileSync(new URL("../../supabase/migrations/20260923110000_journalism_scope_hardening.sql", import.meta.url), "utf8");
 
 test("database enforces Content scope for every Journalism security-definer entry point", () => {
   assert.match(migration, /api_assert_journalism_department_scope/);
