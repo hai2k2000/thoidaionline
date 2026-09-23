@@ -15,7 +15,7 @@ test("calendar scope is always content department and reporter scope is assigned
   assert.deepEqual(calendarActorScope({ id: "u4", departmentId: "d1", departmentCode: "editorial", roleCode: "truong_phong" }), {
     departmentId: "d1", scope: "all",
   });
-  assert.equal(calendarActorScope({ id: "u3", departmentId: "d2", departmentCode: "hr", roleCode: "admin" }), null);
+  assert.deepEqual(calendarActorScope({ id: "u3", departmentId: "d2", departmentCode: "hr", roleCode: "admin" }), { departmentId: "d2", scope: "all" });
 });
 
 test("planned date patch has no fields outside the safe allowlist", () => {

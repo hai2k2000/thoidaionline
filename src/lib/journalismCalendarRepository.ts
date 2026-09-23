@@ -99,7 +99,7 @@ export async function updatePlannedPublicationDate(actor: CalendarActor, taskId:
   if (!scope) return { ok: false, error: { code: "forbidden" } };
   const access = await taskRepository.access(taskId);
   if (!access.ok || !access.data) return { ok: false, error: { code: "not_found" } };
-  const globalJournalismLeader = ["tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode);
+  const globalJournalismLeader = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode);
   if (!globalJournalismLeader && access.data.departmentId !== actor.departmentId) return { ok: false, error: { code: "forbidden" } };
   if (scope.scope === "assigned" && ![access.data.ownerId, access.data.assigneeId, access.data.createdBy].includes(actor.id)) {
     return { ok: false, error: { code: "forbidden" } };

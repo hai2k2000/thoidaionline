@@ -104,6 +104,18 @@ test("shared-rubric configuration remains admin-only", () => {
   );
 });
 
+test("admin navigation exposes Journalism regardless of department", () => {
+  const navigation = getPhase2Navigation({
+    ...employee,
+    roleCode: "admin",
+    departmentCode: "business",
+    canAccessJournalism: true,
+    canManageJournalismStructures: true,
+  });
+  assert.deepEqual(navigation.primary.find((item) => item.id === "journalism-reports"), { id: "journalism-reports", href: "/journalism/reports" });
+  assert.deepEqual(navigation.configuration.find((item) => item.id === "journalism-structures"), { id: "journalism-structures", href: "/journalism/structures" });
+});
+
 test("admin configuration restores legacy administration beside new configuration", () => {
   assert.deepEqual(
     getPhase2Navigation({

@@ -67,6 +67,6 @@ export function parseCalendarQuery(params: URLSearchParams): JournalismCalendarQ
 }
 
 export function canViewCalendar(actor: { roleCode?: string | null; departmentCode?: string | null }) {
-  return (["tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode ?? "") || actor.departmentCode === "editorial")
+  return (["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode ?? "") || actor.departmentCode === "editorial")
     && ["admin", "tong_bien_tap", "pho_tong_bien_tap", "truong_phong", "pho_truong_phong", "phu_trach_phong_bien_tap", "phu_trach_phong_phong_vien", "phu_trach_phong_tri_su", "phong_vien"].includes(actor.roleCode ?? "");
 }
