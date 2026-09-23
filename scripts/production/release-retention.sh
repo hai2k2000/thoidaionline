@@ -6,6 +6,7 @@ set -Eeuo pipefail
 : "${THOIDAI_HEALTH_URL:=http://127.0.0.1:3001/login}"
 : "${THOIDAI_SYSTEMCTL_BIN:=systemctl}"
 : "${THOIDAI_CURL_BIN:=curl}"
+: "${THOIDAI_CANONICAL_BASELINE:=e501652e969900b97938acccd8f998df4e5d1873}"
 
 mode=dry-run
 case "${1:-}" in
@@ -21,6 +22,26 @@ health_check() {
   "$THOIDAI_CURL_BIN" -fsS --max-time 15 -o /dev/null "$THOIDAI_HEALTH_URL"
 }
 
+meta_value() {
+  local file=$1 key=$2
+  awk -F= -v wanted="$key" '$1 == wanted {sub(/^[^=]*=/, ""); print; exit}' "$file"
+}
+
+managed_release() {
+  local path=$1 meta="$path/.release-meta"
+  [[ -f "$meta" && -f "$path/.deploy-success" && -f "$path/.next/BUILD_ID" && -f "$path/required-route-manifest.json" ]] || return 1
+  [[ "$(meta_value "$meta" commit)" =~ ^[0-9a-f]{40}$ ]] || return 1
+  [[ "$(meta_value "$meta" created_at)" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[^[:space:]]+Z$ ]] || return 1
+  [[ "$(meta_value "$meta" artifact_type)" == next-standalone ]] || return 1
+  [[ "$(meta_value "$meta" canonical_baseline)" == "$THOIDAI_CANONICAL_BASELINE" ]] || return 1
+  [[ "$(meta_value "$meta" protection)" == managed ]] || return 1
+  [[ "$(meta_value "$meta" rollback_eligible)" == yes ]] || return 1
+  [[ "$(meta_value "$meta" health_status)" == pass ]] || return 1
+  [[ "$(meta_value "$meta" deploy_status)" == success ]] || return 1
+  grep -q '^health_status=pass$' "$path/.deploy-success" || return 1
+  grep -q '^deploy_status=success$' "$path/.deploy-success" || return 1
+}
+
 active=$("$THOIDAI_SYSTEMCTL_BIN" show -P WorkingDirectory "$THOIDAI_SERVICE" 2>/dev/null || true)
 [[ -n "$active" && -d "$active" ]] || { echo "cannot prove active release; refusing retention" >&2; exit 1; }
 active=$(realpath -m -- "$active")
@@ -29,7 +50,7 @@ active=$(realpath -m -- "$active")
 declare -A keep=()
 keep["$active"]="active-systemd"
 links_complete=1
-for name in current previous rollback-2; do
+for name in current previous rollback-1 rollback-2; do
   link="$root/$name"
   if [[ -L "$link" ]]; then
     target=$(realpath -m -- "$link")
@@ -43,17 +64,18 @@ done
 records=()
 while IFS= read -r -d '' path; do
   base=$(basename "$path")
-  case "$base" in current|previous|rollback-2|ops-backups|build-evidence) continue ;; esac
+  case "$base" in current|previous|rollback-1|rollback-2|ops-backups|build-evidence) continue ;; esac
   real=$(realpath -m -- "$path")
   reason=""
-  if (( ! links_complete )); then reason=legacy-unmanaged;
+  if ! managed_release "$path"; then reason=legacy-unmanaged;
+  elif (( ! links_complete )); then reason=managed-unvalidated-lifecycle;
   elif [[ ${keep[$real]+yes} ]]; then reason=${keep[$real]};
   elif [[ -e "$path/.keep" ]]; then reason=protected-.keep;
   elif grep -R -l --fixed-strings "$real" /etc/systemd/system /etc/nginx 2>/dev/null | head -n 1 | grep -q .; then reason=configuration-reference;
   elif command -v pgrep >/dev/null 2>&1 && pgrep -af -- "$real" >/dev/null 2>&1; then reason=process-reference;
   elif command -v lsof >/dev/null 2>&1 && lsof +D "$real" 2>/dev/null | tail -n +2 | grep -q .; then reason=open-file-reference;
   fi
-  if [[ -n "$reason" ]]; then records+=("KEEP\t$path\t$reason"); else records+=("DELETE\t$path\told-unused"); fi
+  if [[ -n "$reason" ]]; then records+=("KEEP\t$path\t$reason"); else records+=("DELETE\t$path\tsuperseded-managed"); fi
 done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -regextype posix-extended -regex '.*/[A-Za-z0-9][A-Za-z0-9._-]{7,127}$' -print0 | sort -z)
 
 printf '%b\n' "${records[@]}"

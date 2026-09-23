@@ -14,4 +14,5 @@ STANDALONE_ARTIFACT_DIR="$artifact_dir" npm run package:standalone
 test -f "$artifact_dir/.next/BUILD_ID"
 test -f "$artifact_dir/RELEASE_BASELINE_COMMIT"
 test -f "$artifact_dir/required-route-manifest.json"
+test -f "$artifact_dir/.release-meta"
 echo "standalone-release: PASS ($artifact_dir)"
