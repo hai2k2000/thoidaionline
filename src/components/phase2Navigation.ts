@@ -14,7 +14,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "journalism-structures" | "journalism-reports";
+    | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
   href: string;
 };
 
@@ -39,6 +39,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
+      ...(canAccessJournalism && access.departmentCode === "editorial" ? [{ id: "journalism-calendar", href: "/journalism/calendar" } as const] : []),
       ...(canAccessJournalism ? [{ id: "journalism-reports", href: "/journalism/reports" } as const] : []),
       { id: "attendance", href: "/my-attendance" },
       ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),

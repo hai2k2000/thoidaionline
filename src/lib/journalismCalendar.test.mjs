@@ -1,0 +1,34 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  calendarRange,
+  classifyCalendarTask,
+  parseCalendarQuery,
+  canViewCalendar,
+} from "./journalismCalendar.ts";
+
+test("day, week and month ranges are bounded to the requested anchor", () => {
+  assert.deepEqual(calendarRange("day", "2026-09-23"), { from: "2026-09-23", to: "2026-09-23" });
+  assert.deepEqual(calendarRange("week", "2026-09-23"), { from: "2026-09-21", to: "2026-09-27" });
+  assert.deepEqual(calendarRange("month", "2026-09-23"), { from: "2026-09-01", to: "2026-09-30" });
+});
+
+test("calendar status classification distinguishes planned, overdue and publication states", () => {
+  assert.equal(classifyCalendarTask({ plannedPublicationAt: null, publicationStatus: "not_published" }, "2026-09-23"), "unplanned");
+  assert.equal(classifyCalendarTask({ plannedPublicationAt: "2026-09-22T08:00:00Z", publicationStatus: "not_published" }, "2026-09-23"), "overdue");
+  assert.equal(classifyCalendarTask({ plannedPublicationAt: "2026-09-24T08:00:00Z", publicationStatus: "scheduled" }, "2026-09-23"), "scheduled");
+  assert.equal(classifyCalendarTask({ plannedPublicationAt: "2026-09-22T08:00:00Z", publicationStatus: "published" }, "2026-09-23"), "published");
+  assert.equal(classifyCalendarTask({ plannedPublicationAt: "2026-09-22T08:00:00Z", publicationStatus: "withdrawn" }, "2026-09-23"), "withdrawn");
+});
+
+test("query parser accepts only safe J7 filters", () => {
+  const query = parseCalendarQuery(new URLSearchParams("view=week&date=2026-09-23&reporter=r1&status=scheduled&topic=t1&series=s1"));
+  assert.deepEqual(query, { view: "week", anchorDate: "2026-09-23", reporterId: "r1", publicationStatus: "scheduled", topicId: "t1", seriesId: "s1" });
+  assert.equal(parseCalendarQuery(new URLSearchParams("view=bad&date=nope&status=bad")).view, "month");
+});
+
+test("calendar scope is content department or approved journalism leadership", () => {
+  assert.equal(canViewCalendar({ roleCode: "phong_vien", departmentCode: "editorial" }), true);
+  assert.equal(canViewCalendar({ roleCode: "admin", departmentCode: "hr" }), false);
+  assert.equal(canViewCalendar({ roleCode: "staff", departmentCode: "hr" }), false);
+});

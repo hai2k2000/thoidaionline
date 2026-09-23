@@ -39,6 +39,7 @@ const labels = {
   "work-schedule-admin": "Quản trị lịch công tác",
   "journalism-structures": "Chủ đề & Loạt bài",
   "journalism-reports": "Báo cáo nghiệp vụ báo chí",
+  "journalism-calendar": "Lịch biên tập",
 } as const;
 
 function NavIcon({ id, active }: { id: keyof typeof labels; active: boolean }) {

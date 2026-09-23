@@ -12,6 +12,8 @@ export const REQUIRED_PRODUCTION_ROUTES = [
   { sourcePath: "src/app/api/tasks/journalism/assign/route.ts", routePath: "/api/tasks/journalism/assign" },
   { sourcePath: "src/app/api/tasks/[id]/journalism/route.ts", routePath: "/api/tasks/[id]/journalism" },
   { sourcePath: "src/app/api/tasks/[id]/journalism/publication/route.ts", routePath: "/api/tasks/[id]/journalism/publication" },
+  { sourcePath: "src/app/api/journalism/calendar/route.ts", routePath: "/api/journalism/calendar" },
+  { sourcePath: "src/app/api/journalism/calendar/[id]/route.ts", routePath: "/api/journalism/calendar/[id]" },
 ];
 
 export function missingRequiredProductionRoutes(root = process.cwd()) {
