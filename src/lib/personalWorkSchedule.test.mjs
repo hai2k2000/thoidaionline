@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+
+test("personal schedule page has a matching personal API route", () => {
+  assert.equal(existsSync(new URL("../app/api/work-schedule/personal/route.ts", import.meta.url)), true);
+  const route = read("../app/api/work-schedule/personal/route.ts");
+  assert.match(route, /export async function GET/);
+  assert.match(route, /scope !== "self"/);
+  assert.match(route, /workScheduleRepository\.listPersonal/);
+});
 
 test("personal plan page is public to authenticated users and is named correctly", () => {
   const page = read("../app/work-schedule/staff/page.tsx");
