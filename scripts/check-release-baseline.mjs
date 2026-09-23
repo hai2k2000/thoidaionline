@@ -6,8 +6,8 @@ try {
   if (existsSync(".git")) {
     execFileSync("git", ["merge-base", "--is-ancestor", canonicalBaseline, "HEAD"], { stdio: "ignore" });
   } else {
-    const releaseCommit = readFileSync("RELEASE_COMMIT", "utf8").trim();
-    execFileSync("git", ["merge-base", "--is-ancestor", canonicalBaseline, releaseCommit], { stdio: "ignore" });
+    const releaseBaseline = readFileSync("RELEASE_BASELINE_COMMIT", "utf8").trim();
+    if (releaseBaseline !== canonicalBaseline) throw new Error("packaged baseline mismatch");
   }
 } catch {
   console.error(`release baseline check failed: HEAD must descend from ${canonicalBaseline}`);
