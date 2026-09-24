@@ -8,6 +8,7 @@ export type AuthorizationActor = {
   canAccessJournalism?: boolean;
   roleCode: string;
   roleLevel: number;
+  isDepartmentManager?: boolean;
   permissions: PermissionSet;
 };
 
@@ -27,6 +28,7 @@ export type TaskAccessSnapshot = {
   selfClaimable: boolean;
   taskType: "assigned" | "personal" | null;
   status: string;
+  approvalRequired?: boolean;
   participants: TaskParticipant[];
 };
 
@@ -162,6 +164,10 @@ export function canTaskAction(
         && !["new", "waiting", "pending_review", "done", "cancelled"].includes(task.status);
     case "review":
       return actor.roleCode === "admin"
+        || (task.approvalRequired === true
+          && ["tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode)
+          && task.createdBy !== actor.id
+          && task.ownerId !== actor.id)
         || (
           task.reviewerId === actor.id
           && (
@@ -185,7 +191,8 @@ export function canTaskAction(
     case "personal_complete":
       return task.taskType === "personal"
         && (task.ownerId === actor.id || actor.roleCode === "admin")
-        && !["done", "cancelled"].includes(task.status);
+        && !["done", "cancelled", "pending_review"].includes(task.status)
+        && (!task.approvalRequired || ["in_progress", "blocked", "rejected"].includes(task.status));
     case "evaluate":
     case "legacy_evaluate":
       return actor.roleCode === "admin"

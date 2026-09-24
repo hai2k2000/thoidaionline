@@ -49,6 +49,7 @@ export function parseTaskListSearchParams(params, options = {}) {
   const parsedTopicId = topicId && UUID.test(topicId) ? topicId : null;
   const parsedSeriesId = seriesId && UUID.test(seriesId) ? seriesId : null;
   const requestedJournalism = member(JOURNALISM_FILTERS, params.get("journalism")) ?? null;
+  const approvalQueue = member(["assignment", "completion"], params.get("approvalQueue")) ?? null;
   const defaultJournalism = options.defaultJournalism ?? null;
   const category = params.get("category") === "duty" ? "duty" : null;
   const isNormalOnly = requestedJournalism === "exclude";
@@ -66,6 +67,7 @@ export function parseTaskListSearchParams(params, options = {}) {
     departmentId: departmentId && UUID.test(departmentId) ? departmentId : null,
     journalism: requestedJournalism
       ?? (parsedJournalismWorkKindId || parsedPublicationStatus || parsedPlannedPublicationFrom || parsedPlannedPublicationTo || parsedTopicId || parsedSeriesId ? "only" : defaultJournalism),
+    approvalQueue,
     journalismWorkKindId: isNormalOnly ? null : parsedJournalismWorkKindId,
     publicationStatus: isNormalOnly ? null : parsedPublicationStatus,
     plannedPublicationFrom: isNormalOnly ? null : parsedPlannedPublicationFrom,
@@ -115,6 +117,7 @@ export function taskListHref(query, patch) {
   if (next.deadlineState) params.set("deadline", next.deadlineState);
   if (next.departmentId) params.set("department", next.departmentId);
   if (next.journalism) params.set("journalism", next.journalism);
+  if (next.approvalQueue) params.set("approvalQueue", next.approvalQueue);
   if (next.journalismWorkKindId) params.set("workKind", next.journalismWorkKindId);
   if (next.publicationStatus) params.set("publicationStatus", next.publicationStatus);
   if (next.plannedPublicationFrom) params.set("plannedFrom", next.plannedPublicationFrom);
@@ -146,5 +149,6 @@ export function countTaskListFilters(query) {
     query.plannedPublicationTo,
     query.topicId,
     query.seriesId,
+    query.approvalQueue,
   ].filter(Boolean).length;
 }

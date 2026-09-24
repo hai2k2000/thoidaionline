@@ -34,10 +34,15 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     canAccessJournalism: journalismAllowed,
     roleCode: user.role_code,
     roleLevel: user.role_level,
+    isDepartmentManager: user.is_department_manager,
     permissions: user.permissions,
   };
   const canViewEvaluations = user.permissions.can_evaluate_step1
     || user.permissions.can_evaluate_step2;
+  const canReviewTaskApprovals = user.role_code === "admin"
+    || user.role_code === "tong_bien_tap"
+    || user.role_code === "pho_tong_bien_tap"
+    || user.is_department_manager === true;
   const rawParams = await searchParams;
   if (rawParams.view === "evaluations") {
     if (!canViewEvaluations) redirect("/tasks");
@@ -55,11 +60,15 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     items: [], total: 0, page: query.page, pageSize: query.pageSize,
   };
   let listError = false;
-  if (view === "work") {
+  if (view === "work" && !query.approvalQueue) {
     const result = await taskRepository.list(actor, query);
     if (result.ok) tasks = result.data;
     else listError = true;
   }
+  const approvalQueue = canReviewTaskApprovals ? await Promise.all([
+    taskRepository.listApprovalQueue(actor, "assignment"),
+    taskRepository.listApprovalQueue(actor, "completion"),
+  ]) : null;
 
   let departments: { id: string; name: string }[] = [];
   if (hasOrganizationTaskView(actor) || user.permissions.can_view_department_tasks) {
@@ -80,6 +89,11 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       canAssignTask={user.permissions.can_assign_task}
       canAccessJournalism={journalismAllowed}
       canClaimTasks={!['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
+      canReviewTaskApprovals={canReviewTaskApprovals}
+      approvalQueue={approvalQueue && {
+        assignment: approvalQueue[0].ok ? approvalQueue[0].data : { items: [], total: 0, page: 1, pageSize: 100 },
+        completion: approvalQueue[1].ok ? approvalQueue[1].data : { items: [], total: 0, page: 1, pageSize: 100 },
+      }}
       currentUserId={user.id}
       departments={departments}
       journalismWorkKinds={journalismWorkKinds}

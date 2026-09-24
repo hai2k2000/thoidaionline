@@ -36,6 +36,7 @@ const TASK_BASE_FIELDS = [
   "priority",
   "created_at",
   "status",
+  "approval_required",
   "task_type",
   "task_category",
   "duty_month",
@@ -166,6 +167,7 @@ type TaskAccessRow = {
   self_claimable: boolean;
   task_type: "assigned" | "personal" | null;
   status: string;
+  approval_required: boolean;
   task_assignees: {
     user_id: string;
     assignment_role: TaskParticipant["assignmentRole"];
@@ -220,6 +222,7 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
   selfClaimable: row.self_claimable,
   taskType: row.task_type,
   status: row.status,
+  approvalRequired: row.approval_required,
   participants: (row.task_assignees ?? []).map((participant) => ({
     userId: participant.user_id,
     assignmentRole: participant.assignment_role,
@@ -415,12 +418,33 @@ export const taskRepository: TaskRepository = {
       .from("tasks")
       .select(
         "id,department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id)," +
-        "self_claimable,task_type,status,task_assignees(user_id,assignment_role)",
+        "self_claimable,task_type,status,approval_required,task_assignees(user_id,assignment_role)",
       )
       .eq("id", taskId)
       .maybeSingle();
     if (error) return fail(error);
     return ok(data ? toAccess(data as unknown as TaskAccessRow) : null);
+  },
+
+  async listApprovalQueue(actor, queue) {
+    const global = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode);
+    if (!global && (!actor.isDepartmentManager || !actor.departmentId)) {
+      return fail({ code: "42501" });
+    }
+    let query = serverSupabase.from("tasks").select(TASK_LIST_FIELDS, { count: "exact" })
+      .eq("approval_required", true)
+      .eq("status", queue === "assignment" ? "waiting" : "pending_review")
+      .neq("task_category", "duty")
+      .order("created_at", { ascending: false });
+    if (!global) query = query.eq("department_id", actor.departmentId!);
+    if (actor.canAccessJournalism === false) query = applyJournalismExcludeFilter(query);
+    const { data, error, count } = await query.range(0, 99);
+    if (error) return fail(error);
+    const items = ((data ?? []) as unknown as TaskListItemDto[]).map((item) => ({
+      ...resolveTaskCompatibility(withJournalismList(item)),
+      ...withJournalismList(item),
+    }));
+    return ok({ items, total: count ?? items.length, page: 1, pageSize: 100 });
   },
 
   async detail(taskId, actor) {

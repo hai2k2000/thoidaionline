@@ -101,6 +101,7 @@ export type TaskListItemDto = {
   priority: string;
   created_at: string;
   status: CanonicalTaskStatus;
+  approval_required: boolean;
   task_type: CanonicalTaskType | null;
   task_category: "regular" | "duty";
   duty_month: string | null;
@@ -204,6 +205,7 @@ export type TaskListQuery = {
   deadlineState: "on_time" | "due_soon" | "overdue" | "no_deadline" | null;
   departmentId: string | null;
   journalism?: "only" | "exclude" | null;
+  approvalQueue?: "assignment" | "completion" | null;
   journalismWorkKindId?: string | null;
   publicationStatus?: JournalismPublicationStatus | null;
   plannedPublicationFrom?: string | null;
@@ -219,6 +221,11 @@ export type TaskListResult = {
   total: number;
   page: number;
   pageSize: number;
+};
+
+export type TaskApprovalQueueItem = TaskListItemDto & {
+  last_reason: string | null;
+  last_event_at: string | null;
 };
 
 export type LegacyCreateTaskInput = {
@@ -298,6 +305,7 @@ export interface TaskRepository {
   ): Promise<RepositoryResult<TaskListResult>>;
   access(taskId: string): Promise<RepositoryResult<TaskAccessSnapshot | null>>;
   detail(taskId: string, actor?: AuthorizationActor): Promise<RepositoryResult<TaskDetailDto | null>>;
+  listApprovalQueue(actor: AuthorizationActor, queue: "assignment" | "completion"): Promise<RepositoryResult<TaskListResult>>;
   create(
     actorId: string,
     input: LegacyCreateTaskInput,
