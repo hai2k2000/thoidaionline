@@ -28,6 +28,7 @@ import type {
   TaskDetailDto,
   TaskListItemDto,
   TaskRepository,
+  TaskWorkflowContextDto,
 } from "@/lib/taskContracts";
 
 const TASK_BASE_FIELDS = [
@@ -172,6 +173,140 @@ type TaskAccessRow = {
     user_id: string;
     assignment_role: TaskParticipant["assignmentRole"];
   }[] | null;
+};
+
+type TaskStatusEventRow = {
+  task_id: string;
+  from_status: string | null;
+  to_status: string;
+  reason: string | null;
+  actor_id: string;
+  created_at: string;
+};
+
+type TaskAuditLogRow = {
+  entity_id: string;
+  action: string;
+  actor_id: string | null;
+  old_data: Record<string, unknown> | null;
+  new_data: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type StaffNameRow = { id: string; full_name: string | null };
+
+const APPROVAL_AUDIT_ACTIONS = [
+  "create",
+  "submit_assignment_approval",
+  "approve_assignment",
+  "reject_assignment",
+  "submit_completion",
+  "approve_completion",
+  "request_rework",
+] as const;
+
+const approvalActionLabel = (action: string) => ({
+  create: "Tạo công việc",
+  submit_assignment_approval: "Gửi duyệt giao việc",
+  approve_assignment: "Duyệt giao việc",
+  reject_assignment: "Từ chối giao việc",
+  submit_completion: "Gửi duyệt hoàn thành",
+  approve_completion: "Duyệt hoàn thành",
+  request_rework: "Yêu cầu làm lại",
+}[action] ?? action);
+
+const statusEventApprovalAction = (event: TaskStatusEventRow) => {
+  if (event.to_status === "waiting") return "submit_assignment_approval";
+  if (event.from_status === "waiting" && event.to_status === "in_progress") return "approve_assignment";
+  if (event.from_status === "waiting" && event.to_status === "rejected") return "reject_assignment";
+  if (event.to_status === "pending_review") return "submit_completion";
+  if (event.from_status === "pending_review" && event.to_status === "done") return "approve_completion";
+  if (event.from_status === "pending_review" && event.to_status === "in_progress") return "request_rework";
+  return null;
+};
+
+const auditReason = (row: TaskAuditLogRow) => {
+  const reason = row.new_data?.reason ?? row.old_data?.reason;
+  return typeof reason === "string" && reason.trim() ? reason : null;
+};
+
+const enrichApprovalWorkflowContext = async (
+  items: TaskListItemDto[],
+): Promise<RepositoryResult<TaskListItemDto[]>> => {
+  if (items.length === 0) return ok(items);
+  const taskIds = items.map((item) => item.id);
+  const [statusResult, auditResult] = await Promise.all([
+    serverSupabase
+      .from("task_status_events")
+      .select("task_id,from_status,to_status,reason,actor_id,created_at")
+      .in("task_id", taskIds)
+      .order("created_at", { ascending: false })
+      .limit(500),
+    serverSupabase
+      .from("audit_logs")
+      .select("entity_id,action,actor_id,old_data,new_data,created_at")
+      .eq("module", "task")
+      .eq("entity_type", "tasks")
+      .in("entity_id", taskIds)
+      .in("action", Array.from(APPROVAL_AUDIT_ACTIONS))
+      .order("created_at", { ascending: false })
+      .limit(500),
+  ]);
+  const error = statusResult.error ?? auditResult.error;
+  if (error) return fail(error);
+  const statusEvents = (statusResult.data ?? []) as unknown as TaskStatusEventRow[];
+  const auditLogs = (auditResult.data ?? []) as unknown as TaskAuditLogRow[];
+  const actorIds = [...new Set([
+    ...statusEvents.map((event) => event.actor_id),
+    ...auditLogs.map((event) => event.actor_id).filter((id): id is string => Boolean(id)),
+  ])];
+  const actorResult = actorIds.length
+    ? await serverSupabase.from("staff_users").select("id,full_name").in("id", actorIds)
+    : { data: [], error: null };
+  if (actorResult.error) return fail(actorResult.error);
+  const actorNames = new Map(
+    ((actorResult.data ?? []) as unknown as StaffNameRow[]).map((row) => [row.id, row.full_name] as const),
+  );
+  type Candidate = TaskWorkflowContextDto & { priority: number };
+  const candidates = new Map<string, Candidate>();
+  const consider = (taskId: string, candidate: Candidate) => {
+    const current = candidates.get(taskId);
+    if (!current || candidate.created_at > current.created_at
+      || (candidate.created_at === current.created_at && candidate.priority > current.priority)) {
+      candidates.set(taskId, candidate);
+    }
+  };
+  for (const event of statusEvents) {
+    const action = statusEventApprovalAction(event);
+    if (!action) continue;
+    consider(event.task_id, {
+      action,
+      label: approvalActionLabel(action),
+      reason: event.reason,
+      actor_id: event.actor_id,
+      actor_name: actorNames.get(event.actor_id) ?? null,
+      created_at: event.created_at,
+      source: "task_status_events",
+      priority: 1,
+    });
+  }
+  for (const event of auditLogs) {
+    if (!APPROVAL_AUDIT_ACTIONS.includes(event.action as typeof APPROVAL_AUDIT_ACTIONS[number])) continue;
+    consider(event.entity_id, {
+      action: event.action,
+      label: approvalActionLabel(event.action),
+      reason: auditReason(event),
+      actor_id: event.actor_id,
+      actor_name: event.actor_id ? actorNames.get(event.actor_id) ?? null : null,
+      created_at: event.created_at,
+      source: "audit_logs",
+      priority: event.action === "create" ? 0 : 2,
+    });
+  }
+  return ok(items.map((item) => ({
+    ...item,
+    recent_workflow_event: candidates.get(item.id) ?? null,
+  })));
 };
 
 const ok = <T>(data: T): RepositoryResult<T> => ({ ok: true, data });
@@ -444,7 +579,9 @@ export const taskRepository: TaskRepository = {
       ...resolveTaskCompatibility(withJournalismList(item)),
       ...withJournalismList(item),
     }));
-    return ok({ items, total: count ?? items.length, page: 1, pageSize: 100 });
+    const enriched = await enrichApprovalWorkflowContext(items);
+    if (!enriched.ok) return enriched;
+    return ok({ items: enriched.data, total: count ?? items.length, page: 1, pageSize: 100 });
   },
 
   async detail(taskId, actor) {

@@ -129,6 +129,7 @@ export type TaskListItemDto = {
   description: string | null;
   evaluation_criteria: string | null;
   completion_score: { requirement_score: number; collaboration_score: number; initiative_score: number; total_score: number; note: string | null } | null;
+  recent_workflow_event?: TaskWorkflowContextDto | null;
   journalism: JournalismTaskListSummaryDto | null;
 };
 
@@ -171,6 +172,15 @@ export type TaskQualitativeEvaluationSource = "chatgpt" | "leader";
 export type TaskQualitativeEvaluationDto = { id: string; evaluation_text: string; evaluation_deadline: string; evaluation_source: TaskQualitativeEvaluationSource; created_at: string; evaluator: { full_name: string | null } | null; };
 export type TaskDeadlineHistoryDto = { id: string; old_due_date: string | null; new_due_date: string | null; reason: string; changed_at: string; };
 export type TaskStatusEventDto = { id: string; from_status: string | null; to_status: string; reason: string | null; created_at: string; };
+export type TaskWorkflowContextDto = {
+  action: string;
+  label: string;
+  reason: string | null;
+  actor_id: string | null;
+  actor_name: string | null;
+  created_at: string;
+  source: "task_status_events" | "audit_logs";
+};
 export type TaskAttachmentDto = { id: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; uploaded_by: string; };
 export type TaskCompletionScoreDto = { id: string; requirement_results: Array<{ index: number; achieved: boolean }>; requirement_score: number; collaboration_score: number; initiative_score: number; total_score: number; note: string | null; created_at: string; reviewer: { full_name: string | null } | null; };
 

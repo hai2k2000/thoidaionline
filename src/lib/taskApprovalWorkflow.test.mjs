@@ -69,3 +69,24 @@ test("approval queue is server-scoped and uses existing review endpoints", () =>
   assert.match(claimReview, /api_approve_task_claim/);
   assert.match(completionReview, /reviewAssignedCompletion/);
 });
+
+
+test("approval queues expose recent reason and workflow history from existing audit tables", () => {
+  const repository = read("src/lib/taskRepository.ts");
+  const center = read("src/components/TaskCenterShell.tsx");
+  assert.match(repository, /from\("task_status_events"\)/);
+  assert.match(repository, /from\("audit_logs"\)/);
+  assert.match(repository, /recent_workflow_event/);
+  assert.match(repository, /actor_name/);
+  assert.match(repository, /created_at/);
+  assert.match(repository, /reason/);
+  assert.match(center, /Lịch sử xử lý gần đây/);
+  assert.match(center, /recent_workflow_event\.reason/);
+});
+
+test("approval migration is idempotent and does not rewrite legacy tasks", () => {
+  const sql = read(migrationPath);
+  assert.match(sql, /add column if not exists approval_required boolean not null default false/i);
+  assert.doesNotMatch(sql, /update\s+public\.tasks\s+set\s+approval_required\s*=/i);
+  assert.match(sql, /if v_before\.approval_required then/i);
+});

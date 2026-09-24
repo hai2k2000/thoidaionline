@@ -12,14 +12,13 @@ test("Phase 5 task detail is server-scoped and keeps secondary content in the ri
   assert.match(page, /canTaskAction/);
   assert.doesNotMatch(page, /"use client"/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
-  const sections = ["Thông tin chung", "Tổng quan", "Tiêu chí đánh giá", "Đánh giá công việc", "Trao đổi", "Đính kèm", "Lịch sử"];
+  const sections = ["Thông tin chung", "Tổng quan", "Yêu cầu công việc", "Chấm điểm hoàn thành", "Trao đổi", "Đính kèm", "Lịch sử"];
   for (const section of sections) assert.ok(shell.includes(section), `${section} must remain reachable`);
   assert.doesNotMatch(shell, /role="tablist"|task-panel-progress|task-panel-history/);
   assert.match(shell, /<section aria-label="Tổng quan"/);
-  assert.match(shell, /<Item label="Tiến độ"/);
-  assert.match(shell, /<summary className="cursor-pointer font-bold">Tiêu chí đánh giá/);
-  assert.match(shell, /<summary className="cursor-pointer font-bold">Tiến độ/);
-  assert.match(shell, /<summary className="cursor-pointer font-bold">Lịch sử/);
+  assert.match(shell, /<Section title="Yêu cầu công việc">/);
+  assert.match(shell, /<Section title="Chấm điểm hoàn thành">/);
+  assert.match(shell, /<summary className="sticky [^"]*">Lịch sử/);
 });
 
 test("structured progress and workflow controls never use progress percent", () => {

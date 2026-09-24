@@ -37,6 +37,7 @@ await rm(join(output, "scripts", "check-required-routes.mjs"), { force: true });
 await cp(join(root, "scripts", "check-release-baseline.mjs"), join(output, "scripts", "check-release-baseline.mjs"));
 await writeFile(join(output, "RELEASE_BASELINE_COMMIT"), `${canonicalBaseline}\n`);
 await writeFile(join(output, "required-route-manifest.json"), `${JSON.stringify(REQUIRED_PRODUCTION_ROUTES, null, 2)}\n`);
+await writeFile(join(output, "MIGRATION_REFERENCE"), "supabase/migrations/20260924120000_task_approval_gates.sql\n");
 await writeFile(join(output, "package.json"), `${JSON.stringify({ name: "thoidai-work-runtime", version: "0.1.0", private: true, scripts: { start: "node start-standalone.mjs" } }, null, 2)}\n`);
 const artifactBytes = execFileSync("du", ["-sb", output], { encoding: "utf8" }).trim().split(/\s+/, 1)[0];
 await writeFile(join(output, ".release-meta"), [
@@ -46,6 +47,9 @@ await writeFile(join(output, ".release-meta"), [
   "artifact_type=next-standalone",
   `canonical_baseline=${canonicalBaseline}`,
   `artifact_bytes=${artifactBytes}`,
+  "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql",
+  "env_model=symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production",
+  "build_verification=production-like-env-build-pass",
   "protection=managed",
   "rollback_eligible=yes",
   "health_status=pending",
