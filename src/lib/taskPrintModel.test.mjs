@@ -35,6 +35,23 @@ test("print mapping uses assignment domain roles instead of treating watchers as
   assert.deepEqual(result.requirements, ["Đủ tài liệu", "Đúng thể thức"]);
 });
 
+test("print mapping prefers the task owner before falling back to the primary assignee", () => {
+  const result = printModule.buildWorkAssignmentPrintModel({
+    ...baseTask,
+    assignee_id: "assignee",
+    owner_id: "owner",
+    owner: { full_name: "Trần Người Nhận" },
+    task_assignees: [
+      { user_id: "owner", assignment_role: "owner", status: "todo", staff_users: { full_name: "Trần Người Nhận" } },
+      { user_id: "assignee", assignment_role: "assignee", status: "todo", staff_users: { full_name: "Vũ Người Được Giao" } },
+      { user_id: "collaborator", assignment_role: "assignee", status: "todo", staff_users: { full_name: "Lê Phối Hợp" } },
+      { user_id: "watcher", assignment_role: "watcher", status: "todo", staff_users: { full_name: "Phạm Theo Dõi" } },
+    ],
+  });
+  assert.equal(result.primaryAssignee, "Trần Người Nhận");
+  assert.deepEqual(result.collaborators, ["Vũ Người Được Giao", "Lê Phối Hợp"]);
+});
+
 test("print mapping adds current Journalism metadata without MasterCMS fields", () => {
   assert.equal(typeof printModule.buildWorkAssignmentPrintModel, "function");
   const result = printModule.buildWorkAssignmentPrintModel({
@@ -55,4 +72,3 @@ test("print mapping adds current Journalism metadata without MasterCMS fields", 
   assert.equal(result.notes, "Ưu tiên ảnh ngang.");
   assert.equal(Object.hasOwn(result.journalism, "cms"), false);
 });
-

@@ -50,3 +50,28 @@ Blockers:
 
 Next:
 - Owner review of migration and artifact before a separately authorized production deployment.
+
+# Work Assignment Print Redesign Status
+
+Current Phase: bounded print-layout redesign complete; pre-production validation
+Current Task: artifact verification and owner review
+
+Completed:
+- Redesigned `/tasks/[id]/print` as an A4 portrait, grayscale-friendly assignment form.
+- Preserved server-side authorization and `TaskDetailDto` as the only data source.
+- Updated owner/assignee mapping and excluded watchers from collaborators.
+- Removed code, priority, watcher, and old footer fields; kept required signatures and print controls.
+
+Validation:
+- Print, Journalism print, Task Summary, and authorization regressions: 23/23 PASS.
+- TypeScript: PASS.
+- Canonical baseline guard: PASS.
+- Required-route guard: PASS.
+- Production build: PASS.
+- Standalone artifact verification: PASS.
+
+Blockers:
+- None. Production deployment intentionally not performed.
+
+Next:
+- Owner review and separately authorized production deployment.

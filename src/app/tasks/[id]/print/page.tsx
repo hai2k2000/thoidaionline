@@ -32,5 +32,5 @@ export default async function TaskPrintPage({ params }: Props) {
     canView: (viewer, access) => canTaskAction(viewer, access, "view"),
   });
   if (!result.ok) redirect("/tasks");
-  return <WorkAssignmentPrintSheet task={result.task} userLabel={user.full_name} />;
+  return <WorkAssignmentPrintSheet task={result.task} />;
 }

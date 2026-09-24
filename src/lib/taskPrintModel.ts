@@ -55,10 +55,9 @@ const parseRequirements = (value: string | null) => {
 const participantName = (row: TaskDetailDto["task_assignees"][number] | null | undefined) => row?.staff_users?.full_name?.trim() || null;
 
 export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignmentPrintModel {
-  const primaryId = task.assignee_id
-    ?? task.task_assignees.find((row) => row.assignment_role === "owner")?.user_id
-    ?? null;
-  const primary = task.task_assignees.find((row) => row.user_id === primaryId)
+  const ownerRow = task.task_assignees.find((row) => row.assignment_role === "owner");
+  const primaryId = task.owner_id ?? ownerRow?.user_id ?? task.assignee_id ?? null;
+  const primaryRow = task.task_assignees.find((row) => row.user_id === primaryId)
     ?? task.task_assignees.find((row) => row.assignment_role === "owner");
   const collaborators = task.task_assignees
     .filter((row) => row.assignment_role === "assignee" && row.user_id !== primaryId)
@@ -77,7 +76,7 @@ export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignme
     taskType: taskTypeLabel(task),
     department: task.departments?.name ?? "—",
     assigner: task.created_by_user?.full_name ?? "—",
-    primaryAssignee: participantName(primary) ?? task.owner?.full_name ?? "—",
+    primaryAssignee: task.owner?.full_name?.trim() || participantName(primaryRow) || "—",
     collaborators,
     title: task.title,
     description: task.description ?? "—",

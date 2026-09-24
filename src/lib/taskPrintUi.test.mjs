@@ -15,17 +15,26 @@ test("print route is a server-authorized reuse of TaskDetailDto", () => {
   assert.match(route, /redirect\("\/tasks"\)/);
 });
 
-test("print sheet includes A4 fields, signatures, and print controls", () => {
+test("print sheet uses the redesigned A4 assignment layout", () => {
   const sheet = read("../components/WorkAssignmentPrintSheet.tsx");
   const actions = read("../components/PrintActions.tsx");
   const css = read("../app/globals.css");
   for (const label of [
-    "PHIẾU GIAO VIỆC", "Mã công việc", "Ngày giao", "Phòng ban", "Người giao việc",
-    "Người nhận việc", "Người phối hợp", "Hạn hoàn thành", "Mức độ ưu tiên", "Ghi chú",
-    "NGƯỜI GIAO VIỆC", "NGƯỜI NHẬN VIỆC", "NGƯỜI PHỐI HỢP", "In phiếu", "Save / Export PDF",
+    "PHIẾU GIAO VIỆC", "Tạp chí Thời Đại", "Thông tin giao việc", "Ngày giao", "Hạn hoàn thành",
+    "Người giao việc", "Người nhận việc", "Người phối hợp", "Nội dung công việc", "Tên công việc",
+    "Mô tả", "Yêu cầu", "Ghi chú", "NGƯỜI GIAO VIỆC", "NGƯỜI NHẬN VIỆC", "NGƯỜI PHỐI HỢP",
+    "In phiếu", "Save / Export PDF",
   ]) assert.match(`${sheet}\n${actions}`, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  for (const removed of ["BÁO THỜI ĐẠI", "Mã công việc", "Loại công việc", "Mức độ ưu tiên", "Người xem", "Phiếu được in từ"]) {
+    assert.doesNotMatch(`${sheet}\n${actions}`, new RegExp(removed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(sheet, /model\.department/);
+  assert.match(sheet, /print-box/);
+  assert.match(sheet, /formatPrintDate/);
+  assert.doesNotMatch(sheet, /userLabel/);
   assert.match(css, /@page\s*\{[\s\S]*size:\s*A4/);
   assert.match(css, /break-inside:\s*avoid/);
+  assert.match(css, /print-color-adjust:\s*exact/);
   assert.match(sheet, /print:hidden/);
   assert.match(sheet, /journalism/);
 });
