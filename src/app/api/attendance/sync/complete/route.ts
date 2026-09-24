@@ -83,8 +83,16 @@ export async function POST(request: Request) {
   const beforeKeys = new Set(beforeRows.map(punchKey));
   const insertedCount = payload.filter((punch) => !beforeKeys.has(punchKey(punch))).length;
   const duplicateSkippedCount = payload.length - insertedCount;
+  const { data: users, error: userError } = await serverSupabase
+    .from("staff_users")
+    .select("id,full_name,attendance_code")
+    .in("attendance_code", enrollments)
+    .eq("active", true);
+  if (userError) return failRequest(requestId, userError.message);
+  const userByCode = new Map((users ?? []).map((user) => [user.attendance_code, user]));
   if (dryRun) {
-    const result = { source: requestResult?.source ?? "reconcile", dry_run: true, range_start: rangeStart, range_end: rangeEnd, device_punch_count: punches.length, db_before_count: beforeRows.length, inserted_count: insertedCount, duplicate_skipped_count: duplicateSkippedCount, attendance_rows_recalculated: deriveAttendanceDays(payload).length };
+    const mappedDays = deriveAttendanceDays(payload).filter((row) => userByCode.has(row.enroll_number));
+    const result = { source: requestResult?.source ?? "reconcile", dry_run: true, range_start: rangeStart, range_end: rangeEnd, device_punch_count: punches.length, db_before_count: beforeRows.length, inserted_count: insertedCount, duplicate_skipped_count: duplicateSkippedCount, matched_users: userByCode.size, attendance_rows_recalculated: mappedDays.length };
     const { data: completed, error: doneError } = await serverSupabase
       .from("attendance_sync_requests")
       .update({ status: "succeeded", completed_at: new Date().toISOString(), finished_at: new Date().toISOString(), result })
@@ -99,13 +107,6 @@ export async function POST(request: Request) {
     .upsert(payload, { onConflict: "device_id,enroll_number,punched_at", ignoreDuplicates: true });
   if (punchError) return failRequest(requestId, punchError.message);
 
-  const { data: users, error: userError } = await serverSupabase
-    .from("staff_users")
-    .select("id,full_name,attendance_code")
-    .in("attendance_code", enrollments)
-    .eq("active", true);
-  if (userError) return failRequest(requestId, userError.message);
-  const userByCode = new Map((users ?? []).map((user) => [user.attendance_code, user]));
   const canonicalPunches: Array<{ enroll_number: string; punched_at: string; verify_mode: number | null; in_out_mode: number | null; work_code: number | null }> = [];
   const pageSize = 10000;
   let page = 0;
