@@ -33,3 +33,23 @@ test("print page sets the task title without changing the visible task title", (
   assert.match(actions, /sanitizePrintFilenameTitle/);
   assert.match(sheet, /model\.title/);
 });
+
+test("print sheet uses a compact two-row assignment info layout", () => {
+  const sheet = read("../components/WorkAssignmentPrintSheet.tsx");
+  const css = read("../app/globals.css");
+  assert.match(sheet, /print-info-dates/);
+  assert.match(sheet, /print-info-people/);
+  assert.match(sheet, /print-header-compact/);
+  assert.match(css, /\.print-info-dates\s*\{[\s\S]*grid-template-columns:\s*repeat\(2/);
+  assert.match(css, /\.print-info-people\s*\{[\s\S]*grid-template-columns:\s*repeat\(3/);
+  assert.match(css, /\.print-header-compact/);
+});
+
+test("print CSS prioritizes content and keeps signatures compact", () => {
+  const css = read("../app/globals.css");
+  assert.match(css, /\.print-content-grid[\s\S]*break-inside:\s*avoid/);
+  assert.match(css, /\.signature-grid\s*\{[\s\S]*margin-top:\s*4mm/);
+  assert.doesNotMatch(css, /\.signature-grid\s*\{\s*margin-top:\s*14mm/);
+  assert.match(css, /@media print[\s\S]*\.print-box[\s\S]*padding:\s*0\.35rem/);
+  assert.doesNotMatch(css, /min-height:\s*18mm/);
+});

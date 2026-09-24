@@ -31,7 +31,7 @@ export default function WorkAssignmentPrintSheet({ task }: { task: TaskDetailDto
       <PrintActions documentTitle={model.title} />
     </div>
     <article className="print-sheet mx-auto max-w-[210mm] bg-white px-[16mm] py-[14mm] shadow-lg print:max-w-none print:shadow-none">
-      <header className="print-header pb-4 text-center">
+      <header className="print-header print-header-compact pb-4 text-center">
         <p className="print-publication" aria-label="Tạp chí Thời Đại">TẠP CHÍ THỜI ĐẠI</p>
         <h1 className="mt-2 text-3xl font-bold tracking-[0.12em]">PHIẾU GIAO VIỆC</h1>
         <p className="mt-1 text-sm font-semibold text-slate-700">{model.department}</p>
@@ -39,12 +39,14 @@ export default function WorkAssignmentPrintSheet({ task }: { task: TaskDetailDto
 
       <section data-section="assignment" className="print-section-frame mt-5">
         <SectionHeading number="1">THÔNG TIN GIAO VIỆC</SectionHeading>
-        <dl className="print-grid mt-3">
+        <dl className="print-info-dates">
           <Field label="Ngày giao" value={formatPrintDate(model.assignedDate)} icon={<CalendarIcon />} />
           <Field label="Hạn hoàn thành" value={formatPrintDate(model.deadline)} icon={<CalendarIcon />} />
+        </dl>
+        <dl className="print-info-people">
           <Field label="Người giao việc" value={model.assigner} icon={<UserIcon />} />
           <Field label="Người nhận việc" value={model.primaryAssignee} icon={<UserIcon />} />
-          <div className="print-box print-field-full"><dt><span className="print-field-label"><GroupIcon />Người phối hợp (nếu có)</span></dt><dd>{model.collaborators.join(", ") || "—"}</dd></div>
+          <div className="print-box"><dt><span className="print-field-label"><GroupIcon />Người phối hợp (nếu có)</span></dt><dd>{model.collaborators.join(", ") || "—"}</dd></div>
         </dl>
       </section>
 
