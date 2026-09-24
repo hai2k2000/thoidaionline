@@ -60,6 +60,7 @@ export default function WorkSchedulePageShell({
   people,
   currentUserId,
   approvalActorId,
+  canReviewPersonalPlans = false,
   userLabel,
   scheduleScope = "all",
   title = "Lịch công tác",
@@ -70,6 +71,7 @@ export default function WorkSchedulePageShell({
   people: Person[];
   currentUserId?: string;
   approvalActorId?: string;
+  canReviewPersonalPlans?: boolean;
   userLabel: string;
   scheduleScope?: "all" | "self";
   title?: string;
@@ -85,6 +87,7 @@ export default function WorkSchedulePageShell({
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [approvalRows, setApprovalRows] = useState<Row[]>([]);
+  const [activeTab, setActiveTab] = useState<"personal" | "approval">("personal");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
@@ -147,7 +150,7 @@ export default function WorkSchedulePageShell({
     setLoading(true);
     setLoadError(false);
     const endpoint = viewAll ? "/api/work-schedule" : "/api/work-schedule/personal";
-    const query = viewAll ? `?from=${range.from}&to=${range.to}` : `?from=${range.from}&to=${range.to}&scope=self`;
+    const query = `?from=${range.from}&to=${range.to}${viewAll ? "" : "&scope=self"}`;
     fetch(`${endpoint}${query}`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((body) => setRows(body.rows ?? []))
@@ -157,12 +160,12 @@ export default function WorkSchedulePageShell({
   }, [range.from, range.to, retryToken, viewAll]);
 
   useEffect(() => {
-    if (scheduleScope !== "all") return;
+    if (!canReviewPersonalPlans) return;
     fetch("/api/work-schedule/personal?scope=approval")
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((body) => setApprovalRows(body.rows ?? []))
       .catch(() => setApprovalRows([]));
-  }, [retryToken, scheduleScope]);
+  }, [retryToken, canReviewPersonalPlans]);
 
   useEffect(() => {
     setViewAll(scheduleScope === "all");
@@ -257,7 +260,12 @@ export default function WorkSchedulePageShell({
             <p className="text-sm text-slate-600">{description}</p>
           </header>
 
-          <section className="mt-3 rounded-xl border bg-white p-4 shadow-sm">
+          {canReviewPersonalPlans ? <div className="mt-3 flex gap-2 border-b border-slate-200" role="tablist" aria-label="Kế hoạch cá nhân">
+            <button type="button" role="tab" aria-selected={activeTab === "personal"} onClick={() => setActiveTab("personal")} className={`rounded-t-lg border-b-2 px-4 py-2 text-sm font-semibold ${activeTab === "personal" ? "border-orange-600 text-orange-700" : "border-transparent text-slate-500"}`}>Kế hoạch cá nhân</button>
+            <button type="button" role="tab" aria-selected={activeTab === "approval"} onClick={() => setActiveTab("approval")} className={`rounded-t-lg border-b-2 px-4 py-2 text-sm font-semibold ${activeTab === "approval" ? "border-orange-600 text-orange-700" : "border-transparent text-slate-500"}`}>Chờ duyệt{approvalRows.length ? ` (${approvalRows.length})` : ""}</button>
+          </div> : null}
+
+          {activeTab === "personal" ? <section className="mt-3 rounded-xl border bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-end gap-4">
               {period === "day" ? (
                 <label className="text-sm font-semibold">
@@ -436,22 +444,30 @@ export default function WorkSchedulePageShell({
                 </div>
               ) : null}
             </div> : null}
-          </section>
-          {enableEventAssignment ? <EventAssignmentPanel people={eventPeople ?? people} /> : null}
-          {scheduleScope === "all" && approvalRows.length ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
-            <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ phê duyệt</h2>
-            <div className="mt-3 grid gap-2">
+          </section> : null}
+          {activeTab === "personal" && enableEventAssignment ? <EventAssignmentPanel people={eventPeople ?? people} /> : null}
+
+          {canReviewPersonalPlans && activeTab === "approval" ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm" role="tabpanel">
+            <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ duyệt</h2>
+            {approvalRows.filter((row) => row.created_by !== approvalActorId).length ? <div className="mt-3 grid gap-3">
               {approvalRows.filter((row) => row.created_by !== approvalActorId).map((row) => <article key={row.id} className="rounded-lg border bg-white p-3 text-sm">
-                <p className="font-semibold">{row.title}</p>
-                <p className="text-slate-600">{row.work_date} {row.start_time?.slice(0, 5)}-{row.end_time?.slice(0, 5)} · {row.creator?.full_name ?? ""}</p>
-                <div className="mt-2 flex gap-2"><button type="button" onClick={() => void reviewPlan(row, "approve")} className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">Duyệt</button><button type="button" onClick={() => void reviewPlan(row, "reject")} className="rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white">Từ chối</button></div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <p><span className="font-semibold">Nhân sự:</span> {row.creator?.full_name ?? "Không rõ"}</p>
+                  <p><span className="font-semibold">Ngày:</span> {new Date(`${row.work_date}T12:00:00`).toLocaleDateString("vi-VN")}</p>
+                  <p><span className="font-semibold">Thời gian:</span> {row.start_time?.slice(0, 5) ?? ""}{row.end_time ? ` - ${row.end_time.slice(0, 5)}` : ""}</p>
+                  <p><span className="font-semibold">Nội dung:</span> {row.title}</p>
+                  <p><span className="font-semibold">Địa điểm:</span> {row.location ?? "-"}</p>
+                  <p><span className="font-semibold">Trạng thái:</span> {approvalLabel(row.approval_status)}</p>
+                </div>
+                {row.notes ? <p className="mt-2"><span className="font-semibold">Ghi chú:</span> {row.notes}</p> : null}
+                <div className="mt-3 flex gap-2"><button type="button" onClick={() => void reviewPlan(row, "approve")} className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">Duyệt</button><button type="button" onClick={() => void reviewPlan(row, "reject")} className="rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white">Từ chối</button></div>
               </article>)}
-            </div>
+            </div> : <p className="mt-3 rounded-lg border border-dashed border-amber-300 bg-white p-4 text-sm text-slate-600">Không có kế hoạch chờ duyệt.</p>}
           </section> : null}
 
-          {loading ? <p className="mt-3 rounded-xl border bg-white p-5 text-sm text-slate-600 shadow-sm">Đang tải lịch công tác...</p> : null}
-          {!loading && loadError ? <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><span>Không tải được lịch công tác. Dữ liệu cũ được giữ nguyên để tránh hiển thị nhầm là lịch trống.</span><button type="button" onClick={() => setRetryToken((value) => value + 1)} className="rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold">Thử lại</button></div> : null}
-          {!loadError ? <section className="table-scroll mt-3 rounded-xl border bg-white shadow-sm">
+          {activeTab === "personal" && loading ? <p className="mt-3 rounded-xl border bg-white p-5 text-sm text-slate-600 shadow-sm">Đang tải lịch công tác...</p> : null}
+          {activeTab === "personal" && !loading && loadError ? <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><span>Không tải được lịch công tác. Dữ liệu cũ được giữ nguyên để tránh hiển thị nhầm là lịch trống.</span><button type="button" onClick={() => setRetryToken((value) => value + 1)} className="rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold">Thử lại</button></div> : null}
+          {activeTab === "personal" && !loadError ? <section className="table-scroll mt-3 rounded-xl border bg-white shadow-sm">
             <table className="work-schedule-table data-table w-full min-w-[1290px] border-collapse text-sm">
               <colgroup>
                 <col className="w-14" />
@@ -519,7 +535,7 @@ export default function WorkSchedulePageShell({
               </tbody>
             </table>
           </section> : null}
-          {createOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="create-plan-title" onClick={(event) => { if (event.target === event.currentTarget) { setEditingRow(null); setCreateOpen(false); } }}>
+          {activeTab === "personal" && createOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="create-plan-title" onClick={(event) => { if (event.target === event.currentTarget) { setEditingRow(null); setCreateOpen(false); } }}>
             <form key={editingRow?.id ?? "new"} onSubmit={createPlan} className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
               <div className="flex items-center justify-between"><h2 id="create-plan-title" className="text-lg font-semibold">{editingRow ? "Sửa kế hoạch cá nhân" : "Tạo kế hoạch cá nhân"}</h2><button type="button" onClick={() => { setEditingRow(null); setCreateOpen(false); }} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
               <p className="mt-1 text-sm text-slate-600">Kế hoạch mới và kế hoạch đã duyệt sau khi sửa sẽ chuyển sang Chờ phê duyệt. Kế hoạch chờ duyệt chưa có hiệu lực.</p>
