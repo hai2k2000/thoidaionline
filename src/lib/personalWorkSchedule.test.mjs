@@ -85,6 +85,22 @@ test("work schedule API rejects work plans and requires valid event hours", () =
   assert.match(route, /endTime: planType === "event" \? endTime : null/);
 });
 
+test("personal event payload keeps a same-day range and sends the selected times", () => {
+  const shell = read("../components/WorkSchedulePageShell.tsx");
+  const route = read("../app/api/work-schedule/personal/route.ts");
+  assert.match(shell, /endDate: planType === "event" \? workDate : form\.get\("endDate"\)/);
+  assert.match(shell, /startTime: form\.get\("startTime"\)/);
+  assert.match(shell, /endTime: form\.get\("endTime"\)/);
+  assert.match(route, /validateLocalPlanInterval/);
+});
+
+test("personal plan UI surfaces safe API error messages", () => {
+  const shell = read("../components/WorkSchedulePageShell.tsx");
+  assert.match(shell, /response\.json\(\)/);
+  assert.match(shell, /personalPlanErrorMessage\(body\?\.error\?\.code\)/);
+  assert.doesNotMatch(shell, /error\.message.*Supabase|error\.message.*database/i);
+});
+
 test("work schedule admin form sends a valid business plan payload", () => {
   const adminShell = read("../components/WorkScheduleAdminShell.tsx");
   assert.match(adminShell, /planType:\"business\"/);

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
 import EventAssignmentPanel from "@/components/EventAssignmentPanel";
+import { personalPlanErrorMessage } from "@/lib/personalPlanError";
 
 type Person = {
   id: string;
@@ -209,14 +210,19 @@ export default function WorkSchedulePageShell({
     try {
       const endpoint = personalMode ? "/api/work-schedule/personal" : "/api/work-schedule";
       const response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: { code?: unknown } } | null;
+        throw new Error(personalPlanErrorMessage(body?.error?.code));
+      }
       setCreateMessage(personalMode ? "Đã gửi kế hoạch chờ phê duyệt." : "Đã lưu lịch công tác.");
       event.currentTarget.reset();
       setEditingRow(null);
       setTimeout(() => setCreateOpen(false), 500);
       setRetryToken((value) => value + 1);
-    } catch {
-      setCreateMessage("Không thể tạo kế hoạch. Vui lòng kiểm tra lại thông tin.");
+    } catch (error) {
+      setCreateMessage(error instanceof Error && error.message
+        ? error.message
+        : personalPlanErrorMessage(null));
     } finally {
       setCreateBusy(false);
     }
