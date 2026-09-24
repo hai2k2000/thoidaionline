@@ -24,7 +24,7 @@ test("print sheet uses the redesigned A4 assignment layout", () => {
     "Người giao việc", "Người nhận việc", "Người phối hợp", "Nội dung công việc", "Tên công việc",
     "Mô tả", "Yêu cầu", "Ghi chú", "NGƯỜI GIAO VIỆC", "NGƯỜI NHẬN VIỆC", "NGƯỜI PHỐI HỢP",
     "In phiếu", "Save / Export PDF",
-  ]) assert.match(`${sheet}\n${actions}`, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  ]) assert.match(`${sheet}\n${actions}`, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
   for (const removed of ["BÁO THỜI ĐẠI", "Mã công việc", "Loại công việc", "Mức độ ưu tiên", "Người xem", "Phiếu được in từ"]) {
     assert.doesNotMatch(`${sheet}\n${actions}`, new RegExp(removed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }

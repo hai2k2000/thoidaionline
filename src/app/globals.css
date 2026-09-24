@@ -266,6 +266,58 @@ main section > h3 {
   background: #fff;
 }
 
+.print-header {
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.print-publication {
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.print-section-frame,
+.signature-panel {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.print-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  background: #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.print-section-heading h2 {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  color: #1e293b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.section-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .print-section,
 .print-box,
 .signature-grid > div {
@@ -288,18 +340,20 @@ main section > h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.7rem;
+  padding: 0 0.85rem 0.85rem;
 }
 
 .print-box {
   border: 1px solid #64748b;
-  border-radius: 0.35rem;
-  padding: 0.65rem 0.75rem;
+  border-color: #cbd5e1;
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.7rem;
   background: #fff;
 }
 
 .print-box dt {
-  color: #334155;
-  font-size: 0.7rem;
+  color: #475569;
+  font-size: 0.64rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -312,9 +366,43 @@ main section > h3 {
   line-height: 1.55;
 }
 
+.print-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.print-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #64748b;
+}
+
+.print-field-full {
+  grid-column: 1 / -1;
+}
+
 .print-content-grid {
   display: grid;
   gap: 0.7rem;
+  padding: 0 0.85rem 0.85rem;
+}
+
+.journalism-print-details {
+  margin: 0 0.85rem 0.85rem;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 0.75rem;
+}
+
+.journalism-print-details h3 {
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.journalism-print-details .print-grid {
+  padding: 0;
 }
 
 .signature-grid {
@@ -322,6 +410,7 @@ main section > h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
   text-align: center;
+  padding: 0 0.85rem 0.85rem;
 }
 
 .signature-grid h2 {
@@ -336,7 +425,7 @@ main section > h3 {
 }
 
 .signature-space {
-  min-height: 25mm;
+  min-height: 18mm;
 }
 
 @media print {
@@ -360,12 +449,22 @@ main section > h3 {
     margin-top: 5mm;
   }
 
+  .print-section-frame,
+  .signature-panel {
+    border-color: #64748b;
+    box-shadow: none !important;
+  }
+
+  .print-section-heading {
+    background: #f1f5f9 !important;
+  }
+
   .signature-grid {
     margin-top: 14mm;
   }
 
   .print-box {
     border-color: #111827;
-    border-radius: 0;
+    border-radius: 0.6rem;
   }
 }

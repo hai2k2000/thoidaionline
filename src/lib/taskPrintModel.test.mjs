@@ -52,6 +52,15 @@ test("print mapping prefers the task owner before falling back to the primary as
   assert.deepEqual(result.collaborators, ["Vũ Người Được Giao", "Lê Phối Hợp"]);
 });
 
+test("print mapping resolves department codes to Vietnamese labels", () => {
+  const result = printModule.buildWorkAssignmentPrintModel({ ...baseTask, departments: { name: "editorial" } });
+  assert.equal(result.department, "Phòng Nội dung");
+});
+
+test("print title keeps Vietnamese text while removing filename-invalid characters", () => {
+  assert.equal(printModule.sanitizePrintFilenameTitle("Rà soát: quy trình / duyệt tin?"), "Rà soát quy trình duyệt tin");
+});
+
 test("print mapping adds current Journalism metadata without MasterCMS fields", () => {
   assert.equal(typeof printModule.buildWorkAssignmentPrintModel, "function");
   const result = printModule.buildWorkAssignmentPrintModel({

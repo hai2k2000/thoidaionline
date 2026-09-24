@@ -22,6 +22,18 @@ export type WorkAssignmentPrintModel = {
   } | null;
 };
 
+// Keep the browser's print title filesystem-safe without stripping Vietnamese text.
+export function sanitizePrintFilenameTitle(value: string): string {
+  const sanitized = value
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/[. ]+$/g, "")
+    .trim()
+    .slice(0, 180)
+    .trim();
+  return sanitized || "Phiếu giao việc";
+}
+
 const taskTypeLabel = (task: TaskDetailDto) => {
   if (task.journalism) return "Công việc nghiệp vụ báo chí";
   return task.compatibility_task_type === "personal" || task.task_type === "personal"
@@ -41,6 +53,21 @@ const publicationStatusLabels: Record<string, string> = {
   scheduled: "Đã lên lịch",
   published: "Đã xuất bản",
   withdrawn: "Đã rút",
+};
+
+const departmentLabels: Record<string, string> = {
+  editorial: "Phòng Nội dung",
+  content: "Phòng Nội dung",
+  general_affairs: "Phòng Tổng hợp",
+  business: "Phòng Kinh doanh",
+  communications: "Phòng Truyền thông",
+  hr: "Phòng Hành chính - Nhân sự",
+};
+
+const departmentDisplayName = (task: TaskDetailDto) => {
+  const raw = task.departments?.name?.trim() ?? "";
+  if (!raw) return "—";
+  return departmentLabels[raw.toLowerCase()] ?? raw;
 };
 
 const parseRequirements = (value: string | null) => {
@@ -74,7 +101,7 @@ export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignme
     id: task.id,
     assignedDate: task.created_at,
     taskType: taskTypeLabel(task),
-    department: task.departments?.name ?? "—",
+    department: departmentDisplayName(task),
     assigner: task.created_by_user?.full_name ?? "—",
     primaryAssignee: task.owner?.full_name?.trim() || participantName(primaryRow) || "—",
     collaborators,
