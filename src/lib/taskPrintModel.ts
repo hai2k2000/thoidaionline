@@ -83,7 +83,7 @@ const participantName = (row: TaskDetailDto["task_assignees"][number] | null | u
 
 export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignmentPrintModel {
   const ownerRow = task.task_assignees.find((row) => row.assignment_role === "owner");
-  const primaryId = task.owner_id ?? ownerRow?.user_id ?? task.assignee_id ?? null;
+  const primaryId = ownerRow?.user_id ?? task.assignee_id ?? task.owner_id ?? null;
   const primaryRow = task.task_assignees.find((row) => row.user_id === primaryId)
     ?? task.task_assignees.find((row) => row.assignment_role === "owner");
   const collaborators = task.task_assignees
@@ -103,7 +103,7 @@ export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignme
     taskType: taskTypeLabel(task),
     department: departmentDisplayName(task),
     assigner: task.created_by_user?.full_name ?? "—",
-    primaryAssignee: task.owner?.full_name?.trim() || participantName(primaryRow) || "—",
+    primaryAssignee: participantName(primaryRow) || task.owner?.full_name?.trim() || "—",
     collaborators,
     title: task.title,
     description: task.description ?? "—",

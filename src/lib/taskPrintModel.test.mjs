@@ -52,6 +52,21 @@ test("print mapping prefers the task owner before falling back to the primary as
   assert.deepEqual(result.collaborators, ["Vũ Người Được Giao", "Lê Phối Hợp"]);
 });
 
+test("print mapping uses the assigned owner participant before a stale task owner relation", () => {
+  const result = printModule.buildWorkAssignmentPrintModel({
+    ...baseTask,
+    owner_id: "creator",
+    owner: { full_name: "Lê Quang Thiện" },
+    assignee_id: "assignee",
+    task_assignees: [
+      { user_id: "assignee", assignment_role: "owner", status: "todo", staff_users: { full_name: "Đoàn Thanh Hải" } },
+      { user_id: "creator", assignment_role: "watcher", status: "todo", staff_users: { full_name: "Lê Quang Thiện" } },
+    ],
+  });
+  assert.equal(result.primaryAssignee, "Đoàn Thanh Hải");
+  assert.equal(result.collaborators.length, 0);
+});
+
 test("print mapping resolves department codes to Vietnamese labels", () => {
   const result = printModule.buildWorkAssignmentPrintModel({ ...baseTask, departments: { name: "editorial" } });
   assert.equal(result.department, "Phòng Nội dung");
