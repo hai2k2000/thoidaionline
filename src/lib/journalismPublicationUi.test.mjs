@@ -32,7 +32,7 @@ test("schedule requires a complete deterministic Vietnam-local timestamp", () =>
   assert.equal(validateSchedule("", "09:30").ok, false);
   assert.equal(validateSchedule("2026-09-20", "").ok, false);
   assert.equal(validateSchedule("2026-02-30", "09:30").ok, false);
-  assert.equal(validateSchedule("2026-09-20", "01:30").ok, true);
+  assert.equal(validateSchedule("2026-09-20", "01:30", new Date("2026-09-19T00:00:00Z")).ok, true);
   assert.deepEqual(validateSchedule("2026-09-20", "09:30", new Date("2026-09-19T00:00:00Z")), { ok: true, value: "2026-09-20T09:30:00+07:00" });
 });
 

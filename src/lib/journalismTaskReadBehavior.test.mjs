@@ -19,5 +19,8 @@ test("Journalism detail remains behind the parent Task view guard", () => {
 
 test("Repository keeps server-side pagination after Journalism filters", () => {
   assert.match(repository, /\.range\(from, to\)/);
-  assert.doesNotMatch(repository, /for \(const .* of .*data.*\)[\s\S]*from\(["']journalism_task_details/);
+  const rangeIndex = repository.indexOf("const { data, error, count } = await dbQuery.range(from, to);");
+  const enrichIndex = repository.indexOf("const enriched = await enrichJournalismList(normalizedItems);");
+  assert.ok(rangeIndex >= 0, "repository must apply the requested page range in the database query");
+  assert.ok(enrichIndex > rangeIndex, "Journalism enrichment must happen after server-side pagination");
 });
