@@ -254,3 +254,102 @@ main section > h3 {
   line-height: 1.35;
   letter-spacing: 0;
 }
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+.print-sheet {
+  font-family: var(--font-vietnam-sans), "Segoe UI", sans-serif;
+  color: #111827;
+}
+
+.print-section,
+.print-field,
+.signature-grid > div {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-section > h2 {
+  display: block;
+  border: 0;
+  padding: 0 0 0.35rem;
+  color: #111827;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid #94a3b8;
+}
+
+.print-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+}
+
+.print-field {
+  border: 1px solid #cbd5e1;
+  padding: 0.55rem 0.7rem;
+}
+
+.print-field dt {
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.print-field dd {
+  margin-top: 0.2rem;
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.signature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  text-align: center;
+}
+
+.signature-grid h2 {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.signature-grid p {
+  margin-top: 0.15rem;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.signature-space {
+  min-height: 25mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .print-sheet {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 0 !important;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-section {
+    margin-top: 5mm;
+  }
+
+  .signature-grid {
+    margin-top: 14mm;
+  }
+}
