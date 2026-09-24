@@ -3,8 +3,6 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { bridgeAuthorized, configuredAttendanceDeviceId, validateAttendanceRange } from "@/lib/attendanceBridgeAuth";
 
 const isAdmin = (actor: { role_code: string }) => actor.role_code === "admin";
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 export async function GET(request: Request) {
   if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
   const { data, error } = await serverSupabase
