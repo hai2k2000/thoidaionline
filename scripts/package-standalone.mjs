@@ -19,6 +19,7 @@ if (existsSync(output)) throw new Error(`artifact already exists: ${output}`);
 execFileSync(process.execPath, ["scripts/check-required-routes.mjs"], { cwd: root, stdio: "inherit" });
 await mkdir(output, { recursive: true });
 await cp(standalone, output, { recursive: true });
+await mkdir(join(output, ".next", "cache"), { recursive: true });
 await cp(join(build, "static"), join(output, ".next", "static"), { recursive: true });
 if (existsSync(join(root, "public"))) await cp(join(root, "public"), join(output, "public"), { recursive: true });
 const sharedRoot = process.env.THOIDAI_SHARED_ROOT || "/opt/thoidai-work";
