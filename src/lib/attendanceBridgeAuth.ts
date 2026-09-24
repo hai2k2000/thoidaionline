@@ -54,6 +54,7 @@ export function validateAttendanceRange(period: string, start: string, end: stri
   const days = Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
   if (period === "day") return days === 1;
   if (period === "week") return days === 7;
+  if (period === "range") return days <= 31;
   if (period !== "month" || !start.endsWith("-01") || start.slice(0, 7) !== end.slice(0, 7)) return false;
   const lastDay = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth() + 1, 0, 12));
   return endDate.getUTCDate() === lastDay.getUTCDate();

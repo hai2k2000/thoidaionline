@@ -41,6 +41,22 @@ function Invoke-BridgeApi([string]$Path, [string]$Method = "GET", $Body = $null)
   Invoke-RestMethod @params
 }
 
+function Invoke-WithRetry([scriptblock]$Operation) {
+  $delays = @(0, 10, 30, 60)
+  $lastError = $null
+  foreach ($delay in $delays) {
+    if ($delay -gt 0) { Start-Sleep -Seconds $delay }
+    try { return & $Operation } catch { $lastError = $_ }
+  }
+  throw $lastError
+}
+
+function Get-LookbackRange {
+  $end = (Get-Date).Date
+  $start = $end.AddDays(-2)
+  return @{ start = $start.ToString("yyyy-MM-dd"); end = $end.ToString("yyyy-MM-dd") }
+}
+
 function Read-DeviceData {
   $zk = New-Object -ComObject "zkemkeeper.ZKEM"
   $connected = $false
@@ -80,7 +96,7 @@ function Read-DeviceData {
 
 function Complete-Request($request) {
   try {
-    $punches = @(Read-DeviceData)
+    $punches = @(Invoke-WithRetry { Read-DeviceData })
     $rangeStart = [string]$request.result.range_start
     $rangeEnd = [string]$request.result.range_end
     if ($rangeStart -and $rangeEnd) {
@@ -97,7 +113,8 @@ function Complete-Request($request) {
 }
 
 if ($Daily) {
-  [void](Invoke-BridgeApi "/api/attendance/sync/request" "POST" @{ device_id = $deviceId })
+  $range = Get-LookbackRange
+  [void](Invoke-BridgeApi "/api/attendance/sync/request" "POST" @{ device_id = $deviceId; source = "daily"; period = "range"; range_start = $range.start; range_end = $range.end })
 }
 
 $pending = Invoke-BridgeApi "/api/attendance/sync/pending"

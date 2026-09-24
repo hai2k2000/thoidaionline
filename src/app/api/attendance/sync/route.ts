@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
   const { data, error } = await serverSupabase
     .from("attendance_sync_requests")
-    .select("id,status,requested_at,started_at,completed_at,result,error")
+    .select("id,status,requested_at,started_at,finished_at,completed_at,result,error")
     .order("requested_at", { ascending: false })
     .limit(10);
   if (error) return apiError("operation_failed", 500);

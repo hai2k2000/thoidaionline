@@ -1,6 +1,7 @@
 import { apiError, apiJson, readJsonObject } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { bridgeAuthorized, configuredAttendanceDeviceId, validateAttendanceRange } from "@/lib/attendanceBridgeAuth";
+import { deriveAttendanceDays, punchKey } from "@/lib/attendanceReconciliation";
 
 type Punch = {
   enroll_number: string;
@@ -37,11 +38,12 @@ export async function POST(request: Request) {
     .eq("id", requestId)
     .maybeSingle();
   const configuredDeviceId = configuredAttendanceDeviceId();
-  const requestResult = requestRow?.result as { device_id?: string; period?: string; range_start?: string; range_end?: string } | null;
+  const requestResult = requestRow?.result as { device_id?: string; period?: string; range_start?: string; range_end?: string; dry_run?: boolean; source?: string } | null;
   const requestDeviceId = requestResult?.device_id ?? "";
   const rangeStart = requestResult?.range_start ?? "";
   const rangeEnd = requestResult?.range_end ?? "";
   const period = requestResult?.period ?? "";
+  const dryRun = requestResult?.dry_run === true;
   if (requestError || !requestRow || requestRow.status !== "running" || requestDeviceId !== configuredDeviceId || deviceId !== configuredDeviceId || !validateAttendanceRange(period, rangeStart, rangeEnd)) return apiError("conflict", 409);
   if (punches.some((punch) => {
     const punchDate = new Date(punch.punched_at).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
@@ -61,12 +63,42 @@ export async function POST(request: Request) {
     in_out_mode: punch.in_out_mode ?? null,
     work_code: punch.work_code ?? null,
   }));
+  const enrollments = [...new Set(punches.map((punch) => punch.enroll_number))];
+  const rangeStartInstant = new Date(`${rangeStart}T00:00:00+07:00`);
+  const rangeEndExclusive = new Date(`${rangeEnd}T00:00:00+07:00`);
+  rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
+  let beforeRows: Array<{ device_id: string; enroll_number: string; punched_at: string }> = [];
+  if (enrollments.length) {
+    const { data, error: beforeError } = await serverSupabase
+      .from("attendance_punches")
+      .select("device_id,enroll_number,punched_at")
+      .eq("device_id", configuredDeviceId)
+      .in("enroll_number", enrollments)
+      .gte("punched_at", rangeStartInstant.toISOString())
+      .lt("punched_at", rangeEndExclusive.toISOString())
+      .limit(100000);
+    if (beforeError) return failRequest(requestId, beforeError.message);
+    beforeRows = (data ?? []) as Array<{ device_id: string; enroll_number: string; punched_at: string }>;
+  }
+  const beforeKeys = new Set(beforeRows.map(punchKey));
+  const insertedCount = payload.filter((punch) => !beforeKeys.has(punchKey(punch))).length;
+  const duplicateSkippedCount = payload.length - insertedCount;
+  if (dryRun) {
+    const result = { source: requestResult?.source ?? "reconcile", dry_run: true, range_start: rangeStart, range_end: rangeEnd, device_punch_count: punches.length, db_before_count: beforeRows.length, inserted_count: insertedCount, duplicate_skipped_count: duplicateSkippedCount, attendance_rows_recalculated: deriveAttendanceDays(payload).length };
+    const { data: completed, error: doneError } = await serverSupabase
+      .from("attendance_sync_requests")
+      .update({ status: "succeeded", completed_at: new Date().toISOString(), finished_at: new Date().toISOString(), result })
+      .eq("id", requestId).eq("status", "completing")
+      .select("id,status")
+      .maybeSingle();
+    if (doneError || !completed) return failRequest(requestId, doneError?.message ?? "Dry-run was not committed");
+    return apiJson({ ok: true, result });
+  }
   const { error: punchError } = await serverSupabase
     .from("attendance_punches")
     .upsert(payload, { onConflict: "device_id,enroll_number,punched_at", ignoreDuplicates: true });
   if (punchError) return failRequest(requestId, punchError.message);
 
-  const enrollments = [...new Set(punches.map((punch) => punch.enroll_number))];
   const { data: users, error: userError } = await serverSupabase
     .from("staff_users")
     .select("id,full_name,attendance_code")
@@ -74,9 +106,6 @@ export async function POST(request: Request) {
     .eq("active", true);
   if (userError) return failRequest(requestId, userError.message);
   const userByCode = new Map((users ?? []).map((user) => [user.attendance_code, user]));
-  const rangeStartInstant = new Date(`${rangeStart}T00:00:00+07:00`);
-  const rangeEndExclusive = new Date(`${rangeEnd}T00:00:00+07:00`);
-  rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
   const canonicalPunches: Array<{ enroll_number: string; punched_at: string; verify_mode: number | null; in_out_mode: number | null; work_code: number | null }> = [];
   const pageSize = 10000;
   let page = 0;
@@ -134,10 +163,10 @@ export async function POST(request: Request) {
     });
     if (logError) return failRequest(requestId, logError.message);
   }
-  const result = { punches_received: punches.length, matched_users: userByCode.size, daily_logs: logs.length };
+  const result = { source: requestResult?.source ?? "sync", dry_run: false, range_start: rangeStart, range_end: rangeEnd, punches_received: punches.length, device_punch_count: punches.length, db_before_count: beforeRows.length, inserted_count: insertedCount, duplicate_skipped_count: duplicateSkippedCount, matched_users: userByCode.size, daily_logs: logs.length, attendance_rows_recalculated: logs.length };
   const { data: completed, error: doneError } = await serverSupabase
     .from("attendance_sync_requests")
-    .update({ status: "succeeded", completed_at: new Date().toISOString(), result })
+    .update({ status: "succeeded", completed_at: new Date().toISOString(), finished_at: new Date().toISOString(), result })
     .eq("id", requestId)
     .eq("status", "completing")
     .select("id,status")
@@ -150,6 +179,7 @@ async function failRequest(requestId: string, error: string) {
   await serverSupabase.from("attendance_sync_requests").update({
     status: "failed",
     completed_at: new Date().toISOString(),
+    finished_at: new Date().toISOString(),
     error: error.slice(0, 500),
   }).eq("id", requestId).in("status", ["running", "completing"]);
   return apiError("operation_failed", 500);

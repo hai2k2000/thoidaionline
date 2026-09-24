@@ -39,7 +39,7 @@ type SyncRequest = {
   status: "pending" | "running" | "completing" | "succeeded" | "failed";
   requested_at: string;
   completed_at: string | null;
-  result?: { punches_received?: number; matched_users?: number; daily_logs?: number } | null;
+  result?: { punches_received?: number; matched_users?: number; daily_logs?: number; inserted_count?: number; duplicate_skipped_count?: number } | null;
   error?: string | null;
 };
 
@@ -98,6 +98,12 @@ const workedHours = (checkIn?: string | null, checkOut?: string | null) => {
   const outMin = timeToMin(checkOut);
   if (inMin === null || outMin === null || outMin <= inMin) return 0;
   return (outMin - inMin) / 60;
+};
+
+const formatAttendanceDate = (value?: string | null) => {
+  if (!value) return "-";
+  const [year, month, day] = value.split("-");
+  return year && month && day ? `${day}/${month}/${year}` : value;
 };
 
 export default function AttendancePage() {
@@ -412,6 +418,7 @@ export default function AttendancePage() {
             <thead className="bg-slate-50">
               <tr>
                 <th scope="col" className="px-3 py-2">Nhân sự</th>
+                <th scope="col" className="px-3 py-2">Ngày</th>
                 <th scope="col" className="px-3 py-2">Giờ vào</th>
                 <th scope="col" className="px-3 py-2">Giờ ra</th>
                 <th scope="col" className="px-3 py-2 text-right">Tổng giờ</th>
@@ -423,6 +430,7 @@ export default function AttendancePage() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-t">
                   <td className="px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
+                  <td className="whitespace-nowrap px-3 py-2">{formatAttendanceDate(r.work_date)}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_in ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
                   <td className="px-3 py-2 text-right font-semibold">{workedHours(r.check_in, r.check_out).toFixed(2)}</td>
@@ -431,7 +439,7 @@ export default function AttendancePage() {
                 </tr>
               ))}
               {rows.length === 0 ? (
-                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={6}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
+                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={7}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
               ) : null}
             </tbody>
           </table>

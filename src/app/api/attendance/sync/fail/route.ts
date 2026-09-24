@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   if (!requestId) return apiError("invalid_request", 400);
   const { data, error: updateError } = await serverSupabase
     .from("attendance_sync_requests")
-    .update({ status: "failed", completed_at: new Date().toISOString(), error })
+    .update({ status: "failed", completed_at: new Date().toISOString(), finished_at: new Date().toISOString(), error })
     .eq("id", requestId)
     .in("status", ["running", "completing"])
     .select("id,status,completed_at,error")
