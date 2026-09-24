@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getPhase2Navigation, type Phase2Navigation } from "@/components/phase2Navigation";
+import { getPhase2Navigation, isNavigationActive, type Phase2Navigation } from "@/components/phase2Navigation";
 import { useAuth } from "@/lib/auth";
 import { canUseJournalism } from "@/lib/journalismScope.mjs";
 import NotificationBell from "@/components/NotificationBell";
@@ -37,7 +37,8 @@ const labels = {
   "work-schedule-leader": "Lịch công tác lãnh đạo",
   "work-schedule-staff": "Kế hoạch cá nhân",
   "work-schedule-admin": "Quản trị lịch công tác",
-  "journalism-structures": "Chủ đề & Loạt bài",
+  "journalism-tasks": "Công việc nghiệp vụ báo chí",
+  "journalism-structures": "Chủ đề / Loạt bài",
   "journalism-reports": "Báo cáo nghiệp vụ báo chí",
   "journalism-calendar": "Lịch biên tập",
 } as const;
@@ -60,14 +61,6 @@ const linkClass = (active: boolean) =>
       : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
   }`;
 
-function isNavigationActive(currentPath: string, href: string) {
-  if (href === "/tasks/assign") return currentPath === href;
-  if (href === "/tasks") {
-    return currentPath.startsWith("/tasks") && currentPath !== "/tasks/assign";
-  }
-  return currentPath === href || currentPath.startsWith(`${href}/`);
-}
-
 function NavContent({
   currentPath,
   navigation,
@@ -87,8 +80,10 @@ function NavContent({
     isNavigationActive(currentPath, item.href));
   const workScheduleActive = navigation.primary.some((item) =>
     ["work-schedule", "work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"].includes(item.id) && isNavigationActive(currentPath, item.href));
+  const journalismActive = navigation.journalism.some((item) => isNavigationActive(currentPath, item.href));
   const [configurationOpen, setConfigurationOpen] = useState(configurationActive);
   const [workScheduleOpen, setWorkScheduleOpen] = useState(workScheduleActive);
+  const [journalismOpen, setJournalismOpen] = useState(journalismActive);
   const [accountOpen, setAccountOpen] = useState(true);
 
 
@@ -117,6 +112,25 @@ function NavContent({
             ))}
       </nav>
       </div>
+
+      {navigation.journalism.length > 0 ? (
+        <details open={journalismOpen || journalismActive} onToggle={(event) => setJournalismOpen(event.currentTarget.open)} className="group mt-3 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
+          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl bg-gradient-to-r from-red-100 to-orange-50 px-2.5 py-2 ring-1 ring-red-200 [&::-webkit-details-marker]:hidden"><div className="flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><path d="M4 6h16M4 12h11M4 18h16"/><circle cx="18" cy="12" r="2"/></svg></span><p className="min-w-0 text-[11px] font-extrabold uppercase leading-snug tracking-wide text-red-900">NGHIỆP VỤ BÁO CHÍ</p></div><div className="flex items-center gap-2"><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-red-700 ring-1 ring-red-200">{navigation.journalism.length}</span><ChevronIcon open={journalismOpen || journalismActive} /></div></summary>
+          <nav aria-label="Nghiệp vụ báo chí" className="mt-2.5 space-y-1">
+            {navigation.journalism.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                aria-current={isNavigationActive(currentPath, item.href) ? "page" : undefined}
+                onClick={onNavigate}
+                className={linkClass(isNavigationActive(currentPath, item.href))}
+              >
+                <NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span className="leading-snug">{labels[item.id]}</span>
+              </Link>
+            ))}
+          </nav>
+        </details>
+      ) : null}
 
       {navigation.configuration.length > 0 ? (
         <details open={configurationOpen || configurationActive} onToggle={(event) => setConfigurationOpen(event.currentTarget.open)} className="group mt-3 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">

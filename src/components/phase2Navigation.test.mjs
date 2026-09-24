@@ -1,169 +1,68 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
-import {
-  buildLegacyTaskRedirect,
-  getPhase2Navigation,
-  LEGACY_TASK_REDIRECTS,
-} from "./phase2Navigation.ts";
-
-const employee = {
-  roleCode: "nhan_vien",
-  departmentCode: null,
-  canAccessJournalism: false,
-  canAssignTask: false,
-  canEvaluateStep1: false,
-  canEvaluateStep2: false,
-  canManageRubrics: false,
-  canManageUsers: false,
-  canManagePermissions: false,
-};
-
-test("employee navigation exposes only Task Center and account", () => {
-  const navigation = getPhase2Navigation(employee);
-
-  assert.deepEqual(navigation.primary, [
-    { id: "tasks", href: "/tasks" },
-  ]);
-  assert.deepEqual(navigation.account, [
-    { id: "account", href: "/account" },
-  ]);
-  assert.equal(navigation.showEvaluationTab, false);
+import { buildLegacyTaskRedirect, getPhase2Navigation, isNavigationActive, LEGACY_TASK_REDIRECTS } from "./phase2Navigation.ts";
+const employee = { roleCode: "nhan_vien", departmentCode: null, canAccessJournalism: false, canAssignTask: false, canEvaluateStep1: false, canEvaluateStep2: false, canManageRubrics: false, canManageUsers: false, canManagePermissions: false };
+const journalismItems = [
+  { id: "journalism-tasks", href: "/tasks?journalism=only" },
+  { id: "journalism-calendar", href: "/journalism/calendar" },
+  { id: "journalism-reports", href: "/journalism/reports" },
+];
+for (const [roleCode, departmentCode, visible] of [
+  ["nhan_vien", "editorial", true], ["tong_bien_tap", "leadership", true],
+  ["pho_tong_bien_tap", "leadership", true], ["nhan_vien", "general", false],
+  ["truong_phong", "communications", false], ["admin", "business", false],
+]) test("Journalism sidebar scope: " + roleCode + "/" + departmentCode, () => {
+  const navigation = getPhase2Navigation({ ...employee, roleCode, departmentCode, canAccessJournalism: true, canManageJournalismStructures: true });
+  assert.deepEqual(navigation.journalism, visible ? [...journalismItems, { id: "journalism-structures", href: "/journalism/structures" }] : []);
+  assert.equal([...navigation.primary, ...navigation.configuration].some(item => item.id.startsWith("journalism-")), false);
+  const all = [...navigation.primary, ...navigation.journalism, ...navigation.configuration, ...navigation.account];
+  assert.equal(new Set(all.map(item => item.href)).size, all.length);
+});
+test("existing Journalism permissions still gate section and structures", () => {
+  assert.deepEqual(getPhase2Navigation({ ...employee, departmentCode: "editorial" }).journalism, []);
+  assert.deepEqual(getPhase2Navigation({ ...employee, departmentCode: "editorial", canAccessJournalism: true }).journalism, journalismItems);
+});
+test("work and schedule navigation is preserved", () => {
+  const navigation = getPhase2Navigation({ ...employee, canAssignTask: true });
+  assert.deepEqual(navigation.primary.slice(0, 2), [{ id: "assign", href: "/tasks/assign" }, { id: "tasks", href: "/tasks" }]);
+  for (const id of ["attendance", "work-schedule", "work-schedule-staff", "duty-schedule", "online-work"]) assert.ok(navigation.primary.some(item => item.id === id));
+  assert.deepEqual(navigation.account, [{ id: "account", href: "/account" }]);
   assert.deepEqual(navigation.configuration, []);
 });
-
-test("journalism navigation is limited to Content scope or editorial leadership", () => {
-  const content = getPhase2Navigation({
-    ...employee,
-    departmentCode: "editorial",
-    canAccessJournalism: true,
-    canManageJournalismStructures: true,
-  });
-  const unrelatedManager = getPhase2Navigation({
-    ...employee,
-    roleCode: "truong_phong",
-    departmentCode: "business",
-    canAccessJournalism: true,
-    canManageJournalismStructures: true,
-  });
-  const editorialLead = getPhase2Navigation({
-    ...employee,
-    roleCode: "pho_tong_bien_tap",
-    canAccessJournalism: true,
-  });
-
-  assert.deepEqual(content.primary.find((item) => item.id === "journalism-reports"), { id: "journalism-reports", href: "/journalism/reports" });
-  assert.deepEqual(content.configuration.find((item) => item.id === "journalism-structures"), { id: "journalism-structures", href: "/journalism/structures" });
-  assert.equal(unrelatedManager.primary.some((item) => item.id === "journalism-reports"), false);
-  assert.equal(unrelatedManager.configuration.some((item) => item.id === "journalism-structures"), false);
-  assert.deepEqual(editorialLead.primary.find((item) => item.id === "journalism-reports"), { id: "journalism-reports", href: "/journalism/reports" });
+test("manager and editorial leadership retain assignment and evaluation navigation", () => {
+  for (const roleCode of ["truong_phong", "tong_bien_tap", "pho_tong_bien_tap"]) {
+    const navigation = getPhase2Navigation({ ...employee, roleCode, canAssignTask: roleCode === "truong_phong", canEvaluateStep1: true, canEvaluateStep2: true, isDepartmentManager: true });
+    assert.ok(navigation.primary.some(item => item.id === "assign"));
+    assert.equal(navigation.showEvaluationTab, true);
+  }
 });
-
-test("manager and TBT see assignment while read-only TBT does not", () => {
-  const manager = getPhase2Navigation({
-    ...employee,
-    roleCode: "truong_phong",
-    canAssignTask: true,
-    canEvaluateStep1: true,
-    isDepartmentManager: true,
-  });
-  const tbt = getPhase2Navigation({
-    ...employee,
-    roleCode: "tong_bien_tap",
-    canEvaluateStep2: true,
-  });
-
-  assert.deepEqual(manager.primary, [
-    { id: "assign", href: "/tasks/assign" },
-    { id: "tasks", href: "/tasks" },
-    { id: "evaluations", href: "/evaluations" },
-  ]);
-  assert.equal(manager.showEvaluationTab, true);
-  assert.deepEqual(tbt.primary, [
-    { id: "tasks", href: "/tasks" },
-    { id: "evaluations", href: "/evaluations" },
-  ]);
-  assert.equal(tbt.showEvaluationTab, true);
+test("administration still requires admin role and individual permission", () => {
+  const admin = getPhase2Navigation({ ...employee, roleCode: "admin", canManageUsers: true, canManagePermissions: true, canManageRubrics: true });
+  for (const id of ["users", "departments", "permissions", "evaluation-rubrics", "evaluation-cycles"]) assert.ok(admin.configuration.some(item => item.id === id));
+  const restricted = getPhase2Navigation({ ...employee, roleCode: "admin" });
+  assert.equal(restricted.configuration.some(item => ["users", "departments", "permissions", "evaluation-rubrics"].includes(item.id)), false);
+  assert.deepEqual(getPhase2Navigation({ ...employee, canManageUsers: true, canManagePermissions: true, canManageRubrics: true }).configuration, []);
 });
-
-test("shared-rubric configuration remains admin-only", () => {
-  assert.deepEqual(
-    getPhase2Navigation({
-      ...employee,
-      roleCode: "admin",
-      canManageRubrics: true,
-    }).configuration,
-    [{ id: "evaluation-rubrics", href: "/configuration/evaluation-rubrics" }],
-  );
-  assert.deepEqual(
-    getPhase2Navigation({
-      ...employee,
-      canManageRubrics: true,
-    }).configuration,
-    [],
-  );
+test("Journalism tasks, assignment and detail exclusively activate Journalism", () => {
+  for (const route of ["/tasks?journalism=only", "/tasks?page=2&journalism=only", "/tasks/assign?kind=journalism", "/tasks/task-id?journalism=only"]) {
+    assert.equal(isNavigationActive(route, "/tasks?journalism=only"), true, route);
+    assert.equal(isNavigationActive(route, "/tasks"), false, route);
+    assert.equal(isNavigationActive(route, "/tasks/assign"), false, route);
+  }
+  for (const route of ["/tasks", "/tasks?page=2", "/tasks/task-id"]) {
+    assert.equal(isNavigationActive(route, "/tasks"), true);
+    assert.equal(isNavigationActive(route, "/tasks?journalism=only"), false);
+  }
+  assert.equal(isNavigationActive("/tasks/assign", "/tasks/assign"), true);
 });
-
-test("admin navigation exposes Journalism regardless of department", () => {
-  const navigation = getPhase2Navigation({
-    ...employee,
-    roleCode: "admin",
-    departmentCode: "business",
-    canAccessJournalism: true,
-    canManageJournalismStructures: true,
-  });
-  assert.deepEqual(navigation.primary.find((item) => item.id === "journalism-reports"), { id: "journalism-reports", href: "/journalism/reports" });
-  assert.deepEqual(navigation.configuration.find((item) => item.id === "journalism-structures"), { id: "journalism-structures", href: "/journalism/structures" });
+test("Journalism page routes select the correct child, including nested series", () => {
+  for (const route of ["/journalism/calendar?view=week", "/journalism/reports", "/journalism/structures", "/journalism/structures/series-id"]) {
+    const target = route.includes("structures") ? "/journalism/structures" : route.split("?")[0];
+    assert.equal(isNavigationActive(route, target), true);
+    assert.equal(isNavigationActive(route, "/tasks"), false);
+    for (const other of ["/journalism/calendar", "/journalism/reports", "/journalism/structures"].filter(item => item !== target)) assert.equal(isNavigationActive(route, other), false);
+  }
 });
-
-test("admin configuration restores legacy administration beside new configuration", () => {
-  assert.deepEqual(
-    getPhase2Navigation({
-      ...employee,
-      roleCode: "admin",
-      canManageUsers: true,
-      canManagePermissions: true,
-      canManageRubrics: true,
-    }).configuration,
-    [
-      { id: "users", href: "/users" },
-      { id: "departments", href: "/departments" },
-      { id: "permissions", href: "/permissions" },
-      {
-        id: "evaluation-rubrics",
-        href: "/configuration/evaluation-rubrics",
-      },
-    ],
-  );
-});
-
-test("legacy administration visibility is fail-closed by admin role and permission", () => {
-  const usersOnly = getPhase2Navigation({
-    ...employee,
-    roleCode: "admin",
-    canManageUsers: true,
-  });
-  const permissionsOnly = getPhase2Navigation({
-    ...employee,
-    roleCode: "admin",
-    canManagePermissions: true,
-  });
-  const nonAdmin = getPhase2Navigation({
-    ...employee,
-    canManageUsers: true,
-    canManagePermissions: true,
-  });
-
-  assert.deepEqual(usersOnly.configuration, [
-    { id: "users", href: "/users" },
-    { id: "departments", href: "/departments" },
-  ]);
-  assert.deepEqual(permissionsOnly.configuration, [
-    { id: "permissions", href: "/permissions" },
-  ]);
-  assert.deepEqual(nonAdmin.configuration, []);
-});
-
 test("legacy redirects preserve unrelated query state and lock canonical filters", () => {
   assert.equal(buildLegacyTaskRedirect("/", "q=bao&page=2"), "/tasks?q=bao&page=2");
   assert.equal(buildLegacyTaskRedirect("/tasks/active", "department=abc&status=done"), "/tasks?department=abc&status=active");

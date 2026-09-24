@@ -138,7 +138,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel, journal
 
   return <div className="min-h-screen bg-slate-50 px-3 py-3 text-slate-900 sm:px-4 lg:px-6">
     <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
-      <AppNav currentPath={`/tasks/${task.id}`} userLabel={userLabel} onLogout={logout} />
+      <AppNav currentPath={task.journalism ? `/tasks/${task.id}?journalism=only` : `/tasks/${task.id}`} userLabel={userLabel} onLogout={logout} />
       <main className="min-w-0 flex-1 space-y-2.5">
         <header className="sticky top-3 z-30 rounded-2xl bg-white/95 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

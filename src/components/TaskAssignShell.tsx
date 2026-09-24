@@ -125,7 +125,7 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
 
   return <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
     <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
-      <AppNav currentPath="/tasks/assign" userLabel={userLabel} onLogout={() => { logout(); router.replace("/login"); }} />
+      <AppNav currentPath={journalismMode ? "/tasks/assign?kind=journalism" : "/tasks/assign"} userLabel={userLabel} onLogout={() => { logout(); router.replace("/login"); }} />
       <main className="min-w-0 flex-1">
         <header className="rounded-2xl border bg-white p-4 shadow-sm">
           <h1 className="text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>

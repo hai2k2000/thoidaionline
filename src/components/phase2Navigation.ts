@@ -14,12 +14,13 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
+    | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
   href: string;
 };
 
 export type Phase2Navigation = {
   primary: Phase2NavigationItem[];
+  journalism: Phase2NavigationItem[];
   account: Phase2NavigationItem[];
   configuration: Phase2NavigationItem[];
   showEvaluationTab: boolean;
@@ -30,7 +31,7 @@ export function getPhase2Navigation(
 ): Phase2Navigation {
   const canViewAllSchedules = access.isDepartmentManager === true || ["admin", "tong_bien_tap", "pho_tong_bien_tap", "truong_phong"].includes(access.roleCode);
   const canAccessJournalism = access.canAccessJournalism === true
-    && (["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode) || access.departmentCode === "editorial");
+    && (["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode) || access.departmentCode === "editorial");
   return {
     primary: [
       ...(access.canAssignTask || ["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
@@ -39,8 +40,6 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
-      ...(canAccessJournalism ? [{ id: "journalism-calendar", href: "/journalism/calendar" } as const] : []),
-      ...(canAccessJournalism ? [{ id: "journalism-reports", href: "/journalism/reports" } as const] : []),
       { id: "attendance", href: "/my-attendance" },
       ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
@@ -54,6 +53,12 @@ export function getPhase2Navigation(
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
     ],
+    journalism: canAccessJournalism ? [
+      { id: "journalism-tasks", href: "/tasks?journalism=only" },
+      { id: "journalism-calendar", href: "/journalism/calendar" },
+      { id: "journalism-reports", href: "/journalism/reports" },
+      ...(access.canManageJournalismStructures ? [{ id: "journalism-structures", href: "/journalism/structures" } as const] : []),
+    ] : [],
     account: [{ id: "account", href: "/account" }],
     configuration: [
       ...(access.roleCode === "admin" ? [{ id: "duty-roster", href: "/configuration/duty-roster" } as const, { id: "online-work-admin", href: "/configuration/online-work" } as const, { id: "work-schedule-admin", href: "/configuration/work-schedule" } as const] : []),
@@ -78,7 +83,6 @@ export function getPhase2Navigation(
             href: "/configuration/evaluation-cycles",
           } as const]
         : []),
-      ...(canAccessJournalism && access.canManageJournalismStructures ? [{ id: "journalism-structures", href: "/journalism/structures" } as const] : []),
     ],
     showEvaluationTab:
       access.canEvaluateStep1 || access.canEvaluateStep2,
@@ -133,4 +137,16 @@ export function buildLegacyTaskRedirectFromParams(
     }
   }
   return buildLegacyTaskRedirect(path, search.toString());
+}
+
+// Navigation context only; route authorization continues to use the existing guards.
+export function isNavigationActive(currentPath: string, href: string): boolean {
+  const [pathname, rawSearch = ""] = currentPath.split("?");
+  const search = new URLSearchParams(rawSearch.split("#")[0]);
+  const journalismTask = (pathname === "/tasks" || pathname.startsWith("/tasks/"))
+    && (search.get("journalism") === "only" || (pathname === "/tasks/assign" && search.get("kind") === "journalism"));
+  if (href === "/tasks?journalism=only") return journalismTask;
+  if (href === "/tasks/assign") return pathname === href && !journalismTask;
+  if (href === "/tasks") return (pathname === href || pathname.startsWith("/tasks/")) && pathname !== "/tasks/assign" && !journalismTask;
+  return pathname === href || pathname.startsWith(href + "/");
 }

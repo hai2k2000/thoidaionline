@@ -33,7 +33,7 @@ test("sidebar implements the required off-canvas accessibility contract", () => 
   assert.match(navSource, /aria-modal="true"/);
   assert.match(navSource, /Escape/);
   assert.match(navSource, /restoreMenuFocus/);
-  assert.match(navSource, /lg:w-\[232px\]/);
+  assert.match(navSource, /lg:w-\[252px\]/);
 });
 
 test("client permission DTO includes every Phase-1 navigation permission", () => {
@@ -55,7 +55,20 @@ test("both canonical route shells render the permission-driven sidebar", () => {
   );
 
   assert.match(taskCenter, /<AppNav/);
-  assert.match(taskCenter, /currentPath="\/tasks"/);
+  assert.match(taskCenter, /query\.journalism === "only" \? "\/tasks\?journalism=only" : basePath/);
   assert.match(taskAssign, /<AppNav/);
-  assert.match(taskAssign, /currentPath="\/tasks\/assign"/);
+  assert.match(taskAssign, /currentPath=\{journalismMode \? "\/tasks\/assign\?kind=journalism"/);
+});
+
+test("shared desktop and mobile content renders one scoped Journalism section after work", () => {
+  assert.match(navSource, /navigation\.journalism\.length > 0/);
+  assert.match(navSource, /open=\{journalismOpen \|\| journalismActive\}/);
+  assert.match(navSource, /NGHIỆP VỤ BÁO CHÍ/);
+  assert.match(navSource, /"journalism-tasks": "Công việc nghiệp vụ báo chí"/);
+  assert.match(navSource, /"journalism-structures": "Chủ đề \/ Loạt bài"/);
+  assert.equal((navSource.match(/<NavContent/g) || []).length, 2);
+  assert.ok(navSource.indexOf('navigation.primary.filter') < navSource.indexOf('navigation.journalism.length > 0'));
+  assert.ok(navSource.indexOf('navigation.journalism.length > 0') < navSource.indexOf('navigation.configuration.length > 0'));
+  const detail = fs.readFileSync(new URL('./TaskDetailShell.tsx', import.meta.url), 'utf8');
+  assert.match(detail, /currentPath=\{task\.journalism/);
 });
