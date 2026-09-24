@@ -283,6 +283,9 @@ begin
           insert into public.task_status_events(task_id,from_status,to_status,reason,actor_id)
           values(v_task.id,null,'waiting','Chờ duyệt giao việc',v_rule.created_by);
           insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data)
+          values(v_rule.created_by,'task','tasks',v_task.id,'create',
+            jsonb_build_object('recurrence_rule_id',v_rule.id,'scheduled_for',v_scheduled,'task_type','personal','status','waiting','approval_required',true));
+          insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data)
           values(v_rule.created_by,'task','tasks',v_task.id,'submit_assignment_approval',
             jsonb_build_object('recurrence_rule_id',v_rule.id,'scheduled_for',v_scheduled,'task_type','personal','approval_required',true,'reviewer_id',v_manager));
         else
