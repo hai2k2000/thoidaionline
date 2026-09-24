@@ -51,7 +51,7 @@ test("reconciliation remains Work-owned and disconnected from MasterCMS and unre
 
 test("reconciliation UI is a separate intentional action with a reason and optimistic version", () => {
   const component = read("../components/JournalismManualPublicationReport.tsx");
-  assert.match(component, /Đối soát/);
+  assert.match(component, /journalismLabels.reconciliation/);
   assert.match(component, /publication-reconciliation/);
   assert.match(component, /reconciliationReason/);
   assert.match(component, /expectedUpdatedAt: report\?\.updated_at/);

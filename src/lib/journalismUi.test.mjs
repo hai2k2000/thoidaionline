@@ -12,7 +12,7 @@ test("publication statuses use the approved Vietnamese labels", () => {
   assert.equal(journalismPublicationStatusLabel("not_published"), "Chưa xuất bản");
   assert.equal(journalismPublicationStatusLabel("scheduled"), "Đã lên lịch");
   assert.equal(journalismPublicationStatusLabel("published"), "Đã xuất bản");
-  assert.equal(journalismPublicationStatusLabel("withdrawn"), "Đã gỡ");
+  assert.equal(journalismPublicationStatusLabel("withdrawn"), "Đã rút");
   assert.equal(journalismPublicationStatusLabel("unknown"), "Không rõ trạng thái");
 });
 

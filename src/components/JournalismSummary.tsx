@@ -1,6 +1,7 @@
 import type { JournalismTaskListSummaryDto } from "@/lib/taskContracts";
 import {
   formatJournalismDate,
+  journalismLabels,
   journalismPublicationStatusClass,
   journalismPublicationStatusLabel,
   journalismWorkKindLabel,
@@ -16,7 +17,7 @@ export default function JournalismSummary({ journalism }: { journalism: Journali
           {journalismPublicationStatusLabel(journalism.publication_status)}
         </span>
       </div>
-      {journalism.planned_publication_at ? <div className="mt-1 text-slate-600">Dự kiến xuất bản: {formatJournalismDate(journalism.planned_publication_at)}</div> : null}
+      {journalism.planned_publication_at ? <div className="mt-1 text-slate-600">{journalismLabels.plannedPublicationDate}: {formatJournalismDate(journalism.planned_publication_at)}</div> : null}
     </div>
   );
 }

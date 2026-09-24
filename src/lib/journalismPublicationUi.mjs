@@ -49,7 +49,7 @@ export function publicationError(status, code, action = "") {
   if (status === 400 || code === "invalid_request") {
     if (action === "schedule") return { refresh: false, close: false, message: "Cần nhập thời gian dự kiến xuất bản để lên lịch." };
     if (action === "publish") return { refresh: false, close: false, message: "URL phải là địa chỉ http/https hợp lệ, không chứa thông tin đăng nhập." };
-    if (action === "withdraw") return { refresh: false, close: false, message: "Vui lòng nhập lý do gỡ bài." };
+    if (action === "withdraw") return { refresh: false, close: false, message: "Vui lòng nhập lý do rút bài." };
   }
   return { refresh: false, close: false, message: "Không thể hoàn tất thao tác xuất bản. Vui lòng thử lại." };
 }

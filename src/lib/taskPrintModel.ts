@@ -40,7 +40,7 @@ const publicationStatusLabels: Record<string, string> = {
   not_published: "Chưa xuất bản",
   scheduled: "Đã lên lịch",
   published: "Đã xuất bản",
-  withdrawn: "Đã gỡ",
+  withdrawn: "Đã rút",
 };
 
 const parseRequirements = (value: string | null) => {

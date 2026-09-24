@@ -11,7 +11,7 @@ import {
   validatePublishedTitle,
   validateReportedPublicationUrl,
 } from "@/lib/journalismManualPublicationUi.mjs";
-import { formatJournalismDate } from "@/lib/journalismUi.mjs";
+import { formatJournalismDate, journalismLabels } from "@/lib/journalismUi.mjs";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 function currentLocalDateTime() {
@@ -206,17 +206,17 @@ export default function JournalismManualPublicationReport({
       </div>
       <div className="flex shrink-0 flex-col gap-2 sm:items-end">
         {canEdit ? <button type="button" onClick={() => open()} className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800">{report ? "Cập nhật thông tin xuất bản" : "Ghi nhận xuất bản"}</button> : null}
-        {report && canEdit ? <button type="button" onClick={() => open("reconcile")} className="rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">Đối soát &amp; sửa</button> : null}
+        {report && canEdit ? <button type="button" onClick={() => open("reconcile")} className="rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">{journalismLabels.reconciliation} &amp; sửa</button> : null}
         {report && canVerify ? <div className="flex flex-wrap gap-2"><button type="button" onClick={() => openVerification("verified")} className="rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">Xác nhận</button><button type="button" onClick={() => openVerification("rejected")} className="rounded-lg border border-amber-700 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">Từ chối</button></div> : null}
       </div>
     </div>
     <dialog ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="manual-publication-title" onCancel={(event) => { event.preventDefault(); close(); }} onClick={(event) => { if (event.target === event.currentTarget) close(); }} className="max-h-[90vh] w-[min(92vw,640px)] overflow-y-auto rounded-2xl border p-0 shadow-xl backdrop:bg-slate-900/40">
       <form onSubmit={submit} className="grid gap-4 p-4 sm:p-6">
-        <div><h3 id="manual-publication-title" className="text-lg font-bold">{dialogMode === "reconcile" ? "Đối soát thông tin xuất bản" : report ? "Cập nhật thông tin xuất bản" : "Ghi nhận xuất bản"}</h3><p className="mt-1 text-sm text-slate-600">{dialogMode === "reconcile" ? "Nêu rõ lý do đối soát; lịch sử xác minh trước đó được giữ nguyên." : "Chỉ ghi nhận thông tin nội bộ trong Thời Đại Work."}</p></div>
+        <div><h3 id="manual-publication-title" className="text-lg font-bold">{dialogMode === "reconcile" ? `${journalismLabels.reconciliation} thông tin xuất bản` : report ? "Cập nhật thông tin xuất bản" : "Ghi nhận xuất bản"}</h3><p className="mt-1 text-sm text-slate-600">{dialogMode === "reconcile" ? "Nêu rõ lý do đối soát; lịch sử xác minh trước đó được giữ nguyên." : "Chỉ ghi nhận thông tin nội bộ trong Thời Đại Work."}</p></div>
         <label className="grid gap-1 text-sm font-semibold">URL bài đã xuất bản *<input type="text" inputMode="url" required maxLength={2048} value={url} onChange={(event) => setUrl(event.target.value)} aria-invalid={Boolean(error)} className="rounded-lg border px-3 py-2.5 font-normal" placeholder="https://..." /></label>
         <label className="grid gap-1 text-sm font-semibold">Tiêu đề khi xuất bản<input type="text" maxLength={500} value={title} onChange={(event) => setTitle(event.target.value)} className="rounded-lg border px-3 py-2.5 font-normal" /></label>
         <fieldset className="grid gap-2"><legend className="text-sm font-semibold">Thời gian xuất bản *</legend><div className="grid gap-2 sm:grid-cols-2"><label className="grid gap-1 text-sm font-semibold">Ngày<input type="date" required value={date} onChange={(event) => setDate(event.target.value)} className="rounded-lg border px-3 py-2.5 font-normal" /></label><label className="grid gap-1 text-sm font-semibold">Giờ<input type="time" required value={time} onChange={(event) => setTime(event.target.value)} className="rounded-lg border px-3 py-2.5 font-normal" /></label></div></fieldset>
-        {dialogMode === "reconcile" ? <label className="grid gap-1 text-sm font-semibold">Lý do đối soát *<textarea required maxLength={2000} rows={3} value={reconciliationReason} onChange={(event) => setReconciliationReason(event.target.value)} className="rounded-lg border px-3 py-2.5 font-normal" /></label> : null}
+        {dialogMode === "reconcile" ? <label className="grid gap-1 text-sm font-semibold">{journalismLabels.reconciliation} lý do *<textarea required maxLength={2000} rows={3} value={reconciliationReason} onChange={(event) => setReconciliationReason(event.target.value)} className="rounded-lg border px-3 py-2.5 font-normal" /></label> : null}
         <label className="grid gap-1 text-sm font-semibold">Ghi chú<textarea maxLength={5000} rows={4} value={note} onChange={(event) => setNote(event.target.value)} className="rounded-lg border px-3 py-2.5 font-normal" /></label>
         {error ? <p role="alert" className="text-sm font-medium text-red-700">{error}</p> : null}
         <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t bg-white px-4 py-3 sm:-mx-6 sm:-mb-6 sm:flex-row sm:justify-end sm:px-6"><button type="button" disabled={busy} onClick={close} className="rounded-lg border px-4 py-2 font-semibold disabled:opacity-50">Hủy</button><button type="submit" disabled={busy} aria-busy={busy} className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Đang lưu..." : "Lưu thông tin"}</button></div>

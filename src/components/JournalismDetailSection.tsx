@@ -1,6 +1,7 @@
 import type { JournalismTaskDetailDto } from "@/lib/taskContracts";
 import {
   formatJournalismDate,
+  journalismLabels,
   journalismPublicationStatusClass,
   journalismPublicationStatusLabel,
   safeJournalismArticleUrl,
@@ -27,7 +28,7 @@ export default function JournalismDetailSection({ journalism }: { journalism: Jo
             {journalismPublicationStatusLabel(journalism.publication_status)}
           </dd>
         </div>
-        {journalism.planned_publication_at ? <Field label="Dự kiến xuất bản" value={formatJournalismDate(journalism.planned_publication_at)} /> : null}
+        {journalism.planned_publication_at ? <Field label={journalismLabels.plannedPublicationDate} value={formatJournalismDate(journalism.planned_publication_at)} /> : null}
         {journalism.published_at ? <Field label="Đã xuất bản lúc" value={formatJournalismDate(journalism.published_at)} /> : null}
         {journalism.location ? <Field label="Địa điểm" value={journalism.location} /> : null}
         {articleUrl ? <div className="min-w-0 rounded-lg bg-slate-50 px-2.5 py-2 sm:col-span-2"><dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">URL bài đã xuất bản</dt><dd className="mt-0.5 break-all text-sm font-medium"><a href={articleUrl} target="_blank" rel="noreferrer" className="text-orange-700 underline">{articleUrl}</a></dd></div> : null}

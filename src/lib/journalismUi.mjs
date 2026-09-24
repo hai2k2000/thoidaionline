@@ -1,12 +1,59 @@
-const PUBLICATION_STATUS_LABELS = {
+export const journalismPublicationStatusLabels = Object.freeze({
   not_published: "Chưa xuất bản",
   scheduled: "Đã lên lịch",
   published: "Đã xuất bản",
-  withdrawn: "Đã gỡ",
-};
+  withdrawn: "Đã rút",
+});
 
-export const journalismPublicationStatusLabel = (status) =>
-  PUBLICATION_STATUS_LABELS[status] ?? "Không rõ trạng thái";
+const PUBLICATION_STATUS_LABELS = journalismPublicationStatusLabels;
+
+export const journalismLabels = Object.freeze({
+  topic: "Chủ đề",
+  series: "Loạt bài",
+  reporter: "Phóng viên",
+  publicationStatus: "Trạng thái xuất bản",
+  plannedPublicationDate: "Ngày dự kiến xuất bản",
+  unplanned: "Chưa lên kế hoạch",
+  overdue: "Quá hạn",
+  scheduled: "Đã lên lịch",
+  published: "Đã xuất bản",
+  withdrawn: "Đã rút",
+  editorialNotes: "Ghi chú biên tập",
+  verification: "Xác minh",
+  reconciliation: "Đối soát",
+  manualPublicationReport: "Báo cáo xuất bản thủ công",
+  journalismTask: "Công việc nghiệp vụ báo chí",
+  editorialCalendar: "Lịch nghiệp vụ báo chí",
+  journalismReports: "Báo cáo nghiệp vụ báo chí",
+});
+
+export const journalismVerificationStatusLabels = Object.freeze({
+  unverified: "Chưa xác minh",
+  verified: "Đã xác minh",
+  rejected: "Bị từ chối",
+  stale: "Cần xác minh lại",
+});
+
+export const journalismTaskStatusLabels = Object.freeze({
+  new: "Mới",
+  in_progress: "Đang làm",
+  blocked: "Có vướng mắc",
+  waiting: "Chờ nhận việc",
+  pending_review: "Chờ duyệt",
+  rejected: "Trả lại",
+  done: "Hoàn thành",
+  cancelled: "Đã hủy",
+});
+
+export const journalismCalendarStatusLabels = Object.freeze({
+  unplanned: journalismLabels.unplanned,
+  overdue: journalismLabels.overdue,
+  scheduled: journalismLabels.scheduled,
+  published: journalismLabels.published,
+  withdrawn: journalismLabels.withdrawn,
+});
+
+export const journalismPublicationStatusLabel = (status) => PUBLICATION_STATUS_LABELS[status] ?? "Không rõ trạng thái";
 
 export const formatJournalismDate = (value) => {
   if (!value) return "—";

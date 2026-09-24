@@ -9,6 +9,7 @@ import WorkScheduleSummary from "@/components/WorkScheduleSummary";
 import JournalismSummary from "@/components/JournalismSummary";
 import { useAuth } from "@/lib/auth";
 import { countTaskListFilters, taskListHref } from "@/lib/taskFilters.mjs";
+import { journalismLabels, journalismPublicationStatusLabel } from "@/lib/journalismUi.mjs";
 import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
 import type { TaskCenterView } from "@/lib/taskCenterView";
 import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
@@ -99,11 +100,11 @@ function FilterFields({ query, departments, journalismWorkKinds, journalismTopic
             <option value="">Loại nghiệp vụ · Tất cả</option>
             {journalismWorkKinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.name}{kind.is_active ? "" : " (Ngừng sử dụng)"}</option>)}
           </select></label>
-          <label className="grid gap-1 text-xs font-semibold text-slate-600">Chủ đề<select name="topicId" defaultValue={query.topicId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal"><option value="">Chủ đề · Tất cả</option>{journalismTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}{topic.is_active ? "" : " (Ngừng sử dụng)"}</option>)}</select></label>
-          <label className="grid gap-1 text-xs font-semibold text-slate-600">Loạt bài<select name="seriesId" defaultValue={query.seriesId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal"><option value="">Loạt bài · Tất cả</option>{journalismSeries.map((series) => <option key={series.id} value={series.id}>{series.name}{series.is_active ? "" : " (Ngừng sử dụng)"}</option>)}</select></label>
+          <label className="grid gap-1 text-xs font-semibold text-slate-600">{journalismLabels.topic}<select name="topicId" defaultValue={query.topicId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal"><option value="">Chủ đề · Tất cả</option>{journalismTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}{topic.is_active ? "" : " (Ngừng sử dụng)"}</option>)}</select></label>
+          <label className="grid gap-1 text-xs font-semibold text-slate-600">{journalismLabels.series}<select name="seriesId" defaultValue={query.seriesId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal"><option value="">Loạt bài · Tất cả</option>{journalismSeries.map((series) => <option key={series.id} value={series.id}>{series.name}{series.is_active ? "" : " (Ngừng sử dụng)"}</option>)}</select></label>
           <label className="grid gap-1 text-xs font-semibold text-slate-600">Trạng thái xuất bản<select name="publicationStatus" defaultValue={query.publicationStatus ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal">
             <option value="">Trạng thái xuất bản · Tất cả</option>
-            <option value="not_published">Chưa xuất bản</option><option value="scheduled">Đã lên lịch</option><option value="published">Đã xuất bản</option><option value="withdrawn">Đã gỡ</option>
+            <option value="not_published">{journalismPublicationStatusLabel("not_published")}</option><option value="scheduled">{journalismPublicationStatusLabel("scheduled")}</option><option value="published">{journalismPublicationStatusLabel("published")}</option><option value="withdrawn">{journalismPublicationStatusLabel("withdrawn")}</option>
           </select></label>
           <label className="grid gap-1 text-xs font-semibold text-slate-600">Dự kiến xuất bản từ<input name="plannedFrom" type="date" defaultValue={query.plannedPublicationFrom ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 text-sm font-normal" /></label>
           <label className="grid gap-1 text-xs font-semibold text-slate-600">Dự kiến xuất bản đến<input name="plannedTo" type="date" defaultValue={query.plannedPublicationTo ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 text-sm font-normal" /></label>
@@ -143,7 +144,7 @@ export default function TaskCenterShell(props: Props) {
               <div><h1 className="text-2xl font-bold sm:text-3xl">{heading}</h1></div>
               {!taskMode ? <Link href="/tasks/personal/new" className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">+ Tạo công việc</Link> : null}
             </div>
-            <nav aria-label="Task Center" className="mt-4 flex flex-wrap gap-2">
+            <nav aria-label="Bảng công việc" className="mt-4 flex flex-wrap gap-2">
             </nav>
           </header>
 

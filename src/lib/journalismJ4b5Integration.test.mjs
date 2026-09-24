@@ -62,7 +62,7 @@ test("J4B-5 preserves payload allowlists, URL safety, CMS semantics, and no clie
   assert.match(publication, /status: "withdrawn", reason/);
   assert.match(detail, /target="_blank"/);
   assert.match(detail, /rel="noreferrer"/);
-  assert.match(controls, /không thao tác trực tiếp trên CMS/);
+  assert.match(controls, /không thao tác trực tiếp trên hệ thống xuất bản bên ngoài/);
   assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|service_role|dangerouslySetInnerHTML|createClient|\.rpc\(/);
 });
 

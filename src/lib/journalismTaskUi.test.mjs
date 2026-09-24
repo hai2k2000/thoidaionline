@@ -9,7 +9,7 @@ test("Task list renders Journalism summary only when Journalism data exists", ()
   const summary = read("../components/JournalismSummary.tsx");
   assert.match(shell, /task\.journalism \? <JournalismSummary journalism=\{task\.journalism\}/);
   assert.match(summary, /Nghiệp vụ báo chí/);
-  assert.match(summary, /Dự kiến xuất bản/);
+  assert.match(summary, /journalismLabels.plannedPublicationDate/);
   assert.doesNotMatch(summary, /Chỉnh sửa thông tin|Lên lịch xuất bản|Đánh dấu đã xuất bản|Gỡ bài/);
 });
 

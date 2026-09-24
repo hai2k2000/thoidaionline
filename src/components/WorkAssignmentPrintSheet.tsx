@@ -1,5 +1,6 @@
 import type { TaskDetailDto } from "@/lib/taskContracts";
 import { buildWorkAssignmentPrintModel } from "@/lib/taskPrintModel";
+import { journalismLabels } from "@/lib/journalismUi.mjs";
 import PrintActions from "./PrintActions";
 
 const displayDate = (value: string) => {
@@ -51,10 +52,10 @@ export default function WorkAssignmentPrintSheet({ task, userLabel }: { task: Ta
       {model.journalism ? <section className="print-section mt-5">
         <h2>Thông tin nghiệp vụ báo chí</h2>
         <dl className="print-grid mt-3">
-          <Field label="Chủ đề" value={model.journalism.topics.join(", ") || "—"} />
-          <Field label="Loạt bài" value={model.journalism.series} />
-          <Field label="Dự kiến xuất bản" value={displayDate(model.journalism.plannedPublicationDate)} />
-          <Field label="Trạng thái xuất bản" value={model.journalism.publicationStatus} />
+          <Field label={journalismLabels.topic} value={model.journalism.topics.join(", ") || "—"} />
+          <Field label={journalismLabels.series} value={model.journalism.series} />
+          <Field label="Ngày dự kiến xuất bản" value={displayDate(model.journalism.plannedPublicationDate)} />
+          <Field label={journalismLabels.publicationStatus} value={model.journalism.publicationStatus} />
         </dl>
       </section> : null}
 
