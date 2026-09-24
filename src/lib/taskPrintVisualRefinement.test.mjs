@@ -52,4 +52,6 @@ test("print CSS prioritizes content and keeps signatures compact", () => {
   assert.doesNotMatch(css, /\.signature-grid\s*\{\s*margin-top:\s*14mm/);
   assert.match(css, /@media print[\s\S]*\.print-box[\s\S]*padding:\s*0\.35rem/);
   assert.doesNotMatch(css, /min-height:\s*18mm/);
+  assert.match(css, /@media print[\s\S]*\.print-section-frame,[\s\S]*overflow:\s*visible/);
+  assert.match(css, /overflow-wrap:\s*anywhere/);
 });

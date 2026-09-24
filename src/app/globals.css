@@ -483,6 +483,12 @@ main section > h3 {
     -webkit-print-color-adjust: exact;
   }
 
+  .print-section-frame,
+  .signature-panel {
+    margin-top: 3mm !important;
+    overflow: visible;
+  }
+
   .print-section {
     margin-top: 5mm;
   }
@@ -557,6 +563,10 @@ main section > h3 {
   .print-content-grid {
     gap: 0.45rem;
     padding: 0.45rem 0.5rem 0.55rem;
+  }
+
+  .print-content-grid .print-box {
+    min-height: 0;
   }
 
   .journalism-print-details {
