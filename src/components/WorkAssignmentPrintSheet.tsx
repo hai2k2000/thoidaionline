@@ -43,8 +43,9 @@ export default function WorkAssignmentPrintSheet({ task }: { task: TaskDetailDto
           <Field label="Ngày giao" value={formatPrintDate(model.assignedDate)} icon={<CalendarIcon />} />
           <Field label="Hạn hoàn thành" value={formatPrintDate(model.deadline)} icon={<CalendarIcon />} />
         </dl>
-        <dl className="print-info-people">
-          <Field label="Người giao việc" value={model.assigner} icon={<UserIcon />} />
+        <dl className="print-info-people" aria-label="Người giao việc">
+          <Field label="Hình thức" value={model.assignmentSourceLabel} icon={<FileIcon />} />
+          <Field label={model.assignerLabel} value={model.assigner} icon={<UserIcon />} />
           <Field label="Người nhận việc" value={model.primaryAssignee} icon={<UserIcon />} />
           <div className="print-box"><dt><span className="print-field-label"><GroupIcon />Người phối hợp (nếu có)</span></dt><dd>{model.collaborators.join(", ") || "—"}</dd></div>
         </dl>
@@ -72,7 +73,7 @@ export default function WorkAssignmentPrintSheet({ task }: { task: TaskDetailDto
       <section data-section="confirmation" className="signature-panel mt-8">
         <SectionHeading number="3">XÁC NHẬN</SectionHeading>
         <div className="signature-grid mt-4">
-          <div><h2>NGƯỜI GIAO VIỆC</h2><p>(Ký, ghi rõ họ tên)</p><div className="signature-space" /><strong>{model.assigner}</strong></div>
+          <div><h2>{model.assignerLabel.toUpperCase()}</h2><p>(Ký, ghi rõ họ tên)</p><div className="signature-space" /><strong>{model.assigner}</strong></div>
           <div><h2>NGƯỜI NHẬN VIỆC</h2><p>(Ký, ghi rõ họ tên)</p><div className="signature-space" /><strong>{model.primaryAssignee}</strong></div>
           <div><h2>NGƯỜI PHỐI HỢP</h2><p>(Ký, ghi rõ họ tên)</p><div className="signature-space" /><strong>{model.collaborators.join(", ") || "—"}</strong></div>
         </div>

@@ -11,6 +11,12 @@ test("Task Center counts each active filter once", () => {
   assert.equal(countTaskListFilters(parseTaskListSearchParams(new URLSearchParams())), 0);
 });
 
+test("Task Center assignment source filter round-trips through canonical URL state", () => {
+  const parsed = parseTaskListSearchParams(new URLSearchParams("assignmentSource=self_registered"));
+  assert.equal(parsed.assignmentSource, "self_registered");
+  assert.match(taskListHref(parsed, {}), /assignmentSource=self_registered/);
+});
+
 test("Task Center filters round-trip through canonical URL state", () => {
   const params = new URLSearchParams({
     q: "  Báo cáo  ",

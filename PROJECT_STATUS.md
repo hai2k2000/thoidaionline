@@ -75,3 +75,27 @@ Blockers:
 
 Next:
 - Owner review and separately authorized production deployment.
+
+# Task Assignment Semantics Status
+
+Current Phase: implementation complete; pre-production validation
+Current Task: structured assignment origin, semantic display, and non-deployed artifact
+
+Completed:
+- Added additive `assignment_source` with controlled values `leadership_assigned`, `self_registered`, and `legacy_unknown`.
+- Added approval actor fields populated from existing task status events; creator data remains unchanged.
+- Updated Task Summary, Task Detail, approval queues, and Work Assignment Print to distinguish self-registered work and leadership assignment.
+- Added source filter and blocked employee completion actions while `pending_review`.
+- Added migration, focused tests, and artifact metadata references without applying production changes.
+
+Validation:
+- Targeted task/approval/print/filter tests: PASS.
+- Journalism, Event Assignment, Personal Plan, Online Work, Attendance regressions: PASS.
+- TypeScript, canonical baseline, route manifest, and production-like build: PASS.
+- Touched-file lint: 0 errors; existing Task Detail warnings remain.
+
+Blockers:
+- No implementation blocker; production migration/deploy intentionally not performed.
+
+Next:
+- Commit/push source and create the non-deployed standalone artifact for owner review.

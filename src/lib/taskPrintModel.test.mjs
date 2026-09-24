@@ -96,3 +96,24 @@ test("print mapping adds current Journalism metadata without MasterCMS fields", 
   assert.equal(result.notes, "Ưu tiên ảnh ngang.");
   assert.equal(Object.hasOwn(result.journalism, "cms"), false);
 });
+
+
+test("print mapping separates self-registered origin and approval actor", () => {
+  const result = printModule.buildWorkAssignmentPrintModel({
+    ...baseTask,
+    status: "waiting",
+    assignment_source: "self_registered",
+    assignment_approver: { full_name: "Trưởng phòng" },
+  });
+  assert.equal(result.assignmentSourceLabel, "Tự đăng ký");
+  assert.equal(result.assignerLabel, "Người giao việc");
+  assert.equal(result.assigner, "—");
+  const approved = printModule.buildWorkAssignmentPrintModel({
+    ...baseTask,
+    status: "in_progress",
+    assignment_source: "self_registered",
+    assignment_approver: { full_name: "Trưởng phòng" },
+  });
+  assert.equal(approved.assignerLabel, "Người duyệt giao việc");
+  assert.equal(approved.assigner, "Trưởng phòng");
+});

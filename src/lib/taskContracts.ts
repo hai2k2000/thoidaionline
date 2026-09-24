@@ -2,6 +2,7 @@ import type { AuthorizationActor, TaskAccessSnapshot } from "./authorization";
 import type { CanonicalTaskStatus, CanonicalTaskType } from "./taskCompatibility";
 
 export type AssignmentRole = "owner" | "assignee" | "watcher";
+export type AssignmentSource = "leadership_assigned" | "self_registered" | "legacy_unknown";
 
 export type JournalismPublicationStatus =
   | "not_published"
@@ -102,6 +103,10 @@ export type TaskListItemDto = {
   created_at: string;
   status: CanonicalTaskStatus;
   approval_required: boolean;
+  assignment_source?: AssignmentSource;
+  assignment_approved_by?: string | null;
+  assignment_approved_at?: string | null;
+  assignment_approver?: { full_name: string | null } | null;
   task_type: CanonicalTaskType | null;
   task_category: "regular" | "duty";
   duty_month: string | null;
@@ -216,6 +221,7 @@ export type TaskListQuery = {
   departmentId: string | null;
   journalism?: "only" | "exclude" | null;
   approvalQueue?: "assignment" | "completion" | null;
+  assignmentSource?: AssignmentSource | null;
   journalismWorkKindId?: string | null;
   publicationStatus?: JournalismPublicationStatus | null;
   plannedPublicationFrom?: string | null;

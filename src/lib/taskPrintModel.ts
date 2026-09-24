@@ -5,6 +5,8 @@ export type WorkAssignmentPrintModel = {
   assignedDate: string;
   taskType: string;
   department: string;
+  assignmentSourceLabel: string;
+  assignerLabel: string;
   assigner: string;
   primaryAssignee: string;
   collaborators: string[];
@@ -97,12 +99,19 @@ export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignme
     publicationStatus: publicationStatusLabels[task.journalism.publication_status] ?? task.journalism.publication_status,
   } : null;
 
+  const source = task.assignment_source ?? "legacy_unknown";
+  const selfRegisteredApproved = source === "self_registered" && ["in_progress", "pending_review", "done"].includes(task.status);
+  const assignmentSourceLabel = source === "self_registered" ? "Tự đăng ký" : source === "leadership_assigned" ? "Lãnh đạo giao" : "Không xác định (dữ liệu cũ)";
+  const assignerLabel = source === "self_registered" && selfRegisteredApproved ? "Người duyệt giao việc" : "Người giao việc";
+  const assigner = source === "self_registered" ? (selfRegisteredApproved ? task.assignment_approver?.full_name?.trim() || "—" : "—") : (task.created_by_user?.full_name ?? "—");
   return {
     id: task.id,
     assignedDate: task.created_at,
     taskType: taskTypeLabel(task),
     department: departmentDisplayName(task),
-    assigner: task.created_by_user?.full_name ?? "—",
+    assignmentSourceLabel,
+    assignerLabel,
+    assigner,
     primaryAssignee: participantName(primaryRow) || task.owner?.full_name?.trim() || "—",
     collaborators,
     title: task.title,

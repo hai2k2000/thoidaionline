@@ -38,6 +38,9 @@ const TASK_BASE_FIELDS = [
   "created_at",
   "status",
   "approval_required",
+  "assignment_source",
+  "assignment_approved_by",
+  "assignment_approved_at",
   "task_type",
   "task_category",
   "duty_month",
@@ -63,6 +66,7 @@ const TASK_BASE_FIELDS = [
   "departments(name)",
   "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
   "created_by_user:staff_users!tasks_created_by_fkey(full_name)",
+  "assignment_approver:staff_users!tasks_assignment_approved_by_fkey(full_name)",
   "completion_score:task_completion_scores(requirement_score,collaboration_score,initiative_score,total_score,note)",
 ];
 
@@ -472,6 +476,7 @@ export const taskRepository: TaskRepository = {
       dbQuery = dbQuery.neq("status", "cancelled");
     }
     if (query.status) dbQuery = dbQuery.eq("status", query.status);
+    if (query.assignmentSource) dbQuery = dbQuery.eq("assignment_source", query.assignmentSource);
     if (query.statusGroup === "completed") dbQuery = dbQuery.eq("status", "done");
     if (query.statusGroup === "returned") dbQuery = dbQuery.eq("status", "rejected");
     if (query.statusGroup === "cancelled") dbQuery = dbQuery.eq("status", "cancelled");
