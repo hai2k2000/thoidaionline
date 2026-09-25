@@ -314,6 +314,9 @@ const enrichApprovalWorkflowContext = async (
 };
 
 const ok = <T>(data: T): RepositoryResult<T> => ({ ok: true, data });
+export const isTaskListRangeExhausted = (error: { code?: string | null } | null | undefined) =>
+  error?.code === "PGRST103";
+
 const fail = <T>(error: { code?: string | null }): RepositoryResult<T> => ({
   ok: false,
   error: { code: error.code ?? null },
@@ -538,6 +541,9 @@ export const taskRepository: TaskRepository = {
     const from = (query.page - 1) * query.pageSize;
     const to = from + query.pageSize - 1;
     const { data, error, count } = await dbQuery.range(from, to);
+    if (isTaskListRangeExhausted(error)) {
+      return ok({ items: [], total: count ?? 0, page: query.page, pageSize: query.pageSize });
+    }
     if (error) return fail(error);
     const normalizedItems = ((data ?? []) as unknown as TaskListItemDto[]).map((item) => {
         const normalized = withJournalismList(item);
