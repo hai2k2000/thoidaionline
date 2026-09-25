@@ -4,7 +4,7 @@ const baseUrl = process.env.SMOKE_BASE_URL.replace(/\/$/, "");
 const credentials = JSON.parse(readFileSync(process.env.SMOKE_CREDENTIAL_FILE, "utf8"));
 const roles = [
   ["employee/reporter", credentials.employee_reporter, true, false],
-  ["truong_phong", credentials.truong_phong, true, true],
+  ["truong_phong", credentials.truong_phong, false, true],
   ["global_editorial", credentials.global_editorial, true, true],
   ["non_editorial", credentials.non_editorial, false, false],
 ];
