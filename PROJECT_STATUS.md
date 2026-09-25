@@ -125,3 +125,37 @@ Blockers:
 
 Next:
 - Commit/push implementation branch, merge into integration/production, run baseline/route/lint/build and package verification.
+
+# Release Regression Hardening Result
+
+Current Phase: COMPLETE; no production deployment requested
+Current Task: closed
+
+Implemented:
+- Dynamic current-production ancestry guard and mandatory `integration/production` release source.
+- Authenticated API contract inventory with valid empty-list response-shape checks.
+- Read-only database schema, migration-state, and PostgREST visibility guards.
+- Artifact provenance equality fields and standalone verification.
+- Disk guard, deploy lock, atomic activation, cache ownership guard, and application-only rollback helper.
+- Journalism topics/series authenticated GET list routes using the existing repository and scope checks.
+
+Validation:
+- Hardening focused tests: 17/17 PASS.
+- TypeScript: PASS.
+- ESLint: PASS.
+- Required-route manifest: PASS.
+- Production build with production env: PASS.
+- Standalone artifact verification: PASS; `/opt/build/thoidai-work/release-regression-hardening-final2` (~81MB).
+- Canary `/login`: HTTP 200; unauthenticated protected APIs correctly return 401.
+
+Evidence:
+- Current production commit: `e72e4969a0fd20f176bb906f4f2203d58f30a74e`.
+- Canonical integration branch: `integration/production` at `77b08a0`.
+- Confirmed current runtime issue: `.next/cache` is `root:root`, causing service-user EACCES on image cache writes; activation guard now fails closed and provisions service ownership for new releases.
+
+Blockers:
+- No smoke account credentials were created or exposed, so authenticated live contract smoke remains not-run.
+- Production unchanged.
+
+Follow Up:
+- Owner may separately authorize a controlled deployment and service-cache ownership normalization.
