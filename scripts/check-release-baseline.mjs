@@ -11,7 +11,7 @@ const readFileValue = (file, key) => {
 const git = (args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 const hasGit = existsSync(".git");
 let candidateCommit = "";
-let currentProductionCommit = readValue("THOIDAI_CURRENT_PRODUCTION_COMMIT", readFileValue("CURRENT_PRODUCTION_COMMIT", "commit") || legacyBaseline);
+let currentProductionCommit = readValue("THOIDAI_CURRENT_PRODUCTION_COMMIT", readFileValue("CURRENT_PRODUCTION_COMMIT", "commit") || readFileValue("/opt/releases/thoidai-work/current/.release-meta", "commit") || legacyBaseline);
 let integrationCommit = "";
 let candidateBranch = "";
 let candidateDescendsFromProduction = false;
@@ -57,5 +57,6 @@ try {
   console.error("release lineage check failed: " + error.message);
   process.exit(1);
 }
+
 
 
