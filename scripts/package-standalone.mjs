@@ -12,6 +12,10 @@ const baselineText = await readFile(join(root, "scripts/check-release-baseline.m
 const canonicalBaseline = baselineText.match(/canonicalBaseline = "([^"]+)"/)?.[1];
 const output = resolve(process.env.STANDALONE_ARTIFACT_DIR || join(root, ".artifacts", "standalone", `${buildId}-${Date.now()}`));
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+const remoteHead = execFileSync("git", ["rev-parse", "@{u}"], { cwd: root, encoding: "utf8" }).trim();
+const integrationBranch = process.env.THOIDAI_INTEGRATION_BRANCH || "integration/production";
+const integrationBaseline = execFileSync("git", ["rev-parse", integrationBranch], { cwd: root, encoding: "utf8" }).trim();
+const currentProductionParent = process.env.THOIDAI_CURRENT_PRODUCTION_COMMIT || "e72e4969a0fd20f176bb906f4f2203d58f30a74e";
 
 if (!existsSync(standalone)) throw new Error("Next standalone output is missing; run next build first.");
 if (!canonicalBaseline) throw new Error("canonical baseline is missing from check-release-baseline.mjs");
@@ -47,6 +51,13 @@ const artifactBytes = execFileSync("du", ["-sb", output], { encoding: "utf8" }).
 await writeFile(join(output, ".release-meta"), [
   `release_id=${buildId}-standalone`,
   `commit=${commit}`,
+  `local_head=${commit}`,
+  `remote_head=${remoteHead}`,
+  `artifact_source_commit=${commit}`,
+  `metadata_commit=${commit}`,
+  `current_production_parent=${currentProductionParent}`,
+  `integration_branch=${integrationBranch}`,
+  `integration_baseline=${integrationBaseline}`,
   `created_at=${new Date().toISOString()}`,
   "artifact_type=next-standalone",
   `canonical_baseline=${canonicalBaseline}`,
@@ -54,6 +65,7 @@ await writeFile(join(output, ".release-meta"), [
   "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql",
   "env_model=symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production",
   "build_verification=production-like-env-build-pass",
+  `contract_suite=${process.env.THOIDAI_CONTRACT_SUITE_RESULT || "pending"}`,
   "protection=managed",
   "rollback_eligible=yes",
   "health_status=pending",
