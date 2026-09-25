@@ -2,7 +2,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { assertReleaseLineage, parseReleaseLineage } from "./release-lineage.mjs";
 
-const legacyBaseline = "e501652e969900b97938acccd8f998df4e5d1873";`r`nconst canonicalBaseline = legacyBaseline;
+const legacyBaseline = "e501652e969900b97938acccd8f998df4e5d1873";
+const canonicalBaseline = legacyBaseline;
 const readValue = (name, fallback = "") => process.env[name] || fallback;
 const readFileValue = (file, key) => {
   if (!existsSync(file)) return "";
@@ -57,6 +58,7 @@ try {
   console.error("release lineage check failed: " + error.message);
   process.exit(1);
 }
+
 
 
 
