@@ -18,6 +18,19 @@ new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 cp -a -- "$artifact" "$new_release"
 install -d -o "${THOIDAI_SERVICE_USER:-thoidai-work}" -g "${THOIDAI_SERVICE_GROUP:-thoidai-work}" -m 0750 -- "$new_release/.next/cache"
 chown "${THOIDAI_SERVICE_USER:-thoidai-work}:${THOIDAI_SERVICE_GROUP:-thoidai-work}" -- "$new_release/.next/cache"
+current_target=$(readlink -f -- "$release_root/current")
+[[ "$current_target" == "$release_root"/* && -d "$current_target" ]] || { echo "current release target invalid" >&2; exit 1; }
+rollback_1_target=$(readlink -f -- "$release_root/rollback-1" 2>/dev/null || true)
+previous_target=$(readlink -f -- "$release_root/previous" 2>/dev/null || true)
+[[ -n "$rollback_1_target" ]] || rollback_1_target=$previous_target
+rollback_2_target=$(readlink -f -- "$release_root/rollback-2" 2>/dev/null || true)
+[[ -n "$rollback_2_target" ]] || rollback_2_target=$rollback_1_target
+ln -sfn -- "$rollback_1_target" "$release_root/rollback-2.new"
+mv -Tf -- "$release_root/rollback-2.new" "$release_root/rollback-2"
+ln -sfn -- "$current_target" "$release_root/rollback-1.new"
+mv -Tf -- "$release_root/rollback-1.new" "$release_root/rollback-1"
+ln -sfn -- "$current_target" "$release_root/previous.new"
+mv -Tf -- "$release_root/previous.new" "$release_root/previous"
 ln -s -- "$new_release" "$release_root/current.new"
 mv -Tf -- "$release_root/current.new" "$release_root/current"
 systemctl restart "${THOIDAI_SERVICE:-thoidai-work.service}"
