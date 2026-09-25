@@ -8,6 +8,7 @@ assert.equal(readFileSync(join(root, "RELEASE_BASELINE_COMMIT"), "utf8").trim(),
 assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().split("\n"), [
   "supabase/migrations/20260924120000_task_approval_gates.sql",
   "supabase/migrations/20260924130000_task_assignment_semantics.sql",
+  "supabase/migrations/20260925100000_journalism_self_registration.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);
@@ -16,6 +17,6 @@ assert.match(releaseMeta, /env_model=symlink:/);
 for (const field of ["local_head=", "remote_head=", "artifact_source_commit=", "metadata_commit=", "current_production_parent=", "integration_branch=", "integration_baseline=", "contract_suite="]) assert.match(releaseMeta, new RegExp(`^${field}[^\\n]+`, "m"));
 const routes = JSON.parse(readFileSync(join(root, "required-route-manifest.json"), "utf8"));
 const appPaths = JSON.parse(readFileSync(join(root, ".next/server/app-paths-manifest.json"), "utf8"));
-for (const { routePath } of routes) assert.ok(Object.hasOwn(appPaths, `${routePath}/route`), `missing artifact route: ${routePath}`);
+for (const { routePath, sourcePath } of routes) assert.ok(Object.hasOwn(appPaths, `${routePath}/${sourcePath?.endsWith("/route.ts") ? "route" : "page"}`), `missing artifact route: ${routePath}`);
 for (const name of [".env.local", ".env.production"]) { const path = join(root, name); assert.ok(lstatSync(path).isSymbolicLink(), `${name} must remain a symlink`); assert.ok(readlinkSync(path), `${name} symlink target is empty`); }
 console.log("standalone-artifact: PASS");
