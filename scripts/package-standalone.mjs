@@ -9,7 +9,7 @@ const build = join(root, ".next");
 const standalone = join(build, "standalone");
 const buildId = (await readFile(join(build, "BUILD_ID"), "utf8")).trim();
 const baselineText = await readFile(join(root, "scripts/check-release-baseline.mjs"), "utf8");
-const canonicalBaseline = baselineText.match(/canonicalBaseline = "([^"]+)"/)?.[1];
+const canonicalBaseline = baselineText.match(/legacyBaseline = "([^"]+)"/)?.[1] || baselineText.match(/canonicalBaseline = "([^"]+)"/)?.[1];
 const output = resolve(process.env.STANDALONE_ARTIFACT_DIR || join(root, ".artifacts", "standalone", `${buildId}-${Date.now()}`));
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
 const remoteHead = execFileSync("git", ["rev-parse", "@{u}"], { cwd: root, encoding: "utf8" }).trim();
