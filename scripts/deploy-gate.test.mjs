@@ -8,3 +8,8 @@ test("deploy gate has disk guard, lock, atomic activation, and post-health rollb
 });
 
 
+
+test("deploy gate exposes browser-path and proxy-buffer gates", () => {
+  assert.ok(source.includes("browser-path-smoke.mjs"), "browser-path smoke gate missing");
+  assert.ok(source.includes("nginx-supa-buffer-guard.sh"), "Supabase proxy buffer guard missing");
+});

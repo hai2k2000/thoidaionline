@@ -12,6 +12,7 @@ if (( free_kb < hard_min_free_kb || free_kb - estimated_headroom_kb < hard_min_f
 fi
 exec 9>"$lock_file"
 flock -n 9 || { echo "DEPLOY ABORTED: deploy lock unavailable" >&2; exit 1; }
+"$(dirname "$0")/nginx-supa-buffer-guard.sh"
 if [[ "${THOIDAI_CANARY_ONLY:-0}" == 1 ]]; then echo "canary gate: PASS"; exit 0; fi
 new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 [[ ! -e "$new_release" && ! -L "$new_release" ]] || { echo "release target already exists" >&2; exit 1; }
@@ -27,5 +28,6 @@ if ! systemctl is-active --quiet "${THOIDAI_SERVICE:-thoidai-work.service}" || !
 fi
 if [[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]]; then
   node scripts/contract-smoke.mjs || { "$(dirname "$0")/rollback-application.sh"; exit 1; }
+  node scripts/production/browser-path-smoke.mjs || { "$(dirname "$0")/rollback-application.sh"; exit 1; }
 fi
 echo "deploy-gate: PASS ($new_release)"
