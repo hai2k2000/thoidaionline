@@ -653,7 +653,8 @@ export function createTaskApplication(deps: Dependencies) {
       }
       const title = cleanText(body?.title, 500);
       const requirements = Array.isArray(body?.requirements) ? body.requirements.map((value) => cleanText(value, 2000)).filter(Boolean) : [];
-      const description = requirements.map((value) => `- ${value}`).join("\n");
+      const explicitDescription = cleanText(body?.description, 10000);
+      const description = explicitDescription || requirements.map((value) => `- ${value}`).join("\n");
       const departmentId = deps.asUuid(body?.departmentId);
       const assigneeId = deps.asUuid(body?.assigneeId);
       const reviewerId = actor.id;

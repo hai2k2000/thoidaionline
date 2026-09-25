@@ -9,6 +9,7 @@ import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVietnamPlannedPublication, validateJournalismCreateFields } from "@/lib/journalismCreateUi.mjs";
 import { journalismLabels } from "@/lib/journalismUi.mjs";
+import { addTaskCard, buildBatchPayload, createTaskCard, MAX_TASK_CARDS, removeTaskCard, validateTaskCards } from "@/lib/taskAssignmentCards.mjs";
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
@@ -38,6 +39,10 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   const [watcherIds, setWatcherIds] = useState<string[]>([]);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState("");
   const [requirements, setRequirements] = useState([""]);
+  const [taskCards, setTaskCards] = useState<AssignmentCardState[]>(() => [createTaskCard("card-1") as AssignmentCardState]);
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const [cardErrors, setCardErrors] = useState<Record<number, Record<string, string>>>({});
+  const cardTitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [busy, setBusy] = useState(false);
   const submittingRef = useRef(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +61,33 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   const recipientReady = journalismSelfCreate || Boolean(assigneeId && selectedDepartment);
   const canChooseOtherDepartment = Boolean(assignmentScope && assignmentScope.canChooseOtherDepartment);
 
+  const updateTaskCard = (index: number, patch: Record<string, unknown>) => {
+    setTaskCards((current) => current.map((card, cardIndex) => cardIndex === index ? { ...card, ...patch } : card));
+    setBatchId(null);
+    setCardErrors((current) => {
+      const next = { ...current };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const addTask = () => {
+    const cardId = `card-${Date.now()}-${taskCards.length + 1}`;
+    setTaskCards((current) => addTaskCard(current, cardId));
+    setBatchId(null);
+    focusCardTitle(cardId);
+  };
+
+  const removeTask = (index: number) => {
+    setTaskCards((current) => removeTaskCard(current, index));
+    setBatchId(null);
+    setCardErrors({});
+  };
+
+  const focusCardTitle = (cardId: string) => {
+    window.requestAnimationFrame(() => cardTitleRefs.current[cardId]?.focus());
+  };
+
   useEffect(() => {
     if (!journalismMode && recipientReady && formActivated) titleInputRef.current?.focus();
   }, [formActivated, journalismMode, recipientReady]);
@@ -69,6 +101,8 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     setWatcherIds([]);
     setChoosingOtherDepartment(false);
     setFormActivated(true);
+    setBatchId(null);
+    focusCardTitle(taskCards[0]?.cardId ?? "");
   };
 
   const changeRecipient = () => {
@@ -79,10 +113,74 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     setDepartmentId(assignmentScope?.departmentId ?? "");
     setChoosingOtherDepartment(false);
     setFormActivated(false);
+    setBatchId(null);
+  };
+
+  const submitGeneral = async () => {
+    if (!recipientReady || !departmentId || !assigneeId) {
+      const text = "Vui lòng chọn người nhận việc trước.";
+      setMessage(text); notify("error", text); return;
+    }
+    const validation = validateTaskCards(taskCards);
+    if (validation.length) {
+      const first = validation[0];
+      setCardErrors({ [first.taskIndex]: { [first.field]: first.message } });
+      setMessage(first.message); notify("error", first.message);
+      window.requestAnimationFrame(() => cardTitleRefs.current[taskCards[first.taskIndex]?.cardId]?.focus());
+      return;
+    }
+    if (taskCards.length > 1 && taskCards.some((card) => card.attachment instanceof File && card.attachment.size > 0)) {
+      const text = "Tệp đính kèm cho nhiều việc sẽ được hỗ trợ ở bước tiếp theo. Hãy bỏ tệp hoặc giao từng việc riêng.";
+      setMessage(text); notify("error", text); return;
+    }
+    if (taskCards.length > 1 && assignmentMode === "department_group") {
+      const text = "Giao nhiều việc chưa hỗ trợ chế độ nhóm phòng ban. Hãy chọn Cá nhân hoặc giao từng việc riêng.";
+      setMessage(text); notify("error", text); return;
+    }
+    if (submittingRef.current) return;
+    submittingRef.current = true; setBusy(true); setMessage("");
+    const currentBatchId = taskCards.length > 1 ? (batchId ?? crypto.randomUUID()) : null;
+    if (currentBatchId) setBatchId(currentBatchId);
+    try {
+      const response = await fetch("/api/tasks/assign", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(taskCards.length > 1
+          ? buildBatchPayload({ batchId: currentBatchId, departmentId, assigneeId, cards: taskCards })
+          : {
+            title: taskCards[0].title.trim(), description: taskCards[0].description.trim(), requirements: taskCards[0].requirements.filter((item) => item.trim()),
+            departmentId, assigneeId, dueDate: taskCards[0].dueDate, dueTime: taskCards[0].dueTime, evaluationCriteria: null,
+            priority: taskCards[0].priority, collaboratorIds: taskCards[0].collaboratorIds, watcherIds: taskCards[0].watcherIds,
+            recurrenceFrequency: taskCards[0].recurrenceFrequency, recurrenceEndsOn: taskCards[0].recurrenceEndsOn,
+            reviewerId: assigneeId, groupDepartmentId: assignmentMode === "department_group" ? departmentId : null, excludedMemberIds: assignmentMode === "department_group" ? excludedMemberIds : [],
+          }),
+      });
+      if (!response.ok) {
+        if (response.status === 409 && currentBatchId) throw new Error("Batch ID đã được dùng cho dữ liệu khác. Không tự tạo mã mới; hãy kiểm tra lại phiên giao việc.");
+        throw new Error(await responseErrorMessage(response, "Không thể giao công việc."));
+      }
+      const result = await response.json() as { task?: { id: string }; tasks?: Array<{ id: string }>; count?: number };
+      const count = taskCards.length;
+      const attachment = taskCards[0].attachment;
+      let attachmentWarning = "";
+      if (count === 1 && attachment instanceof File && attachment.size > 0 && result.task?.id) {
+        const upload = new FormData(); upload.set("file", attachment);
+        const uploaded = await fetch(`/api/tasks/${result.task.id}/attachments`, { method: "POST", body: upload });
+        if (!uploaded.ok) attachmentWarning = await responseErrorMessage(uploaded, "Tệp đính kèm chưa tải lên được.");
+      }
+      const recipientName = selectedAssignee?.fullName ?? "người nhận việc";
+      notify(attachmentWarning ? "error" : "success", attachmentWarning || `Đã giao ${count} công việc cho ${recipientName}.`);
+      if (attachmentWarning) setMessage(attachmentWarning);
+      router.push(count === 1 && result.task?.id ? `/tasks/${result.task.id}` : "/tasks");
+      router.refresh();
+    } catch (error) {
+      const text = errorMessage(error, "Không thể giao công việc. Vui lòng thử lại."); setMessage(text); notify("error", text);
+    } finally { submittingRef.current = false; setBusy(false); }
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!journalismMode) { await submitGeneral(); return; }
     if (submittingRef.current) return;
     if (journalismMode && (!journalismDepartment || departmentId !== journalismDepartment.id)) {
       const text = "Công việc nghiệp vụ báo chí chỉ thuộc Phòng Nội dung."; setMessage(text); notify("error", text); return;
@@ -193,7 +291,7 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
           <input type="hidden" name="recipientReady" disabled={!recipientReady} value="true" readOnly />
           <fieldset disabled={!journalismMode && !recipientReady} className="contents disabled:opacity-60">
             <div className="grid gap-3 lg:col-span-2 lg:grid-cols-3">
-            <Field label="Tên công việc"><input ref={titleInputRef} name="title" required maxLength={500} className={controlClass} /></Field>
+            {journalismMode ? <Field label="Tên công việc"><input ref={titleInputRef} name="title" required maxLength={500} className={controlClass} /></Field> : <div className="lg:col-span-3"><p className="text-sm text-slate-600">Sau khi chọn người nhận, thêm từng việc trong các thẻ bên dưới.</p></div>}
                 {journalismMode ? <div className="grid gap-1 text-sm font-semibold"><span>Phòng ban</span><input type="hidden" name="departmentId" value={journalismDepartment?.id ?? ""} /><div className={`${controlClass} bg-slate-100`} aria-readonly="true">Phòng Nội dung</div></div> : <input type="hidden" name="departmentId" value={departmentId} />}
             {isEditorialBoard ? <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 lg:col-span-2">Ban Biên tập mặc định: Tổng biên tập là trưởng phòng; thành viên gồm Phó Tổng biên tập và các Trưởng phòng.</p> : null}
               <Field label="Cách chọn người"><select value={assignmentMode} disabled={journalismMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); setCollaboratorIds([]); }} className={controlClass}><option value="individual">Cá nhân</option>{!journalismMode ? <option value="department_group">Nhóm phòng ban</option> : null}</select>{journalismMode ? <span className="font-normal text-slate-500">Công việc nghiệp vụ báo chí dùng người thực hiện cá nhân; cộng tác viên và người theo dõi vẫn giữ nguyên.</span> : null}</Field>
@@ -203,19 +301,27 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
               ? `Theo dõi mặc định: ${managerLabel}. Hệ thống kiểm tra lại Trưởng phòng chính hiện hành khi lưu.`
               : "Phòng ban này chưa có Trưởng phòng chính; không thể giao việc."}
           </div> : null}
-          <Field label="Các yêu cầu" wide><div className="grid gap-2">{requirements.map((value, index) => <div key={index} className="flex gap-2"><input name="requirements" required value={value} onChange={(event) => setRequirements((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} maxLength={2000} placeholder={`Yêu cầu ${index + 1}`} className={controlClass} />{requirements.length > 1 ? <button type="button" onClick={() => setRequirements((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded border px-3 text-red-700">Xóa</button> : null}</div>)}<button type="button" onClick={() => setRequirements((current) => [...current, ""])} className="justify-self-start rounded border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-700">+ Thêm yêu cầu</button></div></Field>
+          {journalismMode ? <Field label="Các yêu cầu" wide><div className="grid gap-2">{requirements.map((value, index) => <div key={index} className="flex gap-2"><input name="requirements" required value={value} onChange={(event) => setRequirements((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} maxLength={2000} placeholder={`Yêu cầu ${index + 1}`} className={controlClass} />{requirements.length > 1 ? <button type="button" onClick={() => setRequirements((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded border px-3 text-red-700">Xóa</button> : null}</div>)}<button type="button" onClick={() => setRequirements((current) => [...current, ""])} className="justify-self-start rounded border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-700">+ Thêm yêu cầu</button></div></Field> : <section aria-label="Danh sách công việc" className="grid gap-3 lg:col-span-2">
+            {taskCards.map((card, index) => <TaskCardFields key={card.cardId} card={card} index={index} selectedAssigneeId={assigneeId} people={scopedPeople} errors={cardErrors[index] ?? {}} busy={busy} registerTitle={(element) => { cardTitleRefs.current[card.cardId] = element; }} onChange={(patch) => updateTaskCard(index, patch)} onRemove={() => removeTask(index)} allowRemove={taskCards.length > 1} />)}
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" onClick={addTask} disabled={busy || taskCards.length >= MAX_TASK_CARDS || assignmentMode === "department_group"} className="rounded-lg border border-orange-300 px-4 py-2 font-semibold text-orange-700 disabled:opacity-50">+ Thêm việc</button>
+              {assignmentMode === "department_group" ? <span className="text-sm text-slate-500">Chọn Cá nhân để thêm nhiều thẻ việc.</span> : null}
+              <span className="text-sm text-slate-500">{taskCards.length}/{MAX_TASK_CARDS} việc</span>
+              {taskCards.length >= MAX_TASK_CARDS ? <span className="text-sm font-medium text-amber-700">Đã đạt giới hạn 20 việc.</span> : null}
+            </div>
+          </section>}
+          {!journalismMode && assignmentMode === "department_group" && taskCards.length === 1 ? <Field label="Danh sách thành viên đang hoạt động" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed || busy} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên đang hoạt động.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field> : null}
           {journalismMode ? <section aria-label="Nghiệp vụ báo chí" className="grid gap-3 rounded-xl border border-orange-200 bg-orange-50/60 p-3 lg:col-span-2 lg:grid-cols-2"><div className="lg:col-span-2"><h2 className="font-bold text-orange-900">Nghiệp vụ báo chí</h2><p className="mt-1 text-sm text-orange-900">Trạng thái ban đầu: Chưa xuất bản</p></div><Field label="Loại nghiệp vụ *"><select name="workKindId" required disabled={!journalismWorkKindsLoaded || journalismWorkKinds.length === 0} defaultValue="" aria-invalid={Boolean(journalismErrors.workKindId)} aria-describedby={journalismErrors.workKindId ? "journalism-work-kind-error" : undefined} className={controlClass}><option value="">Chọn loại nghiệp vụ</option>{journalismWorkKinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.name}</option>)}</select>{journalismErrors.workKindId ? <span id="journalism-work-kind-error" role="alert" className="font-normal text-red-700">Trường này bắt buộc.</span> : null}{!journalismWorkKindsLoaded || journalismWorkKinds.length === 0 ? <span role="alert" className="font-normal text-red-700">Không thể tải danh sách loại nghiệp vụ.</span> : null}</Field><fieldset className="grid gap-1 text-sm font-semibold"><legend>{journalismLabels.plannedPublicationDate}</legend><div className="grid grid-cols-2 gap-2"><input name="plannedPublicationDate" type="date" aria-label="Ngày dự kiến xuất bản" className={controlClass} /><input name="plannedPublicationTime" type="time" aria-label="Giờ dự kiến xuất bản" step="60" className={controlClass} /></div>{journalismErrors.plannedPublicationAt ? <span role="alert" className="font-normal text-red-700">Nhập đủ ngày và giờ hợp lệ.</span> : null}</fieldset><Field label="Địa điểm"><input name="location" maxLength={500} aria-invalid={Boolean(journalismErrors.location)} aria-describedby={journalismErrors.location ? "journalism-location-error" : undefined} className={controlClass} />{journalismErrors.location ? <span id="journalism-location-error" role="alert" className="font-normal text-red-700">Tối đa 500 ký tự.</span> : null}</Field><Field label={journalismLabels.editorialNotes} wide><textarea name="editorialNotes" maxLength={10000} aria-invalid={Boolean(journalismErrors.editorialNotes)} aria-describedby={journalismErrors.editorialNotes ? "journalism-notes-error" : undefined} rows={4} className={controlClass} />{journalismErrors.editorialNotes ? <span id="journalism-notes-error" role="alert" className="font-normal text-red-700">Tối đa 10.000 ký tự.</span> : null}</Field></section> : null}
-          <div className="grid gap-3 lg:col-span-2 lg:grid-cols-4">
+          {journalismMode ? <div className="grid gap-3 lg:col-span-2 lg:grid-cols-4">
             {journalismSelfCreate ? <div className="grid gap-1 text-sm font-semibold"><span>Người thực hiện</span><input type="hidden" name="assigneeId" value={userId ?? ""} /><div className={`${controlClass} bg-slate-100`} aria-readonly="true">Tôi (tự đăng ký)</div><span className="font-normal text-slate-500">Công việc sẽ vào Chờ duyệt giao việc; không thể giao cho người khác.</span></div> : journalismMode ? <Field label="Người chịu trách nhiệm chính"><select name="assigneeId" required value={assigneeId} className={controlClass} onChange={(event) => { setAssigneeId(event.target.value); setExcludedMemberIds((current) => current.filter((id) => id !== event.target.value)); setCollaboratorIds((current) => current.filter((id) => id !== event.target.value)); setWatcherIds((current) => current.filter((id) => id !== event.target.value)); }}><option value="">Chọn người thực hiện</option>{scopedPeople.map(personOption)}</select></Field> : <div className="grid gap-1 text-sm font-semibold"><span>Người nhận việc</span><input type="hidden" name="assigneeId" value={assigneeId} /><div className={`${controlClass} bg-slate-100`} aria-readonly="true">{selectedAssignee?.fullName ?? "Chưa chọn"}</div></div>}
             <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 lg:flex lg:items-center">Người duyệt tự động là người giao việc.</p>
             <Field label="Hạn hoàn thành"><div className="grid grid-cols-[minmax(0,1fr)_100px] gap-2"><input name="dueDate" aria-label="Ngày hoàn thành" type="date" required className={controlClass} /><input name="dueTime" aria-label="Giờ hoàn thành" type="time" required defaultValue="17:00" step="60" className={controlClass} /></div></Field>
             {!journalismMode ? <Field label="Lặp lại"><select name="recurrenceFrequency" value={recurrenceFrequency} onChange={(e) => setRecurrenceFrequency(e.target.value)} className={controlClass}><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></Field> : null}
-          </div>
-          {!journalismMode ? (recurrenceFrequency ? <Field label="Ngày kết thúc lặp"><input name="recurrenceEndsOn" type="date" className={controlClass} /></Field> : <input name="recurrenceEndsOn" type="hidden" value="" />) : null}
-              {journalismSelfCreate ? null : assignmentMode === "individual" ? <Field label="Người phối hợp"><CheckGroup name="collaboratorIds" people={scopedPeople.filter((person) => person.id !== assigneeId)} selected={collaboratorIds} onChange={setCollaboratorIds} empty="Không còn người phù hợp trong phòng." /></Field> : <Field label="Danh sách thành viên đang hoạt động" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên đang hoạt động.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành khi lưu. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field>}
-          {!journalismSelfCreate ? <Field label="Người theo dõi bổ sung"><CheckGroup name="watcherIds" people={people.filter((person) => person.id !== assigneeId && !collaboratorIds.includes(person.id))} selected={watcherIds} onChange={setWatcherIds} empty="Không còn người phù hợp." /><span className="font-normal text-slate-500">Trưởng phòng chính được thêm tự động; lựa chọn trùng sẽ được gộp.</span></Field> : null}
-          <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className={controlClass} /></Field>
-          <div className="flex items-end"><button disabled={busy || !departmentId || !selectedDepartment?.managerId || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : "Giao việc"}</button></div>
+          </div> : null}
+          {journalismMode ? (journalismSelfCreate ? null : assignmentMode === "individual" ? <Field label="Người phối hợp"><CheckGroup name="collaboratorIds" people={scopedPeople.filter((person) => person.id !== assigneeId)} selected={collaboratorIds} onChange={setCollaboratorIds} empty="Không còn người phù hợp trong phòng." /></Field> : <Field label="Danh sách thành viên đang hoạt động" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên đang hoạt động.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành khi lưu. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field>) : null}
+          {journalismMode ? <>{!journalismSelfCreate ? <Field label="Người theo dõi bổ sung"><CheckGroup name="watcherIds" people={people.filter((person) => person.id !== assigneeId && !collaboratorIds.includes(person.id))} selected={watcherIds} onChange={setWatcherIds} empty="Không còn người phù hợp." /><span className="font-normal text-slate-500">Trưởng phòng chính được thêm tự động; lựa chọn trùng sẽ được gộp.</span></Field> : null}</> : null}
+          {journalismMode ? <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className={controlClass} /></Field> : null}
+          <div className="flex items-end"><button disabled={busy || !recipientReady || !departmentId || !selectedDepartment?.managerId || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"}</button></div>
           {message ? <p role="alert" className="text-sm text-red-700 lg:col-span-2">{message}</p> : null}
           </fieldset>
         </form>
@@ -234,4 +340,49 @@ function CheckGroup({ name, people, selected, onChange, empty }: {
   onChange: (ids: string[]) => void; empty: string;
 }) {
   return <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/40 p-1.5">{people.map((person) => <label key={person.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 font-normal hover:bg-orange-50"><input name={name} type="checkbox" value={person.id} checked={selected.includes(person.id)} onChange={(event) => onChange(event.target.checked ? [...new Set([...selected, person.id])] : selected.filter((id) => id !== person.id))} /><span>{person.fullName}</span></label>)}{people.length === 0 ? <p className="px-2 py-3 font-normal text-slate-500">{empty}</p> : null}</div>;
+}
+
+type AssignmentCardState = {
+  cardId: string;
+  title: string;
+  description: string;
+  requirements: string[];
+  dueDate: string;
+  dueTime: string;
+  collaboratorIds: string[];
+  watcherIds: string[];
+  priority: "low" | "normal" | "high" | "urgent";
+  recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
+  recurrenceEndsOn: string | null;
+  attachment: File | null;
+};
+
+function TaskCardFields({ card, index, selectedAssigneeId, people, errors, busy, registerTitle, onChange, onRemove, allowRemove }: {
+  card: AssignmentCardState;
+  index: number;
+  selectedAssigneeId: string;
+  people: AssignmentPerson[];
+  errors: Record<string, string>;
+  busy: boolean;
+  registerTitle: (element: HTMLInputElement | null) => void;
+  onChange: (patch: Partial<AssignmentCardState>) => void;
+  onRemove: () => void;
+  allowRemove: boolean;
+}) {
+  const updateRequirement = (requirementIndex: number, value: string) => onChange({ requirements: card.requirements.map((item, itemIndex) => itemIndex === requirementIndex ? value : item) });
+  const removeRequirement = (requirementIndex: number) => onChange({ requirements: card.requirements.length > 1 ? card.requirements.filter((_, itemIndex) => itemIndex !== requirementIndex) : [""] });
+  return <article aria-labelledby={`${card.cardId}-heading`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+    <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2"><h3 id={`${card.cardId}-heading`} className="font-bold text-slate-950">VIỆC {index + 1}</h3>{allowRemove ? <button type="button" disabled={busy} onClick={onRemove} className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-semibold text-red-700 disabled:opacity-50">Xóa việc</button> : null}</div>
+    <div className="grid gap-3 lg:grid-cols-2">
+      <Field label="Tên công việc"><input ref={registerTitle} value={card.title} onChange={(event) => onChange({ title: event.target.value })} maxLength={500} aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? `${card.cardId}-title-error` : undefined} className={controlClass} />{errors.title ? <span id={`${card.cardId}-title-error`} role="alert" className="font-normal text-red-700">{errors.title}</span> : null}</Field>
+      <Field label="Hạn hoàn thành"><div className="grid grid-cols-[minmax(0,1fr)_100px] gap-2"><input value={card.dueDate} onChange={(event) => onChange({ dueDate: event.target.value })} type="date" aria-invalid={Boolean(errors.dueDate)} className={controlClass} /><input value={card.dueTime} onChange={(event) => onChange({ dueTime: event.target.value })} type="time" step="60" aria-invalid={Boolean(errors.dueTime)} className={controlClass} /></div>{errors.dueDate || errors.dueTime ? <span role="alert" className="font-normal text-red-700">{errors.dueDate || errors.dueTime}</span> : null}</Field>
+      <Field label="Mô tả" wide><textarea value={card.description} onChange={(event) => onChange({ description: event.target.value })} maxLength={10000} rows={3} aria-invalid={Boolean(errors.description)} className={controlClass} />{errors.description ? <span role="alert" className="font-normal text-red-700">{errors.description}</span> : null}</Field>
+      <Field label="Yêu cầu" wide><div className="grid gap-2">{card.requirements.map((value, requirementIndex) => <div key={`${card.cardId}-requirement-${requirementIndex}`} className="flex gap-2"><input value={value} onChange={(event) => updateRequirement(requirementIndex, event.target.value)} maxLength={2000} placeholder={`Yêu cầu ${requirementIndex + 1}`} aria-invalid={Boolean(errors.requirements)} className={controlClass} />{card.requirements.length > 1 ? <button type="button" disabled={busy} onClick={() => removeRequirement(requirementIndex)} className="rounded border px-3 text-red-700 disabled:opacity-50">Xóa</button> : null}</div>)}<button type="button" disabled={busy} onClick={() => onChange({ requirements: [...card.requirements, ""] })} className="justify-self-start rounded border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-700 disabled:opacity-50">+ Thêm yêu cầu</button>{errors.requirements ? <span role="alert" className="font-normal text-red-700">{errors.requirements}</span> : null}</div></Field>
+      <Field label="Mức độ ưu tiên"><select value={card.priority} onChange={(event) => onChange({ priority: event.target.value as AssignmentCardState["priority"] })} className={controlClass}><option value="low">Thấp</option><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn cấp</option></select></Field>
+      <Field label="Lặp lại"><div className="grid gap-2"><select value={card.recurrenceFrequency ?? ""} onChange={(event) => onChange({ recurrenceFrequency: (event.target.value || null) as AssignmentCardState["recurrenceFrequency"], recurrenceEndsOn: event.target.value ? card.recurrenceEndsOn : null })} className={controlClass}><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select>{card.recurrenceFrequency ? <input value={card.recurrenceEndsOn ?? ""} onChange={(event) => onChange({ recurrenceEndsOn: event.target.value || null })} type="date" className={controlClass} /> : null}</div></Field>
+      <Field label="Người phối hợp"><CheckGroup name={`collaborators-${card.cardId}`} people={people.filter((person) => person.id !== selectedAssigneeId)} selected={card.collaboratorIds} onChange={(ids) => onChange({ collaboratorIds: ids })} empty="Không còn người phù hợp trong phòng." /></Field>
+      <Field label="Người theo dõi"><CheckGroup name={`watchers-${card.cardId}`} people={people.filter((person) => person.id !== selectedAssigneeId && !card.collaboratorIds.includes(person.id))} selected={card.watcherIds} onChange={(ids) => onChange({ watcherIds: ids })} empty="Không còn người phù hợp." /></Field>
+      <Field label="Đính kèm riêng tư"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" disabled={busy} onChange={(event) => onChange({ attachment: event.target.files?.[0] ?? null })} className={controlClass} /><span className="font-normal text-slate-500">Giao nhiều việc sẽ xử lý tệp ở bước đính kèm riêng.</span></Field>
+    </div>
+  </article>;
 }

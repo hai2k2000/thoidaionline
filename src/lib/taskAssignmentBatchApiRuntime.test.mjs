@@ -172,3 +172,14 @@ test("single-task payload remains on the existing assignment path", async () => 
   assert.equal(response.status, 201);
   assert.equal(harness.calls[0][0], "assign");
 });
+
+test("single-task payload preserves an explicit description alongside requirements", async () => {
+  const harness = makeApp();
+  const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST",
+    body: JSON.stringify({ title: "Công việc mới", description: "Mô tả riêng", requirements: ["Yêu cầu"], departmentId: uuid("10"), assigneeId: uuid("11"), dueDate: "2026-09-30", dueTime: "17:30", collaboratorIds: [], watcherIds: [], recurrenceFrequency: null, recurrenceEndsOn: null }),
+  }));
+  assert.equal(response.status, 201);
+  assert.equal(harness.calls[0][2].description, "Mô tả riêng");
+  assert.equal(harness.calls[0][2].evaluationCriteria, JSON.stringify(["Yêu cầu"]));
+});
