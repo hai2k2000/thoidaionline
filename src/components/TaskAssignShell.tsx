@@ -10,6 +10,7 @@ import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVietnamPlannedPublication, validateJournalismCreateFields } from "@/lib/journalismCreateUi.mjs";
 import { journalismLabels } from "@/lib/journalismUi.mjs";
 import { addTaskCard, buildBatchPayload, createTaskCard, MAX_TASK_CARDS, removeTaskCard, validateTaskCards } from "@/lib/taskAssignmentCards.mjs";
+import { uploadBatchAttachments } from "@/lib/taskAssignmentAttachments.mjs";
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
@@ -42,6 +43,9 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   const [taskCards, setTaskCards] = useState<AssignmentCardState[]>(() => [createTaskCard("card-1") as AssignmentCardState]);
   const [batchId, setBatchId] = useState<string | null>(null);
   const [cardErrors, setCardErrors] = useState<Record<number, Record<string, string>>>({});
+  const [batchTaskResults, setBatchTaskResults] = useState<BatchTaskResult[]>([]);
+  const [pendingBatchAttachments, setPendingBatchAttachments] = useState<BatchAttachmentInput[]>([]);
+  const [batchAttachmentFailures, setBatchAttachmentFailures] = useState<BatchAttachmentFailure[]>([]);
   const cardTitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [busy, setBusy] = useState(false);
   const submittingRef = useRef(false);
@@ -64,6 +68,9 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   const updateTaskCard = (index: number, patch: Record<string, unknown>) => {
     setTaskCards((current) => current.map((card, cardIndex) => cardIndex === index ? { ...card, ...patch } : card));
     setBatchId(null);
+    setPendingBatchAttachments([]);
+    setBatchAttachmentFailures([]);
+    setBatchTaskResults([]);
     setCardErrors((current) => {
       const next = { ...current };
       delete next[index];
@@ -75,12 +82,18 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     const cardId = `card-${Date.now()}-${taskCards.length + 1}`;
     setTaskCards((current) => addTaskCard(current, cardId));
     setBatchId(null);
+    setPendingBatchAttachments([]);
+    setBatchAttachmentFailures([]);
+    setBatchTaskResults([]);
     focusCardTitle(cardId);
   };
 
   const removeTask = (index: number) => {
     setTaskCards((current) => removeTaskCard(current, index));
     setBatchId(null);
+    setPendingBatchAttachments([]);
+    setBatchAttachmentFailures([]);
+    setBatchTaskResults([]);
     setCardErrors({});
   };
 
@@ -102,6 +115,9 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     setChoosingOtherDepartment(false);
     setFormActivated(true);
     setBatchId(null);
+    setPendingBatchAttachments([]);
+    setBatchAttachmentFailures([]);
+    setBatchTaskResults([]);
     focusCardTitle(taskCards[0]?.cardId ?? "");
   };
 
@@ -114,6 +130,9 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     setChoosingOtherDepartment(false);
     setFormActivated(false);
     setBatchId(null);
+    setPendingBatchAttachments([]);
+    setBatchAttachmentFailures([]);
+    setBatchTaskResults([]);
   };
 
   const submitGeneral = async () => {
@@ -129,10 +148,6 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
       window.requestAnimationFrame(() => cardTitleRefs.current[taskCards[first.taskIndex]?.cardId]?.focus());
       return;
     }
-    if (taskCards.length > 1 && taskCards.some((card) => card.attachment instanceof File && card.attachment.size > 0)) {
-      const text = "Tệp đính kèm cho nhiều việc sẽ được hỗ trợ ở bước tiếp theo. Hãy bỏ tệp hoặc giao từng việc riêng.";
-      setMessage(text); notify("error", text); return;
-    }
     if (taskCards.length > 1 && assignmentMode === "department_group") {
       const text = "Giao nhiều việc chưa hỗ trợ chế độ nhóm phòng ban. Hãy chọn Cá nhân hoặc giao từng việc riêng.";
       setMessage(text); notify("error", text); return;
@@ -141,6 +156,9 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     submittingRef.current = true; setBusy(true); setMessage("");
     const currentBatchId = taskCards.length > 1 ? (batchId ?? crypto.randomUUID()) : null;
     if (currentBatchId) setBatchId(currentBatchId);
+    setBatchAttachmentFailures([]);
+    setPendingBatchAttachments([]);
+    setBatchTaskResults([]);
     try {
       const response = await fetch("/api/tasks/assign", {
         method: "POST",
@@ -159,7 +177,7 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
         if (response.status === 409 && currentBatchId) throw new Error("Batch ID đã được dùng cho dữ liệu khác. Không tự tạo mã mới; hãy kiểm tra lại phiên giao việc.");
         throw new Error(await responseErrorMessage(response, "Không thể giao công việc."));
       }
-      const result = await response.json() as { task?: { id: string }; tasks?: Array<{ id: string }>; count?: number };
+      const result = await response.json() as { task?: { id: string }; tasks?: BatchTaskResult[]; count?: number };
       const count = taskCards.length;
       const attachment = taskCards[0].attachment;
       let attachmentWarning = "";
@@ -167,6 +185,21 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
         const upload = new FormData(); upload.set("file", attachment);
         const uploaded = await fetch(`/api/tasks/${result.task.id}/attachments`, { method: "POST", body: upload });
         if (!uploaded.ok) attachmentWarning = await responseErrorMessage(uploaded, "Tệp đính kèm chưa tải lên được.");
+      }
+      if (count > 1) {
+        const createdTasks = result.tasks ?? [];
+        const attachments = taskCards
+          .map((card, taskIndex) => card.attachment instanceof File && card.attachment.size > 0 ? { taskIndex, file: card.attachment } : null)
+          .filter((item): item is BatchAttachmentInput => Boolean(item));
+        const uploadResult = await uploadBatchAttachments(createdTasks, attachments, uploadTaskAttachment);
+        if (uploadResult.failed.length) {
+          setBatchTaskResults(createdTasks);
+          setPendingBatchAttachments(attachments.filter((item) => uploadResult.failed.some((failure) => failure.taskIndex === item.taskIndex)));
+          setBatchAttachmentFailures(uploadResult.failed);
+          const text = `Đã tạo ${count} công việc, nhưng một số tệp chưa tải lên được.`;
+          setMessage(text); notify("error", text);
+          return;
+        }
       }
       const recipientName = selectedAssignee?.fullName ?? "người nhận việc";
       notify(attachmentWarning ? "error" : "success", attachmentWarning || `Đã giao ${count} công việc cho ${recipientName}.`);
@@ -176,6 +209,34 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     } catch (error) {
       const text = errorMessage(error, "Không thể giao công việc. Vui lòng thử lại."); setMessage(text); notify("error", text);
     } finally { submittingRef.current = false; setBusy(false); }
+  };
+
+  const uploadTaskAttachment = async (taskId: string, file: File) => {
+    const upload = new FormData(); upload.set("file", file);
+    const response = await fetch(`/api/tasks/${taskId}/attachments`, { method: "POST", body: upload });
+    if (!response.ok) return { ok: false, message: await responseErrorMessage(response, "Tệp đính kèm chưa tải lên được.") };
+    return { ok: true };
+  };
+
+  const retryBatchAttachments = async () => {
+    if (submittingRef.current || !batchTaskResults.length || !pendingBatchAttachments.length) return;
+    submittingRef.current = true; setBusy(true); setMessage("");
+    try {
+      const uploadResult = await uploadBatchAttachments(batchTaskResults, pendingBatchAttachments, uploadTaskAttachment);
+      setBatchAttachmentFailures(uploadResult.failed);
+      setPendingBatchAttachments(pendingBatchAttachments.filter((item) => uploadResult.failed.some((failure) => failure.taskIndex === item.taskIndex)));
+      if (uploadResult.failed.length) {
+        const text = "Một số tệp vẫn chưa tải lên được.";
+        setMessage(text); notify("error", text);
+        return;
+      }
+      setBatchTaskResults([]);
+      notify("success", "Đã tải lại các tệp đính kèm.");
+      router.push("/tasks");
+      router.refresh();
+    } finally {
+      submittingRef.current = false; setBusy(false);
+    }
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -325,6 +386,11 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
           {message ? <p role="alert" className="text-sm text-red-700 lg:col-span-2">{message}</p> : null}
           </fieldset>
         </form>
+        {batchAttachmentFailures.length ? <section role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Đã tạo công việc, nhưng một số tệp chưa tải lên được.</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">{batchAttachmentFailures.map((failure) => <li key={failure.taskIndex + "-" + failure.fileName}>Việc {failure.taskIndex + 1}: {failure.fileName} — {failure.message}</li>)}</ul>
+          <button type="button" disabled={busy} onClick={retryBatchAttachments} className="mt-3 rounded-lg border border-amber-400 bg-white px-3 py-2 font-semibold text-amber-900 disabled:opacity-50">Thử tải lại tệp</button>
+        </section> : null}
       </main>
     </div>
   </div>;
@@ -341,6 +407,10 @@ function CheckGroup({ name, people, selected, onChange, empty }: {
 }) {
   return <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/40 p-1.5">{people.map((person) => <label key={person.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 font-normal hover:bg-orange-50"><input name={name} type="checkbox" value={person.id} checked={selected.includes(person.id)} onChange={(event) => onChange(event.target.checked ? [...new Set([...selected, person.id])] : selected.filter((id) => id !== person.id))} /><span>{person.fullName}</span></label>)}{people.length === 0 ? <p className="px-2 py-3 font-normal text-slate-500">{empty}</p> : null}</div>;
 }
+
+type BatchTaskResult = { ordinal: number; id: string; title?: string };
+type BatchAttachmentInput = { taskIndex: number; taskId?: string; file: File };
+type BatchAttachmentFailure = { taskIndex: number; taskId: string; fileName: string; message: string };
 
 type AssignmentCardState = {
   cardId: string;

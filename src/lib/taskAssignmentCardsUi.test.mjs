@@ -20,8 +20,13 @@ test("general assignment switches to the explicit batch payload for multiple car
   assert.match(shell, /Giao \$\{taskCards\.length\} việc/);
 });
 
-test("card UI has no notes field and blocks multi-card attachments until checkpoint 6", () => {
+test("card UI has no notes field and maps batch attachments after task creation", () => {
   assert.doesNotMatch(shell, /name=["']notes["']/);
   assert.doesNotMatch(shell, /name=["']ghiChu["']/);
-  assert.match(shell, /Tệp đính kèm cho nhiều việc sẽ được hỗ trợ ở bước tiếp theo/);
+  assert.match(shell, /uploadBatchAttachments/);
+  assert.match(shell, /Thử tải lại tệp/);
+  assert.match(shell, /retryBatchAttachments/);
+  const retry = shell.slice(shell.indexOf("const retryBatchAttachments"), shell.indexOf("const submit ="));
+  assert.doesNotMatch(retry, /\/api\/tasks\/assign/);
+  assert.match(retry, /uploadBatchAttachments/);
 });

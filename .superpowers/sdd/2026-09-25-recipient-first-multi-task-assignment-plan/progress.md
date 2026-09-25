@@ -37,3 +37,4 @@ Task 2: complete (atomic batch RPC; inline spec/quality review PASS; commit 440f
 Task 3: complete (API compatibility and error contract; inline spec/quality review PASS; commit 2b81cb3)
 Task 4: complete (recipient-first UI and role-aware scope; inline spec/quality review PASS; commit cb5ee63)
 Task 5: complete (multi-task card UI; inline spec/quality review PASS; commit 8201796)
+Task 6: complete (attachment phase and retry; inline spec/quality review PASS; commit pending)
