@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const allowedFields = new Set([
     "title", "description", "departmentId", "assigneeId", "dueDate", "dueTime",
     "evaluationCriteria", "priority", "collaboratorIds", "watcherIds", "recurrenceFrequency",
-    "recurrenceEndsOn", "journalism",
+    "recurrenceEndsOn", "journalism", "selfRegister",
   ]);
   if (body && Object.keys(body).some((key) => !allowedFields.has(key))) {
     return apiError("invalid_request", 400);
@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   }
   const departmentId = asUuid(body?.departmentId);
   const assigneeId = asUuid(body?.assigneeId);
+  const selfRegister = body?.selfRegister === true;
   const reviewerId = guard.actor.id;
   const workKindId = asUuid(journalism?.workKindId);
   const title = text(body?.title, 500);
@@ -43,10 +44,31 @@ export async function POST(request: Request) {
     return apiError("invalid_request", 400);
   }
   if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);
+  const selfRegisterAllowed = selfRegister
+    && guard.actor.department_code === "editorial"
+    && assigneeId === guard.actor.id
+    && ["phong_vien", "nhan_vien", "bien_tap_vien"].includes(guard.actor.role_code);
+  if (selfRegister && !selfRegisterAllowed) return apiError("forbidden", 403);
   const department = await serverSupabase.from("departments").select("id,code").eq("id", departmentId).eq("active", true).maybeSingle();
   if (department.error || !department.data || department.data.code !== "editorial") return apiError("forbidden", 403);
   const actor = { id: guard.actor.id, departmentId: guard.actor.department_id, roleCode: guard.actor.role_code, roleLevel: guard.actor.role_level, permissions: guard.actor.permissions };
-  if (!guard.actor.permissions.can_create_task || !canAssignToDepartment(actor, departmentId)) return apiError("forbidden", 403);
+  if (!guard.actor.permissions.can_create_task || (!selfRegisterAllowed && !canAssignToDepartment(actor, departmentId))) return apiError("forbidden", 403);
+  if (selfRegisterAllowed) {
+    const { data, error } = await serverSupabase.rpc("api_register_journalism_task_v1", {
+      p_actor_id: guard.actor.id,
+      p_title: title,
+      p_description: description,
+      p_department_id: departmentId,
+      p_due_date: dueDate,
+      p_due_time: dueTime,
+      p_evaluation_criteria: typeof body.evaluationCriteria === "string" ? body.evaluationCriteria : null,
+      p_work_kind_id: workKindId,
+      p_planned_publication_at: date(journalism.plannedPublicationAt),
+      p_location: text(journalism.location, 500),
+      p_editorial_notes: text(journalism.editorialNotes, 10000),
+    });
+    return error ? rpcFailure(error) : apiJson({ task: data }, 201);
+  }
   const collaboratorIds = Array.isArray(body.collaboratorIds) ? body.collaboratorIds.map(asUuid).filter(Boolean) : [];
   const watcherIds = Array.isArray(body.watcherIds) ? body.watcherIds.map(asUuid).filter(Boolean) : [];
   const { data, error } = await serverSupabase.rpc("api_assign_journalism_task_v1", {

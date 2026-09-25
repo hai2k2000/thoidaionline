@@ -23,7 +23,7 @@ const toUrlSearchParams = (input: Record<string, string | string[] | undefined>)
   return params;
 };
 
-export default async function TasksPage({ searchParams }: TasksPageProps) {
+export async function TasksPage({ searchParams, basePath = "/tasks", forceJournalism = false }: TasksPageProps & { basePath?: string; forceJournalism?: boolean }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   const journalismAllowed = canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions });
@@ -50,7 +50,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     redirect(`/evaluations${params.toString() ? `?${params.toString()}` : ""}`);
   }
   const view = resolveTaskCenterView(rawParams.view, canViewEvaluations);
-  const query = parseTaskListSearchParams(toUrlSearchParams(rawParams), { defaultJournalism: "exclude" });
+  const parsedQuery = parseTaskListSearchParams(toUrlSearchParams(rawParams), { defaultJournalism: forceJournalism ? "only" : "exclude" });
+  const query = forceJournalism ? { ...parsedQuery, journalism: "only" as const, approvalQueue: undefined } : parsedQuery;
   if (query.journalism === "only" && !journalismAllowed) redirect("/tasks");
   const workKindsResult = journalismAllowed ? await listJournalismWorkKinds(query.journalismWorkKindId ?? null) : null;
   const journalismWorkKinds = workKindsResult?.ok ? workKindsResult.data : [];
@@ -104,6 +105,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       tasks={tasks}
       userLabel={user.full_name}
       view={view}
+      basePath={basePath}
     />
   );
 }
+
+export default TasksPage;

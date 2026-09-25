@@ -45,6 +45,37 @@ test("Journalism mode fixes the department to Phòng Nội dung", () => {
   assert.doesNotMatch(shell, /journalismMode \? null : <select name="departmentId"/);
 });
 
+test("canonical Journalism task route reuses the Task Center and forces Journalism-only mode", () => {
+  const page = read("../app/journalism/tasks/page.tsx");
+  assert.match(page, /TasksPage/);
+  assert.match(page, /forceJournalism/);
+  const navigation = read("../components/phase2Navigation.ts");
+  assert.match(navigation, /journalism-tasks.*href: "\/journalism\/tasks"/s);
+});
+
+test("editorial reporters use a self-only Journalism creation mode", () => {
+  const page = read("../app/journalism/tasks/new/page.tsx");
+  const shell = read("../components/TaskAssignShell.tsx");
+  assert.match(page, /journalismSelfCreate/);
+  assert.match(shell, /journalismSelfCreate/);
+  assert.match(shell, /assigneeId.*user/);
+  assert.match(shell, /payload\.selfRegister = true/);
+  assert.match(shell, /Tôi \(tự đăng ký\)/);
+  assert.match(shell, /!journalismSelfCreate \? <Field label="Người theo dõi bổ sung"/);
+});
+
+test("Journalism self-registration uses the dedicated approval RPC", () => {
+  const route = read("../app/api/tasks/journalism/assign/route.ts");
+  const migration = read("../../supabase/migrations/20260925100000_journalism_self_registration.sql");
+  assert.match(route, /api_register_journalism_task_v1/);
+  assert.doesNotMatch(route, /api_create_personal_task_v2/);
+  assert.match(migration, /api_register_journalism_task_v1/);
+  assert.match(migration, /approval_required/);
+  assert.match(migration, /'waiting'/);
+  assert.match(migration, /self_registered/);
+  assert.match(migration, /department.*editorial|editorial.*department/s);
+});
+
 test("Journalism creation lives under the Journalism section and reuses the existing backend", () => {
   const page = read("../app/journalism/tasks/new/page.tsx");
   const shell = read("../components/TaskAssignShell.tsx");
