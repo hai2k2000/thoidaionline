@@ -14,8 +14,9 @@ permanent fix branch must merge into that integration lineage before release.
 
 ## Release gate
 
-Run `npm run check:release` before packaging; it verifies the canonical
-baseline is an ancestor and checks all source routes. Run `npm run check:routes`
+Run `npm run check:release` before packaging; it verifies the candidate descends
+from the current production commit, is built from `integration/production`, and
+checks all source routes. Run `npm run check:routes`
 again after `npm run build` so the Next.js artifact manifest is checked. A
 stale baseline or missing required route fails the release regardless of
 TypeScript or build status.
