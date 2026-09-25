@@ -99,3 +99,29 @@ Blockers:
 
 Next:
 - Commit/push source and create the non-deployed standalone artifact for owner review.
+
+# Release Regression Hardening
+
+Current Phase: implementation complete; integration validation
+Current Task: merge onto integration/production, build and artifact verification
+
+Completed:
+- Added production ancestry and integration-branch guard.
+- Added authenticated API contract inventory/shape validation.
+- Added read-only schema, migration-state, and PostgREST checks.
+- Added artifact provenance fields and verification requirements.
+- Added cache permission guard, disk/deploy lock, atomic activation, and application rollback helpers.
+- Added authenticated GET contracts for Journalism topics and series list APIs.
+
+Validation:
+- Hardening focused tests: 17/17 PASS.
+- npm exec tsc --noEmit: PASS.
+- Production unchanged: YES.
+
+Blockers:
+- Feature branch intentionally fails release guard until merged into integration/production.
+- Authenticated contract smoke and live schema checks require secure runtime credentials/config; no credentials were created or exposed.
+- Existing production cache path is root-owned; guard will fail until release activation provisions service-owned cache.
+
+Next:
+- Commit/push implementation branch, merge into integration/production, run baseline/route/lint/build and package verification.
