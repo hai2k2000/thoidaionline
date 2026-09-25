@@ -9,6 +9,8 @@ import { canUseJournalism } from "./journalismScope.mjs";
 import type {
   AssignedTaskInput,
   LegacyEvaluationInput,
+  TaskAssignmentBatchInput,
+  TaskAssignmentBatchTask,
   TaskRepository,
 } from "./taskContracts";
 
@@ -93,6 +95,19 @@ const dateValue = (value: unknown) => {
 const timeValue = (value: unknown) =>
   typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)
     ? value
+    : null;
+
+const batchPriority = (value: unknown) =>
+  ["low", "normal", "high", "urgent"].find((item) => item === value) as TaskAssignmentBatchTask["priority"] | undefined;
+
+const batchIds = (value: unknown, asUuid: (value: unknown) => string | null) =>
+  Array.isArray(value)
+    ? (() => {
+        const ids = value.map(asUuid);
+        return ids.every((id): id is string => id !== null)
+          ? [...new Set(ids)]
+          : null;
+      })()
     : null;
 
 export function createTaskApplication(deps: Dependencies) {
@@ -512,6 +527,130 @@ export function createTaskApplication(deps: Dependencies) {
       if (!guard.ok) return guard.response;
       const actor = toActor(guard.actor);
       const body = await bodyObject(request);
+      if (body?.mode === "batch") {
+        const invalidBatch = (taskIndex: number | null, field: string, message: string) =>
+          deps.json({ error: { code: "invalid_request", taskIndex, field, message } }, 400);
+        const batchId = deps.asUuid(body.batchId);
+        const departmentId = deps.asUuid(body.departmentId);
+        const assigneeId = deps.asUuid(body.assigneeId);
+        const cards = body.tasks;
+        if (!batchId) return invalidBatch(null, "batchId", "Batch ID không hợp lệ");
+        if (!departmentId) return invalidBatch(null, "departmentId", "Phòng ban không hợp lệ");
+        if (!assigneeId) return invalidBatch(null, "assigneeId", "Người nhận việc không hợp lệ");
+        if (!Array.isArray(cards) || cards.length < 1 || cards.length > 20) {
+          return invalidBatch(null, "tasks", "Số lượng việc phải từ 1 đến 20");
+        }
+
+        const normalized: TaskAssignmentBatchTask[] = [];
+        for (const [index, raw] of cards.entries()) {
+          const card = raw && typeof raw === "object" && !Array.isArray(raw)
+            ? raw as Record<string, unknown>
+            : null;
+          const title = cleanText(card?.title, 500);
+          const description = cleanText(card?.description, 10000);
+          const requirements = Array.isArray(card?.requirements)
+            ? card.requirements.map((value) => cleanText(value, 2000)).filter(Boolean)
+            : null;
+          const dueDate = dateValue(card?.dueDate);
+          const dueTime = timeValue(card?.dueTime);
+          const priority = card?.priority === undefined ? "normal" : batchPriority(card?.priority);
+          const collaboratorIds = batchIds(card?.collaboratorIds, deps.asUuid);
+          const watcherIds = batchIds(card?.watcherIds, deps.asUuid);
+          const recurrenceFrequency = card?.recurrenceFrequency === null
+            ? null
+            : card?.recurrenceFrequency === "daily"
+              || card?.recurrenceFrequency === "weekly"
+              || card?.recurrenceFrequency === "monthly"
+              ? card.recurrenceFrequency
+              : undefined;
+          const recurrenceEndsOn = card?.recurrenceEndsOn === null
+            ? null
+            : dateValue(card?.recurrenceEndsOn);
+          if (!card || !title) return invalidBatch(index, "title", `Việc ${index + 1} chưa có Tên công việc`);
+          if (!description) return invalidBatch(index, "description", `Việc ${index + 1} chưa có Mô tả`);
+          if (!requirements || requirements.length < 1 || requirements.length > 50) {
+            return invalidBatch(index, "requirements", `Việc ${index + 1} cần từ 1 đến 50 yêu cầu`);
+          }
+          if (!dueDate) return invalidBatch(index, "dueDate", `Việc ${index + 1} có Ngày hết hạn không hợp lệ`);
+          if (!dueTime) return invalidBatch(index, "dueTime", `Việc ${index + 1} có Giờ hết hạn không hợp lệ`);
+          if (!priority) return invalidBatch(index, "priority", `Việc ${index + 1} có Mức độ ưu tiên không hợp lệ`);
+          if (!collaboratorIds) return invalidBatch(index, "collaboratorIds", `Việc ${index + 1} có Người phối hợp không hợp lệ`);
+          if (!watcherIds) return invalidBatch(index, "watcherIds", `Việc ${index + 1} có Người xem không hợp lệ`);
+          if (recurrenceFrequency === undefined) return invalidBatch(index, "recurrenceFrequency", `Việc ${index + 1} có lịch lặp không hợp lệ`);
+          if (card?.recurrenceEndsOn !== null && !recurrenceEndsOn) {
+            return invalidBatch(index, "recurrenceEndsOn", `Việc ${index + 1} có ngày kết thúc lặp không hợp lệ`);
+          }
+          if (recurrenceFrequency === null && recurrenceEndsOn !== null) {
+            return invalidBatch(index, "recurrenceEndsOn", `Việc ${index + 1} cần tần suất lặp trước khi đặt ngày kết thúc`);
+          }
+          if (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate) {
+            return invalidBatch(index, "recurrenceEndsOn", `Việc ${index + 1} có ngày kết thúc lặp trước hạn hoàn thành`);
+          }
+          normalized.push({
+            title,
+            description,
+            requirements,
+            dueDate,
+            dueTime,
+            evaluationCriteria: JSON.stringify(requirements),
+            priority,
+            collaboratorIds,
+            watcherIds,
+            recurrenceFrequency,
+            recurrenceEndsOn,
+          });
+        }
+
+        const legacyAssignmentResult = deps.canAssignToDepartment(actor, departmentId);
+        await deps.shadowTaskAction?.(
+          guard.actor,
+          {
+            id: "assignment-scope",
+            departmentId,
+            createdBy: null,
+            ownerId: null,
+            assigneeId,
+            reviewerId: actor.id,
+            departmentManagerId: null,
+            selfClaimable: false,
+            taskType: "assigned",
+            status: "new",
+            participants: [],
+          },
+          "assign",
+          legacyAssignmentResult,
+        );
+        if (!legacyAssignmentResult) return deps.error("forbidden", 403);
+        if (deps.taskRbacEnabled) {
+          if (!deps.taskRbacBaseAllowed) return deps.error("forbidden", 403);
+          try {
+            const allowed = await deps.taskRbacBaseAllowed(guard.actor, "assign", {
+              id: "assignment-scope", departmentId, createdBy: actor.id, ownerId: null,
+              assigneeId, reviewerId: actor.id, departmentManagerId: null, selfClaimable: false,
+              taskType: "assigned", status: "new", participants: [],
+            });
+            if (!allowed) return deps.error("forbidden", 403);
+          } catch { return deps.error("forbidden", 403); }
+        }
+
+        const resolvedTasks: TaskAssignmentBatchTask[] = [];
+        for (const [index, task] of normalized.entries()) {
+          const resolved = await deps.resolveAssignmentParticipants(actor, {
+            departmentId, assigneeId, reviewerId: actor.id,
+            collaboratorIds: task.collaboratorIds,
+            watcherIds: task.watcherIds,
+            groupDepartmentId: null,
+            excludedMemberIds: [],
+          });
+          if (!resolved.ok) return invalidBatch(index, "participants", `Việc ${index + 1} có người tham gia không hợp lệ`);
+          resolvedTasks.push({ ...task, collaboratorIds: resolved.collaboratorIds, watcherIds: resolved.watcherIds });
+        }
+        const input: TaskAssignmentBatchInput = { batchId, departmentId, assigneeId, tasks: resolvedTasks };
+        const result = await deps.repository.assignBatch(actor.id, input);
+        return result.ok
+          ? deps.json(result.data, 201)
+          : deps.rpcFailure(result.error);
+      }
       const title = cleanText(body?.title, 500);
       const requirements = Array.isArray(body?.requirements) ? body.requirements.map((value) => cleanText(value, 2000)).filter(Boolean) : [];
       const description = requirements.map((value) => `- ${value}`).join("\n");

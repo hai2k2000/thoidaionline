@@ -20,6 +20,7 @@ import type {
   LegacyUpdateTaskInput,
   PersonalTaskEditInput,
   PersonalTaskInput,
+  TaskAssignmentBatchResult,
   RepositoryResult,
   JournalismTaskDetailDto,
   JournalismTaskListSummaryDto,
@@ -733,6 +734,37 @@ export const taskRepository: TaskRepository = {
       p_recurrence_ends_on: input.recurrenceEndsOn,
     },
   ),
+
+  assignBatch: async (actorId, input) => {
+    const result = await mutation<TaskAssignmentBatchResult>(
+      "api_assign_task_batch_v1",
+      {
+        p_actor_id: actorId,
+        p_batch_id: input.batchId,
+        p_department_id: input.departmentId,
+        p_assignee_id: input.assigneeId,
+        p_tasks: input.tasks.map((task) => ({
+          title: task.title,
+          description: task.description,
+          due_date: task.dueDate,
+          due_time: task.dueTime,
+          evaluation_criteria: task.evaluationCriteria,
+          priority: task.priority,
+          collaborator_ids: task.collaboratorIds,
+          watcher_ids: task.watcherIds,
+          recurrence_frequency: task.recurrenceFrequency,
+          recurrence_ends_on: task.recurrenceEndsOn,
+        })),
+      },
+    );
+    if (!result.ok) return result;
+    return ok({
+      batchId: result.data.batchId,
+      tasks: result.data.tasks,
+      count: result.data.count,
+      replayed: result.data.replayed,
+    });
+  },
 
   createPersonal: (actorId, input: PersonalTaskInput) => mutation(
     "api_create_personal_task_v2",

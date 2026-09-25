@@ -272,6 +272,34 @@ export type AssignedTaskInput = {
   recurrenceEndsOn: string | null;
 };
 
+export type TaskAssignmentBatchTask = {
+  title: string;
+  description: string;
+  requirements: string[];
+  dueDate: string;
+  dueTime: string;
+  evaluationCriteria: string | null;
+  priority: "low" | "normal" | "high" | "urgent";
+  collaboratorIds: string[];
+  watcherIds: string[];
+  recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
+  recurrenceEndsOn: string | null;
+};
+
+export type TaskAssignmentBatchInput = {
+  batchId: string;
+  departmentId: string;
+  assigneeId: string;
+  tasks: TaskAssignmentBatchTask[];
+};
+
+export type TaskAssignmentBatchResult = {
+  batchId: string;
+  tasks: Array<{ ordinal: number; id: string; title: string }>;
+  count: number;
+  replayed: boolean;
+};
+
 export type JournalismCreateInput = AssignedTaskInput & { workKindId: string; plannedPublicationAt: string | null; location: string | null; editorialNotes: string | null; };
 
 export type LegacyUpdateTaskInput = {
@@ -330,6 +358,10 @@ export interface TaskRepository {
     actorId: string,
     input: AssignedTaskInput,
   ): Promise<RepositoryResult<{ id: string }>>;
+  assignBatch(
+    actorId: string,
+    input: TaskAssignmentBatchInput,
+  ): Promise<RepositoryResult<TaskAssignmentBatchResult>>;
   createPersonal(
     actorId: string,
     input: PersonalTaskInput,
