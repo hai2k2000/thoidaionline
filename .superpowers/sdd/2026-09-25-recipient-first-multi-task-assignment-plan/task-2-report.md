@@ -2,7 +2,7 @@
 
 Status: PASS
 
-Commit: pending
+Commit: 440f59e
 
 Files:
 - `supabase/migrations/20260925111000_task_assignment_batch_rpc.sql`
