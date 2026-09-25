@@ -17,5 +17,5 @@ export default async function TaskAssignPage({ searchParams }: Props) {
   }
   const options = await taskAssignmentRepository.options({ id: user.id, departmentId: user.department_id, roleCode: user.role_code, roleLevel: user.role_level, permissions: user.permissions });
   if (!options.ok) throw new Error("Không thể tải dữ liệu giao việc.");
-  return <TaskAssignShell departments={options.departments} people={options.people} userLabel={user.full_name} canManageEventAssignment={user.role_code === "admin" || user.role_code === "tong_bien_tap" || user.role_code === "pho_tong_bien_tap" || user.role_code === "truong_phong" || user.is_department_manager} journalismMode={false} journalismDepartment={null} journalismWorkKinds={[]} journalismWorkKindsLoaded={false} />;
+  return <TaskAssignShell departments={options.departments} people={options.people} assignmentScope={options.scope} userLabel={user.full_name} canManageEventAssignment={user.role_code === "admin" || user.role_code === "tong_bien_tap" || user.role_code === "pho_tong_bien_tap" || user.role_code === "truong_phong" || user.is_department_manager} journalismMode={false} journalismDepartment={null} journalismWorkKinds={[]} journalismWorkKindsLoaded={false} />;
 }

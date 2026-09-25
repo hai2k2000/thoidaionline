@@ -1,10 +1,10 @@
 ﻿"use client";
 
-import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import type { AssignmentDepartment, AssignmentPerson } from "@/lib/taskAssignmentRepository";
+import type { AssignmentDepartment, AssignmentPerson, AssignmentScope } from "@/lib/taskAssignmentRepository";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVietnamPlannedPublication, validateJournalismCreateFields } from "@/lib/journalismCreateUi.mjs";
@@ -12,9 +12,10 @@ import { journalismLabels } from "@/lib/journalismUi.mjs";
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
-export default function TaskAssignShell({ departments, people, userLabel, canManageEventAssignment, journalismMode, journalismSelfCreate = false, userId, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
+export default function TaskAssignShell({ departments, people, assignmentScope = null, userLabel, canManageEventAssignment, journalismMode, journalismSelfCreate = false, userId, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
   departments: AssignmentDepartment[];
   people: AssignmentPerson[];
+  assignmentScope?: AssignmentScope | null;
   userLabel: string;
   canManageEventAssignment: boolean;
   journalismMode: boolean;
@@ -27,8 +28,10 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
   const router = useRouter();
   const { logout } = useAuth();
   const { notify } = useActionFeedback();
-  const [departmentId, setDepartmentId] = useState(journalismMode ? journalismDepartment?.id ?? "" : "");
+  const [departmentId, setDepartmentId] = useState(journalismMode ? journalismDepartment?.id ?? "" : assignmentScope?.departmentId ?? "");
   const [assigneeId, setAssigneeId] = useState(journalismSelfCreate ? userId ?? "" : "");
+  const [formActivated, setFormActivated] = useState(journalismMode || journalismSelfCreate);
+  const [choosingOtherDepartment, setChoosingOtherDepartment] = useState(false);
   const [assignmentMode, setAssignmentMode] = useState<"individual" | "department_group">("individual");
   const [excludedMemberIds, setExcludedMemberIds] = useState<string[]>([]);
   const [collaboratorIds, setCollaboratorIds] = useState<string[]>([]);
@@ -37,6 +40,7 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
   const [requirements, setRequirements] = useState([""]);
   const [busy, setBusy] = useState(false);
   const submittingRef = useRef(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState("");
   const [journalismErrors, setJournalismErrors] = useState<Record<string, string>>({});
   const selectedDepartment = departments.find((department) => department.id === departmentId);
@@ -48,6 +52,34 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
   const managerLabel = selectedDepartment?.managerId
     ? people.find((person) => person.id === selectedDepartment.managerId)?.fullName ?? "Trưởng phòng chính"
     : null;
+  const selectedAssignee = people.find((person) => person.id === assigneeId) ?? null;
+  const recipientReady = journalismSelfCreate || Boolean(assigneeId && selectedDepartment);
+  const canChooseOtherDepartment = Boolean(assignmentScope && assignmentScope.canChooseOtherDepartment);
+
+  useEffect(() => {
+    if (!journalismMode && recipientReady && formActivated) titleInputRef.current?.focus();
+  }, [formActivated, journalismMode, recipientReady]);
+
+  const chooseRecipient = (person: AssignmentPerson) => {
+    if (!person.departmentId) return;
+    setDepartmentId(person.departmentId);
+    setAssigneeId(person.id);
+    setExcludedMemberIds([]);
+    setCollaboratorIds([]);
+    setWatcherIds([]);
+    setChoosingOtherDepartment(false);
+    setFormActivated(true);
+  };
+
+  const changeRecipient = () => {
+    setAssigneeId("");
+    setExcludedMemberIds([]);
+    setCollaboratorIds([]);
+    setWatcherIds([]);
+    setDepartmentId(assignmentScope?.departmentId ?? "");
+    setChoosingOtherDepartment(false);
+    setFormActivated(false);
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -135,10 +167,34 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
             {canManageEventAssignment ? <a href="/work-schedule" className="ml-auto rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</a> : null}
           </div>
         </header>
+        {!journalismMode ? <section aria-labelledby="recipient-heading" className="mt-3 overflow-hidden rounded-xl border border-orange-200 bg-white shadow-sm">
+          <div className="border-b border-orange-100 bg-orange-50 px-4 py-3">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-700">Bước đầu tiên</p>
+            <h2 id="recipient-heading" className="mt-1 text-lg font-bold text-slate-950">CHỌN NGƯỜI NHẬN VIỆC</h2>
+          </div>
+          {formActivated && selectedAssignee && selectedDepartment ? <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Đang giao việc cho:</p>
+              <p className="mt-1 text-lg font-bold text-slate-950">{selectedAssignee.fullName} <span className="font-medium text-slate-400">·</span> {selectedDepartment.name}</p>
+            </div>
+            <button type="button" onClick={changeRecipient} className="rounded-lg border border-orange-300 bg-white px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">Đổi người</button>
+          </div> : <div className="grid gap-4 p-4">
+            <p role="status" className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Vui lòng chọn người nhận việc trước</p>
+            {assignmentScope?.kind === "own_department" ? <p className="text-sm font-semibold text-slate-700">Phạm vi: {assignmentScope.departmentName ?? "Chưa xác định phòng ban"}</p> : null}
+            {assignmentScope?.canChooseOtherDepartment && canChooseOtherDepartment && assignmentScope.departmentId && !choosingOtherDepartment ? <button type="button" onClick={() => { setChoosingOtherDepartment(true); setDepartmentId(""); }} className="justify-self-start rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Chọn phòng ban khác</button> : null}
+            {canChooseOtherDepartment && (choosingOtherDepartment || !assignmentScope?.departmentId) ? <div className="grid gap-2 sm:max-w-md">
+              <label className="grid gap-1 text-sm font-semibold"><span>Phòng ban</span><select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></label>
+              {assignmentScope?.departmentId ? <button type="button" onClick={() => { setDepartmentId(assignmentScope.departmentId ?? ""); setChoosingOtherDepartment(false); }} className="justify-self-start text-sm font-semibold text-orange-700 underline-offset-4 hover:underline">Quay về Ban Biên tập</button> : null}
+            </div> : null}
+            {departmentId ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{scopedPeople.map((person) => <button key={person.id} type="button" onClick={() => chooseRecipient(person)} className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-left hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><span className="block font-semibold text-slate-950">{person.fullName}</span><span className="mt-1 block text-xs text-slate-500">{selectedDepartment?.name}</span></button>)}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có nhân sự phù hợp trong phòng ban này.</p> : null}</div> : null}
+          </div>}
+        </section> : null}
         <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
+          <input type="hidden" name="recipientReady" disabled={!recipientReady} value="true" readOnly />
+          <fieldset disabled={!journalismMode && !recipientReady} className="contents disabled:opacity-60">
             <div className="grid gap-3 lg:col-span-2 lg:grid-cols-3">
-            <Field label="Tên công việc"><input name="title" required maxLength={500} className={controlClass} /></Field>
-                {journalismMode ? <div className="grid gap-1 text-sm font-semibold"><span>Phòng ban</span><input type="hidden" name="departmentId" value={journalismDepartment?.id ?? ""} /><div className={`${controlClass} bg-slate-100`} aria-readonly="true">Phòng Nội dung</div></div> : <Field label="Phòng ban / nhóm"><select name="departmentId" required value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setAssigneeId(""); setExcludedMemberIds([]); setCollaboratorIds([]); setWatcherIds([]); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></Field>}
+            <Field label="Tên công việc"><input ref={titleInputRef} name="title" required maxLength={500} className={controlClass} /></Field>
+                {journalismMode ? <div className="grid gap-1 text-sm font-semibold"><span>Phòng ban</span><input type="hidden" name="departmentId" value={journalismDepartment?.id ?? ""} /><div className={`${controlClass} bg-slate-100`} aria-readonly="true">Phòng Nội dung</div></div> : <input type="hidden" name="departmentId" value={departmentId} />}
             {isEditorialBoard ? <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 lg:col-span-2">Ban Biên tập mặc định: Tổng biên tập là trưởng phòng; thành viên gồm Phó Tổng biên tập và các Trưởng phòng.</p> : null}
               <Field label="Cách chọn người"><select value={assignmentMode} disabled={journalismMode} onChange={(e) => { setAssignmentMode(e.target.value as "individual" | "department_group"); setExcludedMemberIds([]); setCollaboratorIds([]); }} className={controlClass}><option value="individual">Cá nhân</option>{!journalismMode ? <option value="department_group">Nhóm phòng ban</option> : null}</select>{journalismMode ? <span className="font-normal text-slate-500">Công việc nghiệp vụ báo chí dùng người thực hiện cá nhân; cộng tác viên và người theo dõi vẫn giữ nguyên.</span> : null}</Field>
           </div>
@@ -150,7 +206,7 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
           <Field label="Các yêu cầu" wide><div className="grid gap-2">{requirements.map((value, index) => <div key={index} className="flex gap-2"><input name="requirements" required value={value} onChange={(event) => setRequirements((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} maxLength={2000} placeholder={`Yêu cầu ${index + 1}`} className={controlClass} />{requirements.length > 1 ? <button type="button" onClick={() => setRequirements((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded border px-3 text-red-700">Xóa</button> : null}</div>)}<button type="button" onClick={() => setRequirements((current) => [...current, ""])} className="justify-self-start rounded border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-700">+ Thêm yêu cầu</button></div></Field>
           {journalismMode ? <section aria-label="Nghiệp vụ báo chí" className="grid gap-3 rounded-xl border border-orange-200 bg-orange-50/60 p-3 lg:col-span-2 lg:grid-cols-2"><div className="lg:col-span-2"><h2 className="font-bold text-orange-900">Nghiệp vụ báo chí</h2><p className="mt-1 text-sm text-orange-900">Trạng thái ban đầu: Chưa xuất bản</p></div><Field label="Loại nghiệp vụ *"><select name="workKindId" required disabled={!journalismWorkKindsLoaded || journalismWorkKinds.length === 0} defaultValue="" aria-invalid={Boolean(journalismErrors.workKindId)} aria-describedby={journalismErrors.workKindId ? "journalism-work-kind-error" : undefined} className={controlClass}><option value="">Chọn loại nghiệp vụ</option>{journalismWorkKinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.name}</option>)}</select>{journalismErrors.workKindId ? <span id="journalism-work-kind-error" role="alert" className="font-normal text-red-700">Trường này bắt buộc.</span> : null}{!journalismWorkKindsLoaded || journalismWorkKinds.length === 0 ? <span role="alert" className="font-normal text-red-700">Không thể tải danh sách loại nghiệp vụ.</span> : null}</Field><fieldset className="grid gap-1 text-sm font-semibold"><legend>{journalismLabels.plannedPublicationDate}</legend><div className="grid grid-cols-2 gap-2"><input name="plannedPublicationDate" type="date" aria-label="Ngày dự kiến xuất bản" className={controlClass} /><input name="plannedPublicationTime" type="time" aria-label="Giờ dự kiến xuất bản" step="60" className={controlClass} /></div>{journalismErrors.plannedPublicationAt ? <span role="alert" className="font-normal text-red-700">Nhập đủ ngày và giờ hợp lệ.</span> : null}</fieldset><Field label="Địa điểm"><input name="location" maxLength={500} aria-invalid={Boolean(journalismErrors.location)} aria-describedby={journalismErrors.location ? "journalism-location-error" : undefined} className={controlClass} />{journalismErrors.location ? <span id="journalism-location-error" role="alert" className="font-normal text-red-700">Tối đa 500 ký tự.</span> : null}</Field><Field label={journalismLabels.editorialNotes} wide><textarea name="editorialNotes" maxLength={10000} aria-invalid={Boolean(journalismErrors.editorialNotes)} aria-describedby={journalismErrors.editorialNotes ? "journalism-notes-error" : undefined} rows={4} className={controlClass} />{journalismErrors.editorialNotes ? <span id="journalism-notes-error" role="alert" className="font-normal text-red-700">Tối đa 10.000 ký tự.</span> : null}</Field></section> : null}
           <div className="grid gap-3 lg:col-span-2 lg:grid-cols-4">
-            {journalismSelfCreate ? <div className="grid gap-1 text-sm font-semibold"><span>Người thực hiện</span><input type="hidden" name="assigneeId" value={userId ?? ""} /><div className={`${controlClass} bg-slate-100`} aria-readonly="true">Tôi (tự đăng ký)</div><span className="font-normal text-slate-500">Công việc sẽ vào Chờ duyệt giao việc; không thể giao cho người khác.</span></div> : <Field label="Người chịu trách nhiệm chính"><select name="assigneeId" required value={assigneeId} className={controlClass} onChange={(event) => { setAssigneeId(event.target.value); setExcludedMemberIds((current) => current.filter((id) => id !== event.target.value)); setCollaboratorIds((current) => current.filter((id) => id !== event.target.value)); setWatcherIds((current) => current.filter((id) => id !== event.target.value)); }}><option value="">Chọn người thực hiện</option>{scopedPeople.map(personOption)}</select></Field>}
+            {journalismSelfCreate ? <div className="grid gap-1 text-sm font-semibold"><span>Người thực hiện</span><input type="hidden" name="assigneeId" value={userId ?? ""} /><div className={`${controlClass} bg-slate-100`} aria-readonly="true">Tôi (tự đăng ký)</div><span className="font-normal text-slate-500">Công việc sẽ vào Chờ duyệt giao việc; không thể giao cho người khác.</span></div> : journalismMode ? <Field label="Người chịu trách nhiệm chính"><select name="assigneeId" required value={assigneeId} className={controlClass} onChange={(event) => { setAssigneeId(event.target.value); setExcludedMemberIds((current) => current.filter((id) => id !== event.target.value)); setCollaboratorIds((current) => current.filter((id) => id !== event.target.value)); setWatcherIds((current) => current.filter((id) => id !== event.target.value)); }}><option value="">Chọn người thực hiện</option>{scopedPeople.map(personOption)}</select></Field> : <div className="grid gap-1 text-sm font-semibold"><span>Người nhận việc</span><input type="hidden" name="assigneeId" value={assigneeId} /><div className={`${controlClass} bg-slate-100`} aria-readonly="true">{selectedAssignee?.fullName ?? "Chưa chọn"}</div></div>}
             <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 lg:flex lg:items-center">Người duyệt tự động là người giao việc.</p>
             <Field label="Hạn hoàn thành"><div className="grid grid-cols-[minmax(0,1fr)_100px] gap-2"><input name="dueDate" aria-label="Ngày hoàn thành" type="date" required className={controlClass} /><input name="dueTime" aria-label="Giờ hoàn thành" type="time" required defaultValue="17:00" step="60" className={controlClass} /></div></Field>
             {!journalismMode ? <Field label="Lặp lại"><select name="recurrenceFrequency" value={recurrenceFrequency} onChange={(e) => setRecurrenceFrequency(e.target.value)} className={controlClass}><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></Field> : null}
@@ -161,6 +217,7 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
           <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className={controlClass} /></Field>
           <div className="flex items-end"><button disabled={busy || !departmentId || !selectedDepartment?.managerId || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : "Giao việc"}</button></div>
           {message ? <p role="alert" className="text-sm text-red-700 lg:col-span-2">{message}</p> : null}
+          </fieldset>
         </form>
       </main>
     </div>

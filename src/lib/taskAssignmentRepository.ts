@@ -5,9 +5,11 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { resolveAssignmentSelection } from "@/lib/taskAssignmentGroup";
 import { isSystemAdminStaff, sortStaffRows } from "@/lib/staffOrdering";
 import { isEligibleAssignmentReviewer, isLeadershipAssignmentReviewer } from "@/lib/taskReviewerPolicy.mjs";
+import { deriveAssignmentScope } from "@/lib/taskAssignmentScope.mjs";
 
 export type AssignmentDepartment = { id: string; code?: string | null; name: string; managerId: string | null; hasManager: boolean };
 export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; roleCode: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
+export type AssignmentScope = { kind: "own_department" | "global_default"; departmentId: string | null; departmentName: string | null; canChooseOtherDepartment: boolean };
 
 export const taskAssignmentRepository = {
   async options(actor: AuthorizationActor) {
@@ -24,15 +26,17 @@ export const taskAssignmentRepository = {
     const managerIds = new Set((departments.data ?? []).map((row) => row.manager_id).filter(Boolean));
     const leadershipDepartment = (departments.data ?? []).find((row) => row.code === "leadership");
     const normalizePersonDepartment = (row: (typeof people.data)[number]) => leadershipDepartment && leadershipDepartment.id === (departments.data ?? []).find((department) => department.code === "leadership")?.id && ((row.roles as unknown as { code?: string } | null)?.code === "pho_tong_bien_tap" || (row.job_titles as unknown as { code?: string } | null)?.code === "truong_phong") ? leadershipDepartment.id as string : row.department_id as string | null;
+    const normalizedDepartments = (departments.data ?? []).map((row) => ({
+      id: row.id as string,
+      code: row.code as string | null,
+      name: row.name as string,
+      managerId: row.manager_id as string | null,
+      hasManager: row.manager_id !== null,
+    }));
     return {
       ok: true as const,
-      departments: (departments.data ?? []).map((row) => ({
-        id: row.id as string,
-        code: row.code as string | null,
-        name: row.name as string,
-        managerId: row.manager_id as string | null,
-        hasManager: row.manager_id !== null,
-      })),
+      departments: normalizedDepartments,
+      scope: deriveAssignmentScope(actor, normalizedDepartments) as AssignmentScope,
       people: sortStaffRows(people.data ?? []).filter((row) => !isSystemAdminStaff(row) && (actor.roleCode !== "pho_tong_bien_tap" || (row.roles as unknown as { code?: string } | null)?.code !== "tong_bien_tap") && (broad || row.department_id === actor.departmentId || isLeadershipAssignmentReviewer(
         (row.roles as unknown as { code?: string } | null)?.code,
       ))).map((row) => ({
