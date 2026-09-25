@@ -43,8 +43,8 @@ test("administration still requires admin role and individual permission", () =>
   assert.equal(restricted.configuration.some(item => ["users", "departments", "permissions", "evaluation-rubrics"].includes(item.id)), false);
   assert.deepEqual(getPhase2Navigation({ ...employee, canManageUsers: true, canManagePermissions: true, canManageRubrics: true }).configuration, []);
 });
-test("Journalism tasks, assignment and detail exclusively activate Journalism", () => {
-  for (const route of ["/tasks?journalism=only", "/tasks?page=2&journalism=only", "/tasks/assign?kind=journalism", "/tasks/task-id?journalism=only"]) {
+test("Journalism tasks, creation and detail exclusively activate Journalism", () => {
+  for (const route of ["/tasks?journalism=only", "/tasks?page=2&journalism=only", "/journalism/tasks/new", "/tasks/task-id?journalism=only"]) {
     assert.equal(isNavigationActive(route, "/tasks?journalism=only"), true, route);
     assert.equal(isNavigationActive(route, "/tasks"), false, route);
     assert.equal(isNavigationActive(route, "/tasks/assign"), false, route);
@@ -54,6 +54,7 @@ test("Journalism tasks, assignment and detail exclusively activate Journalism", 
     assert.equal(isNavigationActive(route, "/tasks?journalism=only"), false);
   }
   assert.equal(isNavigationActive("/tasks/assign", "/tasks/assign"), true);
+  assert.equal(isNavigationActive("/tasks/assign?kind=journalism", "/tasks/assign"), false);
 });
 test("Journalism page routes select the correct child, including nested series", () => {
   for (const route of ["/journalism/calendar?view=week", "/journalism/reports", "/journalism/structures", "/journalism/structures/series-id"]) {

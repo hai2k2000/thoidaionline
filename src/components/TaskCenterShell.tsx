@@ -172,7 +172,7 @@ export default function TaskCenterShell(props: Props) {
           <header className="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
               <div><h1 className="text-2xl font-bold sm:text-3xl">{heading}</h1></div>
-              {!taskMode ? <Link href="/tasks/personal/new" className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">+ Tạo công việc</Link> : null}
+              {!taskMode ? <Link href={query.journalism === "only" ? "/journalism/tasks/new" : "/tasks/personal/new"} className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">{query.journalism === "only" ? "+ Tạo công việc nghiệp vụ báo chí" : "+ Tạo công việc"}</Link> : null}
             </div>
             <nav aria-label="Bảng công việc" className="mt-4 flex flex-wrap gap-2">
             </nav>

@@ -13,7 +13,7 @@ test("server session carries department code for authoritative Journalism scope"
 test("Journalism pages and create API deny actors outside Content scope", () => {
   assert.match(read("../app/journalism/reports/page.tsx"), /canUseJournalism/);
   assert.match(read("../app/journalism/structures/page.tsx"), /canUseJournalism/);
-  assert.match(read("../app/tasks/assign/page.tsx"), /canUseJournalism/);
+  assert.match(read("../app/journalism/tasks/new/page.tsx"), /canUseJournalism/);
   assert.match(read("../app/api/tasks/journalism/assign/route.ts"), /canUseJournalism/);
 });
 
@@ -32,9 +32,8 @@ test("Task list and detail do not expose Journalism outside authorized scope", (
   assert.match(read("../app/tasks/page.tsx"), /canUseJournalism/);
   assert.match(read("../app/tasks/[id]/page.tsx"), /canUseJournalism/);
   assert.match(read("../app/tasks/page.tsx"), /<TaskCenterShell[\s\S]*canAccessJournalism=/);
-  assert.match(read("../app/tasks/assign/page.tsx"), /<TaskAssignShell[\s\S]*canAccessJournalism=/);
+  assert.match(read("../app/journalism/tasks/new/page.tsx"), /<TaskAssignShell[\s\S]*journalismMode=\{true\}/);
   assert.match(read("../components/TaskCenterShell.tsx"), /canAccessJournalism: boolean/);
-  assert.match(read("../components/TaskAssignShell.tsx"), /canAccessJournalism: boolean/);
   const repository = read("./taskRepository.ts");
   assert.match(repository, /actor\.canAccessJournalism/);
   assert.match(repository, /applyJournalismExcludeFilter\(dbQuery\)/);

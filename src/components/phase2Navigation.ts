@@ -143,8 +143,8 @@ export function buildLegacyTaskRedirectFromParams(
 export function isNavigationActive(currentPath: string, href: string): boolean {
   const [pathname, rawSearch = ""] = currentPath.split("?");
   const search = new URLSearchParams(rawSearch.split("#")[0]);
-  const journalismTask = (pathname === "/tasks" || pathname.startsWith("/tasks/"))
-    && (search.get("journalism") === "only" || (pathname === "/tasks/assign" && search.get("kind") === "journalism"));
+  const journalismTask = (pathname === "/tasks" || pathname.startsWith("/tasks/") || pathname.startsWith("/journalism/tasks/"))
+    && (search.get("journalism") === "only" || pathname.startsWith("/journalism/tasks/") || (pathname === "/tasks/assign" && search.get("kind") === "journalism"));
   if (href === "/tasks?journalism=only") return journalismTask;
   if (href === "/tasks/assign") return pathname === href && !journalismTask;
   if (href === "/tasks") return (pathname === href || pathname.startsWith("/tasks/")) && pathname !== "/tasks/assign" && !journalismTask;

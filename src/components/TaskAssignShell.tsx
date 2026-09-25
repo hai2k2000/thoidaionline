@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
@@ -13,12 +12,11 @@ import { journalismLabels } from "@/lib/journalismUi.mjs";
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
-export default function TaskAssignShell({ departments, people, userLabel, canManageEventAssignment, canAccessJournalism, journalismMode, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
+export default function TaskAssignShell({ departments, people, userLabel, canManageEventAssignment, journalismMode, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
   departments: AssignmentDepartment[];
   people: AssignmentPerson[];
   userLabel: string;
   canManageEventAssignment: boolean;
-  canAccessJournalism: boolean;
   journalismMode: boolean;
   journalismDepartment: AssignmentDepartment | null;
   journalismWorkKinds: { id: string; name: string; is_active: boolean }[];
@@ -125,15 +123,12 @@ export default function TaskAssignShell({ departments, people, userLabel, canMan
 
   return <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
     <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
-      <AppNav currentPath={journalismMode ? "/tasks/assign?kind=journalism" : "/tasks/assign"} userLabel={userLabel} onLogout={() => { logout(); router.replace("/login"); }} />
+      <AppNav currentPath={journalismMode ? "/journalism/tasks/new" : "/tasks/assign"} userLabel={userLabel} onLogout={() => { logout(); router.replace("/login"); }} />
       <main className="min-w-0 flex-1">
         <header className="rounded-2xl border bg-white p-4 shadow-sm">
           <h1 className="text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <nav aria-label="Loại công việc cần tạo" className="flex flex-wrap gap-2">
-              <Link href="/tasks/assign" aria-current={!journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${!journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc thường</Link>
-              {canAccessJournalism ? <Link href="/tasks/assign?kind=journalism" aria-current={journalismMode ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${journalismMode ? "border-orange-500 bg-orange-50 text-orange-800" : "text-slate-700"}`}>Công việc nghiệp vụ báo chí</Link> : null}
-            </nav>
+            {!journalismMode ? <span className="rounded-lg border border-orange-500 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800">Công việc thường</span> : <span className="rounded-lg border border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">Công việc nghiệp vụ báo chí</span>}
             {canManageEventAssignment ? <a href="/work-schedule" className="ml-auto rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</a> : null}
           </div>
         </header>
