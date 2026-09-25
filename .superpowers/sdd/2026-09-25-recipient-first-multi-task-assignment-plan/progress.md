@@ -38,3 +38,5 @@ Task 3: complete (API compatibility and error contract; inline spec/quality revi
 Task 4: complete (recipient-first UI and role-aware scope; inline spec/quality review PASS; commit cb5ee63)
 Task 5: complete (multi-task card UI; inline spec/quality review PASS; commit 8201796)
 Task 6: complete (attachment phase and retry; inline spec/quality review PASS; commit 002d4f2)
+
+Task 7: complete (integration/edge-case coverage; focused 53/53, relevant regression 194/194, TypeScript/lint/routes/diff checks PASS; browser source gate extended; no production/canary activation)
