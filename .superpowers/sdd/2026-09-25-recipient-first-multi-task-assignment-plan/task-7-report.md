@@ -20,7 +20,7 @@ Commit: 4e3957d8d07b8aa620f849ed998843c6fd61a996
 - Touched-file lint: PASS.
 - Route manifest: PASS.
 - git diff --check: PASS.
-- Canonical ancestry: repository guard cannot pass on the dedicated feature branch because the guard requires candidateBranch=integration/production; lineage to integration/production at 16e90485 is preserved and this branch is intentionally separate.
+- Canonical ancestry: FAIL under the repository guard because integration/production at 16e90485 does not contain the current production commit ea85c377; the candidate itself contains ea85c377 and is lineage-safe, but the stale integration pointer must be reconciled before CP8.
 - Build/artifact: deferred to CP8 per plan.
 
 Production changed: NO.
