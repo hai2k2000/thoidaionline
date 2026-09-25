@@ -22,9 +22,11 @@ current_target=$(readlink -f -- "$release_root/current")
 [[ "$current_target" == "$release_root"/* && -d "$current_target" ]] || { echo "current release target invalid" >&2; exit 1; }
 rollback_1_target=$(readlink -f -- "$release_root/rollback-1" 2>/dev/null || true)
 previous_target=$(readlink -f -- "$release_root/previous" 2>/dev/null || true)
-[[ -n "$rollback_1_target" ]] || rollback_1_target=$previous_target
+[[ -d "$rollback_1_target" ]] || rollback_1_target=$previous_target
 rollback_2_target=$(readlink -f -- "$release_root/rollback-2" 2>/dev/null || true)
-[[ -n "$rollback_2_target" ]] || rollback_2_target=$rollback_1_target
+[[ -d "$rollback_2_target" ]] || rollback_2_target=$rollback_1_target
+[[ -d "$rollback_1_target" && "$rollback_1_target" == "$release_root"/* ]] || rollback_1_target=$current_target
+[[ -d "$rollback_2_target" && "$rollback_2_target" == "$release_root"/* ]] || rollback_2_target=$rollback_1_target
 ln -sfn -- "$rollback_1_target" "$release_root/rollback-2.new"
 mv -Tf -- "$release_root/rollback-2.new" "$release_root/rollback-2"
 ln -sfn -- "$current_target" "$release_root/rollback-1.new"
