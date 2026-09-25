@@ -8,7 +8,9 @@ systemctl_bin=${THOIDAI_SYSTEMCTL_BIN:-systemctl}
 curl_bin=${THOIDAI_CURL_BIN:-curl}
 [[ -d "$release" && "$release" = /* ]] || { echo "invalid release path" >&2; exit 2; }
 [[ -f "$release/.release-meta" ]] || { echo "managed metadata missing" >&2; exit 1; }
-[[ "$($systemctl_bin show -P WorkingDirectory "$service")" = "$(realpath -m "$release")" ]] || { echo "service does not point to release" >&2; exit 1; }
+service_working_dir=$(realpath -m -- "$($systemctl_bin show -P WorkingDirectory "$service")")
+release_path=$(realpath -m -- "$release")
+[[ "$service_working_dir" = "$release_path" ]] || { echo "service does not point to release" >&2; exit 1; }
 "$systemctl_bin" is-active --quiet "$service"
 "$curl_bin" -fsS --max-time 15 -o /dev/null "$health_url"
 tmp="$release/.release-meta.new"
