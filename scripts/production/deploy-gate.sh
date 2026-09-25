@@ -21,11 +21,25 @@ chown "${THOIDAI_SERVICE_USER:-thoidai-work}:${THOIDAI_SERVICE_GROUP:-thoidai-wo
 ln -s -- "$new_release" "$release_root/current.new"
 mv -Tf -- "$release_root/current.new" "$release_root/current"
 systemctl restart "${THOIDAI_SERVICE:-thoidai-work.service}"
-if ! systemctl is-active --quiet "${THOIDAI_SERVICE:-thoidai-work.service}" || ! curl -fsS --max-time 15 -o /dev/null "${THOIDAI_HEALTH_URL:-http://127.0.0.1:3001/login}"; then
+health_ok=0
+for attempt in $(seq 1 30); do
+  if systemctl is-active --quiet "${THOIDAI_SERVICE:-thoidai-work.service}" \
+    && curl -fsS --max-time 15 -o /dev/null "${THOIDAI_HEALTH_URL:-http://127.0.0.1:3001/login}"; then
+    health_ok=1
+    break
+  fi
+  sleep 1
+done
+if (( ! health_ok )); then
+  flock -u 9
   "$(dirname "$0")/rollback-application.sh"
   exit 1
 fi
 if [[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]]; then
-  node scripts/contract-smoke.mjs || { "$(dirname "$0")/rollback-application.sh"; exit 1; }
+  if ! node scripts/contract-smoke.mjs; then
+    flock -u 9
+    "$(dirname "$0")/rollback-application.sh"
+    exit 1
+  fi
 fi
 echo "deploy-gate: PASS ($new_release)"
