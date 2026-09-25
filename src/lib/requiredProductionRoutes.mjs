@@ -10,6 +10,7 @@ export const REQUIRED_PRODUCTION_ROUTES = [
   { sourcePath: "src/app/api/work-schedule/events/route.ts", routePath: "/api/work-schedule/events" },
   { sourcePath: "src/app/api/tasks/assign/route.ts", routePath: "/api/tasks/assign" },
   { sourcePath: "src/app/api/tasks/journalism/assign/route.ts", routePath: "/api/tasks/journalism/assign" },
+  { sourcePath: "src/app/journalism/tasks/page.tsx", routePath: "/journalism/tasks" },
   { sourcePath: "src/app/api/tasks/[id]/journalism/route.ts", routePath: "/api/tasks/[id]/journalism" },
   { sourcePath: "src/app/api/tasks/[id]/journalism/publication/route.ts", routePath: "/api/tasks/[id]/journalism/publication" },
   { sourcePath: "src/app/api/journalism/calendar/route.ts", routePath: "/api/journalism/calendar" },
@@ -27,6 +28,6 @@ export function missingRequiredArtifactRoutes(root = process.cwd()) {
   if (!existsSync(manifestPath)) return REQUIRED_PRODUCTION_ROUTES.map(({ routePath }) => routePath);
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   return REQUIRED_PRODUCTION_ROUTES
-    .filter(({ routePath }) => !Object.hasOwn(manifest, `${routePath}/route`))
+    .filter(({ sourcePath, routePath }) => !Object.hasOwn(manifest, `${routePath}/${sourcePath.endsWith("/route.ts") ? "route" : "page"}`))
     .map(({ routePath }) => routePath);
 }
