@@ -28,6 +28,10 @@ test("sidebar renders labels for every restored legacy administration route", ()
   assert.match(navSource, /permissions:\s*"Ph\\u00e2n quy\\u1ec1n"/);
 });
 
+test("sidebar labels the Department Plan navigation entry", () => {
+  assert.match(navSource, /"department-plan": "Kế hoạch phòng ban"/);
+});
+
 test("sidebar implements the required off-canvas accessibility contract", () => {
   assert.match(navSource, /role="dialog"/);
   assert.match(navSource, /aria-modal="true"/);
