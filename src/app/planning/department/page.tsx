@@ -40,11 +40,12 @@ export default async function DepartmentPlanPage({ searchParams }: Props) {
   const queryStart = first(raw.start);
   if (queryPeriod !== period.periodType || queryStart !== period.periodStart) redirect(canonicalUrl);
 
-  const [department, plan] = await Promise.all([
+  const [department, employees, plan] = await Promise.all([
     departmentPlanRepository.getDepartment(scope.departmentId),
+    departmentPlanRepository.listActiveEmployees(scope.departmentId),
     departmentPlanRepository.getPeriod(scope.departmentId, period.periodType, period.periodStart),
   ]);
-  if (department.error || plan.error) throw new Error("Không thể tải kế hoạch phòng.");
+  if (department.error || employees.error || plan.error) throw new Error("Không thể tải kế hoạch phòng.");
   const items = plan.data ? await departmentPlanRepository.listPlanItems(plan.data.id) : { data: [], error: null };
   if (items.error) throw new Error("Không thể tải mục kế hoạch phòng.");
 
@@ -55,7 +56,8 @@ export default async function DepartmentPlanPage({ searchParams }: Props) {
     period={period}
     currentWeeklyPeriod={currentWeeklyPeriod}
     currentMonthlyPeriod={currentMonthlyPeriod}
-    hasPlan={Boolean(plan.data)}
-    itemCount={items.data?.length ?? 0}
+    employees={employees.data ?? []}
+    initialPlan={plan.data}
+    initialItems={items.data ?? []}
   />;
 }

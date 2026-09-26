@@ -6,16 +6,19 @@ import {
   formatDepartmentPlanPeriod,
   shiftDepartmentPlanStart,
 } from "@/lib/departmentPlanNavigation";
+import DepartmentPlanGrid from "@/components/DepartmentPlanGrid";
+import type { DepartmentPlanItemRow, DepartmentPlanRow } from "@/lib/departmentPlanRepository";
 
 type Props = {
   userLabel: string;
   departmentName: string;
   period: DepartmentPlanPeriod;
   departmentId: string;
-  hasPlan: boolean;
-  itemCount: number;
   currentWeeklyPeriod: DepartmentPlanPeriod;
   currentMonthlyPeriod: DepartmentPlanPeriod;
+  employees: Array<{ id: string; full_name: string; department_id: string }>;
+  initialPlan: DepartmentPlanRow | null;
+  initialItems: DepartmentPlanItemRow[];
 };
 
 const tabClass = (active: boolean) => `rounded-xl px-4 py-2.5 text-sm font-bold transition ${active
@@ -27,10 +30,11 @@ export default function DepartmentPlanShell({
   departmentName,
   period,
   departmentId,
-  hasPlan,
-  itemCount,
   currentWeeklyPeriod,
   currentMonthlyPeriod,
+  employees,
+  initialPlan,
+  initialItems,
 }: Props) {
   const weeklyStart = period.periodType === "weekly" ? period.periodStart : currentWeeklyPeriod.periodStart;
   const monthlyStart = period.periodType === "monthly" ? period.periodStart : currentMonthlyPeriod.periodStart;
@@ -80,13 +84,7 @@ export default function DepartmentPlanShell({
             </div>
           </section>
 
-          <section className="mt-3 rounded-2xl border border-dashed border-orange-200 bg-white/80 p-8 text-center shadow-sm sm:p-12">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100 text-2xl text-orange-700" aria-hidden="true">◷</div>
-            <h2 className="mt-4 text-lg font-extrabold text-slate-900">{hasPlan ? "Kế hoạch đang được chuẩn bị" : "Chưa có kế hoạch cho kỳ này."}</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-600">
-              {hasPlan ? `${itemCount} mục trong kỳ kế hoạch. Chức năng nhập nội dung sẽ được bổ sung ở bước tiếp theo.` : "Bạn đang xem đúng kỳ kế hoạch; việc mở kỳ này không tạo dữ liệu mới."}
-            </p>
-          </section>
+          <DepartmentPlanGrid departmentId={departmentId} period={period} employees={employees} initialPlan={initialPlan} initialItems={initialItems} />
         </main>
       </div>
     </div>

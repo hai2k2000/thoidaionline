@@ -128,6 +128,7 @@ function parseItemPatch(body: Record<string, unknown>, creating = false) {
     if (key in body) patch[key] = body[key];
   }
   if ("due_at" in body && body.due_at !== null && typeof body.due_at !== "string") return null;
+  if (typeof body.due_at === "string" && Number.isNaN(Date.parse(body.due_at))) return null;
   if ("due_at" in body) patch.due_at = body.due_at;
   if ("assignee_id" in body) {
     if (body.assignee_id !== null && !asUuid(body.assignee_id)) return null;
@@ -141,6 +142,10 @@ function parseItemPatch(body: Record<string, unknown>, creating = false) {
     if (typeof body.title !== "string" || !body.title.trim() || body.title.length > 500) return null;
     patch.title = body.title.trim();
   }
+  const assignmentState = patch.assignment_state;
+  const assigneeId = patch.assignee_id;
+  if (assignmentState === "assigned" && !assigneeId) return null;
+  if ((assignmentState === "unassigned" || assignmentState === "department_wide") && assigneeId) return null;
   return patch;
 }
 
@@ -174,6 +179,9 @@ async function updateItem(request: Request, itemId: string) {
   const body = await readJsonObject(request);
   const patch = parseItemPatch(body ?? {});
   if (!patch || !Object.keys(patch).length || "linked_task_id" in (body ?? {}) || "department_id" in (body ?? {}) || "department_plan_id" in (body ?? {})) return apiError("invalid_request", 400);
+  if ((patch.assignment_state === "unassigned" || patch.assignment_state === "department_wide") && patch.assignee_id === undefined) {
+    patch.assignee_id = null;
+  }
   const result = await departmentPlanRepository.updateItem(id, patch as never);
   if (result.error) return repositoryError(result.error);
   if (!result.data) return apiError("not_found", 404);

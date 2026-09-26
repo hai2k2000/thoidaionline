@@ -51,6 +51,15 @@ export const departmentPlanRepository = {
       .maybeSingle<{ id: string; name: string }>();
   },
 
+  async listActiveEmployees(departmentId: string) {
+    return serverSupabase
+      .from("staff_users")
+      .select("id,full_name,department_id")
+      .eq("department_id", departmentId)
+      .eq("active", true)
+      .order("full_name", { ascending: true });
+  },
+
   async validateAssignee(departmentId: string, assigneeId: string | null | undefined) {
     if (!assigneeId) return { data: true, error: null };
     const result = await serverSupabase
