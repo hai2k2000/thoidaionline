@@ -44,6 +44,8 @@ await writeFile(join(output, "required-route-manifest.json"), `${JSON.stringify(
 await writeFile(join(output, "MIGRATION_REFERENCE"), [
   "supabase/migrations/20260924120000_task_approval_gates.sql",
   "supabase/migrations/20260924130000_task_assignment_semantics.sql",
+  "supabase/migrations/20260926140000_department_plans_v2.sql",
+  "supabase/migrations/20260926150000_department_plan_to_task_v1.sql",
   "supabase/migrations/20260925100000_journalism_self_registration.sql",
   "",
 ].join("\n"));
@@ -63,7 +65,7 @@ await writeFile(join(output, ".release-meta"), [
   "artifact_type=next-standalone",
   `canonical_baseline=${canonicalBaseline}`,
   `artifact_bytes=${artifactBytes}`,
-  "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260925100000_journalism_self_registration.sql",
+  "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260926140000_department_plans_v2.sql,supabase/migrations/20260926150000_department_plan_to_task_v1.sql,supabase/migrations/20260925100000_journalism_self_registration.sql",
   "env_model=symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production",
   "build_verification=production-like-env-build-pass",
   `contract_suite=${process.env.THOIDAI_CONTRACT_SUITE_RESULT || "pending"}`,

@@ -8,6 +8,8 @@ assert.equal(readFileSync(join(root, "RELEASE_BASELINE_COMMIT"), "utf8").trim(),
 assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().split("\n"), [
   "supabase/migrations/20260924120000_task_approval_gates.sql",
   "supabase/migrations/20260924130000_task_assignment_semantics.sql",
+  "supabase/migrations/20260926140000_department_plans_v2.sql",
+  "supabase/migrations/20260926150000_department_plan_to_task_v1.sql",
   "supabase/migrations/20260925100000_journalism_self_registration.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
