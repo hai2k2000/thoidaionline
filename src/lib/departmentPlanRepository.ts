@@ -28,6 +28,7 @@ export type DepartmentPlanItemRow = {
   created_by: string;
   created_at: string;
   updated_at: string;
+  created_by_name?: string | null;
 };
 
 export type DepartmentPlanItemPatch = Partial<Pick<
@@ -124,11 +125,19 @@ export const departmentPlanRepository = {
   },
 
   async getItem(itemId: string) {
-    return serverSupabase
+    const result = await serverSupabase
       .from("department_plan_items")
       .select(ITEM_FIELDS)
       .eq("id", itemId)
       .maybeSingle<DepartmentPlanItemRow>();
+    if (result.error || !result.data) return result;
+    const creator = await serverSupabase
+      .from("staff_users")
+      .select("full_name")
+      .eq("id", result.data.created_by)
+      .maybeSingle<{ full_name: string }>();
+    if (creator.error) return { data: null, error: creator.error };
+    return { data: { ...result.data, created_by_name: creator.data?.full_name ?? null }, error: null };
   },
 
   async createItem(

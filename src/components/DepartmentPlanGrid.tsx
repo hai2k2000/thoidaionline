@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DepartmentPlanItemRow, DepartmentPlanRow } from "@/lib/departmentPlanRepository";
 import type { DepartmentPlanPeriod } from "@/lib/departmentPlanPeriod";
+import DepartmentPlanItemDialog from "@/components/DepartmentPlanItemDialog";
 
 type Employee = { id: string; full_name: string; department_id: string };
 type Draft = {
@@ -56,6 +57,7 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
   const [plan, setPlan] = useState(initialPlan);
   const [rows, setRows] = useState(() => initialItems.map(fromItem));
   const [message, setMessage] = useState("");
+  const [detailId, setDetailId] = useState<string | null>(null);
   const savingKeys = useRef(new Set<string>());
   const hasDrafts = useMemo(() => rows.some((row) => row.dirty), [rows]);
 
@@ -143,11 +145,12 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
             <td className="space-y-2 p-2"><select value={row.assignmentState} onChange={(event) => { const assignmentState = event.target.value as Draft["assignmentState"]; update(row.key, { assignmentState, assigneeId: assignmentState === "assigned" ? row.assigneeId : "" }); }} className="min-h-10 w-full rounded-lg border px-2 py-2"><option value="unassigned">{assignmentLabels.unassigned}</option><option value="department_wide">{assignmentLabels.department_wide}</option><option value="assigned">{assignmentLabels.assigned}</option></select>{row.assignmentState === "assigned" ? <select value={row.assigneeId} onChange={(event) => update(row.key, { assigneeId: event.target.value })} className="min-h-10 w-full rounded-lg border px-2 py-2"><option value="">Chọn người</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}</select> : null}</td>
             <td className="p-2"><input type="datetime-local" value={row.dueAt} onChange={(event) => update(row.key, { dueAt: event.target.value })} className="min-h-10 w-full rounded-lg border px-2 py-2" />{outsidePeriod(row.dueAt, period) ? <p className="mt-1 text-xs text-amber-700">Hạn hoàn thành nằm ngoài kỳ kế hoạch.</p> : null}</td>
             <td className="p-2"><select value={row.workStatus} onChange={(event) => update(row.key, { workStatus: event.target.value as Draft["workStatus"] })} className="min-h-10 w-full rounded-lg border px-2 py-2">{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td>
-            <td className="space-y-2 p-2"><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="min-h-10 w-full rounded-lg bg-orange-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu dòng"}</button><button type="button" disabled={row.saving} onClick={() => void remove(row)} className="min-h-10 w-full rounded-lg border px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Xóa</button></td>
+            <td className="space-y-2 p-2"><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="min-h-10 w-full rounded-lg bg-orange-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu dòng"}</button>{row.id ? <button type="button" disabled={row.saving} onClick={() => setDetailId(row.id!)} className="min-h-10 w-full rounded-lg border border-orange-200 px-3 py-2 text-xs font-bold text-orange-800 disabled:opacity-50">Chi tiết</button> : null}<button type="button" disabled={row.saving} onClick={() => void remove(row)} className="min-h-10 w-full rounded-lg border px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Xóa</button></td>
           </tr>)}</tbody>
         </table>
       </div>
       {!rows.length ? <p className="py-8 text-center text-sm text-slate-600">Chưa có kế hoạch cho kỳ này. Bấm “+ Thêm dòng” để bắt đầu.</p> : null}
+      {detailId ? <DepartmentPlanItemDialog itemId={detailId} period={period} employees={employees} onClose={() => setDetailId(null)} onSaved={(item) => { setRows((current) => current.map((row) => row.id === item.id ? fromItem(item) : row)); setMessage("Đã lưu chi tiết công việc."); }} /> : null}
     </section>
   );
 }
