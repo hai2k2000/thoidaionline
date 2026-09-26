@@ -1,3 +1,12 @@
+## Department Plan V2 Final Integration Gate
+
+Current Phase: FINAL INTEGRATION & PRODUCTION ROLLOUT GATE
+Current Task: BLOCKED before production mutation — authorized authenticated production smoke evidence unavailable
+
+Final Integration: c0769ee merged from active production f5d9b66 through CP1-CP8 source dfaf753; release metadata fix 6d5aa4f includes CP1/CP6 migration references.
+Pre-deploy validation: Department Plan 73/73, affected regression 229/229, TypeScript, ESLint, route manifest, production-like build, standalone artifact verification PASS.
+Production mutation: NONE — migration and activation intentionally stopped pending authorized authenticated smoke.
+
 # Production Smoke Cleanup + Recipient-First Compact Picker
 
 ## Department Plan V2 Checkpoint 6
