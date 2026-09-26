@@ -464,6 +464,7 @@ function TaskCardFields({ card, index, selectedAssigneeId, people, errors, busy,
   onRemove: () => void;
   allowRemove: boolean;
 }) {
+  const [openPanel, setOpenPanel] = useState<ParticipantPanel | null>(null);
   const updateRequirement = (requirementIndex: number, value: string) => onChange({ requirements: card.requirements.map((item, itemIndex) => itemIndex === requirementIndex ? value : item) });
   const removeRequirement = (requirementIndex: number) => onChange({ requirements: card.requirements.length > 1 ? card.requirements.filter((_, itemIndex) => itemIndex !== requirementIndex) : [""] });
   return <article aria-labelledby={`${card.cardId}-heading`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
@@ -475,9 +476,59 @@ function TaskCardFields({ card, index, selectedAssigneeId, people, errors, busy,
       <Field label="Yêu cầu" wide><div className="grid gap-2">{card.requirements.map((value, requirementIndex) => <div key={`${card.cardId}-requirement-${requirementIndex}`} className="flex gap-2"><input value={value} onChange={(event) => updateRequirement(requirementIndex, event.target.value)} maxLength={2000} placeholder={`Yêu cầu ${requirementIndex + 1}`} aria-invalid={Boolean(errors.requirements)} className={controlClass} />{card.requirements.length > 1 ? <button type="button" disabled={busy} onClick={() => removeRequirement(requirementIndex)} className="rounded border px-3 text-red-700 disabled:opacity-50">Xóa</button> : null}</div>)}<button type="button" disabled={busy} onClick={() => onChange({ requirements: [...card.requirements, ""] })} className="justify-self-start rounded border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-700 disabled:opacity-50">+ Thêm yêu cầu</button>{errors.requirements ? <span role="alert" className="font-normal text-red-700">{errors.requirements}</span> : null}</div></Field>
       <Field label="Mức độ ưu tiên"><select value={card.priority} onChange={(event) => onChange({ priority: event.target.value as AssignmentCardState["priority"] })} className={controlClass}><option value="low">Thấp</option><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn cấp</option></select></Field>
       <Field label="Lặp lại"><div className="grid gap-2"><select value={card.recurrenceFrequency ?? ""} onChange={(event) => onChange({ recurrenceFrequency: (event.target.value || null) as AssignmentCardState["recurrenceFrequency"], recurrenceEndsOn: event.target.value ? card.recurrenceEndsOn : null })} className={controlClass}><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select>{card.recurrenceFrequency ? <input value={card.recurrenceEndsOn ?? ""} onChange={(event) => onChange({ recurrenceEndsOn: event.target.value || null })} type="date" className={controlClass} /> : null}</div></Field>
-      <Field label="Người phối hợp"><CheckGroup name={`collaborators-${card.cardId}`} people={people.filter((person) => person.id !== selectedAssigneeId)} selected={card.collaboratorIds} onChange={(ids) => onChange({ collaboratorIds: ids })} empty="Không còn người phù hợp trong phòng." /></Field>
-      <Field label="Người theo dõi"><CheckGroup name={`watchers-${card.cardId}`} people={people.filter((person) => person.id !== selectedAssigneeId && !card.collaboratorIds.includes(person.id))} selected={card.watcherIds} onChange={(ids) => onChange({ watcherIds: ids })} empty="Không còn người phù hợp." /></Field>
+      <ParticipantSelector label="Người phối hợp" name={`collaborators-${card.cardId}`} people={people.filter((person) => person.id !== selectedAssigneeId)} selected={card.collaboratorIds} onChange={(ids) => onChange({ collaboratorIds: ids })} empty="Không còn người phù hợp trong phòng." panel="collaborator" openPanel={openPanel} setOpenPanel={setOpenPanel} />
+      <ParticipantSelector label="Người theo dõi" name={`watchers-${card.cardId}`} people={people.filter((person) => person.id !== selectedAssigneeId && !card.collaboratorIds.includes(person.id))} selected={card.watcherIds} onChange={(ids) => onChange({ watcherIds: ids })} empty="Không còn người phù hợp." panel="watcher" openPanel={openPanel} setOpenPanel={setOpenPanel} />
       <Field label="Đính kèm riêng tư"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" disabled={busy} onChange={(event) => onChange({ attachment: event.target.files?.[0] ?? null })} className={controlClass} /><span className="font-normal text-slate-500">Giao nhiều việc sẽ xử lý tệp ở bước đính kèm riêng.</span></Field>
     </div>
   </article>;
+}
+
+type ParticipantPanel = "collaborator" | "watcher";
+
+function ParticipantSelector({ label, name, people, selected, onChange, empty, panel, openPanel, setOpenPanel }: {
+  label: string;
+  name: string;
+  people: AssignmentPerson[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  empty: string;
+  panel: ParticipantPanel;
+  openPanel: ParticipantPanel | null;
+  setOpenPanel: (panel: ParticipantPanel | null) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+  const isOpen = openPanel === panel;
+  const selectedNames = selected.map((id) => people.find((person) => person.id === id)?.fullName).filter((name): name is string => Boolean(name));
+  const filteredPeople = people.filter((person) => person.fullName.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const summary = selectedNames.length === 0
+    ? `Chọn ${label.toLocaleLowerCase()}`
+    : selectedNames.length <= 2 ? selectedNames.join(", ") : `${selectedNames.slice(0, 2).join(", ")} +${selectedNames.length - 2}`;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpenPanel(null);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenPanel(null);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, setOpenPanel]);
+
+  return <div ref={rootRef} className="relative grid gap-1 text-sm font-semibold">
+    <span>{label}</span>
+    <button type="button" aria-expanded={isOpen} aria-haspopup="listbox" onClick={() => { setSearch(""); setOpenPanel(isOpen ? null : panel); }} className={`${controlClass} flex min-h-[46px] items-center justify-between gap-2 text-left`}>
+      <span className="min-w-0 truncate font-normal">{summary}</span><span aria-hidden="true" className="shrink-0 text-slate-500">▾</span>
+    </button>
+    {isOpen ? <div role="listbox" aria-label={label} className="absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-300 bg-white p-2 shadow-lg">
+      <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên nhân viên" aria-label={`Tìm ${label.toLocaleLowerCase()}`} className={`${controlClass} mb-2`} />
+      <div className="space-y-0.5">{filteredPeople.map((person) => <label key={person.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 font-normal hover:bg-orange-50"><input name={name} type="checkbox" value={person.id} checked={selected.includes(person.id)} onChange={(event) => onChange(event.target.checked ? [...new Set([...selected, person.id])] : selected.filter((id) => id !== person.id))} /><span>{person.fullName}</span></label>)}{filteredPeople.length === 0 ? <p className="px-2 py-3 font-normal text-slate-500">{search ? "Không tìm thấy nhân viên phù hợp." : empty}</p> : null}</div>
+    </div> : null}
+  </div>;
 }

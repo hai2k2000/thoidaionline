@@ -40,3 +40,16 @@ test("server page passes a repository-derived assignment scope", () => {
   assert.match(page, /assignmentScope=\{options\.scope\}/);
   assert.doesNotMatch(page, /departmentId:\s*["'][0-9a-f-]{36}["']/i);
 });
+
+test("participant selectors are compact, searchable, and preserve the existing payload fields", () => {
+  assert.match(shell, /ParticipantSelector/);
+  assert.match(shell, /label="Người phối hợp"/);
+  assert.match(shell, /label="Người theo dõi"/);
+  assert.match(shell, /Tìm theo tên nhân viên/);
+  assert.match(shell, /pointerdown/);
+  assert.match(shell, /event\.key === "Escape"/);
+  assert.match(shell, /openPanel === panel/);
+  assert.match(shell, /collaboratorIds: ids/);
+  assert.match(shell, /watcherIds: ids/);
+  assert.doesNotMatch(shell, /participantIds/);
+});
