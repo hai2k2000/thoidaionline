@@ -11,10 +11,13 @@ test("detail dialog loads without mutation and exposes approved fields", () => {
   for (const field of ["title", "description", "requirements", "dueAt", "assigneeId", "assignmentState", "workStatus", "created_by", "created_at", "updated_at"]) assert.match(source, new RegExp(field));
 });
 
-test("dialog saves only the Department Plan item and has no Task mutation", () => {
+test("dialog saves the item and requires an explicit Plan-to-Task action", () => {
   const source = read("DepartmentPlanItemDialog.tsx");
   assert.match(source, /method: "PATCH"/);
-  assert.doesNotMatch(source, /\/api\/tasks|createTask|linked_task_id/);
+  assert.match(source, /method: "POST"/);
+  assert.match(source, /Tạo công việc/);
+  assert.match(source, /linked_task_id/);
+  assert.match(source, /disabled=\{saving \|\| dirty\}/);
   assert.match(source, /onSaved\(savedItem\)/);
 });
 

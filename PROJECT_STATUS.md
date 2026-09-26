@@ -1,5 +1,39 @@
 # Production Smoke Cleanup + Recipient-First Compact Picker
 
+## Department Plan V2 Checkpoint 6
+
+Current Phase: COMPLETE; Plan-to-Task V1 implementation
+Current Task: closed without deployment
+
+Completed:
+- Added explicit authenticated Plan Item -> canonical Task conversion.
+- Reused the canonical api_assign_task_v2 RPC; no parallel Task creation path.
+- Added transactional item lock, one-to-one link protection, idempotent retry behavior, audit origin, and non-destructive Task delete semantics.
+- Added linked Task state and the "Mở công việc" action to the item detail dialog; unsaved edits block conversion.
+
+Validation:
+- CP1–CP6 focused tests: 40/40 PASS.
+- CP6 focused tests: 19/19 PASS.
+- Required Task/Plan/Approval/Event Assignment/Journalism/Personal Plan/Attendance subset: 232/232 PASS after excluding one pre-existing unrelated Task Center UX assertion.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- Migration validation: PASS in a rolled-back development DB transaction; post-rollback schema unchanged.
+- git diff --check: PASS.
+
+Mapping:
+- Title, description, requirements, department, assignee, and due date map from persisted item data.
+- assigned is supported; unassigned and department_wide are rejected because canonical Task creation requires an assignee.
+- Canonical Task default status/priority remain authoritative; no background synchronization.
+
+Blockers:
+- No CP6 implementation blocker.
+- Full repository suite still contains pre-existing unrelated UX assertions on this older CP1 branch; no CP6 files cause those failures.
+
+Next:
+- Owner approval for Checkpoint 7; production remains untouched.
+
 Current Phase: COMPLETE; pre-production validation
 Current Task: closed without deployment
 

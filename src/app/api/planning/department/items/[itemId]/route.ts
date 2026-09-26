@@ -13,6 +13,10 @@ export async function PATCH(request: Request, context: Context) {
   return departmentPlanHandlers.updateItem(request, (await context.params).itemId);
 }
 
+export async function POST(request: Request, context: Context) {
+  return departmentPlanHandlers.createTask(request, (await context.params).itemId);
+}
+
 export async function DELETE(request: Request, context: Context) {
   return departmentPlanHandlers.deleteItem(request, (await context.params).itemId);
 }

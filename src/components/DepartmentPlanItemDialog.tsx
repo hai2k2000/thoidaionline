@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import DepartmentPlanItemFields, { type DepartmentPlanItemDraft } from "@/components/DepartmentPlanItemFields";
-import type { DepartmentPlanItemRow } from "@/lib/departmentPlanRepository";
+import type { DepartmentPlanItemRow, DepartmentPlanLinkedTask } from "@/lib/departmentPlanRepository";
 import type { DepartmentPlanPeriod } from "@/lib/departmentPlanPeriod";
 
 type Props = {
@@ -24,6 +24,7 @@ const outsidePeriod = (value: string, period: DepartmentPlanPeriod) => {
 
 export default function DepartmentPlanItemDialog({ itemId, period, employees, onClose, onSaved }: Props) {
   const [item, setItem] = useState<DepartmentPlanItemRow | null>(null);
+  const [linkedTask, setLinkedTask] = useState<DepartmentPlanLinkedTask | null>(null);
   const [original, setOriginal] = useState<DepartmentPlanItemDraft | null>(null);
   const [draft, setDraft] = useState<DepartmentPlanItemDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,11 +36,11 @@ export default function DepartmentPlanItemDialog({ itemId, period, employees, on
     let active = true;
     void fetch(`/api/planning/department/items/${itemId}`).then(async (response) => {
       if (!response.ok) throw new Error("Không thể tải chi tiết công việc.");
-      return response.json() as Promise<{ item: DepartmentPlanItemRow }>;
+      return response.json() as Promise<{ item: DepartmentPlanItemRow; linkedTask: DepartmentPlanLinkedTask | null }>;
     }).then((payload) => {
       if (!active) return;
       const next = draftFromItem(payload.item);
-      setItem(payload.item); setOriginal(next); setDraft(next);
+      setItem(payload.item); setLinkedTask(payload.linkedTask); setOriginal(next); setDraft(next);
     }).catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Không thể tải chi tiết công việc."); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [itemId]);
@@ -79,10 +80,33 @@ export default function DepartmentPlanItemDialog({ itemId, period, employees, on
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Không thể lưu chi tiết công việc."); } finally { setSaving(false); }
   };
 
+  const createTask = async () => {
+    if (!item || dirty || linkedTask) return;
+    if (!window.confirm("Tạo công việc chính thức từ dữ liệu đã lưu của mục kế hoạch này?")) return;
+    setSaving(true); setError("");
+    try {
+      const response = await fetch("/api/planning/department/items/" + item.id, { method: "POST" });
+      const payload = await response.json().catch(() => null) as { task?: DepartmentPlanLinkedTask } | null;
+      if (!response.ok || !payload?.task) {
+        throw new Error(response.status === 403
+          ? "Bạn không có quyền tạo công việc này."
+          : response.status === 409
+            ? "Mục kế hoạch vừa được liên kết. Hãy tải lại chi tiết."
+            : "Không thể tạo công việc.");
+      }
+      const savedItem = { ...item, linked_task_id: payload.task.id };
+      setItem(savedItem); setLinkedTask(payload.task); onSaved(savedItem);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể tạo công việc.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 p-0 sm:items-center sm:p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
     <div role="dialog" aria-modal="true" aria-labelledby="department-plan-item-dialog-title" className="flex max-h-[96vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
       <header className="flex items-start justify-between gap-4 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 px-5 py-4 sm:px-6"><div><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-orange-700">Công việc trong kế hoạch phòng</p><h2 id="department-plan-item-dialog-title" className="mt-1 text-xl font-extrabold text-slate-950">CHI TIẾT CÔNG VIỆC</h2></div><button type="button" onClick={close} aria-label="Đóng" className="rounded-xl p-2 text-2xl leading-none text-slate-500 hover:bg-white hover:text-slate-900">×</button></header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{loading ? <p className="py-12 text-center text-sm text-slate-600">Đang tải chi tiết…</p> : !item || !draft ? <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-800">{error || "Không thể tải chi tiết công việc."}</p> : <><DepartmentPlanItemFields value={draft} employees={employees} onChange={update} disabled={saving} />{outsidePeriod(draft.dueAt, period) ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Hạn hoàn thành nằm ngoài kỳ kế hoạch.</p> : null}<dl className="mt-5 grid gap-2 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-3"><div><dt className="font-bold text-slate-500">Tạo bởi</dt><dd className="mt-1 break-words text-slate-800">{item.created_by_name || item.created_by}</dd></div><div><dt className="font-bold text-slate-500">Tạo lúc</dt><dd className="mt-1 text-slate-800">{item.created_at}</dd></div><div><dt className="font-bold text-slate-500">Cập nhật lúc</dt><dd className="mt-1 text-slate-800">{item.updated_at}</dd></div></dl>{error ? <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}</>}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{loading ? <p className="py-12 text-center text-sm text-slate-600">Đang tải chi tiết…</p> : !item || !draft ? <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-800">{error || "Không thể tải chi tiết công việc."}</p> : <><DepartmentPlanItemFields value={draft} employees={employees} onChange={update} disabled={saving} />{outsidePeriod(draft.dueAt, period) ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Hạn hoàn thành nằm ngoài kỳ kế hoạch.</p> : null}<dl className="mt-5 grid gap-2 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-3"><div><dt className="font-bold text-slate-500">Tạo bởi</dt><dd className="mt-1 break-words text-slate-800">{item.created_by_name || item.created_by}</dd></div><div><dt className="font-bold text-slate-500">Tạo lúc</dt><dd className="mt-1 text-slate-800">{item.created_at}</dd></div><div><dt className="font-bold text-slate-500">Cập nhật lúc</dt><dd className="mt-1 text-slate-800">{item.updated_at}</dd></div></dl><section className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-4" aria-label="Liên kết công việc"><p className="text-xs font-extrabold uppercase tracking-[0.14em] text-orange-700">Công việc chính thức</p>{linkedTask ? <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><div><p className="font-bold text-slate-950">{linkedTask.title}</p><p className="text-sm text-slate-600">Trạng thái: {linkedTask.status}</p></div><a className="rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white" href={"/tasks/" + linkedTask.id}>Mở công việc</a></div> : <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-slate-700">Chưa tạo Task. Hãy lưu thay đổi trước khi tạo.</p><button type="button" onClick={() => void createTask()} disabled={saving || dirty} className="min-h-10 rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">{saving ? "Đang tạo…" : "Tạo công việc"}</button></div>}</section>{error ? <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}</>}</div>
       <footer className="flex flex-wrap justify-end gap-2 border-t bg-white px-5 py-4 sm:px-6"><button type="button" onClick={cancelChanges} disabled={!dirty || saving} className="min-h-11 rounded-xl border px-4 py-2 text-sm font-bold text-slate-700 disabled:opacity-40">Hủy thay đổi</button><button type="button" onClick={close} disabled={saving} className="min-h-11 rounded-xl border px-4 py-2 text-sm font-bold text-slate-700">Đóng</button><button type="button" onClick={() => void save()} disabled={!item || !draft || saving || !dirty} className="min-h-11 rounded-xl bg-orange-600 px-5 py-2 text-sm font-bold text-white disabled:opacity-40">{saving ? "Đang lưu…" : "Lưu"}</button></footer>
     </div>
   </div>;

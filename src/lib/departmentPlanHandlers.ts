@@ -28,6 +28,9 @@ const asActor = (actor: Actor): AuthorizationActor => ({
 
 const repositoryError = (error: { code?: string | null } | null | undefined) => {
   if (error?.code === "23505") return apiError("conflict", 409);
+  if (error?.code === "40001") return apiError("conflict", 409);
+  if (error?.code === "42501") return apiError("forbidden", 403);
+  if (error?.code === "P0002") return apiError("not_found", 404);
   if (error?.code === "23514" || error?.code === "22023" || error?.code === "22007") return apiError("invalid_request", 400);
   return apiError("operation_failed", 500);
 };
@@ -161,7 +164,33 @@ async function getItem(_request: Request, itemId: string) {
   if (plan.error) return repositoryError(plan.error);
   if (!plan.data) return apiError("not_found", 404);
   if (!scopeFor(guard.actor, plan.data.department_id)) return apiError("forbidden", 403);
-  return apiJson({ item: serializeItem(result.data), plan: serializePlan(plan.data) });
+  const linkedTask = result.data.linked_task_id
+    ? await departmentPlanRepository.getLinkedTask(id)
+    : { data: null, error: null };
+  if (linkedTask.error) return repositoryError(linkedTask.error);
+  return apiJson({
+    item: serializeItem(result.data),
+    plan: serializePlan(plan.data),
+    linkedTask: linkedTask.data,
+  });
+}
+
+async function createTask(request: Request, itemId: string) {
+  void request;
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const id = asUuid(itemId);
+  if (!id) return apiError("invalid_request", 400);
+  const current = await departmentPlanRepository.getItem(id);
+  if (current.error) return repositoryError(current.error);
+  if (!current.data) return apiError("not_found", 404);
+  const plan = await departmentPlanRepository.getPlan(current.data.department_plan_id);
+  if (plan.error) return repositoryError(plan.error);
+  if (!plan.data) return apiError("not_found", 404);
+  if (!scopeFor(guard.actor, plan.data.department_id)) return apiError("forbidden", 403);
+  const result = await departmentPlanRepository.createTaskFromItem(guard.actor.id, id);
+  if (result.error) return repositoryError(result.error);
+  return apiJson({ task: result.data, linkedTaskId: result.data.id });
 }
 
 async function updateItem(request: Request, itemId: string) {
@@ -205,4 +234,4 @@ async function deleteItem(_request: Request, itemId: string) {
   return apiJson({ deleted: true });
 }
 
-export const departmentPlanHandlers = { list, createPlan, listItems, createItem, getItem, updateItem, deleteItem };
+export const departmentPlanHandlers = { list, createPlan, listItems, createItem, getItem, createTask, updateItem, deleteItem };

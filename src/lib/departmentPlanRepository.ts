@@ -31,6 +31,15 @@ export type DepartmentPlanItemRow = {
   created_by_name?: string | null;
 };
 
+export type DepartmentPlanLinkedTask = {
+  id: string;
+  title: string;
+  status: string;
+  department_id: string | null;
+  assignee_id: string | null;
+  owner_id: string | null;
+};
+
 export type DepartmentPlanItemPatch = Partial<Pick<
   DepartmentPlanItemRow,
   "title" | "description" | "requirements" | "due_at" | "assignee_id" | "assignment_state" | "work_status"
@@ -202,5 +211,14 @@ export const departmentPlanRepository = {
       .select("id,title,status,department_id,assignee_id,owner_id")
       .eq("id", item.data.linked_task_id)
       .maybeSingle();
+  },
+
+  async createTaskFromItem(actorId: string, itemId: string) {
+    return serverSupabase
+      .rpc("api_create_department_plan_task", {
+        p_actor_id: actorId,
+        p_item_id: itemId,
+      })
+      .single<DepartmentPlanLinkedTask>();
   },
 };
