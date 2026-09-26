@@ -34,6 +34,8 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   const [assigneeId, setAssigneeId] = useState(journalismSelfCreate ? userId ?? "" : "");
   const [formActivated, setFormActivated] = useState(journalismMode || journalismSelfCreate);
   const [choosingOtherDepartment, setChoosingOtherDepartment] = useState(false);
+  const [recipientPickerOpen, setRecipientPickerOpen] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState("");
   const [assignmentMode, setAssignmentMode] = useState<"individual" | "department_group">("individual");
   const [excludedMemberIds, setExcludedMemberIds] = useState<string[]>([]);
   const [collaboratorIds, setCollaboratorIds] = useState<string[]>([]);
@@ -57,6 +59,14 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     () => people.filter((person) => person.departmentId === departmentId),
     [departmentId, people],
   );
+  const departmentById = useMemo(
+    () => new Map(departments.map((department) => [department.id, department.name])),
+    [departments],
+  );
+  const filteredRecipientPeople = useMemo(() => {
+    const query = recipientSearch.trim().toLocaleLowerCase();
+    return scopedPeople.filter((person) => !query || person.fullName.toLocaleLowerCase().includes(query));
+  }, [recipientSearch, scopedPeople]);
   const isEditorialBoard = selectedDepartment?.code === "leadership";
   const managerLabel = selectedDepartment?.managerId
     ? people.find((person) => person.id === selectedDepartment.managerId)?.fullName ?? "Trưởng phòng chính"
@@ -113,6 +123,8 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     setCollaboratorIds([]);
     setWatcherIds([]);
     setChoosingOtherDepartment(false);
+    setRecipientPickerOpen(false);
+    setRecipientSearch("");
     setFormActivated(true);
     setBatchId(null);
     setPendingBatchAttachments([]);
@@ -128,6 +140,8 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     setWatcherIds([]);
     setDepartmentId(assignmentScope?.departmentId ?? "");
     setChoosingOtherDepartment(false);
+    setRecipientPickerOpen(false);
+    setRecipientSearch("");
     setFormActivated(false);
     setBatchId(null);
     setPendingBatchAttachments([]);
@@ -331,21 +345,32 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-700">Bước đầu tiên</p>
             <h2 id="recipient-heading" className="mt-1 text-lg font-bold text-slate-950">CHỌN NGƯỜI NHẬN VIỆC</h2>
           </div>
-          {formActivated && selectedAssignee && selectedDepartment ? <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">Đang giao việc cho:</p>
-              <p className="mt-1 text-lg font-bold text-slate-950">{selectedAssignee.fullName} <span className="font-medium text-slate-400">·</span> {selectedDepartment.name}</p>
+          {formActivated && selectedAssignee && selectedDepartment ? <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+            <span className="text-sm font-medium text-slate-500">Đang giao việc cho:</span>
+            <span className="min-w-0 flex-1 font-bold text-slate-950">{selectedAssignee.fullName} <span className="font-medium text-slate-400">·</span> {selectedDepartment.name}</span>
+            <button type="button" onClick={changeRecipient} className="rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-sm font-semibold text-orange-700 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">Đổi người</button>
+          </div> : <div className="grid gap-3 p-4">
+            <div className="grid items-end gap-3 md:grid-cols-[minmax(0,520px)_1fr]">
+              <div className="relative">
+                <span className="mb-1 block text-sm font-semibold">Người nhận việc</span>
+                <input type="text" id="recipient-search" role="combobox" aria-controls="recipient-options" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded={recipientPickerOpen} value={recipientSearch} onFocus={() => { if (departmentId) setRecipientPickerOpen(true); }} onKeyDown={(event) => { if (event.key === "Escape") setRecipientPickerOpen(false); }} onChange={(event) => { setRecipientSearch(event.target.value); if (departmentId) setRecipientPickerOpen(true); }} placeholder={departmentId ? (isEditorialBoard ? "Tìm người trong Ban Biên tập..." : "Tìm hoặc chọn nhân viên...") : "Chọn phòng ban trước"} aria-label="Người nhận việc" disabled={!departmentId} className={controlClass + " disabled:bg-slate-100 disabled:text-slate-500"} />
+                {recipientPickerOpen && departmentId ? <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                  <div id="recipient-options" role="listbox" aria-label="Danh sách người nhận việc" className="max-h-64 overflow-y-auto p-1">
+                    {filteredRecipientPeople.map((person) => <button key={person.id} type="button" role="option" aria-selected={false} onClick={() => chooseRecipient(person)} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-orange-50 focus-visible:bg-orange-50 focus-visible:outline-none">
+                      <span className="block font-semibold text-slate-950">{person.fullName}</span>
+                      <span className="block text-xs text-slate-500">{person.departmentId ? departmentById.get(person.departmentId) ?? selectedDepartment?.name : selectedDepartment?.name}</span>
+                    </button>)}
+                    {filteredRecipientPeople.length === 0 ? <p className="px-3 py-4 text-sm text-slate-500">Không tìm thấy nhân sự phù hợp.</p> : null}
+                  </div>
+                </div> : null}
+              </div>
+              {assignmentScope?.kind === "own_department" ? <p className="pb-2 text-sm font-semibold text-slate-700">Phạm vi: {assignmentScope.departmentName ?? "Chưa xác định phòng ban"}</p> : selectedDepartment && !choosingOtherDepartment ? <p className="pb-2 text-sm font-semibold text-slate-700">Phạm vi: {selectedDepartment.name}</p> : null}
             </div>
-            <button type="button" onClick={changeRecipient} className="rounded-lg border border-orange-300 bg-white px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">Đổi người</button>
-          </div> : <div className="grid gap-4 p-4">
-            <p role="status" className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Vui lòng chọn người nhận việc trước</p>
-            {assignmentScope?.kind === "own_department" ? <p className="text-sm font-semibold text-slate-700">Phạm vi: {assignmentScope.departmentName ?? "Chưa xác định phòng ban"}</p> : null}
-            {assignmentScope?.canChooseOtherDepartment && canChooseOtherDepartment && assignmentScope.departmentId && !choosingOtherDepartment ? <button type="button" onClick={() => { setChoosingOtherDepartment(true); setDepartmentId(""); }} className="justify-self-start rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Chọn phòng ban khác</button> : null}
+            {assignmentScope?.canChooseOtherDepartment && canChooseOtherDepartment && assignmentScope.departmentId && !choosingOtherDepartment ? <button type="button" onClick={() => { setChoosingOtherDepartment(true); setDepartmentId(""); setRecipientPickerOpen(false); setRecipientSearch(""); }} className="justify-self-start rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Chọn phòng ban khác</button> : null}
             {canChooseOtherDepartment && (choosingOtherDepartment || !assignmentScope?.departmentId) ? <div className="grid gap-2 sm:max-w-md">
-              <label className="grid gap-1 text-sm font-semibold"><span>Phòng ban</span><select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></label>
-              {assignmentScope?.departmentId ? <button type="button" onClick={() => { setDepartmentId(assignmentScope.departmentId ?? ""); setChoosingOtherDepartment(false); }} className="justify-self-start text-sm font-semibold text-orange-700 underline-offset-4 hover:underline">Quay về Ban Biên tập</button> : null}
+              <label className="grid gap-1 text-sm font-semibold"><span>Phòng ban</span><select value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setRecipientPickerOpen(false); setRecipientSearch(""); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></label>
+              {assignmentScope?.departmentId ? <button type="button" onClick={() => { setDepartmentId(assignmentScope.departmentId ?? ""); setChoosingOtherDepartment(false); setRecipientPickerOpen(false); setRecipientSearch(""); }} className="justify-self-start text-sm font-semibold text-orange-700 underline-offset-4 hover:underline">Quay về Ban Biên tập</button> : null}
             </div> : null}
-            {departmentId ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{scopedPeople.map((person) => <button key={person.id} type="button" onClick={() => chooseRecipient(person)} className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-left hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><span className="block font-semibold text-slate-950">{person.fullName}</span><span className="mt-1 block text-xs text-slate-500">{selectedDepartment?.name}</span></button>)}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có nhân sự phù hợp trong phòng ban này.</p> : null}</div> : null}
           </div>}
         </section> : null}
         <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">

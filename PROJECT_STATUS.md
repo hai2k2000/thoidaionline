@@ -1,3 +1,30 @@
+# Production Smoke Cleanup + Recipient-First Compact Picker
+
+Current Phase: COMPLETE; pre-production validation
+Current Task: closed without deployment
+
+Completed:
+- Audited the four 2026-09-25 smoke staff accounts, their foreign-key references, smoke-only tasks, batch idempotency row, and credential usage.
+- Created and checksum-verified /opt/thoidai-work/backups/smoke-cleanup-20260926T041807Z before cleanup.
+- Deleted three smoke staff rows, deactivated the smoke manager while preserving one historical work-schedule approver reference, reassigned Phòng Nội dung to the active real manager, and deleted four disposable smoke tasks plus their smoke-only dependencies.
+- Securely removed the unused /root/.secrets/thoidai-work/journalism-smoke-accounts.json credential file after confirming no runtime references.
+- Replaced the permanent recipient card grid on /tasks/assign with an interaction-only searchable combobox, inline scope, collapsed selected state, and preserved task-card state.
+
+Validation:
+- Targeted recipient, batch, approval, Journalism, Event Assignment, Personal Plan, Attendance, and Task Summary regressions: 123/123 PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Production build with lineage environment override for the isolated feature branch: PASS; required route manifest PASS.
+- Production service remained on commit 36e0f47ba0c402d73741ef865f446b38424bf65a; no deployment or restart performed.
+- Unauthenticated browser check: /tasks/assign redirects to /login; authenticated browser smoke was not run because no authorized live test session/credentials remained after cleanup.
+
+Blockers:
+- No implementation or data-integrity blocker.
+- Authenticated browser smoke remains owner-verification follow-up before any deployment.
+
+Next:
+- Commit and push codex/compact-recipient-picker; separately authorize any deployment and authenticated browser verification.
+
 # Journalism J6G Status
 
 Current Phase: J6G implementation complete; pre-production validation

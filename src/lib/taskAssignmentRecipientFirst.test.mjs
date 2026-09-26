@@ -6,22 +6,30 @@ const shell = readFileSync(new URL("../components/TaskAssignShell.tsx", import.m
 const page = readFileSync(new URL("../app/tasks/assign/page.tsx", import.meta.url), "utf8");
 const repository = readFileSync(new URL("./taskAssignmentRepository.ts", import.meta.url), "utf8");
 
-test("general assignment starts with recipient selection and keeps the form gated", () => {
+test("general assignment starts with a compact interaction-only recipient picker", () => {
   assert.match(shell, /CHỌN NGƯỜI NHẬN VIỆC/);
-  assert.match(shell, /Vui lòng chọn người nhận việc trước/);
-  assert.match(shell, /formActivated/);
-  assert.match(shell, /titleInputRef/);
+  assert.match(shell, /role="combobox"/);
+  assert.match(shell, /aria-expanded=\{recipientPickerOpen\}/);
+  assert.match(shell, /recipientPickerOpen && departmentId/);
+  assert.match(shell, /aria-autocomplete="list"/);
+  assert.match(shell, /Tìm hoặc chọn nhân viên/);
+  assert.match(shell, /filteredRecipientPeople/);
+  assert.doesNotMatch(shell, /sm:grid-cols-2 lg:grid-cols-3/);
+  assert.match(shell, /disabled=\{!recipientReady\}/);
 });
 
-test("recipient change preserves mounted task content", () => {
+test("recipient selection collapses, focuses Việc 1, and change preserves mounted task content", () => {
+  assert.match(shell, /Đang giao việc cho:/);
   assert.match(shell, /Đổi người/);
+  assert.match(shell, /focusCardTitle\(taskCards\[0\]\?\.cardId/);
   assert.match(shell, /setAssigneeId\(""\)/);
-  assert.match(shell, /disabled=\{!recipientReady\}/);
+  assert.match(shell, /setFormActivated\(false\)/);
   assert.doesNotMatch(shell, /reset\(\)|event\.currentTarget\.reset/);
 });
 
-test("manager UI has no general department selector and TBT can explicitly switch scope", () => {
+test("manager scope stays inline while TBT and PTBT can explicitly switch departments", () => {
   assert.match(shell, /Phạm vi:/);
+  assert.match(shell, /Tìm người trong Ban Biên tập/);
   assert.match(shell, /Chọn phòng ban khác/);
   assert.match(shell, /Quay về Ban Biên tập/);
   assert.match(shell, /assignmentScope\.canChooseOtherDepartment/);
