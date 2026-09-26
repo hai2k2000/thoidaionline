@@ -259,3 +259,30 @@ Blockers:
 
 Follow Up:
 - Owner may separately authorize a controlled deployment and service-cache ownership normalization.
+
+## Department Plan V2 Checkpoint 8
+
+Current Phase: COMPLETE; Department Plan PDF export
+Current Task: Checkpoint 8 — server-side PDF export, pre-production validation
+
+Completed:
+- Added an authenticated, read-only `GET /api/planning/department/reports/pdf` endpoint backed by the shared CP7 authorization and report repository.
+- Added A4 landscape PDF output with embedded DejaVu Sans Unicode fonts, Vietnamese text support, weekly/monthly period labels, active filters, CP7 metrics, detail rows, empty state, repeated headers, page numbers, and safe filenames.
+- Added a client-only `Xuất PDF` action that preserves current period, department, employee, status, and assignment filters without mutating report state or creating records.
+- Added the DejaVu font license alongside bundled font assets.
+
+Validation:
+- CP8 focused tests: 5/5 PASS; CP1–CP8 Department Plan tests: 73/73 PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Required-route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- Representative weekly, monthly, filtered, empty, Vietnamese-heavy, and 45-row multipage PDFs generated in `/tmp`; all had valid `%PDF-` signatures and multipage output reached 4 pages.
+- `git diff --check`: PASS.
+
+Safety:
+- Report/PDF path is GET-only and read-only; no DB migration, Task mutation, export storage, scheduler, email, or production activation was performed.
+- Production remains untouched; no restart or deployment performed.
+
+Next:
+- Owner review and separately authorized integration/deployment checkpoint.
