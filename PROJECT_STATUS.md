@@ -16,6 +16,7 @@ Validation:
 - Touched-file ESLint: PASS.
 - Production build with lineage environment override for the isolated feature branch: PASS; required route manifest PASS.
 - Production service remained on commit 36e0f47ba0c402d73741ef865f446b38424bf65a; no deployment or restart performed.
+- Source committed and pushed as a39f75c4026ded4ce4e3894efcad9b2ff976ebf5 on codex/compact-recipient-picker.
 - Unauthenticated browser check: /tasks/assign redirects to /login; authenticated browser smoke was not run because no authorized live test session/credentials remained after cleanup.
 
 Blockers:
@@ -23,7 +24,7 @@ Blockers:
 - Authenticated browser smoke remains owner-verification follow-up before any deployment.
 
 Next:
-- Commit and push codex/compact-recipient-picker; separately authorize any deployment and authenticated browser verification.
+- Separately authorize any deployment and authenticated browser verification.
 
 # Journalism J6G Status
 
