@@ -56,9 +56,9 @@ export const departmentPlanRepository = {
   async getDepartment(departmentId: string) {
     return serverSupabase
       .from("departments")
-      .select("id,name")
+      .select("id,name,code,manager_id")
       .eq("id", departmentId)
-      .maybeSingle<{ id: string; name: string }>();
+      .maybeSingle<{ id: string; name: string; code: string | null; manager_id: string | null }>();
   },
 
   async listActiveEmployees(departmentId: string) {
@@ -211,6 +211,16 @@ export const departmentPlanRepository = {
       .select("id,title,status,department_id,assignee_id,owner_id")
       .eq("id", item.data.linked_task_id)
       .maybeSingle();
+  },
+
+  async assignTaskFromItem(actorId: string, itemId: string, input: Record<string, unknown>) {
+    return serverSupabase
+      .rpc("api_assign_department_plan_task_v2", {
+        p_actor_id: actorId,
+        p_item_id: itemId,
+        p_input: input,
+      })
+      .single<DepartmentPlanLinkedTask>();
   },
 
   async createTaskFromItem(actorId: string, itemId: string) {

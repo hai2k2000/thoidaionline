@@ -9,10 +9,17 @@ import {
 } from "@/lib/departmentPlanNavigation";
 import DepartmentPlanGrid from "@/components/DepartmentPlanGrid";
 import type { DepartmentPlanItemRow, DepartmentPlanRow } from "@/lib/departmentPlanRepository";
+import type { AssignmentDepartment, AssignmentPerson, AssignmentScope } from "@/lib/taskAssignmentRepository";
 
 type Props = {
   userLabel: string;
   departmentName: string;
+  departmentCode: string | null;
+  departmentManagerId: string | null;
+  scopeKind: "own_department" | "global";
+  assignmentDepartments: AssignmentDepartment[];
+  assignmentPeople: AssignmentPerson[];
+  assignmentScope: AssignmentScope;
   period: DepartmentPlanPeriod;
   departmentId: string;
   currentWeeklyPeriod: DepartmentPlanPeriod;
@@ -29,6 +36,12 @@ const tabClass = (active: boolean) => `rounded-xl px-4 py-2.5 text-sm font-bold 
 export default function DepartmentPlanShell({
   userLabel,
   departmentName,
+  departmentCode,
+  departmentManagerId,
+  scopeKind,
+  assignmentDepartments,
+  assignmentPeople,
+  assignmentScope,
   period,
   departmentId,
   currentWeeklyPeriod,
@@ -86,7 +99,7 @@ export default function DepartmentPlanShell({
             </div>
           </section>
 
-          <DepartmentPlanGrid departmentId={departmentId} period={period} employees={employees} initialPlan={initialPlan} initialItems={initialItems} />
+          <DepartmentPlanGrid departmentId={departmentId} period={period} employees={employees} initialPlan={initialPlan} initialItems={initialItems} departmentName={departmentName} departmentCode={departmentCode} departmentManagerId={departmentManagerId} scopeKind={scopeKind} assignmentDepartments={assignmentDepartments} assignmentPeople={assignmentPeople} assignmentScope={assignmentScope} />
         </main>
       </div>
     </div>

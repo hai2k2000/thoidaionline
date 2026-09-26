@@ -1,3 +1,28 @@
+## Department Plan V2 Checkpoint 9B
+
+Current Phase: COMPLETE; canonical assignment dialog + atomic Plan-to-Task V2
+Current Task: Checkpoint 9B closed without production deployment
+
+Completed:
+- Added shared Department Plan assignment dialog using `CanonicalAssignmentForm`.
+- Added persisted-item prefill and dirty-item guard.
+- Added additive `api_assign_department_plan_task_v2` migration contract with row lock, canonical `api_assign_task_v2` reuse, and one-link protection.
+- Added Department Plan assignment endpoint and linked/unlinked UI actions.
+- Recurrence, batch creation, and attachments are disabled in this one-item dialog.
+
+Validation:
+- Focused CP9B + affected Department Plan/canonical Task regression: 160/160 PASS.
+- Migration syntax and runtime idempotency validation in an ephemeral PostgreSQL container: PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Production-like build and route manifest: PASS.
+- git diff --check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Owner review and separately authorized production rollout; CP9B does not deploy automatically.
+
 ## Department Plan V2 Checkpoint 9A
 
 Current Phase: COMPLETE; reusable canonical assignment form

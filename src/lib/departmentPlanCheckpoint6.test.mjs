@@ -82,15 +82,15 @@ test("the API exposes one explicit POST action", () => {
   assert.match(handlers, /async function createTask\(request: Request, itemId: string\)/);
 });
 
-test("the UI requires confirmation and persisted state", () => {
-  assert.match(dialog, /window\.confirm\("Tạo công việc chính thức/);
+test("the UI requires persisted state before opening canonical assignment", () => {
+  assert.match(dialog, /Hãy lưu hoặc hủy thay đổi mục kế hoạch trước khi giao việc/);
   assert.match(dialog, /disabled=\{saving \|\| dirty\}/);
-  assert.match(dialog, /method: "POST"/);
+  assert.match(dialog, /DepartmentPlanAssignmentDialog/);
   assert.match(dialog, /linkedTask/);
 });
 
 test("opening, saving, and editing do not implicitly create a Task", () => {
-  const beforeAction = dialog.slice(0, dialog.indexOf("const createTask"));
+  const beforeAction = dialog.slice(0, dialog.indexOf("const openAssignment"));
   assert.doesNotMatch(beforeAction, /method: "POST"/);
   assert.doesNotMatch(beforeAction, /api_create_department_plan_task/);
 });

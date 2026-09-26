@@ -14,8 +14,8 @@ test("detail dialog loads without mutation and exposes approved fields", () => {
 test("dialog saves the item and requires an explicit Plan-to-Task action", () => {
   const source = read("DepartmentPlanItemDialog.tsx");
   assert.match(source, /method: "PATCH"/);
-  assert.match(source, /method: "POST"/);
-  assert.match(source, /Tạo công việc/);
+  assert.match(read("DepartmentPlanAssignmentDialog.tsx"), /items\/\$\{item\.id\}\/assign/);
+  assert.match(source, /Giao việc/);
   assert.match(source, /linked_task_id/);
   assert.match(source, /disabled=\{saving \|\| dirty\}/);
   assert.match(source, /onSaved\(savedItem\)/);

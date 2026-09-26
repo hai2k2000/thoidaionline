@@ -5,6 +5,7 @@ import { resolveDepartmentPlanScope } from "@/lib/departmentPlanAuthorization";
 import { canonicalPeriodFromQuery, departmentPlanUrl } from "@/lib/departmentPlanNavigation";
 import { departmentPlanRepository } from "@/lib/departmentPlanRepository";
 import { asUuid } from "@/lib/serverApi";
+import { taskAssignmentRepository } from "@/lib/taskAssignmentRepository";
 import { getSessionUser } from "@/lib/serverSession";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -40,18 +41,26 @@ export default async function DepartmentPlanPage({ searchParams }: Props) {
   const queryStart = first(raw.start);
   if (queryPeriod !== period.periodType || queryStart !== period.periodStart) redirect(canonicalUrl);
 
-  const [department, employees, plan] = await Promise.all([
+  const assignmentActor = actorFromSession(user);
+  const [department, employees, plan, assignmentOptions] = await Promise.all([
     departmentPlanRepository.getDepartment(scope.departmentId),
     departmentPlanRepository.listActiveEmployees(scope.departmentId),
     departmentPlanRepository.getPeriod(scope.departmentId, period.periodType, period.periodStart),
+    taskAssignmentRepository.options(assignmentActor),
   ]);
-  if (department.error || employees.error || plan.error) throw new Error("Không thể tải kế hoạch phòng.");
+  if (department.error || employees.error || plan.error || !assignmentOptions.ok) throw new Error("Không thể tải kế hoạch phòng.");
   const items = plan.data ? await departmentPlanRepository.listPlanItems(plan.data.id) : { data: [], error: null };
   if (items.error) throw new Error("Không thể tải mục kế hoạch phòng.");
 
   return <DepartmentPlanShell
     userLabel={user.full_name}
     departmentName={department.data?.name ?? "Phòng ban được cấp quyền"}
+    departmentCode={department.data?.code ?? null}
+    departmentManagerId={department.data?.manager_id ?? null}
+    scopeKind={scope.kind}
+    assignmentDepartments={assignmentOptions.departments}
+    assignmentPeople={assignmentOptions.people}
+    assignmentScope={assignmentOptions.scope}
     departmentId={scope.departmentId}
     period={period}
     currentWeeklyPeriod={currentWeeklyPeriod}
