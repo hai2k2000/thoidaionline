@@ -1,5 +1,39 @@
 # Production Smoke Cleanup + Recipient-First Compact Picker
 
+## Department Plan V2 Checkpoint 6
+
+Current Phase: COMPLETE; Plan-to-Task V1 implementation
+Current Task: closed without deployment
+
+Completed:
+- Added explicit authenticated Plan Item -> canonical Task conversion.
+- Reused the canonical api_assign_task_v2 RPC; no parallel Task creation path.
+- Added transactional item lock, one-to-one link protection, idempotent retry behavior, audit origin, and non-destructive Task delete semantics.
+- Added linked Task state and the "Mở công việc" action to the item detail dialog; unsaved edits block conversion.
+
+Validation:
+- CP1–CP6 focused tests: 40/40 PASS.
+- CP6 focused tests: 19/19 PASS.
+- Required Task/Plan/Approval/Event Assignment/Journalism/Personal Plan/Attendance subset: 232/232 PASS after excluding one pre-existing unrelated Task Center UX assertion.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- Migration validation: PASS in a rolled-back development DB transaction; post-rollback schema unchanged.
+- git diff --check: PASS.
+
+Mapping:
+- Title, description, requirements, department, assignee, and due date map from persisted item data.
+- assigned is supported; unassigned and department_wide are rejected because canonical Task creation requires an assignee.
+- Canonical Task default status/priority remain authoritative; no background synchronization.
+
+Blockers:
+- No CP6 implementation blocker.
+- Full repository suite still contains pre-existing unrelated UX assertions on this older CP1 branch; no CP6 files cause those failures.
+
+Next:
+- Owner approval for Checkpoint 7; production remains untouched.
+
 Current Phase: COMPLETE; pre-production validation
 Current Task: closed without deployment
 
@@ -44,6 +78,44 @@ Validation:
 
 Blockers:
 - No implementation blocker; production migration/deploy intentionally not performed.
++
+## Department Plan V2 Checkpoint 7
+
+Current Phase: COMPLETE; Department Plan V2 Reports
+Current Task: Checkpoint 7 — read-only reports
+
+Completed:
+- Added canonical weekly/monthly Department Plan report page at /planning/reports.
+- Added server-authorized read-only API at /api/planning/department/reports.
+- Added server-side employee, work-status, and assignment-state filters with the existing Department Plan scope.
+- Added authoritative metrics for total, completed, in progress, planned, overdue, unassigned, and department-wide items.
+- Preserved lazy plan reads; report requests never create plan containers or Tasks.
+
+Validation:
+- CP7 focused tests: 21/21 PASS.
+- Department Plan CP1–CP7 tests: 68/68 PASS.
+- Affected regression: 354/358 PASS; four known pre-existing failures remain in J5C/J5D and leave/attendance tests.
+- Full source suite: 686/712 PASS; 26 known pre-existing failures remain on this older CP1 branch.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- git diff --check: PASS.
+
+Status mapping:
+- planned -> planned metric.
+- in_progress -> in-progress metric.
+- completed -> completed metric and never overdue.
+- cancelled -> final state, excluded from overdue.
+- unassigned and department_wide remain separate assignment metrics.
+
+Blockers:
+- No CP7 implementation blocker.
+- Production remains untouched; PDF export is intentionally deferred to Checkpoint 8.
+
+Next:
+- Owner approval for Checkpoint 8 — PDF Export. Do not begin Checkpoint 8 automatically.
+
 
 Next:
 - Owner review and separately authorized production deployment.
@@ -187,3 +259,30 @@ Blockers:
 
 Follow Up:
 - Owner may separately authorize a controlled deployment and service-cache ownership normalization.
+
+## Department Plan V2 Checkpoint 8
+
+Current Phase: COMPLETE; Department Plan PDF export
+Current Task: Checkpoint 8 — server-side PDF export, pre-production validation
+
+Completed:
+- Added an authenticated, read-only `GET /api/planning/department/reports/pdf` endpoint backed by the shared CP7 authorization and report repository.
+- Added A4 landscape PDF output with embedded DejaVu Sans Unicode fonts, Vietnamese text support, weekly/monthly period labels, active filters, CP7 metrics, detail rows, empty state, repeated headers, page numbers, and safe filenames.
+- Added a client-only `Xuất PDF` action that preserves current period, department, employee, status, and assignment filters without mutating report state or creating records.
+- Added the DejaVu font license alongside bundled font assets.
+
+Validation:
+- CP8 focused tests: 5/5 PASS; CP1–CP8 Department Plan tests: 73/73 PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Required-route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- Representative weekly, monthly, filtered, empty, Vietnamese-heavy, and 45-row multipage PDFs generated in `/tmp`; all had valid `%PDF-` signatures and multipage output reached 4 pages.
+- `git diff --check`: PASS.
+
+Safety:
+- Report/PDF path is GET-only and read-only; no DB migration, Task mutation, export storage, scheduler, email, or production activation was performed.
+- Production remains untouched; no restart or deployment performed.
+
+Next:
+- Owner review and separately authorized integration/deployment checkpoint.
