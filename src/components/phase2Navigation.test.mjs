@@ -29,6 +29,38 @@ test("work and schedule navigation is preserved", () => {
   assert.deepEqual(navigation.account, [{ id: "account", href: "/account" }]);
   assert.deepEqual(navigation.configuration, []);
 });
+test("Department Plan navigation follows its existing authorization scope", () => {
+  const base = { ...employee, departmentCode: "editorial" };
+  for (const roleCode of ["admin", "tong_bien_tap", "pho_tong_bien_tap"]) {
+    const navigation = getPhase2Navigation({ ...base, roleCode });
+    assert.deepEqual(navigation.primary.filter(item => item.id === "department-plan"), [
+      { id: "department-plan", href: "/planning/department" },
+    ]);
+  }
+  assert.deepEqual(
+    getPhase2Navigation({ ...base, roleCode: "truong_phong", isDepartmentManager: true }).primary.filter(item => item.id === "department-plan"),
+    [{ id: "department-plan", href: "/planning/department" }],
+  );
+  for (const access of [
+    { ...employee, roleCode: "nhan_vien", departmentCode: "editorial", isDepartmentManager: false },
+    { ...employee, roleCode: "truong_phong", departmentCode: null, isDepartmentManager: true },
+    { ...employee, roleCode: "pho_truong_phong", departmentCode: "editorial", isDepartmentManager: false },
+  ]) {
+    assert.equal(getPhase2Navigation(access).primary.some(item => item.id === "department-plan"), false);
+  }
+});
+
+test("Department Plan navigation keeps existing primary order and routes", () => {
+  const navigation = getPhase2Navigation({ ...employee, roleCode: "admin", departmentCode: "business" });
+  assert.deepEqual(navigation.primary.slice(0, 3), [
+    { id: "tasks", href: "/tasks" },
+    { id: "department-plan", href: "/planning/department" },
+    { id: "attendance", href: "/my-attendance" },
+  ]);
+  assert.equal(navigation.primary.filter(item => item.id === "department-plan").length, 1);
+  assert.equal(new Set(navigation.primary.map(item => item.href)).size, navigation.primary.length);
+});
+
 test("manager and editorial leadership retain assignment and evaluation navigation", () => {
   for (const roleCode of ["truong_phong", "tong_bien_tap", "pho_tong_bien_tap"]) {
     const navigation = getPhase2Navigation({ ...employee, roleCode, canAssignTask: roleCode === "truong_phong", canEvaluateStep1: true, canEvaluateStep2: true, isDepartmentManager: true });
