@@ -43,6 +43,14 @@ const PLAN_FIELDS = "id,department_id,period_type,period_start,period_end,create
 const ITEM_FIELDS = "id,department_plan_id,department_id,title,description,requirements,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,created_at,updated_at";
 
 export const departmentPlanRepository = {
+  async getDepartment(departmentId: string) {
+    return serverSupabase
+      .from("departments")
+      .select("id,name")
+      .eq("id", departmentId)
+      .maybeSingle<{ id: string; name: string }>();
+  },
+
   async validateAssignee(departmentId: string, assigneeId: string | null | undefined) {
     if (!assigneeId) return { data: true, error: null };
     const result = await serverSupabase
