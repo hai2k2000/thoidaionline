@@ -11,7 +11,6 @@ const routeFiles = {
   "/tasks/done": "../app/tasks/done/page.tsx",
   "/my-tasks": "../app/my-tasks/page.tsx",
   "/planning": "../app/planning/page.tsx",
-  "/planning/reports": "../app/planning/reports/page.tsx",
   "/performance": "../app/performance/page.tsx",
 };
 
@@ -32,6 +31,12 @@ test("every legacy page uses a temporary server redirect helper", () => {
     assert.match(source, /redirect\(buildLegacyTaskRedirectFromParams\(/, route);
     assert.doesNotMatch(source, /@\/lib\/supabase/, route);
   }
+});
+
+test("Department Plan reports are now a canonical read-only route", () => {
+  const source = fs.readFileSync(new URL("../app/planning/reports/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /DepartmentPlanReport/);
+  assert.doesNotMatch(source, /buildLegacyTaskRedirectFromParams/);
 });
 
 test("successful login replaces history with Task Center", () => {

@@ -58,3 +58,13 @@ export const departmentPlanUrl = (
   if (departmentId) query.set("departmentId", departmentId);
   return `/planning/department?${query.toString()}`;
 };
+
+export const departmentPlanReportUrl = (
+  periodType: DepartmentPlanPeriodType,
+  periodStart: string,
+  departmentId?: string | null,
+) => {
+  const query = new URLSearchParams({ period: periodType, start: periodStart });
+  if (departmentId) query.set("departmentId", departmentId);
+  return `/planning/reports?${query.toString()}`;
+};

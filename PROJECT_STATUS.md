@@ -78,6 +78,44 @@ Validation:
 
 Blockers:
 - No implementation blocker; production migration/deploy intentionally not performed.
++
+## Department Plan V2 Checkpoint 7
+
+Current Phase: COMPLETE; Department Plan V2 Reports
+Current Task: Checkpoint 7 — read-only reports
+
+Completed:
+- Added canonical weekly/monthly Department Plan report page at /planning/reports.
+- Added server-authorized read-only API at /api/planning/department/reports.
+- Added server-side employee, work-status, and assignment-state filters with the existing Department Plan scope.
+- Added authoritative metrics for total, completed, in progress, planned, overdue, unassigned, and department-wide items.
+- Preserved lazy plan reads; report requests never create plan containers or Tasks.
+
+Validation:
+- CP7 focused tests: 21/21 PASS.
+- Department Plan CP1–CP7 tests: 68/68 PASS.
+- Affected regression: 354/358 PASS; four known pre-existing failures remain in J5C/J5D and leave/attendance tests.
+- Full source suite: 686/712 PASS; 26 known pre-existing failures remain on this older CP1 branch.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- git diff --check: PASS.
+
+Status mapping:
+- planned -> planned metric.
+- in_progress -> in-progress metric.
+- completed -> completed metric and never overdue.
+- cancelled -> final state, excluded from overdue.
+- unassigned and department_wide remain separate assignment metrics.
+
+Blockers:
+- No CP7 implementation blocker.
+- Production remains untouched; PDF export is intentionally deferred to Checkpoint 8.
+
+Next:
+- Owner approval for Checkpoint 8 — PDF Export. Do not begin Checkpoint 8 automatically.
+
 
 Next:
 - Owner review and separately authorized production deployment.

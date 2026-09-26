@@ -13,6 +13,12 @@ import type { ServerAuthUser } from "@/lib/serverSession";
 import { resolveDepartmentPlanScope } from "@/lib/departmentPlanAuthorization";
 import { getDepartmentPlanPeriod, isDepartmentPlanPeriodType } from "@/lib/departmentPlanPeriod";
 import { departmentPlanRepository } from "@/lib/departmentPlanRepository";
+import { departmentPlanReportRepository } from "@/lib/departmentPlanReportRepository";
+import {
+  isReportAssignmentState,
+  isReportWorkStatus,
+  type DepartmentPlanReportFilters,
+} from "@/lib/departmentPlanReport";
 
 type Actor = ServerAuthUser;
 
@@ -68,6 +74,46 @@ async function list(request: Request) {
   const items = await departmentPlanRepository.listPlanItems(result.data.id);
   if (items.error) return repositoryError(items.error);
   return apiJson({ plan: serializePlan(result.data), items: (items.data ?? []).map(serializeItem) });
+}
+
+async function report(request: Request) {
+  const guard = await requireReadActor();
+  if (!guard.ok) return guard.response;
+  const url = new URL(request.url);
+  const target = parseTargetDepartment(url.searchParams.get("departmentId"));
+  if (url.searchParams.get("departmentId") && !target) return apiError("invalid_request", 400);
+  const scope = scopeFor(guard.actor, target);
+  if (!scope) return apiError("forbidden", 403);
+
+  const period = parsePeriod(
+    url.searchParams.get("period") ?? url.searchParams.get("periodType") ?? "weekly",
+    url.searchParams.get("start") ?? url.searchParams.get("periodStart"),
+  );
+  if (!period) return apiError("invalid_request", 400);
+
+  const employeeValue = url.searchParams.get("employeeId");
+  const employeeId = employeeValue ? asUuid(employeeValue) : null;
+  if (employeeValue && !employeeId) return apiError("invalid_request", 400);
+  const statusValue = url.searchParams.get("status");
+  const workStatus = statusValue ? (isReportWorkStatus(statusValue) ? statusValue : null) : null;
+  if (statusValue && !workStatus) return apiError("invalid_request", 400);
+  const assignmentValue = url.searchParams.get("assignmentState");
+  const assignmentState = assignmentValue
+    ? (isReportAssignmentState(assignmentValue) ? assignmentValue : null)
+    : null;
+  if (assignmentValue && !assignmentState) return apiError("invalid_request", 400);
+
+  const filters: DepartmentPlanReportFilters = { employeeId, workStatus, assignmentState };
+  const result = await departmentPlanReportRepository.getReport(scope.departmentId, period, filters);
+  if (result.error) return repositoryError(result.error);
+  return apiJson({
+    period: result.data.period,
+    plan: serializePlan(result.data.plan),
+    employees: result.data.employees,
+    filters,
+    metrics: result.data.metrics,
+    items: result.data.items,
+  });
 }
 
 async function createPlan(request: Request) {
@@ -234,4 +280,4 @@ async function deleteItem(_request: Request, itemId: string) {
   return apiJson({ deleted: true });
 }
 
-export const departmentPlanHandlers = { list, createPlan, listItems, createItem, getItem, createTask, updateItem, deleteItem };
+export const departmentPlanHandlers = { list, report, createPlan, listItems, createItem, getItem, createTask, updateItem, deleteItem };

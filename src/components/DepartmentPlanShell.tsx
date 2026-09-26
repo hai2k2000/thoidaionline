@@ -3,6 +3,7 @@ import AppNav from "@/components/AppNav";
 import type { DepartmentPlanPeriod } from "@/lib/departmentPlanPeriod";
 import {
   departmentPlanUrl,
+  departmentPlanReportUrl,
   formatDepartmentPlanPeriod,
   shiftDepartmentPlanStart,
 } from "@/lib/departmentPlanNavigation";
@@ -64,6 +65,7 @@ export default function DepartmentPlanShell({
             <div className="flex flex-wrap gap-2">
               <Link className={tabClass(period.periodType === "weekly")} href={departmentPlanUrl("weekly", weeklyStart, departmentId)}>Kế hoạch tuần</Link>
               <Link className={tabClass(period.periodType === "monthly")} href={departmentPlanUrl("monthly", monthlyStart, departmentId)}>Kế hoạch tháng</Link>
+              <Link className="rounded-xl px-4 py-2.5 text-sm font-bold text-indigo-700 hover:bg-indigo-50" href={departmentPlanReportUrl(period.periodType, period.periodStart, departmentId)}>Báo cáo kỳ này</Link>
             </div>
           </section>
 
