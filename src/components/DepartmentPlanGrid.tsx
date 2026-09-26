@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DepartmentPlanItemRow, DepartmentPlanRow } from "@/lib/departmentPlanRepository";
 import type { DepartmentPlanPeriod } from "@/lib/departmentPlanPeriod";
+import type { AssignmentDepartment, AssignmentPerson, AssignmentScope } from "@/lib/taskAssignmentRepository";
 import DepartmentPlanItemDialog from "@/components/DepartmentPlanItemDialog";
+import DepartmentPlanAssignmentDialog from "@/components/DepartmentPlanAssignmentDialog";
 
 type Employee = { id: string; full_name: string; department_id: string };
 type Draft = {
@@ -14,6 +16,7 @@ type Draft = {
   assignmentState: DepartmentPlanItemRow["assignment_state"];
   dueAt: string;
   workStatus: DepartmentPlanItemRow["work_status"];
+  linkedTaskId: string | null;
   dirty: boolean;
   saving: boolean;
   error: string;
@@ -25,6 +28,13 @@ type Props = {
   employees: Employee[];
   initialPlan: DepartmentPlanRow | null;
   initialItems: DepartmentPlanItemRow[];
+  departmentName: string;
+  departmentCode: string | null;
+  departmentManagerId: string | null;
+  scopeKind: "own_department" | "global";
+  assignmentDepartments: AssignmentDepartment[];
+  assignmentPeople: AssignmentPerson[];
+  assignmentScope: AssignmentScope;
 };
 
 const statusLabels: Record<Draft["workStatus"], string> = {
@@ -41,8 +51,8 @@ const assignmentLabels: Record<Draft["assignmentState"], string> = {
 };
 
 const toInputDate = (value: string | null) => value ? value.slice(0, 16) : "";
-const newDraft = (): Draft => ({ key: `new-${Date.now()}-${Math.random()}`, title: "", assigneeId: "", assignmentState: "unassigned", dueAt: "", workStatus: "planned", dirty: true, saving: false, error: "" });
-const fromItem = (item: DepartmentPlanItemRow): Draft => ({ key: item.id, id: item.id, title: item.title, assigneeId: item.assignee_id ?? "", assignmentState: item.assignment_state, dueAt: toInputDate(item.due_at), workStatus: item.work_status, dirty: false, saving: false, error: "" });
+const newDraft = (): Draft => ({ key: `new-${Date.now()}-${Math.random()}`, title: "", assigneeId: "", assignmentState: "unassigned", dueAt: "", workStatus: "planned", linkedTaskId: null, dirty: true, saving: false, error: "" });
+const fromItem = (item: DepartmentPlanItemRow): Draft => ({ key: item.id, id: item.id, title: item.title, assigneeId: item.assignee_id ?? "", assignmentState: item.assignment_state, dueAt: toInputDate(item.due_at), workStatus: item.work_status, linkedTaskId: item.linked_task_id, dirty: false, saving: false, error: "" });
 
 const outsidePeriod = (value: string, period: DepartmentPlanPeriod) => {
   if (!value) return false;
@@ -53,11 +63,12 @@ const outsidePeriod = (value: string, period: DepartmentPlanPeriod) => {
   return date < start || date > end;
 };
 
-export default function DepartmentPlanGrid({ departmentId, period, employees, initialPlan, initialItems }: Props) {
+export default function DepartmentPlanGrid({ departmentId, period, employees, initialPlan, initialItems, departmentName, departmentCode, departmentManagerId, scopeKind, assignmentDepartments, assignmentPeople, assignmentScope }: Props) {
   const [plan, setPlan] = useState(initialPlan);
   const [rows, setRows] = useState(() => initialItems.map(fromItem));
   const [message, setMessage] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [assignmentId, setAssignmentId] = useState<string | null>(null);
   const savingKeys = useRef(new Set<string>());
   const hasDrafts = useMemo(() => rows.some((row) => row.dirty), [rows]);
 
@@ -145,12 +156,13 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
             <td className="space-y-2 p-2"><select value={row.assignmentState} onChange={(event) => { const assignmentState = event.target.value as Draft["assignmentState"]; update(row.key, { assignmentState, assigneeId: assignmentState === "assigned" ? row.assigneeId : "" }); }} className="min-h-10 w-full rounded-lg border px-2 py-2"><option value="unassigned">{assignmentLabels.unassigned}</option><option value="department_wide">{assignmentLabels.department_wide}</option><option value="assigned">{assignmentLabels.assigned}</option></select>{row.assignmentState === "assigned" ? <select value={row.assigneeId} onChange={(event) => update(row.key, { assigneeId: event.target.value })} className="min-h-10 w-full rounded-lg border px-2 py-2"><option value="">Chọn người</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}</select> : null}</td>
             <td className="p-2"><input type="datetime-local" value={row.dueAt} onChange={(event) => update(row.key, { dueAt: event.target.value })} className="min-h-10 w-full rounded-lg border px-2 py-2" />{outsidePeriod(row.dueAt, period) ? <p className="mt-1 text-xs text-amber-700">Hạn hoàn thành nằm ngoài kỳ kế hoạch.</p> : null}</td>
             <td className="p-2"><select value={row.workStatus} onChange={(event) => update(row.key, { workStatus: event.target.value as Draft["workStatus"] })} className="min-h-10 w-full rounded-lg border px-2 py-2">{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td>
-            <td className="space-y-2 p-2"><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="min-h-10 w-full rounded-lg bg-orange-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu dòng"}</button>{row.id ? <button type="button" disabled={row.saving} onClick={() => setDetailId(row.id!)} className="min-h-10 w-full rounded-lg border border-orange-200 px-3 py-2 text-xs font-bold text-orange-800 disabled:opacity-50">Chi tiết</button> : null}<button type="button" disabled={row.saving} onClick={() => void remove(row)} className="min-h-10 w-full rounded-lg border px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Xóa</button></td>
+            <td className="space-y-2 p-2"><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="min-h-10 w-full rounded-lg bg-orange-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu dòng"}</button>{row.id && !row.linkedTaskId ? <button type="button" disabled={row.saving} onClick={() => setAssignmentId(row.id!)} className="min-h-10 w-full rounded-lg bg-orange-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Giao việc</button> : null}{row.linkedTaskId ? <a href={`/tasks/${row.linkedTaskId}`} className="block min-h-10 w-full rounded-lg border border-emerald-200 px-3 py-2 text-center text-xs font-bold text-emerald-800">Mở công việc</a> : null}{row.id ? <button type="button" disabled={row.saving} onClick={() => setDetailId(row.id!)} className="min-h-10 w-full rounded-lg border border-orange-200 px-3 py-2 text-xs font-bold text-orange-800 disabled:opacity-50">Chi tiết</button> : null}<button type="button" disabled={row.saving} onClick={() => void remove(row)} className="min-h-10 w-full rounded-lg border px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Xóa</button></td>
           </tr>)}</tbody>
         </table>
       </div>
       {!rows.length ? <p className="py-8 text-center text-sm text-slate-600">Chưa có kế hoạch cho kỳ này. Bấm “+ Thêm dòng” để bắt đầu.</p> : null}
-      {detailId ? <DepartmentPlanItemDialog itemId={detailId} period={period} employees={employees} onClose={() => setDetailId(null)} onSaved={(item) => { setRows((current) => current.map((row) => row.id === item.id ? fromItem(item) : row)); setMessage("Đã lưu chi tiết công việc."); }} /> : null}
+      {detailId ? <DepartmentPlanItemDialog itemId={detailId} period={period} employees={employees} departmentName={departmentName} departmentCode={departmentCode} departmentManagerId={departmentManagerId} scopeKind={scopeKind} assignmentDepartments={assignmentDepartments} assignmentPeople={assignmentPeople} assignmentScope={assignmentScope} onClose={() => setDetailId(null)} onAssigned={(task) => { setRows((current) => current.map((row) => row.id === detailId ? { ...row, linkedTaskId: task.id, dirty: false } : row)); setDetailId(null); setMessage("Đã giao việc."); }} onSaved={(item) => { setRows((current) => current.map((row) => row.id === item.id ? fromItem(item) : row)); setMessage("Đã lưu chi tiết công việc."); }} /> : null}
+      {assignmentId ? (() => { const row = rows.find((candidate) => candidate.id === assignmentId); const stored = initialItems.find((candidate) => candidate.id === assignmentId); const item = row?.id ? stored ?? { id: row.id, department_plan_id: plan?.id ?? "", department_id: departmentId, title: row.title, description: null, requirements: null, due_at: row.dueAt ? new Date(row.dueAt).toISOString() : null, assignee_id: row.assigneeId || null, assignment_state: row.assignmentState, work_status: row.workStatus, linked_task_id: row.linkedTaskId, created_by: "", created_at: "", updated_at: "" } satisfies DepartmentPlanItemRow : null; return row && item && !row.dirty ? <DepartmentPlanAssignmentDialog item={item} departmentName={departmentName} departmentCode={departmentCode} departmentManagerId={departmentManagerId} scopeKind={scopeKind} assignmentDepartments={assignmentDepartments} assignmentPeople={assignmentPeople} assignmentScope={assignmentScope} onClose={() => setAssignmentId(null)} onAssigned={(task) => { setRows((current) => current.map((candidate) => candidate.id === assignmentId ? { ...candidate, linkedTaskId: task.id, dirty: false } : candidate)); setAssignmentId(null); setMessage("Đã giao việc."); }} /> : null; })() : null}
     </section>
   );
 }

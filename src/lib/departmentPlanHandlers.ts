@@ -190,6 +190,40 @@ async function getItem(_request: Request, itemId: string) {
   });
 }
 
+async function assignTask(request: Request, itemId: string) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const id = asUuid(itemId);
+  if (!id) return apiError("invalid_request", 400);
+  const body = await readJsonObject(request);
+  if (!body) return apiError("invalid_request", 400);
+  const requirements = Array.isArray(body.requirements)
+    ? body.requirements.filter((value): value is string => typeof value === "string").map((value) => value.trim()).filter(Boolean)
+    : null;
+  const collaboratorIds = Array.isArray(body.collaboratorIds) ? body.collaboratorIds : null;
+  const watcherIds = Array.isArray(body.watcherIds) ? body.watcherIds : null;
+  if (typeof body.title !== "string" || typeof body.description !== "string"
+      || typeof body.assigneeId !== "string" || typeof body.dueDate !== "string"
+      || typeof body.dueTime !== "string" || !requirements
+      || !collaboratorIds || !watcherIds) return apiError("invalid_request", 400);
+  const result = await departmentPlanRepository.assignTaskFromItem(guard.actor.id, id, {
+    title: body.title,
+    description: body.description,
+    requirements,
+    assigneeId: body.assigneeId,
+    dueDate: body.dueDate,
+    dueTime: body.dueTime,
+    priority: body.priority ?? "normal",
+    collaboratorIds,
+    watcherIds,
+    recurrenceFrequency: body.recurrenceFrequency ?? null,
+    recurrenceEndsOn: body.recurrenceEndsOn ?? null,
+  });
+  if (result.error) return repositoryError(result.error);
+  if (!result.data) return apiError("operation_failed", 500);
+  return apiJson({ task: result.data, linkedTaskId: result.data.id });
+}
+
 async function createTask(request: Request, itemId: string) {
   void request;
   const guard = await requireMutationActor();
@@ -249,4 +283,4 @@ async function deleteItem(_request: Request, itemId: string) {
   return apiJson({ deleted: true });
 }
 
-export const departmentPlanHandlers = { list, report, createPlan, listItems, createItem, getItem, createTask, updateItem, deleteItem };
+export const departmentPlanHandlers = { list, report, createPlan, listItems, createItem, getItem, assignTask, createTask, updateItem, deleteItem };
