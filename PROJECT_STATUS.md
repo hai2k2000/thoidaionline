@@ -1,11 +1,11 @@
 ## Department Plan V2 Final Integration Gate
 
 Current Phase: FINAL INTEGRATION & PRODUCTION ROLLOUT GATE
-Current Task: ROLLED BACK — technical rollout gate failed; application restored to previous release
+Current Task: COMPLETE — Department Plan V2 production rollout live after corrected activation gate
 
 Final Integration: c0769ee merged from active production f5d9b66 through CP1-CP8 source dfaf753; release metadata fix 6d5aa4f includes CP1/CP6 migration references.
 Pre-deploy validation: Department Plan 73/73, affected regression 229/229, TypeScript, ESLint, route manifest, production-like build, standalone artifact verification PASS.
-Production mutation: ROLLED BACK — CP1/CP6 additive migrations applied and retained; application release restored to previous f5d9b66 after rollout gate failure.
+Production mutation: LIVE — CP1/CP6 additive migrations applied and verified; release 2c4ce3e activated atomically after corrected gate. Previous f5d9b66 retained for rollback.
 
 # Production Smoke Cleanup + Recipient-First Compact Picker
 
