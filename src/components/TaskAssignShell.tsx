@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVi
 import { journalismLabels } from "@/lib/journalismUi.mjs";
 import { addTaskCard, buildBatchPayload, createTaskCard, MAX_TASK_CARDS, removeTaskCard, validateTaskCards } from "@/lib/taskAssignmentCards.mjs";
 import { uploadBatchAttachments } from "@/lib/taskAssignmentAttachments.mjs";
+import CanonicalAssignmentForm, { type CanonicalAssignmentSubmit } from "@/components/CanonicalAssignmentForm";
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
@@ -30,12 +31,9 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   const router = useRouter();
   const { logout } = useAuth();
   const { notify } = useActionFeedback();
-  const [departmentId, setDepartmentId] = useState(journalismMode ? journalismDepartment?.id ?? "" : assignmentScope?.departmentId ?? "");
+  const [departmentId] = useState(journalismMode ? journalismDepartment?.id ?? "" : assignmentScope?.departmentId ?? "");
   const [assigneeId, setAssigneeId] = useState(journalismSelfCreate ? userId ?? "" : "");
-  const [formActivated, setFormActivated] = useState(journalismMode || journalismSelfCreate);
-  const [choosingOtherDepartment, setChoosingOtherDepartment] = useState(false);
-  const [recipientPickerOpen, setRecipientPickerOpen] = useState(false);
-  const [recipientSearch, setRecipientSearch] = useState("");
+  const [formActivated] = useState(journalismMode || journalismSelfCreate);
   const [assignmentMode, setAssignmentMode] = useState<"individual" | "department_group">("individual");
   const [excludedMemberIds, setExcludedMemberIds] = useState<string[]>([]);
   const [collaboratorIds, setCollaboratorIds] = useState<string[]>([]);
@@ -59,21 +57,12 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     () => people.filter((person) => person.departmentId === departmentId),
     [departmentId, people],
   );
-  const departmentById = useMemo(
-    () => new Map(departments.map((department) => [department.id, department.name])),
-    [departments],
-  );
-  const filteredRecipientPeople = useMemo(() => {
-    const query = recipientSearch.trim().toLocaleLowerCase();
-    return scopedPeople.filter((person) => !query || person.fullName.toLocaleLowerCase().includes(query));
-  }, [recipientSearch, scopedPeople]);
   const isEditorialBoard = selectedDepartment?.code === "leadership";
   const managerLabel = selectedDepartment?.managerId
     ? people.find((person) => person.id === selectedDepartment.managerId)?.fullName ?? "Trưởng phòng chính"
     : null;
   const selectedAssignee = people.find((person) => person.id === assigneeId) ?? null;
   const recipientReady = journalismSelfCreate || Boolean(assigneeId && selectedDepartment);
-  const canChooseOtherDepartment = Boolean(assignmentScope && assignmentScope.canChooseOtherDepartment);
 
   const updateTaskCard = (index: number, patch: Record<string, unknown>) => {
     setTaskCards((current) => current.map((card, cardIndex) => cardIndex === index ? { ...card, ...patch } : card));
@@ -115,39 +104,6 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     if (!journalismMode && recipientReady && formActivated) titleInputRef.current?.focus();
   }, [formActivated, journalismMode, recipientReady]);
 
-  const chooseRecipient = (person: AssignmentPerson) => {
-    if (!person.departmentId) return;
-    setDepartmentId(person.departmentId);
-    setAssigneeId(person.id);
-    setExcludedMemberIds([]);
-    setCollaboratorIds([]);
-    setWatcherIds([]);
-    setChoosingOtherDepartment(false);
-    setRecipientPickerOpen(false);
-    setRecipientSearch("");
-    setFormActivated(true);
-    setBatchId(null);
-    setPendingBatchAttachments([]);
-    setBatchAttachmentFailures([]);
-    setBatchTaskResults([]);
-    focusCardTitle(taskCards[0]?.cardId ?? "");
-  };
-
-  const changeRecipient = () => {
-    setAssigneeId("");
-    setExcludedMemberIds([]);
-    setCollaboratorIds([]);
-    setWatcherIds([]);
-    setDepartmentId(assignmentScope?.departmentId ?? "");
-    setChoosingOtherDepartment(false);
-    setRecipientPickerOpen(false);
-    setRecipientSearch("");
-    setFormActivated(false);
-    setBatchId(null);
-    setPendingBatchAttachments([]);
-    setBatchAttachmentFailures([]);
-    setBatchTaskResults([]);
-  };
 
   const submitGeneral = async () => {
     if (!recipientReady || !departmentId || !assigneeId) {
@@ -222,6 +178,45 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
       router.refresh();
     } catch (error) {
       const text = errorMessage(error, "Không thể giao công việc. Vui lòng thử lại."); setMessage(text); notify("error", text);
+    } finally { submittingRef.current = false; setBusy(false); }
+  };
+
+  const submitCanonical = async ({ payload, cards, assigneeId }: CanonicalAssignmentSubmit) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true; setBusy(true); setMessage("");
+    const batch = cards.length > 1;
+    const currentBatchId = batch && typeof payload.batchId === "string" ? payload.batchId : null;
+    if (currentBatchId) setBatchId(currentBatchId);
+    setBatchAttachmentFailures([]); setPendingBatchAttachments([]); setBatchTaskResults([]);
+    try {
+      const response = await fetch("/api/tasks/assign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      if (!response.ok) {
+        if (response.status === 409 && currentBatchId) throw new Error("Batch ID đã được dùng cho dữ liệu khác. Không tự tạo mã mới; hãy kiểm tra lại phiên giao việc.");
+        throw new Error(await responseErrorMessage(response, "Không thể giao công việc."));
+      }
+      const result = await response.json() as { task?: { id: string }; tasks?: BatchTaskResult[] };
+      const attachment = cards[0].attachment;
+      let attachmentWarning = "";
+      if (!batch && attachment instanceof File && attachment.size > 0 && result.task?.id) {
+        const form = new FormData(); form.set("file", attachment);
+        const uploaded = await fetch(`/api/tasks/${result.task.id}/attachments`, { method: "POST", body: form });
+        if (!uploaded.ok) attachmentWarning = await responseErrorMessage(uploaded, "Tệp đính kèm chưa tải lên được.");
+      }
+      if (batch) {
+        const createdTasks = result.tasks ?? [];
+        const attachments = cards.map((card, taskIndex) => card.attachment instanceof File && card.attachment.size > 0 ? { taskIndex, file: card.attachment } : null).filter((item): item is BatchAttachmentInput => Boolean(item));
+        const uploadResult = await uploadBatchAttachments(createdTasks, attachments, uploadTaskAttachment);
+        if (uploadResult.failed.length) {
+          setBatchTaskResults(createdTasks); setPendingBatchAttachments(attachments.filter((item) => uploadResult.failed.some((failure) => failure.taskIndex === item.taskIndex))); setBatchAttachmentFailures(uploadResult.failed);
+          const text = `Đã tạo ${cards.length} công việc, nhưng một số tệp chưa tải lên được.`; setMessage(text); notify("error", text); return;
+        }
+      }
+      const recipientName = people.find((person) => person.id === assigneeId)?.fullName ?? "người nhận việc";
+      notify(attachmentWarning ? "error" : "success", attachmentWarning || `Đã giao ${cards.length} công việc cho ${recipientName}.`);
+      if (attachmentWarning) setMessage(attachmentWarning);
+      router.push(!batch && result.task?.id ? `/tasks/${result.task.id}` : "/tasks"); router.refresh();
+    } catch (error) {
+      const text = errorMessage(error, "Không thể giao công việc. Vui lòng thử lại."); setMessage(text); notify("error", text); throw error;
     } finally { submittingRef.current = false; setBusy(false); }
   };
 
@@ -340,40 +335,10 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
             {canManageEventAssignment ? <a href="/work-schedule" className="ml-auto rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</a> : null}
           </div>
         </header>
-        {!journalismMode ? <section aria-labelledby="recipient-heading" className="mt-3 overflow-hidden rounded-xl border border-orange-200 bg-white shadow-sm">
-          <div className="border-b border-orange-100 bg-orange-50 px-4 py-3">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-700">Bước đầu tiên</p>
-            <h2 id="recipient-heading" className="mt-1 text-lg font-bold text-slate-950">CHỌN NGƯỜI NHẬN VIỆC</h2>
-          </div>
-          {formActivated && selectedAssignee && selectedDepartment ? <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-            <span className="text-sm font-medium text-slate-500">Đang giao việc cho:</span>
-            <span className="min-w-0 flex-1 font-bold text-slate-950">{selectedAssignee.fullName} <span className="font-medium text-slate-400">·</span> {selectedDepartment.name}</span>
-            <button type="button" onClick={changeRecipient} className="rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-sm font-semibold text-orange-700 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">Đổi người</button>
-          </div> : <div className="grid gap-3 p-4">
-            <div className="grid items-end gap-3 md:grid-cols-[minmax(0,520px)_1fr]">
-              <div className="relative">
-                <span className="mb-1 block text-sm font-semibold">Người nhận việc</span>
-                <input type="text" id="recipient-search" role="combobox" aria-controls="recipient-options" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded={recipientPickerOpen} value={recipientSearch} onFocus={() => { if (departmentId) setRecipientPickerOpen(true); }} onKeyDown={(event) => { if (event.key === "Escape") setRecipientPickerOpen(false); }} onChange={(event) => { setRecipientSearch(event.target.value); if (departmentId) setRecipientPickerOpen(true); }} placeholder={departmentId ? (isEditorialBoard ? "Tìm người trong Ban Biên tập..." : "Tìm hoặc chọn nhân viên...") : "Chọn phòng ban trước"} aria-label="Người nhận việc" disabled={!departmentId} className={controlClass + " disabled:bg-slate-100 disabled:text-slate-500"} />
-                {recipientPickerOpen && departmentId ? <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                  <div id="recipient-options" role="listbox" aria-label="Danh sách người nhận việc" className="max-h-64 overflow-y-auto p-1">
-                    {filteredRecipientPeople.map((person) => <button key={person.id} type="button" role="option" aria-selected={false} onClick={() => chooseRecipient(person)} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-orange-50 focus-visible:bg-orange-50 focus-visible:outline-none">
-                      <span className="block font-semibold text-slate-950">{person.fullName}</span>
-                      <span className="block text-xs text-slate-500">{person.departmentId ? departmentById.get(person.departmentId) ?? selectedDepartment?.name : selectedDepartment?.name}</span>
-                    </button>)}
-                    {filteredRecipientPeople.length === 0 ? <p className="px-3 py-4 text-sm text-slate-500">Không tìm thấy nhân sự phù hợp.</p> : null}
-                  </div>
-                </div> : null}
-              </div>
-              {assignmentScope?.kind === "own_department" ? <p className="pb-2 text-sm font-semibold text-slate-700">Phạm vi: {assignmentScope.departmentName ?? "Chưa xác định phòng ban"}</p> : selectedDepartment && !choosingOtherDepartment ? <p className="pb-2 text-sm font-semibold text-slate-700">Phạm vi: {selectedDepartment.name}</p> : null}
-            </div>
-            {assignmentScope?.canChooseOtherDepartment && canChooseOtherDepartment && assignmentScope.departmentId && !choosingOtherDepartment ? <button type="button" onClick={() => { setChoosingOtherDepartment(true); setDepartmentId(""); setRecipientPickerOpen(false); setRecipientSearch(""); }} className="justify-self-start rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Chọn phòng ban khác</button> : null}
-            {canChooseOtherDepartment && (choosingOtherDepartment || !assignmentScope?.departmentId) ? <div className="grid gap-2 sm:max-w-md">
-              <label className="grid gap-1 text-sm font-semibold"><span>Phòng ban</span><select value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setRecipientPickerOpen(false); setRecipientSearch(""); }} className={controlClass}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id} disabled={!department.hasManager}>{department.name}{department.hasManager ? "" : " — thiếu Trưởng phòng chính"}</option>)}</select></label>
-              {assignmentScope?.departmentId ? <button type="button" onClick={() => { setDepartmentId(assignmentScope.departmentId ?? ""); setChoosingOtherDepartment(false); setRecipientPickerOpen(false); setRecipientSearch(""); }} className="justify-self-start text-sm font-semibold text-orange-700 underline-offset-4 hover:underline">Quay về Ban Biên tập</button> : null}
-            </div> : null}
-          </div>}
-        </section> : null}
-        <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
+        {!journalismMode ? <>
+          <CanonicalAssignmentForm departments={departments} people={people} assignmentScope={assignmentScope} onSubmit={submitCanonical} submitLabel={taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"} disabled={busy} />
+        </> : null}
+        {journalismMode && <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
           <input type="hidden" name="recipientReady" disabled={!recipientReady} value="true" readOnly />
           <fieldset disabled={!journalismMode && !recipientReady} className="contents disabled:opacity-60">
             <div className="grid gap-3 lg:col-span-2 lg:grid-cols-3">
@@ -410,7 +375,7 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
           <div className="flex items-end"><button disabled={busy || !recipientReady || !departmentId || !selectedDepartment?.managerId || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"}</button></div>
           {message ? <p role="alert" className="text-sm text-red-700 lg:col-span-2">{message}</p> : null}
           </fieldset>
-        </form>
+        </form>}
         {batchAttachmentFailures.length ? <section role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">Đã tạo công việc, nhưng một số tệp chưa tải lên được.</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">{batchAttachmentFailures.map((failure) => <li key={failure.taskIndex + "-" + failure.fileName}>Việc {failure.taskIndex + 1}: {failure.fileName} — {failure.message}</li>)}</ul>
@@ -436,6 +401,11 @@ function CheckGroup({ name, people, selected, onChange, empty }: {
 type BatchTaskResult = { ordinal: number; id: string; title?: string };
 type BatchAttachmentInput = { taskIndex: number; taskId?: string; file: File };
 type BatchAttachmentFailure = { taskIndex: number; taskId: string; fileName: string; message: string };
+
+
+// Extracted reusable form owns TaskCardFields and ParticipantSelector.
+
+// Extracted reusable form owns TaskCardFields and ParticipantSelector.
 
 type AssignmentCardState = {
   cardId: string;

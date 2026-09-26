@@ -1,3 +1,26 @@
+## Department Plan V2 Checkpoint 9A
+
+Current Phase: COMPLETE; reusable canonical assignment form
+Current Task: Checkpoint 9A — extracted form and preserved Task assignment behavior
+
+Completed:
+- Extracted the recipient-first canonical Task assignment form into `src/components/CanonicalAssignmentForm.tsx`.
+- Kept TaskAssignShell responsible for page layout, API submission, notifications, attachment upload, and redirects.
+- Added compatible `initialValues`, caller-owned `onSubmit`, optional `onCancel`, field validation, scope/picker behavior, participant selectors, priority, due dates, recurrence, and batch payload normalization.
+
+Validation:
+- Focused extraction and assignment regression: PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build: PASS with build-only production environment and lineage overrides.
+- git diff --check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Checkpoint 9B only after owner approval; no Department Plan integration was started.
+
 ## Department Plan V2 Final Integration Gate
 
 Current Phase: FINAL INTEGRATION & PRODUCTION ROLLOUT GATE
