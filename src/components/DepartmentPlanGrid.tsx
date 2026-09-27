@@ -47,7 +47,7 @@ const statusLabels: Record<Draft["workStatus"], string> = {
 
 const assignmentLabels = {
   unassigned: "Chưa phân công",
-  department_wide: "Cả phòng",
+  department_wide: "Cả phòng", // Same persisted state previously labeled "Việc chung của phòng".
 } as const;
 
 const vietnamDateParts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" });
