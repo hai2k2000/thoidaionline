@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSessionToken, isSameOriginRequest, SESSION_COOKIE, sessionCookieOptions } from "@/lib/serverSession";
 import { authenticateCredentials } from "@/lib/authenticateCredentials";
 import { clearLoginAttempts, consumeLoginAttempt } from "@/lib/loginRateLimit";
+import { beginAuthDiagnostic, emitAuthDiagnostic, updateAuthDiagnostic } from "@/lib/authDiagnostic";
 
 export async function POST(request: Request) {
   if (!(await isSameOriginRequest())) return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 403 });
@@ -17,6 +18,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
   }
 
+  const diagnostic = beginAuthDiagnostic(body.identifier, body.password);
+
   const source = request.headers.get("x-real-ip")?.trim() || "unknown";
   const throttleKey = `${source}:${identifier}`;
   const throttle = consumeLoginAttempt(throttleKey);
@@ -27,17 +30,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const authenticated = await authenticateCredentials(identifier, password);
+  const authenticated = await authenticateCredentials(identifier, password, diagnostic);
   if (!authenticated) {
+    emitAuthDiagnostic(diagnostic);
     return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
   }
   clearLoginAttempts(throttleKey);
-
-  const response = NextResponse.json({ ok: true, mustChangePassword: false });
-  response.cookies.set(
-    SESSION_COOKIE,
-    createSessionToken(authenticated.userId, authenticated.sessionVersion, false),
-    sessionCookieOptions,
-  );
-  return response;
+  updateAuthDiagnostic(diagnostic, { session_creation_reached: true });
+  try {
+    const response = NextResponse.json({ ok: true, mustChangePassword: false });
+    response.cookies.set(
+      SESSION_COOKIE,
+      createSessionToken(authenticated.userId, authenticated.sessionVersion, false),
+      sessionCookieOptions,
+    );
+    emitAuthDiagnostic(diagnostic, { auth_result: "success" });
+    return response;
+  } catch (error) {
+    emitAuthDiagnostic(diagnostic, {
+      auth_result: "session_failed",
+      error_name: error instanceof Error ? error.name : "unknown",
+    });
+    throw error;
+  }
 }
