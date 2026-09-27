@@ -65,7 +65,7 @@ const dueText = (dueDate: string | null, dueTime: string | null) => {
 const canEditOwnTask = (task: TaskListResult["items"][number], currentUserId: string, currentUserRole: string) => {
   if (task.legacy_read_only || (task.created_by !== currentUserId && currentUserRole !== "admin")) return false;
   if (["done", "cancelled"].includes(task.status)) return false;
-  if (task.approval_required && !["waiting", "rejected"].includes(task.status)) return false;
+  if (currentUserRole !== "admin" && task.approval_required && !["waiting", "rejected"].includes(task.status)) return false;
   return task.compatibility_task_type === "personal";
 };
 
