@@ -26,9 +26,12 @@ test("does not infer from partial identity data", () => {
   assert.equal(getAssignmentSourceDisplay({ ...legacy, created_by: " ", owner_id: " ", assignee_id: " " }), "Không xác định (dữ liệu cũ)");
 });
 
-test("summary centralizes display and preserves person columns", () => {
+test("summary table hides assignment source and preserves person columns", () => {
   const summary = readFileSync(new URL("../components/TaskCenterShell.tsx", import.meta.url), "utf8");
-  assert.equal((summary.match(/getAssignmentSourceDisplay\(task\)/g) ?? []).length, 3);
+  assert.equal((summary.match(/getAssignmentSourceDisplay\(task\)/g) ?? []).length, 1);
+  assert.doesNotMatch(summary, /<th[^>]*>Hình thức<\/th>/);
+  assert.doesNotMatch(summary, /<dt[^>]*>Hình thức<\/dt>/);
+  assert.match(summary, /colSpan=\{8\}/);
   assert.match(summary, /const semanticAssigner/);
   assert.match(summary, /const assigneeDisplay/);
 });
