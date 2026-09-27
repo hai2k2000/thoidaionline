@@ -12,6 +12,7 @@ import { isTaskRbacV2Enabled } from "@/lib/taskRbacFlag";
 import { buildTaskListScope } from "@/lib/taskAuthorization";
 import { loadRbacActor } from "@/lib/rbac/repository";
 import { applyJournalismExcludeFilter } from "@/lib/taskFilters.mjs";
+import { isSelfCreatedTask, selectAssignmentApprovalActor } from "@/lib/taskAssignmentDisplay.mjs";
 import { publicationReportDto } from "@/lib/journalismManualPublicationValidation";
 import type {
   AssignedTaskInput,
@@ -100,6 +101,61 @@ const TASK_DETAIL_FIELDS = [
 
 const journalismValue = <T>(value: T | T[] | null | undefined): T | null =>
   Array.isArray(value) ? value[0] ?? null : value ?? null;
+
+type AssignmentApprovalEventRow = {
+  task_id: string;
+  from_status: string | null;
+  to_status: string;
+  actor_id: string | null;
+  created_at: string;
+};
+
+const enrichAssignmentApprovers = async (
+  items: TaskListItemDto[],
+): Promise<RepositoryResult<TaskListItemDto[]>> => {
+  const candidates = items.filter((item) =>
+    isSelfCreatedTask(item) && !item.assignment_approver?.full_name,
+  );
+  if (candidates.length === 0) return ok(items);
+
+  const { data, error } = await serverSupabase
+    .from("task_status_events")
+    .select("task_id,from_status,to_status,actor_id,created_at")
+    .in("task_id", candidates.map((item) => item.id))
+    .eq("from_status", "waiting")
+    .eq("to_status", "in_progress")
+    .order("created_at", { ascending: false });
+  if (error) return fail(error);
+
+  const events = (data ?? []) as unknown as AssignmentApprovalEventRow[];
+  const actorIds = [...new Set(events.map((event) => event.actor_id).filter((id): id is string => Boolean(id)))];
+  if (actorIds.length === 0) return ok(items);
+  const actorResult = await serverSupabase
+    .from("staff_users")
+    .select("id,full_name")
+    .in("id", actorIds);
+  if (actorResult.error) return fail(actorResult.error);
+
+  const names = new Map(
+    (actorResult.data ?? []).map((row) => [row.id as string, row.full_name as string | null]),
+  );
+  const selected = new Map<string, AssignmentApprovalEventRow>();
+  for (const event of events) {
+    if (!selected.has(event.task_id)) selected.set(event.task_id, event);
+  }
+  return ok(items.map((item) => {
+    const event = selected.get(item.id);
+    const fullName = event?.actor_id ? names.get(event.actor_id) ?? null : null;
+    return event?.actor_id && fullName
+      ? {
+        ...item,
+        assignment_approved_by: event.actor_id,
+        assignment_approved_at: event.created_at,
+        assignment_approver: { full_name: fullName },
+      }
+      : item;
+  }));
+};
 
 const withJournalismList = (item: TaskListItemDto): TaskListItemDto => ({
   ...item,
@@ -552,8 +608,10 @@ export const taskRepository: TaskRepository = {
       });
     const enriched = await enrichJournalismList(normalizedItems);
     if (!enriched.ok) return enriched;
+    const withApprovers = await enrichAssignmentApprovers(enriched.data);
+    if (!withApprovers.ok) return withApprovers;
     return ok({
-      items: enriched.data,
+      items: withApprovers.data,
       total: count ?? 0,
       page: query.page,
       pageSize: query.pageSize,
@@ -593,7 +651,9 @@ export const taskRepository: TaskRepository = {
     }));
     const enriched = await enrichApprovalWorkflowContext(items);
     if (!enriched.ok) return enriched;
-    return ok({ items: enriched.data, total: count ?? items.length, page: 1, pageSize: 100 });
+    const withApprovers = await enrichAssignmentApprovers(enriched.data);
+    if (!withApprovers.ok) return withApprovers;
+    return ok({ items: withApprovers.data, total: count ?? items.length, page: 1, pageSize: 100 });
   },
 
   async detail(taskId, actor) {
@@ -626,7 +686,7 @@ export const taskRepository: TaskRepository = {
         .select("id,old_due_date,new_due_date,reason,changed_at")
         .eq("task_id", taskId).order("changed_at", { ascending: false }),
       serverSupabase.from("task_status_events")
-        .select("id,from_status,to_status,reason,created_at")
+        .select("id,from_status,to_status,reason,actor_id,created_at")
         .eq("task_id", taskId).order("created_at", { ascending: false }),
       serverSupabase.from("task_attachments")
         .select("id,file_name,mime_type,size_bytes,created_at,uploaded_by")
@@ -641,12 +701,34 @@ export const taskRepository: TaskRepository = {
       ?? statusResult.error ?? attachmentResult.error ?? completionScoreResult.error;
     if (error) return fail(error);
     if (!taskResult.data) return ok(null);
+    const approvalEvent = selectAssignmentApprovalActor(
+      (statusResult.data ?? []) as unknown as AssignmentApprovalEventRow[],
+    );
+    let assignmentApprover = (taskResult.data as unknown as TaskListItemDto).assignment_approver;
+    if (!assignmentApprover && approvalEvent?.actor_id) {
+      const actorResult = await serverSupabase
+        .from("staff_users")
+        .select("id,full_name")
+        .eq("id", approvalEvent.actor_id)
+        .maybeSingle();
+      if (actorResult.error) return fail(actorResult.error);
+      assignmentApprover = actorResult.data
+        ? { full_name: actorResult.data.full_name as string | null }
+        : null;
+    }
     return ok({
       ...(taskResult.data as unknown as Omit<TaskDetailDto,
         "comments" | "progress_logs" | "legacy_evaluations" | "progress_reports"
         | "qualitative_evaluations"
         | "deadline_history" | "status_events" | "attachments" | "completion_score">),
       ...resolveTaskCompatibility(taskResult.data as unknown as TaskListItemDto),
+      assignment_approved_by: (taskResult.data as unknown as TaskListItemDto).assignment_approved_by
+        ?? approvalEvent?.actor_id
+        ?? null,
+      assignment_approved_at: (taskResult.data as unknown as TaskListItemDto).assignment_approved_at
+        ?? approvalEvent?.created_at
+        ?? null,
+      assignment_approver: assignmentApprover,
       comments: (commentResult.data ?? []) as unknown as TaskDetailDto["comments"],
       progress_logs: (legacyProgressResult.data ?? []) as unknown as TaskDetailDto["progress_logs"],
       legacy_evaluations: (evaluationResult.data ?? []) as unknown as TaskDetailDto["legacy_evaluations"],
