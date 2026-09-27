@@ -1,6 +1,7 @@
 import { apiError, apiJson, requireReadActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { FOREIGN_REPORTERS, isForeignReporter } from "@/lib/onlineWorkLanguage.mjs";
+import { calculateAttendance } from "@/lib/attendanceWorkday";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -12,6 +13,7 @@ type AttendanceRow = {
   check_out: string | null;
   note: string | null;
   status: string | null;
+  workday?: number;
   staff_users?: { full_name: string } | null;
 };
 
@@ -137,13 +139,23 @@ export async function GET(request: Request) {
   const noteFor = (row: AttendanceRow) => {
     const leave = leaves.find((x) => x.requester?.id === row.user_id && x.start_date <= row.work_date && x.end_date >= row.work_date);
     const onlineDay = online.some((x) => x.work_date === row.work_date && x.staff?.id === row.user_id);
-    const parts: string[] = [];
-    if (leave) parts.push(leaveLabel(leave, row.work_date));
+    const extraNotes: string[] = [];
+    if (leave) extraNotes.push(leaveLabel(leave, row.work_date));
     const leaveIsFull = !!leave && leavePeriodsForDate(leave, row.work_date).every((period) => period === "full");
-    if (onlineDay && !leaveIsFull) parts.push("Làm việc online");
-    return parts.join("; ");
+    if (onlineDay && !leaveIsFull) extraNotes.push("Làm việc online");
+    return calculateAttendance({
+      checkIn: row.check_in,
+      checkOut: row.check_out,
+      existingNote: row.note,
+      extraNotes,
+      exceptional: row.status === "leave" || row.status === "absent" || leaveIsFull || (onlineDay && !row.check_in && !row.check_out),
+      exceptionalWorkday: onlineDay && !leaveIsFull ? 1 : 0,
+    });
   };
-  const withNotes = (items: AttendanceRow[]) => items.map((row) => ({ ...row, note: noteFor(row) }));
+  const withNotes = (items: AttendanceRow[]) => items.map((row) => {
+    const calculation = noteFor(row);
+    return { ...row, workday: calculation.workday, note: calculation.note };
+  });
   const contextRows = (items: AttendanceRow[], from: string, to: string) => {
     const result = withNotes(items);
     const existing = new Set(result.map((row) => `${row.user_id}:${row.work_date}`));
@@ -158,7 +170,7 @@ export async function GET(request: Request) {
         const key = `${leave.requester.id}:${workDate}`;
         if (existing.has(key)) continue;
         const label = leaveLabel(leave, workDate);
-        result.push({ id: `leave-${leave.requester.id}-${workDate}`, user_id: leave.requester.id, work_date: workDate, check_in: null, check_out: null, note: label, status: "leave", staff_users: { full_name: leave.requester.full_name } });
+        result.push({ id: `leave-${leave.requester.id}-${workDate}`, user_id: leave.requester.id, work_date: workDate, check_in: null, check_out: null, note: label, status: "leave", staff_users: { full_name: leave.requester.full_name }, workday: 0 });
         existing.add(key);
       }
     }
@@ -167,7 +179,7 @@ export async function GET(request: Request) {
       if (onlineRow.work_date < from || onlineRow.work_date > to) continue;
       const key = `${onlineRow.staff.id}:${onlineRow.work_date}`;
       if (existing.has(key)) continue;
-      result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name } });
+      result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name }, workday: 1 });
       existing.add(key);
     }
     return result.sort((a, b) => {
