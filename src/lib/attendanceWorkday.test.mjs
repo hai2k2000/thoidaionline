@@ -76,3 +76,47 @@ test("server and UI consume the canonical workday calculation", () => {
   assert.match(page, /r\.workday === 1/);
   assert.match(page, /Ngày công/);
 });
+
+test("Wise On 39 sync note alone is removed", () => {
+  assert.equal(calculate("08:00", "17:00", { existingNote: "Đồng bộ từ Wise On 39" }).note, "");
+});
+
+test("Wise On 39 sync note matching is case and whitespace tolerant", () => {
+  assert.equal(calculate("08:00", "17:00", { existingNote: "  đồng   bộ từ WiseOn39  " }).note, "");
+});
+
+test("Wise On 39 sync note is removed while late note remains", () => {
+  assert.equal(calculate("08:20", "17:00", { existingNote: "Đồng bộ từ Wise On 39" }).note, "Đi muộn");
+});
+
+test("Wise On 39 sync note is removed while early note remains", () => {
+  assert.equal(calculate("08:00", "16:15", { existingNote: "Đồng bộ từ Wise On 39" }).note, "Về sớm");
+});
+
+test("Wise On 39 sync note is removed while genuine manual note remains", () => {
+  assert.equal(calculate("08:00", "16:15", { existingNote: "Đồng bộ từ Wise On 39; Ghi chú quản trị" }).note, "Về sớm; Ghi chú quản trị");
+});
+
+test("Wise On 39 sync note does not affect late and early ordering", () => {
+  assert.equal(calculate("08:30", "16:00", { existingNote: "Đồng bộ từ Wise On 39" }).note, "Đi muộn; Về sớm");
+});
+
+test("Wise On 39 sync note does not replace missing-time notes", () => {
+  assert.equal(calculate(null, "17:00", { existingNote: "Đồng bộ từ Wise On 39" }).note, "Thiếu giờ vào");
+  assert.equal(calculate("08:00", null, { existingNote: "Đồng bộ từ Wise On 39" }).note, "Thiếu giờ ra");
+});
+
+test("Wise On 39 sync note is removed without changing leave note", () => {
+  assert.equal(calculate(null, null, { exceptional: true, existingNote: "Đồng bộ từ Wise On 39; Nghỉ phép" }).note, "Nghỉ phép");
+});
+
+test("unrelated manual notes remain unchanged", () => {
+  assert.equal(calculate("08:00", "17:00", { existingNote: "Ghi chú bình thường" }).note, "Ghi chú bình thường");
+});
+
+test("Wise On 39 cleanup does not change workday calculation", () => {
+  const result = calculate("08:20", "16:15", { existingNote: "Đồng bộ từ Wise On 39" });
+  assert.equal(result.workday, 1);
+  assert.equal(result.late, true);
+  assert.equal(result.early, true);
+});

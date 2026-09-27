@@ -27,6 +27,11 @@ const timeToSeconds = (value?: string | null) => {
 };
 
 const splitNotes = (value?: string | null) => (value ?? "").split(";").map((part) => part.trim()).filter(Boolean);
+const WISE_ON_39_SYNC_NOTE = /^đồng\s*bộ\s*từ\s*wise\s*on\s*39$/iu;
+
+export const sanitizeAttendanceNotes = (values: Array<string | null | undefined>) => values
+  .flatMap(splitNotes)
+  .filter((note) => !WISE_ON_39_SYNC_NOTE.test(note));
 
 export const calculateAttendance = ({ checkIn, checkOut, existingNote, extraNotes = [], exceptional = false, exceptionalWorkday = 0 }: AttendanceCalculationInput): AttendanceCalculation => {
   const checkInSeconds = timeToSeconds(checkIn);
@@ -41,7 +46,7 @@ export const calculateAttendance = ({ checkIn, checkOut, existingNote, extraNote
         ...(early ? ["Về sớm"] : []),
         ...(checkInSeconds === null && checkOutSeconds === null ? ["Thiếu giờ vào", "Thiếu giờ ra"] : checkInSeconds === null ? ["Thiếu giờ vào"] : checkOutSeconds === null ? ["Thiếu giờ ra"] : []),
       ];
-  const notes = [...generated, ...extraNotes.flatMap(splitNotes), ...splitNotes(existingNote)];
+  const notes = [...generated, ...sanitizeAttendanceNotes([...extraNotes, existingNote])];
   const uniqueNotes = notes.filter((note, index) => notes.indexOf(note) === index);
   return { workday: exceptional ? exceptionalWorkday : complete ? 1 : 0, late, early, note: uniqueNotes.join("; ") };
 };
