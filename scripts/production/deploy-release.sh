@@ -31,6 +31,7 @@ cp -a "$build_worktree/." "$staged_release/"
 rm -rf -- "$staged_release/.git" "$staged_release/backups"
 printf 'release_id=%s\ncommit=%s\nbranch=%s\ncreated_at=%s\ndeployed_at=\nbuild_id=%s\nsource_worktree=%s\n' \
   "$release_id" "$commit" "$commit_ref" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(cat "$build_worktree/.next/BUILD_ID")" "$build_worktree" > "$staged_release/.release-meta"
+chmod 755  \
 mv -Tf -- "$staged_release" "$THOIDAI_RELEASE_ROOT/$release_id"
 staged_release=''
 validate_release "$THOIDAI_RELEASE_ROOT/$release_id"
