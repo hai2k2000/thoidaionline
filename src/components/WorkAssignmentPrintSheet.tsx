@@ -22,6 +22,7 @@ const GroupIcon = () => <svg aria-hidden="true" viewBox="0 0 24 24" className="p
 const FileIcon = () => <svg aria-hidden="true" viewBox="0 0 24 24" className="print-icon" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 3.5h8l4 4V20.5H6z" /><path d="M14 3.5v4h4M8.5 12h7M8.5 15.5h7" /></svg>;
 const Field = ({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) => <div className="print-box"><dt><span className="print-field-label">{icon}{label}</span></dt><dd>{value || "—"}</dd></div>;
 const SectionHeading = ({ number, children }: { number: string; children: ReactNode }) => <div className="print-section-heading"><span className="section-number">{number}</span><h2>{children}</h2></div>;
+const InlineField = ({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) => <div className="print-box print-inline-field"><dt><span className="print-field-label">{icon}{label}:</span></dt><dd>{value || "—"}</dd></div>;
 
 export default function WorkAssignmentPrintSheet({ task }: { task: TaskDetailDto }) {
   const model = buildWorkAssignmentPrintModel(task);
@@ -37,17 +38,16 @@ export default function WorkAssignmentPrintSheet({ task }: { task: TaskDetailDto
         <p className="mt-1 text-sm font-semibold text-slate-700">{model.department}</p>
       </header>
 
-      <section data-section="assignment" className="print-section-frame mt-5">
+      <section data-section="assignment" data-assignment-source={model.assignmentSourceLabel} className="print-section-frame mt-5">
         <SectionHeading number="1">THÔNG TIN GIAO VIỆC</SectionHeading>
         <dl className="print-info-dates">
-          <Field label="Ngày giao" value={formatPrintDate(model.assignedDate)} icon={<CalendarIcon />} />
-          <Field label="Hạn hoàn thành" value={formatPrintDate(model.deadline)} icon={<CalendarIcon />} />
+          <InlineField label="Ngày giao" value={formatPrintDate(model.assignedDate)} icon={<CalendarIcon />} />
+          <InlineField label="Hạn hoàn thành" value={formatPrintDate(model.deadline)} icon={<CalendarIcon />} />
         </dl>
         <dl className="print-info-people" aria-label="Người giao việc">
-          <Field label="Hình thức" value={model.assignmentSourceLabel} icon={<FileIcon />} />
-          <Field label={model.assignerLabel} value={model.assigner} icon={<UserIcon />} />
+          <Field label="Người giao việc" value={model.assigner} icon={<UserIcon />} />
           <Field label="Người nhận việc" value={model.primaryAssignee} icon={<UserIcon />} />
-          <div className="print-box"><dt><span className="print-field-label"><GroupIcon />Người phối hợp (nếu có)</span></dt><dd>{model.collaborators.join(", ") || "—"}</dd></div>
+          <Field label="Người phối hợp (nếu có)" value={model.collaborators.join(", ")} icon={<GroupIcon />} />
         </dl>
       </section>
 

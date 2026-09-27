@@ -376,6 +376,73 @@ main section > h3 {
   padding-bottom: 0.6rem;
 }
 
+.print-section-frame[data-section="assignment"] {
+  margin-top: 1rem;
+}
+
+.print-section-frame[data-section="assignment"] .print-section-heading {
+  padding-block: 0.5rem;
+}
+
+.print-section-frame[data-section="assignment"] .print-info-dates,
+.print-section-frame[data-section="assignment"] .print-info-people {
+  gap: 0.35rem;
+}
+
+.print-section-frame[data-section="assignment"] .print-info-dates {
+  padding-top: 0.4rem;
+}
+
+.print-section-frame[data-section="assignment"] .print-info-people {
+  padding-top: 0.35rem;
+  padding-bottom: 0.45rem;
+}
+
+.print-inline-field {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+}
+
+.print-inline-field dt,
+.print-inline-field dd {
+  margin: 0;
+}
+
+.print-inline-field dt {
+  flex: 0 0 auto;
+}
+
+.print-inline-field dt {
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.print-inline-field dd {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .print-info-dates,
+  .print-info-people {
+    grid-template-columns: 1fr;
+  }
+
+  .print-inline-field dd {
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
 .print-box {
   border: 1px solid #64748b;
   border-color: #cbd5e1;

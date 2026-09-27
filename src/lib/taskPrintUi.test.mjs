@@ -39,6 +39,21 @@ test("print sheet uses the redesigned A4 assignment layout", () => {
   assert.match(sheet, /journalism/);
 });
 
+test("assignment info uses compact inline dates and three people cells", () => {
+  const sheet = read("../components/WorkAssignmentPrintSheet.tsx");
+  const css = read("../app/globals.css");
+  assert.match(sheet, /InlineField label="Ngày giao"/);
+  assert.match(sheet, /InlineField label="Hạn hoàn thành"/);
+  assert.match(sheet, /Field label="Người giao việc"/);
+  assert.match(sheet, /Field label="Người nhận việc"/);
+  assert.match(sheet, /Field label="Người phối hợp \(nếu có\)"/);
+  assert.match(sheet, /model\.collaborators\.join\("?, ?"\)/);
+  assert.doesNotMatch(sheet, /Field label="Hình thức"/);
+  assert.match(css, /\.print-inline-field\s*\{[\s\S]*display:\s*flex/);
+  assert.match(css, /\.print-inline-field\s+dt\s*\{[\s\S]*text-transform:\s*none/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.print-info-dates,[\s\S]*grid-template-columns:\s*1fr/);
+});
+
 test("Task Detail and Task Summary expose the print action", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   const summary = read("../components/TaskCenterShell.tsx");
