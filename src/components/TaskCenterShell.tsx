@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { countTaskListFilters, taskListHref } from "@/lib/taskFilters.mjs";
 import { journalismLabels, journalismPublicationStatusLabel } from "@/lib/journalismUi.mjs";
 import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
-import { getAssignmentSourceDisplay } from "@/lib/taskAssignmentDisplay.mjs";
+import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
 import type { TaskCenterView } from "@/lib/taskCenterView";
 import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
 
@@ -42,10 +42,7 @@ const taskStatusLabel = (status: string, approvalRequired = false) =>
       : status === "rejected" ? "Trả lại"
         : status === "cancelled" ? "Đã hủy"
           : "Chưa hoàn thành";
-const semanticAssigner = (task: TaskListResult["items"][number]) => {
-  const approved = task.assignment_source === "self_registered" && ["in_progress", "pending_review", "done"].includes(task.status);
-  return { label: task.assignment_source === "self_registered" && approved ? "Người duyệt giao việc" : "Người giao việc", value: task.assignment_source === "self_registered" ? (approved ? task.assignment_approver?.full_name ?? "—" : "—") : task.created_by_user?.full_name ?? "—" };
-};
+const semanticAssigner = resolveDisplayedAssigner;
 const statusClass = (status: string) => status === "done" ? "bg-emerald-100 text-emerald-800" : status === "rejected" ? "bg-red-100 text-red-800" : status === "cancelled" ? "bg-slate-200 text-slate-600" : "bg-amber-100 text-amber-800";
 
 const tabClass = (active: boolean) => `rounded-full border px-3.5 py-2 text-sm font-semibold transition-colors ${
