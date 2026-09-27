@@ -6,9 +6,9 @@ import { useState } from "react";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
-type Props = { taskId: string; canEdit: boolean; canClaim: boolean; terminal: boolean };
+type Props = { taskId: string; canEdit: boolean; canComplete: boolean; canClaim: boolean; terminal: boolean };
 
-export default function PersonalTaskActions({ taskId, canEdit, canClaim, terminal }: Props) {
+export default function PersonalTaskActions({ taskId, canEdit, canComplete, canClaim, terminal }: Props) {
   const router = useRouter();
   const { notify } = useActionFeedback();
   const [busy, setBusy] = useState(false);
@@ -53,25 +53,26 @@ export default function PersonalTaskActions({ taskId, canEdit, canClaim, termina
       {error ? <span role="alert" className="text-xs text-red-700">{error}</span> : null}
     </div>
   );
-  if (!canEdit) return null;
+  if (!canEdit && !canComplete) return null;
   return (
     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
-      <Link href={`/tasks/personal/${taskId}/edit`} className="rounded border px-2 py-1 text-xs font-semibold">
+      {canEdit ? <Link href={`/tasks/personal/${taskId}/edit`} className="rounded border px-2 py-1 text-xs font-semibold">
         Sửa
-      </Link>
-      <button disabled={busy} onClick={() => mutate("complete")} className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
+      </Link> : null}
+      {canComplete ? <button disabled={busy} onClick={() => mutate("complete")} className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
         Hoàn thành
-      </button>
-      <button
+      </button> : null}
+      {canEdit ? <button
         disabled={busy}
         onClick={() => {
-          const reason = window.prompt("Lý do hủy nhiệm vụ");
+          if (!window.confirm("Bạn có chắc muốn hủy công việc này?")) return;
+          const reason = window.prompt("Lý do hủy công việc");
           if (reason?.trim()) void mutate("cancel", reason.trim());
         }}
         className="rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 disabled:opacity-50"
       >
-        Hủy nhiệm vụ
-      </button>
+        Hủy công việc
+      </button> : null}
       {error ? <span role="alert" className="text-xs text-red-700">{error}</span> : null}
     </div>
   );

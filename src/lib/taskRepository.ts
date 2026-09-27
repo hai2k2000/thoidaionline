@@ -230,6 +230,7 @@ type TaskAccessRow = {
   task_type: "assigned" | "personal" | null;
   status: string;
   approval_required: boolean;
+  task_status_events: { from_status: string | null; to_status: string }[] | null;
   task_assignees: {
     user_id: string;
     assignment_role: TaskParticipant["assignmentRole"];
@@ -422,6 +423,11 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
   taskType: row.task_type,
   status: row.status,
   approvalRequired: row.approval_required,
+  assignmentApprovalState: !row.approval_required
+    ? "not_required"
+    : (row.task_status_events ?? []).some((event) => event.from_status === "waiting" && event.to_status === "in_progress")
+      ? "approved"
+      : row.status === "rejected" ? "rejected" : "pending",
   participants: (row.task_assignees ?? []).map((participant) => ({
     userId: participant.user_id,
     assignmentRole: participant.assignment_role,
@@ -623,7 +629,7 @@ export const taskRepository: TaskRepository = {
       .from("tasks")
       .select(
         "id,department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id)," +
-        "self_claimable,task_type,status,approval_required,task_assignees(user_id,assignment_role)",
+        "self_claimable,task_type,status,approval_required,task_status_events(from_status,to_status),task_assignees(user_id,assignment_role)",
       )
       .eq("id", taskId)
       .maybeSingle();

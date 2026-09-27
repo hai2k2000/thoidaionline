@@ -22,7 +22,7 @@ type Capabilities = {
   journalismMetadataUpdate: boolean;
   journalismPublicationManage: boolean;
   journalismPublicationVerify: boolean;
-  attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
+  attachment: boolean; evaluate: boolean; leaderEvaluate: boolean; personalComplete: boolean; personalEdit: boolean; personalCancel: boolean; personalDeadline: boolean; assignedCancel: boolean; adminEdit: boolean;
 };
 const statusLabel = (status: string, approvalRequired = false) => ({
   new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc",
@@ -134,7 +134,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel, journal
   const completePath = personal ? "complete" : "submit-completion";
   const latestProgress = task.progress_reports[0] ?? null;
   const returnReason = task.status_events.find((event) => event.to_status === "rejected" && event.reason)?.reason;
-  const hasTaskActions = capabilities.review || capabilities.update || capabilities.personalCancel
+  const hasTaskActions = capabilities.review || capabilities.update || capabilities.personalEdit || capabilities.personalCancel
     || capabilities.personalDeadline || capabilities.assignedCancel || capabilities.adminEdit;
   const assigner = resolveDisplayedAssigner(task);
 
@@ -153,8 +153,8 @@ export default function TaskDetailShell({ task, capabilities, userLabel, journal
                 {capabilities.adminEdit ? <Link href={`/tasks/${task.id}/admin-edit`} className="shrink-0 whitespace-nowrap rounded bg-slate-900 px-2 py-1.5 text-xs font-semibold text-white">Sửa</Link> : null}
                 {!personal && capabilities.review && task.status === "pending_review" ? <><button disabled={busy} onClick={() => document.getElementById("task-scoring-form")?.scrollIntoView({ behavior: "smooth" })} className="shrink-0 whitespace-nowrap rounded bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white">Chấm điểm</button><button disabled={busy} onClick={returnWithDeadline} className="shrink-0 whitespace-nowrap rounded bg-amber-600 px-2 py-1.5 text-xs font-semibold text-white">Trả lại</button></> : null}
                 {!personal && capabilities.review && task.self_claimable && task.status === "waiting" ? <><button disabled={busy} onClick={() => reviewClaim("approve")} className="shrink-0 whitespace-nowrap rounded bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white">Duyệt nhận việc</button><button disabled={busy} onClick={() => reviewClaim("reject")} className="shrink-0 whitespace-nowrap rounded bg-amber-600 px-2 py-1.5 text-xs font-semibold text-white">Trả lại</button></> : null}
-                {personal && capabilities.personalDeadline ? <Link href={`/tasks/personal/${task.id}/edit`} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</Link> : null}
-                {((personal && capabilities.personalCancel) || (!personal && capabilities.assignedCancel && !["done", "cancelled"].includes(task.status))) ? <button disabled={busy} onClick={() => reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy nhiệm vụ")} className="shrink-0 whitespace-nowrap rounded bg-red-700 px-2 py-1.5 text-xs text-white">Hủy</button> : null}
+                {personal && capabilities.personalEdit ? <Link href={`/tasks/personal/${task.id}/edit`} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Sửa</Link> : null}
+                {((personal && capabilities.personalCancel) || (!personal && capabilities.assignedCancel && !["done", "cancelled"].includes(task.status))) ? <button disabled={busy} onClick={() => { if (window.confirm("Bạn có chắc muốn hủy công việc này?")) void reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy công việc"); }} className="shrink-0 whitespace-nowrap rounded bg-red-700 px-2 py-1.5 text-xs text-white">Hủy công việc</button> : null}
                 {!personal && capabilities.update && !["done", "cancelled"].includes(task.status) ? <button disabled={busy} onClick={async () => { const dueDate = window.prompt("Ngày kết thúc mới (YYYY-MM-DD):", task.due_date ?? ""); if (dueDate) await reasonAction(`/api/tasks/${task.id}/deadline-assigned`, "Đổi ngày", { dueDate }); }} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</button> : null}
               </> : null}
             </div>

@@ -19,6 +19,7 @@ type Props = {
   canAccessJournalism: boolean;
   canClaimTasks: boolean;
   canReviewTaskApprovals: boolean;
+  currentUserRole: string;
   approvalQueue: { assignment: TaskListResult; completion: TaskListResult } | null;
   currentUserId: string;
   departments: { id: string; name: string }[];
@@ -59,6 +60,13 @@ const dueText = (dueDate: string | null, dueTime: string | null) => {
   if (!dueDate) return "—";
   const [year, month, day] = dueDate.split("-");
   return `${day}/${month}/${year.slice(-2)}${dueTime ? ` ${dueTime.slice(0, 5)}` : ""}`;
+};
+
+const canEditOwnTask = (task: TaskListResult["items"][number], currentUserId: string, currentUserRole: string) => {
+  if (task.legacy_read_only || (task.created_by !== currentUserId && currentUserRole !== "admin")) return false;
+  if (["done", "cancelled"].includes(task.status)) return false;
+  if (task.approval_required && !["waiting", "rejected"].includes(task.status)) return false;
+  return task.compatibility_task_type === "personal";
 };
 
 const requirementsOf = (task: TaskListResult["items"][number]) => {
@@ -150,7 +158,7 @@ function ApprovalQueue({ queue, data, onRefresh }: { queue: "assignment" | "comp
 }
 
 export default function TaskCenterShell(props: Props) {
-  const { canAccessJournalism, canClaimTasks, canReviewTaskApprovals, approvalQueue, currentUserId, departments, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "BẢNG TỔNG HỢP CÔNG VIỆC", taskMode = false } = props;
+  const { canAccessJournalism, canClaimTasks, canReviewTaskApprovals, approvalQueue, currentUserId, currentUserRole, departments, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "BẢNG TỔNG HỢP CÔNG VIỆC", taskMode = false } = props;
   const router = useRouter();
   const tableRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -169,7 +177,7 @@ export default function TaskCenterShell(props: Props) {
           <header className="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
               <div><h1 className="text-2xl font-bold sm:text-3xl">{heading}</h1></div>
-              {!taskMode ? <Link href={query.journalism === "only" ? "/journalism/tasks/new" : "/tasks/personal/new"} className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">{query.journalism === "only" ? "+ Tạo công việc nghiệp vụ báo chí" : "+ Tạo công việc"}</Link> : null}
+              {!taskMode ? (query.journalism === "only" ? <Link href="/journalism/tasks/new" className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">+ Tạo công việc nghiệp vụ báo chí</Link> : <Link href="/tasks/personal/new" className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm sm:w-auto">+ Tạo công việc</Link>) : null}
             </div>
             <nav aria-label="Bảng công việc" className="mt-4 flex flex-wrap gap-2">
             </nav>
@@ -208,18 +216,24 @@ export default function TaskCenterShell(props: Props) {
                       <tbody>{tasks.items.map((task, index) => {
                         const open = expandedId === task.id;
                         const requirements = requirementsOf(task);
-                        const canEdit = task.compatibility_task_type === "personal" && !task.legacy_read_only && task.owner_id === currentUserId && !["waiting", "pending_review", "done", "cancelled"].includes(task.status);
+                        const canEdit = canEditOwnTask(task, currentUserId, currentUserRole);
+                        const canComplete = task.compatibility_task_type === "personal"
+                          && (task.owner_id === currentUserId || currentUserRole === "admin")
+                          && !["waiting", "pending_review", "done", "cancelled"].includes(task.status);
                         const canClaim = canClaimTasks && task.self_claimable && task.status === "new" && task.assignee_id === null;
                         return <Fragment key={task.id}><tr role="button" tabIndex={0} aria-expanded={open} onClick={() => setExpandedId(open ? null : task.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setExpandedId(open ? null : task.id); }} className={`cursor-pointer border-b hover:bg-orange-50 focus:bg-orange-50 ${open ? "bg-orange-50" : ""}`}>
-                          <td className="p-2 text-center">{(tasks.page - 1) * tasks.pageSize + index + 1}</td><td className="p-2 font-semibold">{task.title}{task.legacy_read_only ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs">Dữ liệu cũ · chỉ đọc</span> : null}{task.journalism ? <JournalismSummary journalism={task.journalism} /> : null}<div onClick={(event) => event.stopPropagation()} className="mt-1 flex flex-wrap items-center gap-2"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /><Link href={`/tasks/${task.id}/print`} className="text-xs font-semibold text-orange-700 underline">Xuất phiếu giao việc</Link></div></td><td className="p-2"><span className="block text-[11px] text-slate-500">{semanticAssigner(task).label}</span>{semanticAssigner(task).value}</td><td className="p-2">{assigneeDisplay(task)}</td><td className="p-2">{participantNames(task, "watcher")}</td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2 font-semibold">{task.completion_score ? task.completion_score.total_score : task.status === "pending_review" ? <Link href={`/tasks/${task.id}#task-scoring-form`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-orange-500 px-2.5 py-1.5 text-[11px] font-bold leading-none text-white shadow-sm transition hover:bg-orange-600 hover:shadow">Chấm điểm</Link> : "—"}</td><td className="p-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status, task.approval_required)}</span></td>
+                          <td className="p-2 text-center">{(tasks.page - 1) * tasks.pageSize + index + 1}</td><td className="p-2 font-semibold">{task.title}{task.legacy_read_only ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs">Dữ liệu cũ · chỉ đọc</span> : null}{task.journalism ? <JournalismSummary journalism={task.journalism} /> : null}<div onClick={(event) => event.stopPropagation()} className="mt-1 flex flex-wrap items-center gap-2"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canComplete={canComplete} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /><Link href={`/tasks/${task.id}/print`} className="text-xs font-semibold text-orange-700 underline">Xuất phiếu giao việc</Link></div></td><td className="p-2"><span className="block text-[11px] text-slate-500">{semanticAssigner(task).label}</span>{semanticAssigner(task).value}</td><td className="p-2">{assigneeDisplay(task)}</td><td className="p-2">{participantNames(task, "watcher")}</td><td className="p-2">{dueText(task.due_date, task.due_time)}</td><td className="p-2 font-semibold">{task.completion_score ? task.completion_score.total_score : task.status === "pending_review" ? <Link href={`/tasks/${task.id}#task-scoring-form`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-orange-500 px-2.5 py-1.5 text-[11px] font-bold leading-none text-white shadow-sm transition hover:bg-orange-600 hover:shadow">Chấm điểm</Link> : "—"}</td><td className="p-2"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status, task.approval_required)}</span></td>
                         </tr>{open ? <tr className="border-b bg-orange-50/40"><td colSpan={8} className="p-4"><div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]"><div><h3 className="font-bold text-orange-900">Yêu cầu công việc</h3>{requirements.length ? <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{requirements.map((item, index) => <li key={index}>{item}</li>)}</ul> : <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{task.description || "Chưa có yêu cầu."}</p>}</div><dl className="grid grid-cols-2 gap-2 text-sm"><SummaryItem label="Trạng thái" value={taskStatusLabel(task.status, task.approval_required)} /><SummaryItem label="Đánh giá" value={task.completion_score?.note || "Chưa có đánh giá"} /><SummaryItem label="Đáp ứng yêu cầu" value={task.completion_score ? `${task.completion_score.requirement_score}/60` : "—"} /><SummaryItem label="Thái độ & phối hợp" value={task.completion_score ? `${task.completion_score.collaboration_score}/20` : "—"} /><SummaryItem label="Chủ động & trách nhiệm" value={task.completion_score ? `${task.completion_score.initiative_score}/20` : "—"} /><SummaryItem label="Tổng điểm" value={task.completion_score ? `${task.completion_score.total_score}/100` : "—"} /></dl></div><div className="mt-3 text-right"><Link href={`/tasks/${task.id}`} className="text-sm font-semibold text-orange-700 underline">Mở chi tiết đầy đủ</Link></div></td></tr> : null}</Fragment>;
                       })}</tbody>
                     </table>
                     </div>
                     <div className="space-y-3 lg:hidden">{tasks.items.map((task) => {
-                      const canEdit = task.compatibility_task_type === "personal" && !task.legacy_read_only && task.owner_id === currentUserId && !["waiting", "pending_review", "done", "cancelled"].includes(task.status);
+                      const canEdit = canEditOwnTask(task, currentUserId, currentUserRole);
+                      const canComplete = task.compatibility_task_type === "personal"
+                          && (task.owner_id === currentUserId || currentUserRole === "admin")
+                          && !["waiting", "pending_review", "done", "cancelled"].includes(task.status);
                       const canClaim = canClaimTasks && task.self_claimable && task.status === "new" && task.assignee_id === null;
-                      return <article key={task.id} className="rounded-xl border p-4"><Link href={`/tasks/${task.id}`} className="font-bold">{task.title}</Link>{task.journalism ? <JournalismSummary journalism={task.journalism} /> : null}<dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div><dt className="text-slate-500">Người giao</dt><dd>{semanticAssigner(task).label}: {semanticAssigner(task).value}</dd></div><div><dt className="text-slate-500">Tính chất</dt><dd>{task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : "Công việc được giao"}</dd></div><div><dt className="text-slate-500">Trạng thái</dt><dd><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status, task.approval_required)}</span></dd></div><div><dt className="text-slate-500">Hạn hoàn thành</dt><dd>{dueText(task.due_date, task.due_time)}</dd></div><div><dt className="text-slate-500">Thời hạn</dt><dd>{deadlineLabel(task)}</dd></div></dl><div className="mt-3 flex flex-wrap items-center gap-3"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /><Link href={`/tasks/${task.id}/print`} className="text-sm font-semibold text-orange-700 underline">Xuất phiếu giao việc</Link></div></article>;
+                      return <article key={task.id} className="rounded-xl border p-4"><Link href={`/tasks/${task.id}`} className="font-bold">{task.title}</Link>{task.journalism ? <JournalismSummary journalism={task.journalism} /> : null}<dl className="mt-3 grid grid-cols-2 gap-2 text-sm"><div><dt className="text-slate-500">Người giao</dt><dd>{semanticAssigner(task).label}: {semanticAssigner(task).value}</dd></div><div><dt className="text-slate-500">Tính chất</dt><dd>{task.compatibility_task_type === "personal" ? "Nhiệm vụ cá nhân" : "Công việc được giao"}</dd></div><div><dt className="text-slate-500">Trạng thái</dt><dd><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(task.status)}`}>{taskStatusLabel(task.status, task.approval_required)}</span></dd></div><div><dt className="text-slate-500">Hạn hoàn thành</dt><dd>{dueText(task.due_date, task.due_time)}</dd></div><div><dt className="text-slate-500">Thời hạn</dt><dd>{deadlineLabel(task)}</dd></div></dl><div className="mt-3 flex flex-wrap items-center gap-3"><PersonalTaskActions taskId={task.id} canEdit={canEdit} canComplete={canComplete} canClaim={canClaim} terminal={["done","cancelled"].includes(task.status)} /><Link href={`/tasks/${task.id}/print`} className="text-sm font-semibold text-orange-700 underline">Xuất phiếu giao việc</Link></div></article>;
                     })}</div>
                   </>
                 ) : null}
