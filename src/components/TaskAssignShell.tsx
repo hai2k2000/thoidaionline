@@ -15,11 +15,12 @@ import CanonicalAssignmentForm, { type CanonicalAssignmentSubmit } from "@/compo
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
-export default function TaskAssignShell({ departments, people, assignmentScope = null, userLabel, canManageEventAssignment, journalismMode, journalismSelfCreate = false, userId, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
+export default function TaskAssignShell({ departments, people, assignmentScope = null, userLabel, actorRoleCode, canManageEventAssignment, journalismMode, journalismSelfCreate = false, userId, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
   departments: AssignmentDepartment[];
   people: AssignmentPerson[];
   assignmentScope?: AssignmentScope | null;
   userLabel: string;
+  actorRoleCode: string;
   canManageEventAssignment: boolean;
   journalismMode: boolean;
   journalismSelfCreate?: boolean;
@@ -255,7 +256,7 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     if (journalismMode && (!journalismDepartment || departmentId !== journalismDepartment.id)) {
       const text = "Công việc nghiệp vụ báo chí chỉ thuộc Phòng Nội dung."; setMessage(text); notify("error", text); return;
     }
-    if (!selectedDepartment?.managerId) {
+    if (!selectedDepartment?.managerId && actorRoleCode !== "tong_bien_tap") {
       const text = "Phòng ban đã chọn chưa có Trưởng phòng chính. Hãy cấu hình trước khi giao việc."; setMessage(text); notify("error", text);
       return;
     }
@@ -336,7 +337,7 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
           </div>
         </header>
         {!journalismMode ? <>
-          <CanonicalAssignmentForm departments={departments} people={people} assignmentScope={assignmentScope} onSubmit={submitCanonical} submitLabel={taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"} disabled={busy} />
+          <CanonicalAssignmentForm departments={departments} people={people} assignmentScope={assignmentScope} actorRoleCode={actorRoleCode} onSubmit={submitCanonical} submitLabel={taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"} disabled={busy} />
         </> : null}
         {journalismMode && <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
           <input type="hidden" name="recipientReady" disabled={!recipientReady} value="true" readOnly />
@@ -372,7 +373,7 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
           {journalismMode ? (journalismSelfCreate ? null : assignmentMode === "individual" ? <Field label="Người phối hợp"><CheckGroup name="collaboratorIds" people={scopedPeople.filter((person) => person.id !== assigneeId)} selected={collaboratorIds} onChange={setCollaboratorIds} empty="Không còn người phù hợp trong phòng." /></Field> : <Field label="Danh sách thành viên đang hoạt động" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên đang hoạt động.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành khi lưu. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field>) : null}
           {journalismMode ? <>{!journalismSelfCreate ? <Field label="Người theo dõi bổ sung"><CheckGroup name="watcherIds" people={people.filter((person) => person.id !== assigneeId && !collaboratorIds.includes(person.id))} selected={watcherIds} onChange={setWatcherIds} empty="Không còn người phù hợp." /><span className="font-normal text-slate-500">Trưởng phòng chính được thêm tự động; lựa chọn trùng sẽ được gộp.</span></Field> : null}</> : null}
           {journalismMode ? <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" className={controlClass} /></Field> : null}
-          <div className="flex items-end"><button disabled={busy || !recipientReady || !departmentId || !selectedDepartment?.managerId || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"}</button></div>
+          <div className="flex items-end"><button disabled={busy || !recipientReady || !departmentId || (!selectedDepartment?.managerId && actorRoleCode !== "tong_bien_tap") || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"}</button></div>
           {message ? <p role="alert" className="text-sm text-red-700 lg:col-span-2">{message}</p> : null}
           </fieldset>
         </form>}

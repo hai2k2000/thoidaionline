@@ -15,7 +15,9 @@ export type AssignmentSelectionInput = {
 };
 
 export function resolveAssignmentSelection(input: AssignmentSelectionInput) {
-  if (!input.department || input.department.id !== input.departmentId || !input.department.managerId) return { ok: false as const };
+  const isTbt = input.actorRoleCode === "tong_bien_tap";
+  if (!input.department || input.department.id !== input.departmentId || (!input.department.managerId && !isTbt)) return { ok: false as const };
+  const managerId = input.department.managerId;
   if (!input.broad && input.actorDepartmentId !== input.departmentId) return { ok: false as const };
   const allowedPeople = input.broad ? input.people : input.people.filter((person) => person.departmentId === input.actorDepartmentId || person.canReviewOutsideDepartment);
   const visible = new Map(allowedPeople.map((person) => [person.id, person]));
@@ -23,7 +25,7 @@ export function resolveAssignmentSelection(input: AssignmentSelectionInput) {
   const memberIds = new Set(members.map((person) => person.id));
   const assignee = visible.get(input.assigneeId);
   const reviewer = visible.get(input.reviewerId);
-  if (!visible.has(input.department.managerId) || !assignee
+  if ((!isTbt && (!managerId || !visible.has(managerId))) || !assignee
     || assignee.departmentId !== input.departmentId || !reviewer
     || !reviewer.canReview
     || (!reviewer.canReviewOutsideDepartment && reviewer.departmentId !== input.departmentId)) return { ok: false as const };
@@ -33,12 +35,12 @@ export function resolveAssignmentSelection(input: AssignmentSelectionInput) {
   if (input.collaboratorIds.some((id) => !memberIds.has(id))) return { ok: false as const };
   if (input.watcherIds.some((id) => !visible.has(id))) return { ok: false as const };
   const excluded = new Set(input.excludedMemberIds);
-  if ([...excluded].some((id) => !memberIds.has(id)) || excluded.has(input.assigneeId) || excluded.has(input.department.managerId)) return { ok: false as const };
+  if ([...excluded].some((id) => !memberIds.has(id)) || excluded.has(input.assigneeId) || (managerId !== null && excluded.has(managerId))) return { ok: false as const };
   const expanded = input.groupDepartmentId
     ? members.map((person) => person.id).filter((id) => !excluded.has(id))
     : [];
   const collaboratorIds = [...new Set([...expanded, ...input.collaboratorIds])]
-    .filter((id) => id !== input.assigneeId && id !== input.department?.managerId);
+    .filter((id) => id !== input.assigneeId && id !== managerId);
   if (input.groupDepartmentId && collaboratorIds.length === 0) return { ok: false as const };
   const collaboratorSet = new Set(collaboratorIds);
   const watcherIds = [...new Set(input.watcherIds)]
