@@ -27,13 +27,27 @@ test("creator can edit/cancel own unapproved waiting and rejected tasks", () => 
   }
 });
 
-test("creator loses edit/cancel after assignment approval, not after completion approval", () => {
-  const approved = task({ status: "in_progress", assignmentApprovalState: "approved" });
+test("non-admin may edit/cancel until completion approval", () => {
+  const inProgress = task({ status: "in_progress", assignmentApprovalState: "approved" });
+  assert.equal(canTaskAction(actor(), inProgress, "personal_edit"), true);
+  assert.equal(canTaskAction(actor(), inProgress, "personal_cancel"), true);
+  const pendingReview = task({ status: "pending_review", assignmentApprovalState: "approved" });
+  assert.equal(canTaskAction(actor(), pendingReview, "personal_edit"), true);
+  assert.equal(canTaskAction(actor(), pendingReview, "personal_cancel"), true);
+  const approved = task({ status: "done", assignmentApprovalState: "approved" });
   assert.equal(canTaskAction(actor(), approved, "personal_edit"), false);
   assert.equal(canTaskAction(actor(), approved, "personal_cancel"), false);
-  const completionOnly = task({ status: "pending_review", assignmentApprovalState: "pending" });
-  assert.equal(canTaskAction(actor(), completionOnly, "personal_edit"), true);
-  assert.equal(canTaskAction(actor(), completionOnly, "personal_cancel"), true);
+});
+
+test("only admin may edit or cancel after completion approval, including terminal tasks", () => {
+  const approved = task({ status: "in_progress", assignmentApprovalState: "approved", taskType: "assigned" });
+  const admin = actor({ id: "admin", roleCode: "admin" });
+  const manager = actor({ id: "manager", roleCode: "truong_phong", permissions: normalizePermissions({ can_assign_task: true }) });
+  assert.equal(canTaskAction(manager, approved, "update"), true);
+  assert.equal(canTaskAction(manager, approved, "assigned_cancel"), true);
+  assert.equal(canTaskAction(admin, task({ ...approved, status: "done" }), "update"), true);
+  assert.equal(canTaskAction(admin, task({ ...approved, status: "done" }), "assigned_cancel"), true);
+  assert.equal(canTaskAction(admin, task({ ...approved, status: "cancelled" }), "update"), true);
 });
 
 test("admin and scoped manager authority remains available", () => {
@@ -50,12 +64,13 @@ test("hard delete is not exposed by the task action contract", () => {
 });
 
 test("permission migration locks and rechecks every affected mutation", () => {
-  const migration = readFileSync(new URL("../../supabase/migrations/20260927100000_task_edit_cancel_permissions.sql", import.meta.url), "utf8");
+  const migration = readFileSync(new URL("../../supabase/migrations/20260928160000_admin_edit_cancel_after_approval.sql", import.meta.url), "utf8");
   for (const rpc of ["api_update_task", "api_edit_personal_task", "api_cancel_personal_task", "api_cancel_assigned_task"]) {
     assert.match(migration, new RegExp(`create or replace function public\\.${rpc}`));
   }
   assert.equal((migration.match(/for update/g) ?? []).length >= 2, true);
-  assert.match(migration, /from_status='waiting'\s+and\s+e\.to_status='in_progress'/);
+  assert.match(migration, /status in \('done','cancelled'\)/);
+  assert.match(migration, /status='done' and v_role_code<>'admin'/);
   assert.match(migration, /task_status_events/);
   assert.match(migration, /cancelled_at/);
   assert.match(migration, /cancelled_by/);

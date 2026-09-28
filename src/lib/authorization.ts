@@ -70,23 +70,23 @@ const canManageTaskInDepartment = (actor: AuthorizationActor, task: TaskAccessSn
 
 export function canCreatorEditTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
   return task.createdBy === actor.id
-    && !TERMINAL_TASK_STATES.has(task.status)
-    && !isTaskAssignmentApproved(task);
+    && !TERMINAL_TASK_STATES.has(task.status);
 }
 
 export function canCreatorCancelTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
   return task.createdBy === actor.id
-    && !TERMINAL_TASK_STATES.has(task.status)
-    && !isTaskAssignmentApproved(task);
+    && !TERMINAL_TASK_STATES.has(task.status);
 }
 
 export function canEditTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
+  if (actor.roleCode === "admin") return true;
   if (TERMINAL_TASK_STATES.has(task.status)) return false;
   if (canManageTaskInDepartment(actor, task)) return true;
   return canCreatorEditTask(actor, task);
 }
 
 export function canCancelTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
+  if (actor.roleCode === "admin") return task.status !== "cancelled";
   if (TERMINAL_TASK_STATES.has(task.status)) return false;
   if (canManageTaskInDepartment(actor, task)) return true;
   return canCreatorCancelTask(actor, task);
