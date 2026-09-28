@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+: "${THOIDAI_SOURCE_REPO:=/opt/thoidai-work}"
+: "${THOIDAI_WORKTREE_ROOT:=/opt/worktrees}"
+size(){ [[ -e "$1" ]] && du -sx --bytes -- "$1" 2>/dev/null | awk 'NR==1{print $1}' || echo 0; }
+printf 'WORKTREE LIFECYCLE ADOPTION REPORT\n'
+total=0; managed=0; unmanaged=0
+while IFS= read -r path; do
+  total=$((total+1)); branch=$(git -C "$path" symbolic-ref --short -q HEAD || echo detached); head=$(git -C "$path" rev-parse HEAD 2>/dev/null || echo UNKNOWN); upstream=$(git -C "$path" rev-parse --abbrev-ref '@{upstream}' 2>/dev/null || echo NONE); clean=YES; [[ -n "$(git -C "$path" status --porcelain 2>/dev/null)" ]] && clean=NO; last=$(git -C "$path" log -1 --format=%cI 2>/dev/null || echo UNKNOWN); age=$(git -C "$path" log -1 --format=%ct 2>/dev/null || echo 0); now=$(date +%s); age_days=UNKNOWN; [[ "$age" =~ ^[0-9]+$ && "$age" != 0 ]] && age_days=$(( (now-age)/86400 )); total_bytes=$(size "$path"); source_bytes=$total_bytes; node=$(size "$path/node_modules"); next=$(size "$path/.next"); cache=$(size "$path/.next/cache"); [[ "$source_bytes" =~ ^[0-9]+$ ]] && source_bytes=$((source_bytes-node-next)); ((source_bytes<0)) && source_bytes=0; state=UNKNOWN; reason=missing-metadata; if [[ -f "$path/.thoidai-lifecycle" ]]; then managed=$((managed+1)); state=$(awk -F= '$1=="lifecycle_state"{print $2}' "$path/.thoidai-lifecycle"); reason=metadata-state-$state; else unmanaged=$((unmanaged+1)); fi; [[ "$path" == "$THOIDAI_SOURCE_REPO" ]] && { state=PROTECTED; reason=production-checkout; }; printf 'path=%s\tbranch=%s\thead=%s\tupstream=%s\tclean=%s\tlast_commit=%s\tage_days=%s\ttotal=%s\tsource=%s\tnode_modules=%s\tnext=%s\next_cache=%s\tproduction_referenced=UNKNOWN\tactive_process_cwd=UNKNOWN\topen_files=UNKNOWN\trecommended=%s\treason=%s\n' "$path" "$branch" "$head" "$upstream" "$clean" "$last" "$age_days" "$total_bytes" "$source_bytes" "$node" "$next" "$cache" "$state" "$reason"
+done < <(git -C "$THOIDAI_SOURCE_REPO" worktree list --porcelain | awk '/^worktree /{print substr($0,10)}')
+printf 'Total worktrees: %s\nManaged: %s\nUnmanaged: %s\nProduction changed: NO\n' "$total" "$managed" "$unmanaged"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-: "${THOIDAI_ARTIFACT_WARN_BYTES:=536870912}"
-: "${THOIDAI_ARTIFACT_HARD_MAX_BYTES:=805306368}"
+: "${THOIDAI_ARTIFACT_WARN_BYTES:=157286400}"
+: "${THOIDAI_ARTIFACT_HARD_MAX_BYTES:=314572800}"
 if [[ -n "${THOIDAI_MAX_ARTIFACT_GIB:-}" ]]; then THOIDAI_ARTIFACT_HARD_MAX_BYTES=$(awk -v g="$THOIDAI_MAX_ARTIFACT_GIB" 'BEGIN {printf "%.0f", g*1024*1024*1024}'); fi
 path=${1:?usage: $0 <artifact-path>}
 [[ -d "$path" ]] || { echo "ERROR: artifact path is not a directory: $path" >&2; exit 2; }

@@ -5,6 +5,12 @@ source "$SCRIPT_DIR/release-common.sh"
 
 commit_ref=${1:?usage: $0 <commit-or-ref> [suffix]}
 suffix=${2:-release}
+source_real=$(realpath -m -- "$THOIDAI_SOURCE_REPO")
+if [[ "$source_real" == /opt/thoidai-work ]]; then
+  THOIDAI_MANAGED_SOURCE_EXCEPTION=production-checkout "$SCRIPT_DIR/../ops/require-managed-worktree.sh" "$THOIDAI_SOURCE_REPO" >/dev/null
+else
+  "$SCRIPT_DIR/../ops/require-managed-worktree.sh" "$THOIDAI_SOURCE_REPO" >/dev/null
+fi
 acquire_lock
 export THOIDAI_LOCK_HELD=1
 disk_guard

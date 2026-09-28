@@ -30,6 +30,7 @@ export THOIDAI_SYSTEMD_ROOT="$ROOT/systemd"
 export THOIDAI_LOCK_FILE="$ROOT/lock"
 export THOIDAI_HEALTH_URL=http://test.invalid/login
 export THOIDAI_TEST_MODE=1
+export THOIDAI_MANAGED_SOURCE_EXCEPTION=immutable-build
 export THOIDAI_ALLOW_RESTART=1
 export THOIDAI_MAX_ARTIFACT_GIB=1
 export THOIDAI_BUILD_COMMAND='mkdir -p .next/standalone node_modules; printf build-id > .next/BUILD_ID; printf "{}" > package.json; printf "console.log(1)" > .next/standalone/server.js'
