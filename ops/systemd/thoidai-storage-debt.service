@@ -1,0 +1,7 @@
+[Unit]
+Description=Thoi Dai Work storage debt report
+
+[Service]
+Type=oneshot
+ExecStart=/opt/worktrees/storage-bloat-hardening/scripts/ops/storage-debt-report.sh
+NoNewPrivileges=yes
