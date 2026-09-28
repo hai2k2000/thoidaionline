@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 : "${THOIDAI_SOURCE_REPO:=/opt/thoidai-work}"
 : "${THOIDAI_WORKTREE_ROOT:=/opt/worktrees}"
 : "${THOIDAI_LIFECYCLE_TTL_DAYS:=7}"
@@ -11,7 +12,7 @@ write_meta(){ local state=$1 branch commit now; branch=$(git -C "$real" symbolic
 dirty_status(){ git -C "$real" status --porcelain -- . ":(exclude).thoidai-lifecycle" ":(exclude)node_modules" ":(exclude).next" ":(exclude).turbo" ":(exclude).cache" ":(exclude)coverage"; }
 shrink(){ [[ -d "$real" ]] || { echo 'ERROR: worktree missing' >&2; exit 1; }; [[ -n "$(dirty_status 2>/dev/null)" ]] && { echo 'ERROR: dirty source; refusing shrink' >&2; exit 1; }; rm -rf -- "$real/node_modules" "$real/.next/cache" "$real/.next/trace" "$real/.turbo" "$real/.cache" "$real/coverage"; }
 case "$cmd" in
- create) [[ ! -e "$real" ]] || { echo 'ERROR: worktree path exists' >&2; exit 1; }; mkdir -p "$(dirname "$real")"; git -C "$THOIDAI_SOURCE_REPO" worktree add -b "${3:?branch required}" "$real" >/dev/null; purpose=${4:-managed}; owner_tool=${THOIDAI_OWNER_TOOL:-worktree-lifecycle}; protected=${THOIDAI_PROTECTED:-false}; build_required=${THOIDAI_BUILD_REQUIRED:-false}; write_meta ACTIVE ;;
+ create) [[ ! -e "$real" ]] || { echo 'ERROR: worktree path exists' >&2; exit 1; }; mkdir -p "$(dirname "$real")"; "$SCRIPT_DIR/storage-budget-guard.sh" worktree "$real" >/dev/null; git -C "$THOIDAI_SOURCE_REPO" worktree add -b "${3:?branch required}" "$real" >/dev/null; purpose=${4:-managed}; owner_tool=${THOIDAI_OWNER_TOOL:-worktree-lifecycle}; protected=${THOIDAI_PROTECTED:-false}; build_required=${THOIDAI_BUILD_REQUIRED:-false}; write_meta ACTIVE ;;
  status) [[ -f "$meta" ]] || { echo 'UNKNOWN'; exit 0; }; cat "$meta" ;;
  close) [[ -f "$meta" ]] || { echo 'ERROR: lifecycle metadata missing' >&2; exit 1; }; [[ -z "$(dirty_status)" ]] || { echo 'ERROR: worktree is dirty' >&2; exit 1; }; git -C "$real" rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1 || { echo 'ERROR: branch has no recoverable upstream' >&2; exit 1; }; shrink; source "$meta"; write_meta READY_FOR_CLEANUP ;;
  shrink) [[ -f "$meta" ]] || { echo 'ERROR: lifecycle metadata missing' >&2; exit 1; }; source "$meta"; [[ "$lifecycle_state" == IDLE || "$lifecycle_state" == READY_FOR_CLEANUP ]] || { echo 'ERROR: state does not permit shrink' >&2; exit 1; }; shrink; write_meta READY_FOR_CLEANUP ;;
