@@ -22,6 +22,7 @@ entries=()
 while IFS= read -r path; do entries+=("$path"); done < <(git -C "$repo" worktree list --porcelain | awk '/^worktree /{print substr($0,10)}')
 for path in "${entries[@]}"; do classify "$path"; done
 if [[ "$mode" = apply ]]; then
+  [[ "${THOIDAI_OWNER_APPROVED_CLEANUP:-0}" = 1 || "${THOIDAI_TEST_MODE:-0}" = 1 ]] || { die "apply requires THOIDAI_OWNER_APPROVED_CLEANUP=1"; return 1; }
   acquire_lock
   export THOIDAI_LOCK_HELD=1
   for path in "${entries[@]}"; do

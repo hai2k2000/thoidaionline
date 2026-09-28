@@ -29,6 +29,7 @@ export THOIDAI_RELEASE_ROOT="$ROOT/releases"
 export THOIDAI_SYSTEMD_ROOT="$ROOT/systemd"
 export THOIDAI_LOCK_FILE="$ROOT/lock"
 export THOIDAI_TEST_MODE=1
+export THOIDAI_OWNER_APPROVED_CLEANUP=1
 export THOIDAI_PGREP_BIN="$BIN/false-ref"
 export THOIDAI_LSOF_BIN="$BIN/empty-ref"
 export THOIDAI_FINDMNT_BIN="$BIN/empty-ref"
@@ -43,7 +44,7 @@ ln -s "$THOIDAI_RELEASE_ROOT/rollback-release-0004" "$THOIDAI_RELEASE_ROOT/rollb
 
 out=$("$(dirname "$0")/../release-retention.sh")
 echo "$out" | grep -q $'KEEP\t.*current-release-0001\tcurrent'
-echo "$out" | grep -q $'DELETE\t.*old-release-0002\told-unused'
+echo "$out" | grep -q $'CANDIDATE	.*old-release-0002\told-unused'
 echo "$out" | grep -q $'KEEP\t.*protected-release-0003\tprotected:.keep'
 ! echo "$out" | grep -q 'ops-backups'
 ! echo "$out" | grep -q 'build-evidence'

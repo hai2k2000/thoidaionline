@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily Thoi Dai Work storage inventory
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

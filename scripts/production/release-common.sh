@@ -18,6 +18,7 @@ set -Eeuo pipefail
 : "${THOIDAI_LSOF_BIN:=lsof}"
 : "${THOIDAI_FINDMNT_BIN:=findmnt}"
 : "${THOIDAI_DOCKER_BIN:=docker}"
+: "${THOIDAI_DF_BIN:=df}"
 : "${THOIDAI_TCP_CHECK_BIN:=}"
 : "${THOIDAI_ENV_VERIFY_BIN:=/opt/ops/thoidai-work/verify-release-env.sh}"
 : "${THOIDAI_TCP_HOST:=127.0.0.1}"
@@ -87,11 +88,12 @@ acquire_lock() {
 
 free_gib() {
   local path=${1:-/} blocks size
-  read -r blocks size < <(df -Pk -- "$path" | awk 'NR==2 {print $4, $2}')
+  read -r blocks size < <("$THOIDAI_DF_BIN" -Pk -- "$path" | awk 'NR==2 {print $4, $2}')
   awk -v b="$blocks" -v s="$size" 'BEGIN {printf "%.3f\n", b/1024/1024}'
 }
 
 disk_guard() {
+  : # disk gate shared by deployment and reporting
   local free required
   free=$(free_gib /)
   required=$(awk -v h="$THOIDAI_HARD_MIN_FREE_GIB" -v e="$THOIDAI_ESTIMATED_RELEASE_GIB" 'BEGIN {print h+e}')

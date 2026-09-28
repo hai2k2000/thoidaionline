@@ -27,6 +27,7 @@ git -C "$THOIDAI_SOURCE_REPO" worktree add --detach "$build_worktree" "$commit" 
 if [[ -n "${THOIDAI_BUILD_COMMAND:-}" ]]; then (cd "$build_worktree" && bash -c "$THOIDAI_BUILD_COMMAND"); else (cd "$build_worktree" && npm ci --no-audit --no-fund && npm run build); fi
 
 [[ -f "$build_worktree/.next/BUILD_ID" ]] || die "build has no BUILD_ID"
+"$SCRIPT_DIR/artifact-size-guard.sh" "$build_worktree"
 cp -a "$build_worktree/." "$staged_release/"
 rm -rf -- "$staged_release/.git" "$staged_release/backups"
 printf 'release_id=%s\ncommit=%s\nbranch=%s\ncreated_at=%s\ndeployed_at=\nbuild_id=%s\nsource_worktree=%s\n' \
@@ -53,4 +54,4 @@ fi
 [[ -z "$old_previous" ]] || atomic_link "$old_previous" "$THOIDAI_RELEASE_ROOT/rollback-2"
 [[ -z "$old_current" ]] || atomic_link "$old_current" "$THOIDAI_RELEASE_ROOT/previous"
 sed -i "s/^deployed_at=.*/deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)/" "$THOIDAI_RELEASE_ROOT/$release_id/.release-meta"
-"$SCRIPT_DIR/release-retention.sh" --apply
+"$SCRIPT_DIR/release-retention.sh" --dry-run

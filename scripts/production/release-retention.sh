@@ -18,7 +18,8 @@ declare -A lifecycle_count=()
 links_complete=1
 for name in current previous rollback-2; do
   if [[ -L "$THOIDAI_RELEASE_ROOT/$name" ]]; then
-    target=$(readlink -f -- "$THOIDAI_RELEASE_ROOT/$name")
+    target=$(readlink -f -- "$THOIDAI_RELEASE_ROOT/$name" || true)
+    if [[ -z "$target" || ! -d "$target" ]]; then links_complete=0; continue; fi
     lifecycle[$target]=1
     lifecycle_reason[$target]=$name
     lifecycle_count[$target]=$(( ${lifecycle_count[$target]:-0} + 1 ))
@@ -39,7 +40,7 @@ classify() {
   refs=$(path_reference "$path")
   if [[ "$refs" = inspection-unavailable ]]; then printf 'REVIEW\t%s\tinspection-unavailable\n' "$path"; return; fi
   if [[ -n "$refs" ]]; then printf 'KEEP\t%s\t%s\n' "$path" "$refs"; return; fi
-  printf 'DELETE\t%s\told-unused\n' "$path"
+  printf 'CANDIDATE\t%s\told-unused\n' "$path"
 }
 
 entries=()
@@ -50,10 +51,11 @@ done < <(find "$THOIDAI_RELEASE_ROOT" -mindepth 1 -maxdepth 1 -type d -regextype
 for path in "${entries[@]}"; do classify "$path"; done
 
 if [[ "$mode" = apply ]]; then
+  [[ "${THOIDAI_OWNER_APPROVED_CLEANUP:-0}" = 1 || "${THOIDAI_TEST_MODE:-0}" = 1 ]] || { die "apply requires THOIDAI_OWNER_APPROVED_CLEANUP=1"; return 1; }
   [[ "${THOIDAI_LOCK_HELD:-0}" = 1 ]] || acquire_lock
   for path in "${entries[@]}"; do
     record=$(classify "$path")
-    [[ "$record" == $'DELETE\t'* ]] || continue
+    [[ "$record" == $'CANDIDATE\t'* ]] || continue
     rm -rf -- "$path"
     [[ ! -e "$path" ]] || die "failed to remove $path"
     log_event "DELETED path=$path"

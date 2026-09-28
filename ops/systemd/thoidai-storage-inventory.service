@@ -1,0 +1,7 @@
+[Unit]
+Description=Thoi Dai Work storage inventory (read-only)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/worktrees/storage-bloat-hardening/scripts/ops/storage-inventory.sh --human
+NoNewPrivileges=yes

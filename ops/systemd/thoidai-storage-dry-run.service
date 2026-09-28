@@ -1,0 +1,7 @@
+[Unit]
+Description=Thoi Dai Work storage dry-run report
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '/opt/worktrees/storage-bloat-hardening/scripts/ops/storage-inventory.sh --human; /opt/worktrees/storage-bloat-hardening/scripts/ops/docker-retention-guard.sh --dry-run; /opt/worktrees/storage-bloat-hardening/scripts/ops/log-retention-report.sh; /opt/worktrees/storage-bloat-hardening/scripts/production/build-retention.sh --dry-run; /opt/worktrees/storage-bloat-hardening/scripts/production/release-retention.sh --dry-run'
+NoNewPrivileges=yes
