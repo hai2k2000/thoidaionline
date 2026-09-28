@@ -104,7 +104,7 @@ disk_guard() {
 validate_release() {
   local release=${1:?release required}
   assert_release_path "$release" || return 1
-  [[ -d "$release" && -f "$release/.next/BUILD_ID" && -f "$release/package.json" && -d "$release/node_modules" ]] || { die "invalid release: $release"; return 1; }
+  [[ -d "$release" && -f "$release/.next/BUILD_ID" && -f "$release/package.json" && ( -d "$release/node_modules" || -f "$release/server.js" ) ]] || { die "invalid release: $release"; return 1; }
 }
 
 validate_bootstrap_release() {

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+: "${THOIDAI_WORKTREE_ROOT:=/opt/worktrees}"
+: "${THOIDAI_BUILD_ROOT:=/opt/build/thoidai-work}"
+size(){ [[ -e "$1" ]] && du -sx --bytes -- "$1" 2>/dev/null | awk 'NR==1{print $1}' || echo 0; }
+sum_named(){ root=$1; shift; total=0; for n in "$@"; do while IFS= read -r -d '' p; do v=$(size "$p"); total=$((total+v)); done < <(find "$root" -type d -name "$n" -print0 2>/dev/null); done; echo "$total"; }
+worktrees=$(size "$THOIDAI_WORKTREE_ROOT"); node=$(sum_named "$THOIDAI_WORKTREE_ROOT" node_modules); next=$(sum_named "$THOIDAI_WORKTREE_ROOT" .next); cache=$(sum_named "$THOIDAI_WORKTREE_ROOT" .cache .turbo coverage); build=$(size "$THOIDAI_BUILD_ROOT");
+active=0; idle=0; dirty=0; shrink=0; removable=0
+if [[ -d "$THOIDAI_WORKTREE_ROOT" ]]; then while IFS= read -r -d '' p; do [[ -f "$p/.thoidai-lifecycle" ]] || { echo "worktree\tUNKNOWN\t0\t$p\tmissing-metadata"; continue; }; state=$(awk -F= '$1=="lifecycle_state"{print $2}' "$p/.thoidai-lifecycle"); bytes=$(size "$p"); case "$state" in ACTIVE) active=$((active+1));; IDLE) idle=$((idle+1));; READY_FOR_CLEANUP) removable=$((removable+1));; PROTECTED) :;; *) echo "worktree\tUNKNOWN\t$bytes\t$p\tstate=$state";; esac; [[ -z "$(git -C "$p" status --porcelain -- . ':(exclude).thoidai-lifecycle' 2>/dev/null)" ]] || dirty=$((dirty+1)); [[ -d "$p/node_modules" || -d "$p/.next/cache" || -d "$p/.turbo" ]] && shrink=$((shrink+bytes)); done < <(find "$THOIDAI_WORKTREE_ROOT" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null); fi
+printf 'STORAGE LIFECYCLE DEBT\nActive worktrees: %s\nIdle worktrees: %s\nDirty worktrees: %s\nShrinkable worktrees: %s\nRemovable worktrees: %s\nnode_modules total: %s\n.next total: %s\nOther reproducible artifacts: %s\nBuild directories: %s\nPotential reclaim from SHRINK only: %s\nPotential reclaim from REMOVE: %s\nProduction changed: NO\n' "$active" "$idle" "$dirty" "$shrink" "$removable" "$node" "$next" "$cache" "$build" "$shrink" 0

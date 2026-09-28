@@ -31,7 +31,8 @@ export THOIDAI_LOCK_FILE="$ROOT/lock"
 export THOIDAI_HEALTH_URL=http://test.invalid/login
 export THOIDAI_TEST_MODE=1
 export THOIDAI_ALLOW_RESTART=1
-export THOIDAI_BUILD_COMMAND='mkdir -p .next node_modules; printf build-id > .next/BUILD_ID; printf "{}" > package.json'
+export THOIDAI_MAX_ARTIFACT_GIB=1
+export THOIDAI_BUILD_COMMAND='mkdir -p .next/standalone node_modules; printf build-id > .next/BUILD_ID; printf "{}" > package.json; printf "console.log(1)" > .next/standalone/server.js'
 export THOIDAI_RETENTION_SCRIPT="$ROOT/no-retention"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$THOIDAI_RETENTION_SCRIPT"
 chmod +x "$THOIDAI_RETENTION_SCRIPT"
