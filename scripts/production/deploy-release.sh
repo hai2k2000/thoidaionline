@@ -28,8 +28,7 @@ if [[ -n "${THOIDAI_BUILD_COMMAND:-}" ]]; then (cd "$build_worktree" && bash -c 
 
 [[ -f "$build_worktree/.next/BUILD_ID" ]] || die "build has no BUILD_ID"
 "$SCRIPT_DIR/artifact-size-guard.sh" "$build_worktree"
-cp -a "$build_worktree/." "$staged_release/"
-rm -rf -- "$staged_release/.git" "$staged_release/backups"
+"$SCRIPT_DIR/package-runtime-release.sh" "$build_worktree" "$staged_release"
 printf 'release_id=%s\ncommit=%s\nbranch=%s\ncreated_at=%s\ndeployed_at=\nbuild_id=%s\nsource_worktree=%s\n' \
   "$release_id" "$commit" "$commit_ref" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(cat "$build_worktree/.next/BUILD_ID")" "$build_worktree" > "$staged_release/.release-meta"
 chmod 755 "$staged_release"
