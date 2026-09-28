@@ -14,11 +14,13 @@ mkdir -p "$THOIDAI_BUILD_ROOT" "$THOIDAI_RELEASE_ROOT"
 commit=$(git -C "$THOIDAI_SOURCE_REPO" rev-parse --verify "$commit_ref^{commit}")
 release_id="${commit:0:12}-$(printf '%s' "$suffix" | tr -cs 'A-Za-z0-9._-' '-')-$(date -u +%Y%m%dT%H%M%SZ)"
 validate_release_id "$release_id"
-build_worktree=$(mktemp -d "$THOIDAI_BUILD_ROOT/worktree.XXXXXX")
+build_worktree=$("$SCRIPT_DIR/build-workspace.sh" create "deploy-${commit:0:12}")
 staged_release=$(mktemp -d "$THOIDAI_RELEASE_ROOT/.staged.XXXXXX")
 snapshot=$(mktemp)
 cleanup() {
   git -C "$THOIDAI_SOURCE_REPO" worktree remove --force "$build_worktree" >/dev/null 2>&1 || true
+  "$SCRIPT_DIR/build-workspace.sh" cleanup "$build_worktree" "${THOIDAI_BUILD_RESULT:-failure}" >/dev/null 2>&1 || true
+  "$SCRIPT_DIR/build-workspace.sh" cleanup "$build_worktree" "${THOIDAI_BUILD_RESULT:-failure}" >/dev/null 2>&1 || true
   [[ -z "$staged_release" ]] || rm -rf -- "$staged_release"
   rm -f -- "$snapshot"
 }
@@ -35,6 +37,7 @@ printf 'release_id=%s\ncommit=%s\nbranch=%s\ncreated_at=%s\ndeployed_at=\nbuild_
 chmod 755 "$staged_release"
 mv -Tf -- "$staged_release" "$THOIDAI_RELEASE_ROOT/$release_id"
 staged_release=''
+export THOIDAI_BUILD_RESULT=success
 validate_release "$THOIDAI_RELEASE_ROOT/$release_id"
 
 snapshot_links > "$snapshot"
