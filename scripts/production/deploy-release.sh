@@ -8,6 +8,7 @@ suffix=${2:-release}
 acquire_lock
 export THOIDAI_LOCK_HELD=1
 disk_guard
+"$SCRIPT_DIR/../ops/storage-budget-guard.sh" build "$THOIDAI_BUILD_ROOT/new-build-guard"
 mkdir -p "$THOIDAI_BUILD_ROOT" "$THOIDAI_RELEASE_ROOT"
 
 commit=$(git -C "$THOIDAI_SOURCE_REPO" rev-parse --verify "$commit_ref^{commit}")
