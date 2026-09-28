@@ -20,7 +20,6 @@ snapshot=$(mktemp)
 cleanup() {
   git -C "$THOIDAI_SOURCE_REPO" worktree remove --force "$build_worktree" >/dev/null 2>&1 || true
   "$SCRIPT_DIR/build-workspace.sh" cleanup "$build_worktree" "${THOIDAI_BUILD_RESULT:-failure}" >/dev/null 2>&1 || true
-  "$SCRIPT_DIR/build-workspace.sh" cleanup "$build_worktree" "${THOIDAI_BUILD_RESULT:-failure}" >/dev/null 2>&1 || true
   [[ -z "$staged_release" ]] || rm -rf -- "$staged_release"
   rm -f -- "$snapshot"
 }
