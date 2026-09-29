@@ -56,6 +56,17 @@ begin
 end
 $function$;
 
+create or replace function public.api_update_task(
+  p_actor_id uuid, p_task_id uuid, p_status text default null,
+  p_due_date date default null, p_update_due_date boolean default false
+) returns public.tasks
+language plpgsql security definer set search_path=public,pg_temp
+as $function$
+begin
+  return public.api_update_task(p_actor_id,p_task_id,p_status,p_due_date,p_update_due_date,null,false);
+end
+$function$;
+
 create or replace function public.api_cancel_assigned_task(
   p_actor_id uuid,
   p_task_id uuid,
@@ -212,6 +223,7 @@ begin
   return v_after;
 end
 $function$;
+revoke all on function public.api_update_task(uuid,uuid,text,date,boolean) from public,anon,authenticated;
 revoke all on function public.api_update_task(uuid,uuid,text,date,boolean,text,boolean) from public,anon,authenticated;
 revoke all on function public.api_cancel_assigned_task(uuid,uuid,text) from public,anon,authenticated;
 revoke all on function public.api_change_assigned_task_deadline(uuid,uuid,date,text) from public,anon,authenticated;
@@ -221,12 +233,14 @@ grant execute on function public.api_change_personal_task_deadline(uuid,uuid,dat
 revoke all on function public.api_edit_personal_task(uuid,uuid,text,text,date,text) from public,anon,authenticated;
 revoke all on function public.api_cancel_personal_task(uuid,uuid,text) from public,anon,authenticated;
 revoke all on function public.api_change_personal_task_deadline(uuid,uuid,date,text) from public,anon,authenticated;
+grant execute on function public.api_update_task(uuid,uuid,text,date,boolean) to service_role;
 grant execute on function public.api_update_task(uuid,uuid,text,date,boolean,text,boolean) to service_role;
 grant execute on function public.api_cancel_assigned_task(uuid,uuid,text) to service_role;
 grant execute on function public.api_change_assigned_task_deadline(uuid,uuid,date,text) to service_role;
 alter function public.api_edit_personal_task(uuid,uuid,text,text,date,text) owner to postgres;
 alter function public.api_cancel_personal_task(uuid,uuid,text) owner to postgres;
 alter function public.api_change_personal_task_deadline(uuid,uuid,date,text) owner to postgres;
+alter function public.api_update_task(uuid,uuid,text,date,boolean) owner to postgres;
 alter function public.api_update_task(uuid,uuid,text,date,boolean,text,boolean) owner to postgres;
 alter function public.api_cancel_assigned_task(uuid,uuid,text) owner to postgres;
 alter function public.api_change_assigned_task_deadline(uuid,uuid,date,text) owner to postgres;
