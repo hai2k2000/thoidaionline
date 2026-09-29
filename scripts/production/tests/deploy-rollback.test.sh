@@ -57,6 +57,7 @@ ln -s "$THOIDAI_RELEASE_ROOT/rollback-release-0003" "$THOIDAI_RELEASE_ROOT/rollb
 
 "$(dirname "$0")/../deploy-release.sh" "$commit" >/dev/null
 [ "$(readlink -f "$THOIDAI_RELEASE_ROOT/current")" != "$THOIDAI_RELEASE_ROOT/current-release-0001" ]
+[ -d "$(readlink -f "$THOIDAI_RELEASE_ROOT/current")/.next/cache" ]
 [ "$(readlink -f "$THOIDAI_RELEASE_ROOT/previous")" = "$THOIDAI_RELEASE_ROOT/current-release-0001" ]
 [ "$(readlink -f "$THOIDAI_RELEASE_ROOT/rollback-2")" = "$THOIDAI_RELEASE_ROOT/previous-release-0002" ]
 
