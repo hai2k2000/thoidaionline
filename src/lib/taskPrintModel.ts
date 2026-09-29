@@ -1,4 +1,5 @@
 import type { TaskDetailDto } from "./taskContracts";
+import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "./taskAssignmentDisplay.mjs";
 
 export type WorkAssignmentPrintModel = {
   id: string;
@@ -99,11 +100,10 @@ export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignme
     publicationStatus: publicationStatusLabels[task.journalism.publication_status] ?? task.journalism.publication_status,
   } : null;
 
-  const source = task.assignment_source ?? "legacy_unknown";
-  const selfRegisteredApproved = source === "self_registered" && ["in_progress", "pending_review", "done"].includes(task.status);
-  const assignmentSourceLabel = source === "self_registered" ? "Tự đăng ký" : source === "leadership_assigned" ? "Lãnh đạo giao" : "Không xác định (dữ liệu cũ)";
-  const assignerLabel = source === "self_registered" && selfRegisteredApproved ? "Người duyệt giao việc" : "Người giao việc";
-  const assigner = source === "self_registered" ? (selfRegisteredApproved ? task.assignment_approver?.full_name?.trim() || "—" : "—") : (task.created_by_user?.full_name ?? "—");
+  const assignmentSourceLabel = getAssignmentSourceDisplay(task);
+  const assignerDisplay = resolveDisplayedAssigner(task);
+  const assignerLabel = assignerDisplay.label;
+  const assigner = assignerDisplay.value;
   return {
     id: task.id,
     assignedDate: task.created_at,

@@ -20,6 +20,8 @@ const paths = [
   "/tasks?journalism=exclude&approvalQueue=assignment",
   "/tasks?journalism=exclude&approvalQueue=completion",
   "/tasks?scope=all&journalism=exclude&assignmentSource=&department=&from=&to=&deadline=&state=",
+  "/tasks/assign",
+
 ];
 
 const failures = [];
@@ -32,6 +34,9 @@ for (const path of paths) {
   }
   if (body.includes("Không thể tải danh sách công việc.")) {
     failures.push(`${path}: rendered task-list error state`);
+  }
+  if (path === "/tasks/assign" && !body.includes("CHỌN NGƯỜI NHẬN VIỆC")) {
+    failures.push(path + ": recipient-first assignment UI missing");
   }
 }
 

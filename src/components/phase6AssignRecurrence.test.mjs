@@ -7,17 +7,19 @@ const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 test("Phase 6 assignment page is server-scoped and renders the full canonical form", () => {
   const page = read("../app/tasks/assign/page.tsx");
   const shell = read("./TaskAssignShell.tsx");
+  const form = read("./CanonicalAssignmentForm.tsx");
+  const assignment = shell + form;
   assert.match(page, /getSessionUser/);
   assert.match(page, /taskAssignmentRepository/);
   assert.doesNotMatch(page, /@\/lib\/supabase/);
   for (const field of ["title", "requirements", "departmentId", "assigneeId", "dueDate", "dueTime", "recurrenceEndsOn", "attachment"]) {
-    assert.match(shell, new RegExp(`name=["']${field}["']`), `${field} field missing`);
+    assert.match(assignment, new RegExp(`name=["']${field}["']`), `${field} field missing`);
   }
-  assert.doesNotMatch(shell, /AI provider|progress_percent/i);
-  assert.match(shell, /value="daily">Hàng ngày/);
-  assert.match(shell, /type="checkbox"/);
-  assert.doesNotMatch(shell, /Giữ Ctrl\/Cmd/);
-  assert.match(shell, /Trưởng phòng/);
+  assert.doesNotMatch(assignment, /AI provider|progress_percent/i);
+  assert.match(assignment, /value="daily">Hàng ngày/);
+  assert.match(assignment, /type="checkbox"/);
+  assert.doesNotMatch(assignment, /Giữ Ctrl\/Cmd/);
+  assert.match(assignment, /Trưởng phòng/);
 });
 
 test("assignment and recurrence stay behind thin server-only routes", () => {

@@ -1,3 +1,122 @@
+## Department Plan V2 Checkpoint 9B
+
+Current Phase: COMPLETE; canonical assignment dialog + atomic Plan-to-Task V2
+Current Task: Checkpoint 9B closed without production deployment
+
+Completed:
+- Added shared Department Plan assignment dialog using `CanonicalAssignmentForm`.
+- Added persisted-item prefill and dirty-item guard.
+- Added additive `api_assign_department_plan_task_v2` migration contract with row lock, canonical `api_assign_task_v2` reuse, and one-link protection.
+- Added Department Plan assignment endpoint and linked/unlinked UI actions.
+- Recurrence, batch creation, and attachments are disabled in this one-item dialog.
+
+Validation:
+- Focused CP9B + affected Department Plan/canonical Task regression: 160/160 PASS.
+- Migration syntax and runtime idempotency validation in an ephemeral PostgreSQL container: PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Production-like build and route manifest: PASS.
+- git diff --check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Owner review and separately authorized production rollout; CP9B does not deploy automatically.
+
+## Department Plan V2 Checkpoint 9A
+
+Current Phase: COMPLETE; reusable canonical assignment form
+Current Task: Checkpoint 9A — extracted form and preserved Task assignment behavior
+
+Completed:
+- Extracted the recipient-first canonical Task assignment form into `src/components/CanonicalAssignmentForm.tsx`.
+- Kept TaskAssignShell responsible for page layout, API submission, notifications, attachment upload, and redirects.
+- Added compatible `initialValues`, caller-owned `onSubmit`, optional `onCancel`, field validation, scope/picker behavior, participant selectors, priority, due dates, recurrence, and batch payload normalization.
+
+Validation:
+- Focused extraction and assignment regression: PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build: PASS with build-only production environment and lineage overrides.
+- git diff --check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Checkpoint 9B only after owner approval; no Department Plan integration was started.
+
+## Department Plan V2 Final Integration Gate
+
+Current Phase: FINAL INTEGRATION & PRODUCTION ROLLOUT GATE
+Current Task: BLOCKED before production mutation — authorized authenticated production smoke evidence unavailable
+
+Final Integration: c0769ee merged from active production f5d9b66 through CP1-CP8 source dfaf753; release metadata fix 6d5aa4f includes CP1/CP6 migration references.
+Pre-deploy validation: Department Plan 73/73, affected regression 229/229, TypeScript, ESLint, route manifest, production-like build, standalone artifact verification PASS.
+Production mutation: NONE — migration and activation intentionally stopped pending authorized authenticated smoke.
+
+# Production Smoke Cleanup + Recipient-First Compact Picker
+
+## Department Plan V2 Checkpoint 6
+
+Current Phase: COMPLETE; Plan-to-Task V1 implementation
+Current Task: closed without deployment
+
+Completed:
+- Added explicit authenticated Plan Item -> canonical Task conversion.
+- Reused the canonical api_assign_task_v2 RPC; no parallel Task creation path.
+- Added transactional item lock, one-to-one link protection, idempotent retry behavior, audit origin, and non-destructive Task delete semantics.
+- Added linked Task state and the "Mở công việc" action to the item detail dialog; unsaved edits block conversion.
+
+Validation:
+- CP1–CP6 focused tests: 40/40 PASS.
+- CP6 focused tests: 19/19 PASS.
+- Required Task/Plan/Approval/Event Assignment/Journalism/Personal Plan/Attendance subset: 232/232 PASS after excluding one pre-existing unrelated Task Center UX assertion.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- Migration validation: PASS in a rolled-back development DB transaction; post-rollback schema unchanged.
+- git diff --check: PASS.
+
+Mapping:
+- Title, description, requirements, department, assignee, and due date map from persisted item data.
+- assigned is supported; unassigned and department_wide are rejected because canonical Task creation requires an assignee.
+- Canonical Task default status/priority remain authoritative; no background synchronization.
+
+Blockers:
+- No CP6 implementation blocker.
+- Full repository suite still contains pre-existing unrelated UX assertions on this older CP1 branch; no CP6 files cause those failures.
+
+Next:
+- Owner approval for Checkpoint 7; production remains untouched.
+
+Current Phase: COMPLETE; pre-production validation
+Current Task: closed without deployment
+
+Completed:
+- Audited the four 2026-09-25 smoke staff accounts, their foreign-key references, smoke-only tasks, batch idempotency row, and credential usage.
+- Created and checksum-verified /opt/thoidai-work/backups/smoke-cleanup-20260926T041807Z before cleanup.
+- Deleted three smoke staff rows, deactivated the smoke manager while preserving one historical work-schedule approver reference, reassigned Phòng Nội dung to the active real manager, and deleted four disposable smoke tasks plus their smoke-only dependencies.
+- Securely removed the unused /root/.secrets/thoidai-work/journalism-smoke-accounts.json credential file after confirming no runtime references.
+- Replaced the permanent recipient card grid on /tasks/assign with an interaction-only searchable combobox, inline scope, collapsed selected state, and preserved task-card state.
+
+Validation:
+- Targeted recipient, batch, approval, Journalism, Event Assignment, Personal Plan, Attendance, and Task Summary regressions: 123/123 PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Production build with lineage environment override for the isolated feature branch: PASS; required route manifest PASS.
+- Production service remained on commit 36e0f47ba0c402d73741ef865f446b38424bf65a; no deployment or restart performed.
+- Source committed and pushed as a39f75c4026ded4ce4e3894efcad9b2ff976ebf5 on codex/compact-recipient-picker.
+- Unauthenticated browser check: /tasks/assign redirects to /login; authenticated browser smoke was not run because no authorized live test session/credentials remained after cleanup.
+
+Blockers:
+- No implementation or data-integrity blocker.
+- Authenticated browser smoke remains owner-verification follow-up before any deployment.
+
+Next:
+- Separately authorize any deployment and authenticated browser verification.
+
 # Journalism J6G Status
 
 Current Phase: J6G implementation complete; pre-production validation
@@ -16,6 +135,44 @@ Validation:
 
 Blockers:
 - No implementation blocker; production migration/deploy intentionally not performed.
++
+## Department Plan V2 Checkpoint 7
+
+Current Phase: COMPLETE; Department Plan V2 Reports
+Current Task: Checkpoint 7 — read-only reports
+
+Completed:
+- Added canonical weekly/monthly Department Plan report page at /planning/reports.
+- Added server-authorized read-only API at /api/planning/department/reports.
+- Added server-side employee, work-status, and assignment-state filters with the existing Department Plan scope.
+- Added authoritative metrics for total, completed, in progress, planned, overdue, unassigned, and department-wide items.
+- Preserved lazy plan reads; report requests never create plan containers or Tasks.
+
+Validation:
+- CP7 focused tests: 21/21 PASS.
+- Department Plan CP1–CP7 tests: 68/68 PASS.
+- Affected regression: 354/358 PASS; four known pre-existing failures remain in J5C/J5D and leave/attendance tests.
+- Full source suite: 686/712 PASS; 26 known pre-existing failures remain on this older CP1 branch.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- git diff --check: PASS.
+
+Status mapping:
+- planned -> planned metric.
+- in_progress -> in-progress metric.
+- completed -> completed metric and never overdue.
+- cancelled -> final state, excluded from overdue.
+- unassigned and department_wide remain separate assignment metrics.
+
+Blockers:
+- No CP7 implementation blocker.
+- Production remains untouched; PDF export is intentionally deferred to Checkpoint 8.
+
+Next:
+- Owner approval for Checkpoint 8 — PDF Export. Do not begin Checkpoint 8 automatically.
+
 
 Next:
 - Owner review and separately authorized production deployment.
@@ -159,3 +316,30 @@ Blockers:
 
 Follow Up:
 - Owner may separately authorize a controlled deployment and service-cache ownership normalization.
+
+## Department Plan V2 Checkpoint 8
+
+Current Phase: COMPLETE; Department Plan PDF export
+Current Task: Checkpoint 8 — server-side PDF export, pre-production validation
+
+Completed:
+- Added an authenticated, read-only `GET /api/planning/department/reports/pdf` endpoint backed by the shared CP7 authorization and report repository.
+- Added A4 landscape PDF output with embedded DejaVu Sans Unicode fonts, Vietnamese text support, weekly/monthly period labels, active filters, CP7 metrics, detail rows, empty state, repeated headers, page numbers, and safe filenames.
+- Added a client-only `Xuất PDF` action that preserves current period, department, employee, status, and assignment filters without mutating report state or creating records.
+- Added the DejaVu font license alongside bundled font assets.
+
+Validation:
+- CP8 focused tests: 5/5 PASS; CP1–CP8 Department Plan tests: 73/73 PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Required-route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- Representative weekly, monthly, filtered, empty, Vietnamese-heavy, and 45-row multipage PDFs generated in `/tmp`; all had valid `%PDF-` signatures and multipage output reached 4 pages.
+- `git diff --check`: PASS.
+
+Safety:
+- Report/PDF path is GET-only and read-only; no DB migration, Task mutation, export storage, scheduler, email, or production activation was performed.
+- Production remains untouched; no restart or deployment performed.
+
+Next:
+- Owner review and separately authorized integration/deployment checkpoint.

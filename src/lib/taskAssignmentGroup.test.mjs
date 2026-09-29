@@ -51,3 +51,14 @@ test("missing manager, inactive-equivalent missing people, and wrong group fail 
   assert.equal(resolveAssignmentSelection({ ...base, people: people.filter((person) => person.id !== "member"), collaboratorIds: ["member"], groupDepartmentId: null }).ok, false);
   assert.equal(resolveAssignmentSelection({ ...base, groupDepartmentId: "dep-b" }).ok, false);
 });
+
+test("TBT may assign to an active department without a primary manager", () => {
+  const result = resolveAssignmentSelection({
+    ...base,
+    broad: true,
+    actorRoleCode: "tong_bien_tap",
+    department: { id: "dep-a", managerId: null },
+    reviewerId: "manager",
+  });
+  assert.equal(result.ok, true);
+});

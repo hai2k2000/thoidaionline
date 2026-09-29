@@ -103,6 +103,9 @@ test("print mapping separates self-registered origin and approval actor", () => 
     ...baseTask,
     status: "waiting",
     assignment_source: "self_registered",
+    created_by: "self",
+    owner_id: "self",
+    assignee_id: "self",
     assignment_approver: { full_name: "Trưởng phòng" },
   });
   assert.equal(result.assignmentSourceLabel, "Tự đăng ký");
@@ -112,8 +115,12 @@ test("print mapping separates self-registered origin and approval actor", () => 
     ...baseTask,
     status: "in_progress",
     assignment_source: "self_registered",
+    created_by: "self",
+    owner_id: "self",
+    assignee_id: "self",
+    assignment_approved_by: "approver",
     assignment_approver: { full_name: "Trưởng phòng" },
   });
-  assert.equal(approved.assignerLabel, "Người duyệt giao việc");
+  assert.equal(approved.assignerLabel, "Người giao việc");
   assert.equal(approved.assigner, "Trưởng phòng");
 });

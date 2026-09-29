@@ -67,6 +67,7 @@ export default async function TaskDetailPage({ params }: Props) {
     evaluate: action("evaluate"),
     leaderEvaluate: action("leader_evaluate"),
     personalComplete: action("personal_complete"),
+    personalEdit: action("personal_edit"),
     personalCancel: action("personal_cancel"),
     personalDeadline: action("personal_deadline"),
     assignedCancel: action("assigned_cancel"),

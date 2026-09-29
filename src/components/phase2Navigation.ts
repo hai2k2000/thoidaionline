@@ -14,7 +14,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
+    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
   href: string;
 };
 
@@ -30,6 +30,8 @@ export function getPhase2Navigation(
   access: Phase2NavigationAccess,
 ): Phase2Navigation {
   const canViewAllSchedules = access.isDepartmentManager === true || ["admin", "tong_bien_tap", "pho_tong_bien_tap", "truong_phong"].includes(access.roleCode);
+  const canAccessDepartmentPlan = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
+    || (access.isDepartmentManager === true && Boolean(access.departmentCode));
   const canAccessJournalism = access.canAccessJournalism === true
     && (["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode) || access.departmentCode === "editorial");
   return {
@@ -40,6 +42,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
+      ...(canAccessDepartmentPlan ? [{ id: "department-plan", href: "/planning/department" } as const] : []),
       { id: "attendance", href: "/my-attendance" },
       ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
       ...((access.canEvaluateStep1 && access.isDepartmentManager)

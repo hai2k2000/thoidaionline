@@ -91,6 +91,7 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
       canAccessJournalism={journalismAllowed}
       canClaimTasks={!['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
       canReviewTaskApprovals={canReviewTaskApprovals}
+      currentUserRole={user.role_code}
       approvalQueue={approvalQueue && {
         assignment: approvalQueue[0].ok ? approvalQueue[0].data : { items: [], total: 0, page: 1, pageSize: 100 },
         completion: approvalQueue[1].ok ? approvalQueue[1].data : { items: [], total: 0, page: 1, pageSize: 100 },
