@@ -32,6 +32,9 @@ cleanup() {
 trap cleanup EXIT
 
 git -C "$THOIDAI_SOURCE_REPO" worktree add --detach "$build_worktree" "$commit" >/dev/null
+for name in .env.local .env.production; do
+  ln -s -- "/opt/thoidai-work/$name" "$build_worktree/$name"
+done
 if [[ -n "${THOIDAI_BUILD_COMMAND:-}" ]]; then (cd "$build_worktree" && bash -c "$THOIDAI_BUILD_COMMAND"); else (cd "$build_worktree" && npm ci --no-audit --no-fund && npm run build); fi
 
 [[ -f "$build_worktree/.next/BUILD_ID" ]] || die "build has no BUILD_ID"
