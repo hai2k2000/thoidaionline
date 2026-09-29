@@ -47,7 +47,8 @@ test("only admin may edit or cancel approved tasks, including terminal tasks", (
   assert.equal(canTaskAction(manager, approved, "assigned_cancel"), false);
   assert.equal(canTaskAction(admin, task({ ...approved, status: "done" }), "update"), true);
   assert.equal(canTaskAction(admin, task({ ...approved, status: "done" }), "assigned_cancel"), true);
-  assert.equal(canTaskAction(admin, task({ ...approved, status: "cancelled" }), "update"), true);
+  assert.equal(canTaskAction(admin, task({ ...approved, status: "cancelled" }), "update"), false);
+  assert.equal(canTaskAction(admin, task({ ...approved, status: "cancelled" }), "assigned_cancel"), false);
 });
 
 test("unrelated managers and leadership cannot edit or cancel another creator's task", () => {
@@ -84,7 +85,7 @@ test("permission migration locks and rechecks every affected mutation", () => {
 
 test("creator-only mutation migration blocks scoped managers and permits admin overrides", () => {
   const migration = readFileSync(new URL("../../supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql", import.meta.url), "utf8");
-  for (const rpc of ["api_update_task", "api_cancel_assigned_task", "api_change_assigned_task_deadline"]) {
+  for (const rpc of ["api_update_task", "api_cancel_assigned_task", "api_change_assigned_task_deadline", "api_edit_personal_task", "api_cancel_personal_task", "api_change_personal_task_deadline"]) {
     assert.match(migration, new RegExp(`create or replace function public\\.${rpc}`));
   }
   assert.match(migration, /v_role_code<>'admin'/);

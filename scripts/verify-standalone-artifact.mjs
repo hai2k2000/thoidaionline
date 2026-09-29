@@ -14,6 +14,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20260925100000_journalism_self_registration.sql",
   "supabase/migrations/20260928140000_tbt_any_assignee.sql",
   "supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql",
+  "supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);

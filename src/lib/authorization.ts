@@ -72,7 +72,7 @@ export function canCreatorCancelTask(actor: AuthorizationActor, task: TaskAccess
 }
 
 export function canEditTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
-  if (actor.roleCode === "admin") return true;
+  if (actor.roleCode === "admin") return task.status !== "cancelled";
   if (TERMINAL_TASK_STATES.has(task.status)) return false;
   return canCreatorEditTask(actor, task);
 }
