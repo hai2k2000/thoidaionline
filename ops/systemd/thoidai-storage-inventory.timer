@@ -4,6 +4,8 @@ Description=Daily Thoi Dai Work storage inventory
 [Timer]
 OnCalendar=daily
 Persistent=true
+Unit=thoidai-storage-inventory.service
 
 [Install]
 WantedBy=timers.target
+

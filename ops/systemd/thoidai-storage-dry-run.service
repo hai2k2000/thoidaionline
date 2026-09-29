@@ -3,5 +3,10 @@ Description=Thoi Dai Work storage dry-run report
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c '/opt/worktrees/storage-bloat-hardening/scripts/ops/storage-inventory.sh --human; /opt/worktrees/storage-bloat-hardening/scripts/ops/storage-debt-report.sh; /opt/worktrees/storage-bloat-hardening/scripts/ops/docker-retention-guard.sh --dry-run; /opt/worktrees/storage-bloat-hardening/scripts/ops/log-retention-report.sh; /opt/worktrees/storage-bloat-hardening/scripts/production/build-retention.sh --dry-run; /opt/worktrees/storage-bloat-hardening/scripts/production/release-retention.sh --dry-run'
+EnvironmentFile=/opt/ops/thoidai-work/storage-lifecycle/current/storage-lifecycle.env
+ExecStart=/bin/bash -c '/opt/ops/thoidai-work/storage-lifecycle/current/scripts/ops/storage-inventory.sh --human; /opt/ops/thoidai-work/storage-lifecycle/current/scripts/ops/storage-debt-report.sh; /opt/ops/thoidai-work/storage-lifecycle/current/scripts/ops/worktree-adoption-audit.sh; /opt/ops/thoidai-work/storage-lifecycle/current/scripts/ops/docker-retention-guard.sh --dry-run; /opt/ops/thoidai-work/storage-lifecycle/current/scripts/ops/log-retention-report.sh; /opt/ops/thoidai-work/storage-lifecycle/current/scripts/production/build-retention.sh --dry-run; /opt/ops/thoidai-work/storage-lifecycle/current/scripts/production/release-retention.sh --dry-run'
 NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+

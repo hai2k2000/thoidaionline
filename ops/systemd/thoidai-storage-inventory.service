@@ -3,5 +3,11 @@ Description=Thoi Dai Work storage inventory (read-only)
 
 [Service]
 Type=oneshot
-ExecStart=/opt/worktrees/storage-bloat-hardening/scripts/ops/storage-inventory.sh --human
+EnvironmentFile=/opt/ops/thoidai-work/storage-lifecycle/current/storage-lifecycle.env
+ExecStart=/opt/ops/thoidai-work/storage-lifecycle/current/scripts/ops/storage-inventory.sh --human
+ExecStartPost=/opt/ops/thoidai-work/storage-lifecycle/current/scripts/ops/storage-debt-report.sh
 NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+

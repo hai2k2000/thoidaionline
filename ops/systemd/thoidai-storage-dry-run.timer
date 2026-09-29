@@ -4,6 +4,8 @@ Description=Weekly Thoi Dai Work storage dry-run report
 [Timer]
 OnCalendar=weekly
 Persistent=true
+Unit=thoidai-storage-dry-run.service
 
 [Install]
 WantedBy=timers.target
+
