@@ -10,7 +10,7 @@ cat > "$BIN/systemctl" <<'EOF'
 case "$1" in
   is-active) exit 0 ;;
   restart) exit 0 ;;
-  show) case "$2" in ActiveState) echo active ;; SubState) echo running ;; MainPID) echo 123 ;; NRestarts) echo 0 ;; WorkingDirectory) echo "$THOIDAI_RELEASE_ROOT/current" ;; MemoryHigh) echo 524288000 ;; MemoryMax) echo 681574400 ;; TasksMax) echo 250 ;; CapabilityBoundingSet|AmbientCapabilities) echo ;; NoNewPrivileges) echo yes ;; PrivateTmp) echo yes ;; ProtectSystem) echo strict ;; ProtectHome) echo yes ;; RestrictAddressFamilies) echo "AF_INET AF_INET6 AF_UNIX" ;; *) echo 0 ;; esac ;;
+  show) case "${3:-$2}" in ActiveState) echo active ;; SubState) echo running ;; MainPID) echo 123 ;; NRestarts) echo 0 ;; WorkingDirectory) echo "$THOIDAI_RELEASE_ROOT/current" ;; MemoryHigh) echo 524288000 ;; MemoryMax) echo 681574400 ;; TasksMax) echo 250 ;; CapabilityBoundingSet|AmbientCapabilities) echo ;; NoNewPrivileges) echo yes ;; PrivateTmp) echo yes ;; ProtectSystem) echo strict ;; ProtectHome) echo yes ;; RestrictAddressFamilies) echo "AF_INET AF_INET6 AF_UNIX" ;; *) echo 0 ;; esac ;;
   *) exit 0 ;;
 esac
 EOF

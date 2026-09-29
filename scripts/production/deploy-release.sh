@@ -52,7 +52,7 @@ atomic_link "$THOIDAI_RELEASE_ROOT/$release_id" "$THOIDAI_RELEASE_ROOT/current"
 if [[ "${THOIDAI_ALLOW_RESTART:-0}" != 1 ]]; then restore_links "$snapshot"; die "production restart not authorized in implementation checkpoint"; fi
 
 "$THOIDAI_SYSTEMCTL_BIN" restart "$THOIDAI_SERVICE"
-if ! health_check; then
+if ! migration_readiness_check; then
   restore_links "$snapshot"
   "$THOIDAI_SYSTEMCTL_BIN" restart "$THOIDAI_SERVICE" || true
   touch "$THOIDAI_RELEASE_ROOT/$release_id/.keep"
