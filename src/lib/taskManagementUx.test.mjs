@@ -49,6 +49,12 @@ test("task repository filters canonical and legacy task natures compatibly", () 
   assert.match(repository, /task_type\.is\.null,plan_period\.eq\.ad_hoc,self_claimable\.eq\.false/);
 });
 
+test("admin task-list actions are available for assigned tasks", () => {
+  const shell = read("../components/TaskCenterShell.tsx");
+  assert.match(shell, /currentUserRole === "admin"\) return task\.status !== "cancelled";/);
+  assert.doesNotMatch(shell, /currentUserRole === "admin"\) return task\.status !== "cancelled" && task\.compatibility_task_type === "personal"/);
+});
+
 test("progress workflow exposes explicit cancel and reschedule labels", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   const page = read("../app/tasks/[id]/page.tsx");
@@ -56,6 +62,12 @@ test("progress workflow exposes explicit cancel and reschedule labels", () => {
   assert.match(detail, /Hủy/);
   assert.match(detail, /Đổi ngày/);
   assert.match(page, /personalDeadline/);
+});
+
+test("admin task-list actions are not limited to personal tasks", () => {
+  const shell = read("../components/TaskCenterShell.tsx");
+  assert.match(shell, /currentUserRole === "admin"\) return task\.status !== "cancelled";/);
+  assert.doesNotMatch(shell, /currentUserRole === "admin"\) return task\.status !== "cancelled" && task\.compatibility_task_type === "personal"/);
 });
 
 test("personal tasks use explicit dates and daily weekly monthly recurrence", () => {
