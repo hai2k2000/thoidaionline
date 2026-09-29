@@ -39,22 +39,25 @@ test("non-admin may edit/cancel until completion approval", () => {
   assert.equal(canTaskAction(actor(), approved, "personal_cancel"), false);
 });
 
-test("only admin may edit or cancel after completion approval, including terminal tasks", () => {
+test("only admin may edit or cancel approved tasks, including terminal tasks", () => {
   const approved = task({ status: "in_progress", assignmentApprovalState: "approved", taskType: "assigned" });
   const admin = actor({ id: "admin", roleCode: "admin" });
   const manager = actor({ id: "manager", roleCode: "truong_phong", permissions: normalizePermissions({ can_assign_task: true }) });
-  assert.equal(canTaskAction(manager, approved, "update"), true);
-  assert.equal(canTaskAction(manager, approved, "assigned_cancel"), true);
+  assert.equal(canTaskAction(manager, approved, "update"), false);
+  assert.equal(canTaskAction(manager, approved, "assigned_cancel"), false);
   assert.equal(canTaskAction(admin, task({ ...approved, status: "done" }), "update"), true);
   assert.equal(canTaskAction(admin, task({ ...approved, status: "done" }), "assigned_cancel"), true);
   assert.equal(canTaskAction(admin, task({ ...approved, status: "cancelled" }), "update"), true);
 });
 
-test("admin and scoped manager authority remains available", () => {
+test("unrelated managers and leadership cannot edit or cancel another creator's task", () => {
   const approved = task({ status: "in_progress", assignmentApprovalState: "approved", taskType: "assigned" });
-  assert.equal(canTaskAction(actor({ id: "admin", roleCode: "admin" }), approved, "update"), true);
-  assert.equal(canTaskAction(actor({ id: "manager", roleCode: "truong_phong", permissions: normalizePermissions({ can_assign_task: true }) }), approved, "update"), true);
-  assert.equal(canTaskAction(actor({ id: "tbt", roleCode: "tong_bien_tap" }), approved, "update"), false);
+  const manager = actor({ id: "manager", roleCode: "truong_phong", permissions: normalizePermissions({ can_assign_task: true }) });
+  const tbt = actor({ id: "tbt", roleCode: "tong_bien_tap" });
+  assert.equal(canTaskAction(manager, approved, "update"), false);
+  assert.equal(canTaskAction(manager, approved, "assigned_cancel"), false);
+  assert.equal(canTaskAction(tbt, approved, "update"), false);
+  assert.equal(canTaskAction(tbt, approved, "assigned_cancel"), false);
 });
 
 test("hard delete is not exposed by the task action contract", () => {
@@ -77,4 +80,15 @@ test("permission migration locks and rechecks every affected mutation", () => {
   assert.match(migration, /cancel_reason/);
   assert.match(migration, /audit_logs/);
   assert.doesNotMatch(migration, /drop table|drop column|delete\s+from/i);
+});
+
+test("creator-only mutation migration blocks scoped managers and permits admin overrides", () => {
+  const migration = readFileSync(new URL("../../supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql", import.meta.url), "utf8");
+  for (const rpc of ["api_update_task", "api_cancel_assigned_task", "api_change_assigned_task_deadline"]) {
+    assert.match(migration, new RegExp(`create or replace function public\\.${rpc}`));
+  }
+  assert.match(migration, /v_role_code<>'admin'/);
+  assert.match(migration, /v_before\.created_by (?:is distinct from|<>)/);
+  assert.match(migration, /status='cancelled'/);
+  assert.doesNotMatch(migration, /delete\s+from|drop table|drop column/i);
 });

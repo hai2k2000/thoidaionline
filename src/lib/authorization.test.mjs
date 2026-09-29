@@ -150,7 +150,7 @@ test("assign, report, review, update and comment require explicit permission plu
     roleCode: "pho_tong_bien_tap",
     permissions: normalizePermissions({ can_assign_task: true }),
   }), "dep-b"), true);
-  assert.equal(canTaskAction(manager, task(), "update"), true);
+  assert.equal(canTaskAction(manager, task({ createdBy: "manager" }), "update"), true);
   assert.equal(canTaskAction(actor({ id: "assignee" }), task(), "report"), true);
   assert.equal(canTaskAction(actor({ id: "watcher" }), task(), "report"), false);
   assert.equal(canTaskAction(manager, task({ reviewerId: "manager", departmentManagerId: "manager" }), "review"), true);

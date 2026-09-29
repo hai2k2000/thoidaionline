@@ -66,7 +66,6 @@ const canEditOwnTask = (task: TaskListResult["items"][number], currentUserId: st
   if (task.legacy_read_only || (task.created_by !== currentUserId && currentUserRole !== "admin")) return false;
   if (currentUserRole === "admin") return task.compatibility_task_type === "personal";
   if (["done", "cancelled"].includes(task.status)) return false;
-  if (currentUserRole !== "admin" && task.approval_required && !["waiting", "rejected"].includes(task.status)) return false;
   return task.compatibility_task_type === "personal";
 };
 
