@@ -57,7 +57,7 @@ test("both canonical route shells render the permission-driven sidebar", () => {
   assert.match(taskCenter, /<AppNav/);
   assert.match(taskCenter, /query\.journalism === "only" \? "\/tasks\?journalism=only" : basePath/);
   assert.match(taskAssign, /<AppNav/);
-  assert.match(taskAssign, /currentPath=\{journalismMode \? "\/journalism\/tasks\/new"/);
+  assert.match(taskAssign, /currentPath=\{journalismMode \? "\/tasks\/assign\?kind=journalism"/);
 });
 
 test("shared desktop and mobile content renders one scoped Journalism section after work", () => {

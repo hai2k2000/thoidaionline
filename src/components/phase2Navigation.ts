@@ -54,7 +54,7 @@ export function getPhase2Navigation(
       { id: "online-work", href: "/online-work" },
     ],
     journalism: canAccessJournalism ? [
-      { id: "journalism-tasks", href: "/journalism/tasks" },
+      { id: "journalism-tasks", href: "/tasks?journalism=only" },
       { id: "journalism-calendar", href: "/journalism/calendar" },
       { id: "journalism-reports", href: "/journalism/reports" },
       ...(access.canManageJournalismStructures ? [{ id: "journalism-structures", href: "/journalism/structures" } as const] : []),
@@ -143,9 +143,8 @@ export function buildLegacyTaskRedirectFromParams(
 export function isNavigationActive(currentPath: string, href: string): boolean {
   const [pathname, rawSearch = ""] = currentPath.split("?");
   const search = new URLSearchParams(rawSearch.split("#")[0]);
-  const journalismTask = (pathname === "/tasks" || pathname.startsWith("/tasks/") || pathname === "/journalism/tasks" || pathname.startsWith("/journalism/tasks/"))
-    && (search.get("journalism") === "only" || pathname === "/journalism/tasks" || pathname.startsWith("/journalism/tasks/") || (pathname === "/tasks/assign" && search.get("kind") === "journalism"));
-  if (href === "/journalism/tasks") return journalismTask;
+  const journalismTask = (pathname === "/tasks" || pathname.startsWith("/tasks/"))
+    && (search.get("journalism") === "only" || (pathname === "/tasks/assign" && search.get("kind") === "journalism"));
   if (href === "/tasks?journalism=only") return journalismTask;
   if (href === "/tasks/assign") return pathname === href && !journalismTask;
   if (href === "/tasks") return (pathname === href || pathname.startsWith("/tasks/")) && pathname !== "/tasks/assign" && !journalismTask;

@@ -3,7 +3,7 @@ import test from "node:test";
 import { buildLegacyTaskRedirect, getPhase2Navigation, isNavigationActive, LEGACY_TASK_REDIRECTS } from "./phase2Navigation.ts";
 const employee = { roleCode: "nhan_vien", departmentCode: null, canAccessJournalism: false, canAssignTask: false, canEvaluateStep1: false, canEvaluateStep2: false, canManageRubrics: false, canManageUsers: false, canManagePermissions: false };
 const journalismItems = [
-  { id: "journalism-tasks", href: "/journalism/tasks" },
+  { id: "journalism-tasks", href: "/tasks?journalism=only" },
   { id: "journalism-calendar", href: "/journalism/calendar" },
   { id: "journalism-reports", href: "/journalism/reports" },
 ];
@@ -43,18 +43,17 @@ test("administration still requires admin role and individual permission", () =>
   assert.equal(restricted.configuration.some(item => ["users", "departments", "permissions", "evaluation-rubrics"].includes(item.id)), false);
   assert.deepEqual(getPhase2Navigation({ ...employee, canManageUsers: true, canManagePermissions: true, canManageRubrics: true }).configuration, []);
 });
-test("Journalism tasks, creation and detail exclusively activate Journalism", () => {
-  for (const route of ["/tasks?journalism=only", "/tasks?page=2&journalism=only", "/journalism/tasks", "/journalism/tasks?page=2", "/journalism/tasks/new", "/tasks/task-id?journalism=only"]) {
-    assert.equal(isNavigationActive(route, "/journalism/tasks"), true, route);
+test("Journalism tasks, assignment and detail exclusively activate Journalism", () => {
+  for (const route of ["/tasks?journalism=only", "/tasks?page=2&journalism=only", "/tasks/assign?kind=journalism", "/tasks/task-id?journalism=only"]) {
+    assert.equal(isNavigationActive(route, "/tasks?journalism=only"), true, route);
     assert.equal(isNavigationActive(route, "/tasks"), false, route);
     assert.equal(isNavigationActive(route, "/tasks/assign"), false, route);
   }
   for (const route of ["/tasks", "/tasks?page=2", "/tasks/task-id"]) {
     assert.equal(isNavigationActive(route, "/tasks"), true);
-    assert.equal(isNavigationActive(route, "/journalism/tasks"), false);
+    assert.equal(isNavigationActive(route, "/tasks?journalism=only"), false);
   }
   assert.equal(isNavigationActive("/tasks/assign", "/tasks/assign"), true);
-  assert.equal(isNavigationActive("/tasks/assign?kind=journalism", "/tasks/assign"), false);
 });
 test("Journalism page routes select the correct child, including nested series", () => {
   for (const route of ["/journalism/calendar?view=week", "/journalism/reports", "/journalism/structures", "/journalism/structures/series-id"]) {
