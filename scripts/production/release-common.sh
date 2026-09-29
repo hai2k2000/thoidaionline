@@ -10,7 +10,7 @@ set -Eeuo pipefail
 : "${THOIDAI_HEALTH_URL:=http://127.0.0.1:3001/login}"
 : "${THOIDAI_LOCK_FILE:=/run/lock/thoidai-work-deploy.lock}"
 : "${THOIDAI_DESIRED_FREE_GIB:=15}"
-: "${THOIDAI_HARD_MIN_FREE_GIB:=10}"
+: "${THOIDAI_HARD_MIN_FREE_GIB:=18}"
 : "${THOIDAI_ESTIMATED_RELEASE_GIB:=2}"
 : "${THOIDAI_SYSTEMCTL_BIN:=systemctl}"
 : "${THOIDAI_CURL_BIN:=curl}"
