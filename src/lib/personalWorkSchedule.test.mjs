@@ -85,6 +85,16 @@ test("work schedule API rejects work plans and requires valid event hours", () =
   assert.match(route, /endTime: planType === "event" \? endTime : null/);
 });
 
+test("schedule time inputs use an explicit 24-hour HH:mm format", () => {
+  const shell = read("../components/WorkSchedulePageShell.tsx");
+  const adminShell = read("../components/WorkScheduleAdminShell.tsx");
+  for (const source of [shell, adminShell]) {
+    assert.match(source, /type="text"[^>]*inputMode="numeric"[^>]*placeholder="HH:mm"/);
+    assert.match(source, /pattern="[^"]+"/);
+    assert.match(source, /maxLength=\{5\}/);
+  }
+});
+
 test("personal event payload keeps a same-day range and sends the selected times", () => {
   const shell = read("../components/WorkSchedulePageShell.tsx");
   const route = read("../app/api/work-schedule/personal/route.ts");
