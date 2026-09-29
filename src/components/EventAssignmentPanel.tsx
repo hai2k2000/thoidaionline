@@ -23,6 +23,7 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [saved, setSaved] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [editing, setEditing] = useState<EventRow | null>(null);
 
@@ -39,6 +40,7 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
     event.preventDefault();
     setBusy(true);
     setMessage("");
+    setSaved(false);
     const form = new FormData(event.currentTarget);
     const payload = {
       ...(editing ? { id: editing.id, workflowRevision: editing.workflow_revision } : {}),
@@ -60,9 +62,13 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
       });
       if (!response.ok) throw new Error();
       setMessage("Đã lưu sự kiện và phân công phóng viên.");
-      setOpen(false);
-      setEditing(null);
-      setSelected([]);
+      setSaved(true);
+      setTimeout(() => {
+        setOpen(false);
+        setEditing(null);
+        setSelected([]);
+        setSaved(false);
+      }, 500);
       reload();
     } catch {
       setMessage("Không thể lưu sự kiện. Vui lòng kiểm tra lại.");
@@ -87,7 +93,7 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
           <h2 className="font-bold text-orange-950">Phân công sự kiện</h2>
           <p className="mt-1 text-xs text-slate-600">Sự kiện có hiệu lực ngay, không tạo Giao việc.</p>
         </div>
-        <button type="button" onClick={() => { setEditing(null); setSelected([]); setMessage(""); setOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white">Phân công sự kiện</button>
+        <button type="button" onClick={() => { setEditing(null); setSelected([]); setMessage(""); setSaved(false); setOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white">Phân công sự kiện</button>
       </div>
       {message ? <p role="status" className="mt-2 text-sm text-slate-700">{message}</p> : null}
       <div className="mt-3 grid gap-2">
@@ -122,7 +128,7 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
           <label className="mt-3 block text-sm font-medium">Địa điểm<input name="location" maxLength={500} defaultValue={editing?.location ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
           <label className="mt-3 block text-sm font-medium">Nội dung<textarea name="notes" maxLength={2000} defaultValue={editing?.notes ?? ""} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
           <fieldset className="mt-3 rounded border p-3"><legend className="px-1 text-sm font-semibold">Chọn phóng viên</legend><div className="grid gap-2 sm:grid-cols-2">{people.map((person) => <label key={person.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected.includes(person.id)} onChange={() => setSelected((current) => current.includes(person.id) ? current.filter((id) => id !== person.id) : [...current, person.id])} />{person.full_name}</label>)}</div></fieldset>
-          <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setOpen(false)} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={busy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">{busy ? "Đang lưu..." : "Lưu sự kiện"}</button></div>
+          <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setOpen(false)} disabled={busy || saved} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={busy || saved} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">{busy ? "Đang lưu..." : saved ? "Đã lưu" : "Lưu sự kiện"}</button></div>
         </form>
       </div> : null}
     </section>
