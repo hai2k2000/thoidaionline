@@ -18,7 +18,9 @@ The stable systemd template uses `/opt/releases/thoidai-work/current`. Deploy ch
 scripts/production/deploy-release.sh <commit-or-ref> [suffix]
 scripts/production/rollback-release.sh [--to-rollback-2]
 scripts/production/release-retention.sh --dry-run
-scripts/production/release-retention.sh --apply
+scripts/production/release-retention.sh --dry-run
+
+Apply is owner-approved only and requires `THOIDAI_OWNER_APPROVED_CLEANUP=1`.
 scripts/production/worktree-cleanup.sh --dry-run
 scripts/production/worktree-cleanup.sh --apply
 ```
