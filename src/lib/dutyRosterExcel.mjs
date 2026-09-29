@@ -12,7 +12,11 @@ function asIsoDate(value) {
   if (value instanceof Date && !Number.isNaN(value.valueOf())) return value.toISOString().slice(0, 10);
   if (typeof value === "string") {
     const match = value.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (match) return `${match[1]}-${String(match[2]).padStart(2, "0")}-${String(match[3]).padStart(2, "0")}`;
+    if (match) {
+      const candidate = `${match[1]}-${String(match[2]).padStart(2, "0")}-${String(match[3]).padStart(2, "0")}`;
+      const parsed = new Date(`${candidate}T00:00:00Z`);
+      if (!Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === candidate) return candidate;
+    }
   }
   return null;
 }
@@ -24,7 +28,7 @@ function fail(message) {
 }
 
 export function parseDutyRosterWorkbook(workbook) {
-  const sheet = workbook?.sheets?.find((item) => Array.isArray(item?.rows) && item.rows.some((row) => row?.some((cell) => cell != null)));
+  const sheet = workbook?.sheets?.find((item) => Array.isArray(item?.rows) && item.rows.some((row) => normalizeDutyRosterName(row?.[0]).includes("nhân sự/ngày")));
   if (!sheet) fail("Không tìm thấy sheet dữ liệu lịch trực.");
   const rows = sheet.rows;
   const headerIndex = rows.findIndex((row) => normalizeDutyRosterName(row?.[0]).includes("nhân sự/ngày"));
@@ -67,7 +71,8 @@ export function parseDutyRosterWorkbook(workbook) {
   }
   if (!currentMonth || !dateHeaders.size) fail("File không có ngày trực hợp lệ.");
   const expectedDays = daysInMonth(currentMonth);
-  if (dateHeaders.size !== expectedDays) fail(`File phải có đủ ${expectedDays} ngày của tháng ${currentMonth}.`);
+  const expectedDates = new Set(Array.from({ length: expectedDays }, (_, index) => `${currentMonth}-${String(index + 1).padStart(2, "0")}`));
+  if (dateHeaders.size !== expectedDays || [...expectedDates].some((date) => !dateHeaders.has(date))) fail(`File phải có đủ các ngày 01-${String(expectedDays).padStart(2, "0")} của tháng ${currentMonth}.`);
   const expectedRows = expectedDays * DUTY_IMPORT_POSITIONS.length;
   if (assignments.length !== expectedRows) fail(`File phải có đủ ${expectedRows} phân công cho tháng ${currentMonth}.`);
   const seen = new Set();

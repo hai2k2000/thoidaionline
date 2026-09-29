@@ -14,7 +14,7 @@ export function resolveDutyImportRows(rows, people) {
   const byUsername = new Map();
   for (const person of people) {
     const username = normalizeDutyRosterName(person.username);
-    if (username) byUsername.set(username, person);
+    if (username) byUsername.set(username, [...(byUsername.get(username) ?? []), person]);
     for (const value of [person.full_name, person.username]) {
       const key = normalizeDutyRosterName(value);
       if (!key) continue;
@@ -26,7 +26,7 @@ export function resolveDutyImportRows(rows, people) {
   for (const row of rows) {
     const direct = byName.get(normalizeDutyRosterName(row.name)) ?? [];
     const alias = approvedAliases.get(withoutMarks(row.name));
-    const candidates = direct.length ? direct : alias && byUsername.has(alias) ? [byUsername.get(alias)] : [];
+    const candidates = direct.length ? direct : alias ? (byUsername.get(alias) ?? []) : [];
     const matches = [...new Map(candidates.map((person) => [person.id, person])).values()];
     if (!matches.length) errors.push({ row, reason: `Không tìm thấy nhân sự "${row.name}".` });
     else if (matches.length > 1) errors.push({ row, reason: `Tên "${row.name}" trùng nhiều tài khoản.` });
@@ -46,22 +46,26 @@ export function validateDutyImportRows(month, rows) {
   const expectedDays = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
   if (rows.length !== expectedDays * positions.length) return false;
   const seen = new Set();
+  const dates = new Set();
   for (const row of rows) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || !positions.includes(row.position) || !row.name.trim()) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || !row.date.startsWith(`${month}-`) || !positions.includes(row.position) || !row.name.trim()) return false;
+    const parsed = new Date(`${row.date}T00:00:00Z`);
+    if (parsed.toISOString().slice(0, 10) !== row.date) return false;
+    dates.add(row.date);
     const key = `${row.date}|${row.position}`;
     if (seen.has(key)) return false;
     seen.add(key);
   }
-  return seen.size === expectedDays * positions.length;
+  return dates.size === expectedDays && [...Array.from({ length: expectedDays }, (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`)].every((date) => dates.has(date)) && seen.size === expectedDays * positions.length;
 }
 
-export function summarizeDutyImport(rows, existing) {
+export function summarizeDutyImport(rows, existing, target = {}) {
   const current = new Map(existing.map((row) => [`${row.due_date}|${row.duty_position}`, row]));
   let create = 0; let update = 0; let unchanged = 0; let locked = 0;
   for (const row of rows) {
     const old = current.get(`${row.date}|${row.position}`);
     if (!old) create += 1;
-    else if (old.assignee_id === row.assigneeId) unchanged += 1;
+    else if (old.assignee_id === row.assigneeId && (!target.departmentId || old.department_id === target.departmentId) && (!target.reviewerId || old.reviewer_id === target.reviewerId)) unchanged += 1;
     else { update += 1; if (old.status !== "new") locked += 1; }
     current.delete(`${row.date}|${row.position}`);
   }

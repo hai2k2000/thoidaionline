@@ -33,17 +33,17 @@ export async function POST(request: Request) {
     if (!options.ok) return apiError("service_unavailable", 503);
     const resolved = resolveDutyImportRows(parsed.rows, options.people);
     const mode = form?.get("mode") === "confirm" ? "confirm" : "preview";
+    const departmentId = typeof form?.get("departmentId") === "string" ? String(form.get("departmentId")) : "";
+    const reviewerId = typeof form?.get("reviewerId") === "string" ? String(form.get("reviewerId")) : "";
     const errors = resolved.errors.map((item) => ({ ...item.row, reason: item.reason }));
     const existing = await dutyTaskRepository.month(parsed.month);
     if (!existing.ok) return apiError("service_unavailable", 503);
-    const summary = summarizeDutyImport(resolved.resolved.map((row) => ({ date: row.date, position: row.position, assigneeId: row.assigneeId })), existing.rows);
+    const summary = summarizeDutyImport(resolved.resolved.map((row) => ({ date: row.date, position: row.position, assigneeId: row.assigneeId })), existing.rows, { departmentId, reviewerId });
     if (mode === "preview") {
       return apiJson({ month: parsed.month, total: parsed.rows.length, valid: resolved.resolved.length, rejected: errors.length, errors, summary });
     }
     if (errors.length) return invalid("Không thể nhập vì còn nhân sự chưa đối chiếu được.");
     if (summary.locked) return invalid("Lịch hiện tại có ca đã bắt đầu hoặc đã duyệt, không thể thay thế tự động.");
-    const departmentId = typeof form?.get("departmentId") === "string" ? String(form.get("departmentId")) : "";
-    const reviewerId = typeof form?.get("reviewerId") === "string" ? String(form.get("reviewerId")) : "";
     if (!departmentId || !reviewerId) return invalid("Thiếu phòng ban hoặc người duyệt lịch trực.");
     const saved = await dutyTaskRepository.save(guard.actor.id, { month: parsed.month, departmentId, reviewerId, days: groupDutyImportRows(resolved.resolved) });
     return saved.ok ? apiJson({ month: parsed.month, imported: resolved.resolved.length, summary: saved.summary }) : apiError("operation_failed", 500);
