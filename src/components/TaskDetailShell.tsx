@@ -118,8 +118,9 @@ export default function TaskDetailShell({ task, capabilities, userLabel, journal
   };
   const upload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await request(`/api/tasks/${task.id}/attachments`, { method: "POST", body: new FormData(event.currentTarget) });
-    event.currentTarget.reset();
+    const formElement = event.currentTarget;
+    await request(`/api/tasks/${task.id}/attachments`, { method: "POST", body: new FormData(formElement) });
+    formElement.reset();
   };
   const download = async (id: string) => {
     const response = await request(`/api/tasks/${task.id}/attachments/${id}`, { method: "GET" });

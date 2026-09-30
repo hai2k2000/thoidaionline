@@ -194,9 +194,10 @@ export default function WorkSchedulePageShell({
   const clearAll = () => setSelected([]);
   const createPlan = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setCreateBusy(true);
     setCreateMessage("");
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const workDate = String(form.get("workDate") ?? "");
     const personalMode = scheduleScope === "self";
     const payload = {
@@ -219,7 +220,7 @@ export default function WorkSchedulePageShell({
         throw new Error(personalPlanErrorMessage(body?.error?.code));
       }
       setCreateMessage(personalMode ? "Đã gửi kế hoạch chờ phê duyệt." : "Đã lưu lịch công tác.");
-      event.currentTarget.reset();
+      formElement.reset();
       setEditingRow(null);
       setTimeout(() => setCreateOpen(false), 500);
       setRetryToken((value) => value + 1);
