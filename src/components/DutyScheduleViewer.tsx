@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { scheduleRange } from "@/lib/dutyScheduleRange.mjs";
+import { scheduleCalendarDates, scheduleRange } from "@/lib/dutyScheduleRange.mjs";
 import Link from "next/link";
 type Row = {
   id: string;
@@ -77,21 +77,14 @@ export default function DutyScheduleViewer({
     );
     setAnchor(d.toISOString().slice(0, 10));
   };
-  const dayCards = useMemo(() => {
-    const result: [string, Row[]][] = [];
-    const cursor = new Date(`${range.from}T12:00:00Z`);
-    const end = new Date(`${range.to}T12:00:00Z`);
-    while (cursor <= end) {
-      const date = cursor.toISOString().slice(0, 10);
-      result.push([date, byDate.get(date) ?? []]);
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-    }
-    return result;
-  }, [byDate, range.from, range.to]);
+  const dayCards = useMemo(
+    () => scheduleCalendarDates(view, range.from, range.to).map((date) => [date, date ? byDate.get(date) ?? [] : []] as const),
+    [byDate, range.from, range.to, view],
+  );
   const density =
     view === "month"
       ? {
-          grid: "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6",
+            grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7",
           card: "rounded-lg border p-2",
           heading: "truncate text-xs font-bold",
           rows: "mt-1 space-y-1",
@@ -100,7 +93,7 @@ export default function DutyScheduleViewer({
         }
       : view === "week"
         ? {
-            grid: "sm:grid-cols-2 lg:grid-cols-3",
+            grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7",
             card: "rounded-xl border p-3",
             heading: "text-sm font-bold",
             rows: "mt-2 space-y-2",
@@ -183,7 +176,7 @@ export default function DutyScheduleViewer({
             {loading ? <p className="mt-3 rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">Đang tải lịch trực…</p> : null}
             {!loading && loadError ? <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Không tải được lịch trực. Vui lòng thử lại hoặc kiểm tra kết nối máy chủ.</p> : null}
             {!loading && !loadError ? <div className={`mt-3 grid w-full gap-2 ${density.grid}`}>
-              {dayCards.map(([date, items]) => (
+              {dayCards.map(([date, items], index) => date ? (
                 <article
                   key={date}
                   role={scope === "organization" && user?.role_code === "admin" && items.length ? "link" : undefined}
@@ -225,7 +218,7 @@ export default function DutyScheduleViewer({
                   </div>
                   {scope === "organization" && user?.role_code === "admin" && items.length ? <p className="mt-2 border-t pt-1 text-right text-[10px] font-bold text-orange-700">Mở đánh giá ngày →</p> : null}
                 </article>
-              ))}
+              ) : <div key={`empty-${index}`} aria-hidden="true" className={density.card} />)}
               {!dayCards.length ? (
                 <p className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
                   Không có lịch trực trong khoảng thời gian này.
