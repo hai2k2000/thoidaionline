@@ -78,8 +78,8 @@ test("work schedule API rejects work plans and requires valid event hours", () =
   const route = read("../app/api/work-schedule/route.ts");
   assert.match(route, /body\.planType !== "business" && body\.planType !== "event"/);
   assert.match(route, /planType === "event" && endDate !== workDate/);
-  assert.match(route, /time\.test\(startTime\)/);
-  assert.match(route, /time\.test\(endTime\)/);
+  assert.match(route, /TIME_24H_REGEX\.test\(startTime\)/);
+  assert.match(route, /TIME_24H_REGEX\.test\(endTime\)/);
   assert.match(route, /endTime <= startTime/);
   assert.match(route, /startTime: planType === "event" \? startTime : null/);
   assert.match(route, /endTime: planType === "event" \? endTime : null/);
@@ -89,9 +89,7 @@ test("schedule time inputs use an explicit 24-hour HH:mm format", () => {
   const shell = read("../components/WorkSchedulePageShell.tsx");
   const adminShell = read("../components/WorkScheduleAdminShell.tsx");
   for (const source of [shell, adminShell]) {
-    assert.match(source, /type="text"[^>]*inputMode="numeric"[^>]*placeholder="HH:mm"/);
-    assert.match(source, /pattern="[^"]+"/);
-    assert.match(source, /maxLength=\{5\}/);
+    assert.match(source, /Time24hInput/);
   }
 });
 

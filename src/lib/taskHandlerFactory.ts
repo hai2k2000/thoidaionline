@@ -1,3 +1,4 @@
+import { TIME_24H_REGEX } from "./time24h.mjs";
 import type {
   AuthorizationActor,
   TaskAccessSnapshot,
@@ -93,7 +94,7 @@ const dateValue = (value: unknown) => {
 };
 
 const timeValue = (value: unknown) =>
-  typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)
+  typeof value === "string" && TIME_24H_REGEX.test(value)
     ? value
     : null;
 

@@ -1,5 +1,5 @@
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const TIME_PATTERN = /^(\d{2}):(\d{2})$/;
+const TIME_PATTERN = /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/;
 
 export function serializeVietnamPlannedPublication(date, time) {
   if (!date && !time) return null;
@@ -11,8 +11,8 @@ export function serializeVietnamPlannedPublication(date, time) {
   const year = Number(dateParts[1]);
   const month = Number(dateParts[2]);
   const day = Number(dateParts[3]);
-  const hour = Number(timeParts[1]);
-  const minute = Number(timeParts[2]);
+  const hour = Number(time.slice(0, 2));
+  const minute = Number(time.slice(3, 5));
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   if (month < 1 || month > 12 || day < 1 || day > daysInMonth || hour > 23 || minute > 59) return undefined;
   const instant = new Date(Date.UTC(year, month - 1, day, hour - 7, minute));

@@ -1,3 +1,4 @@
+import { TIME_24H_REGEX } from "./time24h.mjs";
 export type EventAssignmentInput = {
   title: string;
   eventType: string;
@@ -13,7 +14,6 @@ export type EventAssignmentValidation =
   | { ok: false; reason: string };
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 function civilDayNumber(year: number, month: number, day: number) {
   const adjustedYear = year - (month <= 2 ? 1 : 0);
@@ -28,7 +28,7 @@ function civilDayNumber(year: number, month: number, day: number) {
 function localIntervalValid(input: Pick<EventAssignmentInput, "workDate" | "endDate" | "startTime" | "endTime">) {
   const start = DATE_PATTERN.exec(input.workDate);
   const end = DATE_PATTERN.exec(input.endDate);
-  if (!start || !end || !TIME_PATTERN.test(input.startTime) || !TIME_PATTERN.test(input.endTime)) return false;
+  if (!start || !end || !TIME_24H_REGEX.test(input.startTime) || !TIME_24H_REGEX.test(input.endTime)) return false;
   const leap = (year: number) => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   const validDate = (match: RegExpExecArray) => {
     const year = Number(match[1]);

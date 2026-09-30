@@ -1,3 +1,4 @@
+import { TIME_24H_REGEX } from "./time24h.mjs";
 export type LocalPlanInterval = {
   workDate: string;
   endDate: string;
@@ -10,7 +11,6 @@ export type ValidationResult =
   | { ok: false; reason: string };
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 function parseDate(value: string) {
   const match = DATE_PATTERN.exec(value);
@@ -40,7 +40,7 @@ function civilDayNumber(year: number, month: number, day: number) {
 }
 
 function minuteOfDay(value: string) {
-  if (!TIME_PATTERN.test(value)) return null;
+  if (!TIME_24H_REGEX.test(value)) return null;
   return Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
 }
 

@@ -31,7 +31,7 @@ export function localDateTime(value) {
 }
 
 export function serializeVietnamPublicationTime(date, time) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { ok: false };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(time)) return { ok: false };
   const [year, month, day] = date.split("-").map(Number);
   const [hour, minute] = time.split(":").map(Number);
   const probe = new Date(Date.UTC(year, month - 1, day));

@@ -1,9 +1,9 @@
+import { TIME_24H_REGEX } from "@/lib/time24h.mjs";
 import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
 import { isValidLocalDate, validateLocalPlanInterval } from "@/lib/personalPlanValidation";
 import { workScheduleRepository, type WorkScheduleInput } from "@/lib/workScheduleRepository";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 function validRange(from: string, to: string) {
   return isValidLocalDate(from) && isValidLocalDate(to) && from <= to;
@@ -18,7 +18,7 @@ function parsedInput(body: Record<string, unknown>): WorkScheduleInput | null {
   const title = typeof body.title === "string" ? body.title.trim() : "";
   if ((planType !== "work" && planType !== "business" && planType !== "event")
     || !title || title.length > 500 || !DATE.test(workDate) || !DATE.test(endDate)
-    || !TIME.test(startTime) || !TIME.test(endTime)
+    || !TIME_24H_REGEX.test(startTime) || !TIME_24H_REGEX.test(endTime)
     || !validateLocalPlanInterval({ workDate, endDate, startTime, endTime }).ok) {
     return null;
   }

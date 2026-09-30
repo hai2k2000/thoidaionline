@@ -94,9 +94,9 @@ test("migration exposes security-definer RPCs with server-derived scope", () => 
 
 test("event time inputs use an explicit 24-hour HH:mm format", () => {
   const panel = read("../components/EventAssignmentPanel.tsx");
-  assert.match(panel, /type="text"[^>]*inputMode="numeric"[^>]*placeholder="HH:mm"/);
-  assert.match(panel, /pattern="[^"]+"/);
-  assert.match(panel, /maxLength=\{5\}/);
+  assert.match(panel, /Time24hInput/);
+  assert.doesNotMatch(panel, /pattern="[^\"]*\\\\d/);
+  assert.match(panel, /Time24hInput/);
 });
 
 test("event API never accepts client authorization fields and supports status actions", () => {
@@ -126,7 +126,7 @@ test("leadership UI exposes assignment action and reporter badge", () => {
   const shell = read("../components/WorkSchedulePageShell.tsx");
   const assignShell = read("../components/TaskAssignShell.tsx");
   assert.doesNotMatch(panel, /Tạo sự kiện \/ Phân công sự kiện/);
-  assert.match(panel, /type="text"[^>]*inputMode="numeric"[^>]*placeholder="HH:mm"/);
+  assert.match(panel, /Time24hInput/);
   assert.match(panel, /participantIds|reporterIds/);
   assert.match(panel, /Được phân công/);
   assert.match(shell, /EventAssignmentPanel/);
