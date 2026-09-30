@@ -79,6 +79,3 @@ SAFE TO RESUME GLOBAL MUTATION DEPLOY: NO
 | 20260928160000 | `20260928160000_admin_edit_cancel_after_approval.sql` | `6f47cfc3c274` | `UNKNOWN` |
 | 20260928160100 | `20260928160100_task_deadline_admin_override.sql` | `6f47cfc3c274` | `UNKNOWN` |
 | 20260928160200 | `20260928160200_personal_deadline_approval_guard.sql` | `ddc1d90cf30b` | `UNKNOWN` |
-| 20260930100000 | `20260930100000_global_creator_mutation_policy.sql` | `bb8d5a6be344` | `UNKNOWN` |
-| 20260930110000 | `20260930110000_global_task_creator_mutation_policy.sql` | `bb8d5a6be344` | `UNKNOWN` |
-| 20260930120000 | `20260930120000_global_mutation_cancelled_admin_guard.sql` | `bb8d5a6be344` | `UNKNOWN` |

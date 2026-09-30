@@ -2208,12 +2208,12 @@
   },
   "production_modified": false,
   "unrelated_classification": {
-    "total": 59,
+    "total": 56,
     "counts": {
       "FUTURE_FEATURE": 0,
       "ABANDONED_OR_SUPERSEDED": 0,
       "SCHEMA_EFFECT_ALREADY_PRESENT_BUT_LEDGER_MISSING": 0,
-      "UNKNOWN": 59
+      "UNKNOWN": 56
     },
     "rows": [
       {
@@ -2887,42 +2887,6 @@
         "classification": "UNKNOWN",
         "reason": "DDL/RPC migration is local-only; effect may already exist, but exact production equivalence is not proven read-only",
         "sha256": "902e3d6629668bcd2898581e28d8d1daa963d1ec377e58582799f6a9fcef3f69"
-      },
-      {
-        "version": "20260930100000",
-        "filename": "20260930100000_global_creator_mutation_policy.sql",
-        "introducing_commit": "bb8d5a6be3445466e922ff0d13641b644e6bc41f",
-        "feature_origin": "feat: enforce global creator mutation policy",
-        "active_app_required": "UNKNOWN",
-        "schema_effect_present": "UNKNOWN",
-        "superseded": "UNKNOWN",
-        "classification": "UNKNOWN",
-        "reason": "DDL/RPC migration is local-only; effect may already exist, but exact production equivalence is not proven read-only",
-        "sha256": "a48093b331dff89af535a85b7c8ece4874283e3b812344c1159fa34074b69b66"
-      },
-      {
-        "version": "20260930110000",
-        "filename": "20260930110000_global_task_creator_mutation_policy.sql",
-        "introducing_commit": "bb8d5a6be3445466e922ff0d13641b644e6bc41f",
-        "feature_origin": "feat: enforce global creator mutation policy",
-        "active_app_required": "UNKNOWN",
-        "schema_effect_present": "UNKNOWN",
-        "superseded": "UNKNOWN",
-        "classification": "UNKNOWN",
-        "reason": "DDL/RPC migration is local-only; effect may already exist, but exact production equivalence is not proven read-only",
-        "sha256": "8f031d5d9498bcced459cf88a860fe6fc074d97c7a24003c177642fb164aaefc"
-      },
-      {
-        "version": "20260930120000",
-        "filename": "20260930120000_global_mutation_cancelled_admin_guard.sql",
-        "introducing_commit": "bb8d5a6be3445466e922ff0d13641b644e6bc41f",
-        "feature_origin": "feat: enforce global creator mutation policy",
-        "active_app_required": "UNKNOWN",
-        "schema_effect_present": "UNKNOWN",
-        "superseded": "UNKNOWN",
-        "classification": "UNKNOWN",
-        "reason": "DDL/RPC migration is local-only; effect may already exist, but exact production equivalence is not proven read-only",
-        "sha256": "4fa7b0e34b8a4ca94209cd9d21011d4002c72138d472ff06aef67c49f3404a0d"
       }
     ]
   },
