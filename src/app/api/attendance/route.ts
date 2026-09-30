@@ -162,15 +162,15 @@ export async function GET(request: Request) {
     const extraNotes: string[] = [];
     if (leave) extraNotes.push(leaveLabel(leave, row.work_date));
     const leaveIsFull = !!leave && leavePeriodsForDate(leave, row.work_date).every((period) => period === "full");
-    const businessWorkday = leave?.leave_type === "business" ? (leaveIsFull ? 1 : 0.5) : 0;
+    const leaveWorkday = leave ? (leaveIsFull ? 1 : 0.5) : 0;
     if (onlineDay && !leaveIsFull) extraNotes.push("Làm việc online");
     return calculateAttendance({
       checkIn: row.check_in,
       checkOut: row.check_out,
       existingNote: row.note,
       extraNotes,
-      exceptional: row.status === "leave" || row.status === "absent" || !!businessWorkday || leaveIsFull || (onlineDay && !row.check_in && !row.check_out),
-      exceptionalWorkday: businessWorkday || (onlineDay && !leaveIsFull ? 1 : 0),
+      exceptional: row.status === "leave" || row.status === "absent" || !!leaveWorkday || (onlineDay && !row.check_in && !row.check_out),
+      exceptionalWorkday: leaveWorkday || (onlineDay && !leaveIsFull ? 1 : 0),
     });
   };
   const withNotes = (items: AttendanceRow[]) => items.map((row) => {
@@ -193,7 +193,7 @@ export async function GET(request: Request) {
         const label = leaveLabel(leave, workDate);
         const leavePeriods = leavePeriodsForDate(leave, workDate);
         const leaveIsFull = leavePeriods.every((period) => period === "full");
-        const workday = leave.leave_type === "business" ? (leaveIsFull ? 1 : 0.5) : 0;
+            const workday = leaveIsFull ? 1 : 0.5;
         result.push({ id: `leave-${leave.requester.id}-${workDate}`, user_id: leave.requester.id, work_date: workDate, check_in: null, check_out: null, note: label, status: "leave", staff_users: { full_name: leave.requester.full_name }, workday });
         existing.add(key);
       }
