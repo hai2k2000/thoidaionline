@@ -82,7 +82,8 @@ test("409 handling performs one request, closes stale dialog, and refreshes with
   assert.match(controls, /if \(mapped\.close\) dialogRef\.current\?\.close\(\)/);
   assert.match(controls, /if \(mapped\.refresh\) router\.refresh\(\)/);
   assert.match(controls, /if \(!action \|\| busyRef\.current\) return/);
-  assert.doesNotMatch(controls, /retry|setTimeout\(|while \(/);
+  assert.doesNotMatch(controls, /retry|while \(/);
+  assert.match(controls, /setTimeout\(\(\) => \{[\s\S]*dialogRef\.current\?\.close\(\)[\s\S]*\}, 500\)/);
 });
 
 test("published URL remains read-only and metadata editor stays URL-free", () => {

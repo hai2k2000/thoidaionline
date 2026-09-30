@@ -27,7 +27,7 @@ const timeToSeconds = (value?: string | null) => {
 };
 
 const splitNotes = (value?: string | null) => (value ?? "").split(";").map((part) => part.trim()).filter(Boolean);
-const WISE_ON_39_SYNC_NOTE = /^đồng\s*bộ\s*từ\s*wise\s*on\s*39$/iu;
+const WISE_ON_39_SYNC_NOTE = /^đồng\s*bộ(?:\s+realtime)?\s+từ\s+wise(?:\s+eye)?\s*on\s*39$/iu;
 
 export const sanitizeAttendanceNotes = (values: Array<string | null | undefined>) => values
   .flatMap(splitNotes)

@@ -6,9 +6,9 @@ import { useState } from "react";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
-type Props = { taskId: string; canEdit: boolean; canComplete: boolean; canClaim: boolean; terminal: boolean };
+type Props = { taskId: string; taskType: "assigned" | "personal" | null; isAdmin: boolean; canEdit: boolean; canComplete: boolean; canClaim: boolean; terminal: boolean };
 
-export default function PersonalTaskActions({ taskId, canEdit, canComplete, canClaim, terminal }: Props) {
+export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit, canComplete, canClaim, terminal }: Props) {
   const router = useRouter();
   const { notify } = useActionFeedback();
   const [busy, setBusy] = useState(false);
@@ -17,7 +17,8 @@ export default function PersonalTaskActions({ taskId, canEdit, canComplete, canC
   const mutate = async (action: "complete" | "cancel", reason?: string) => {
     setBusy(true);
     setError("");
-    try { const response = await fetch(`/api/tasks/${taskId}/${action}`, {
+    const cancelPath = taskType === "personal" ? "cancel" : "cancel-assigned";
+    try { const response = await fetch(`/api/tasks/${taskId}/${action === "cancel" ? cancelPath : action}`, {
       method: "POST",
       headers: reason ? { "Content-Type": "application/json" } : undefined,
       body: reason ? JSON.stringify({ reason }) : undefined,
@@ -54,9 +55,10 @@ export default function PersonalTaskActions({ taskId, canEdit, canComplete, canC
     </div>
   );
   if (!canEdit && !canComplete) return null;
+  const editHref = isAdmin ? `/tasks/${taskId}/admin-edit` : `/tasks/personal/${taskId}/edit`;
   return (
     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
-      {canEdit ? <Link href={`/tasks/personal/${taskId}/edit`} className="rounded border px-2 py-1 text-xs font-semibold">
+      {canEdit ? <Link href={editHref} className="rounded border px-2 py-1 text-xs font-semibold">
         Sửa
       </Link> : null}
       {canComplete ? <button disabled={busy} onClick={() => mutate("complete")} className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">

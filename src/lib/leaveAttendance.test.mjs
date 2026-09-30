@@ -37,3 +37,8 @@ test("attendance notes combine approved leave and online work and remain blank o
   assert.match(page, /Duyệt đơn nghỉ \/ công tác/);
   assert.match(page, /r\.note \?\? ""/);
 });
+
+test("approved business leave contributes one workday when the attendance row is synthesized", () => {
+  assert.match(attendance, /leave\?\.leave_type === "business"/);
+  assert.match(attendance, /leave\.leave_type === "business" \? \(leaveIsFull \? 1 : 0\.5\) : 0/);
+});

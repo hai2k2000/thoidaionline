@@ -19,6 +19,7 @@ export default function JournalismMetadataEditor({ journalism, taskId, workKinds
   const initial = useMemo(() => ({ workKindId: journalism.work_kind.id, plannedPublicationAt: journalism.planned_publication_at ?? "", location: journalism.location ?? "", editorialNotes: journalism.editorial_notes ?? "" }), [journalism]);
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => setForm(initial), [initial]);
   const lockedPlanned = journalism.publication_status === "published" || journalism.publication_status === "withdrawn";
@@ -26,6 +27,7 @@ export default function JournalismMetadataEditor({ journalism, taskId, workKinds
 
   const open = () => {
     setErrors({});
+    setSaved(false);
     setForm(initial);
     dialogRef.current?.showModal();
     requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>("input, select, textarea, button")?.focus());
@@ -49,8 +51,12 @@ export default function JournalismMetadataEditor({ journalism, taskId, workKinds
         throw new Error(message);
       }
       notify("success", "Đã cập nhật thông tin nghiệp vụ báo chí.");
-      dialogRef.current?.close();
-      router.refresh();
+      setSaved(true);
+      setTimeout(() => {
+        dialogRef.current?.close();
+        router.refresh();
+        setSaved(false);
+      }, 500);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Không thể cập nhật thông tin nghiệp vụ. Vui lòng thử lại.";
       setErrors({ form: message }); notify("error", message);
@@ -68,7 +74,7 @@ export default function JournalismMetadataEditor({ journalism, taskId, workKinds
         <label className="grid gap-1 text-sm font-semibold">Địa điểm<input value={form.location} maxLength={500} onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} aria-invalid={Boolean(errors.location)} aria-describedby={errors.location ? "metadata-location-error" : undefined} className="rounded-lg border px-3 py-2.5 font-normal" />{errors.location ? <span id="metadata-location-error" role="alert" className="font-normal text-red-700">Tối đa 500 ký tự.</span> : null}</label>
         <label className="grid gap-1 text-sm font-semibold">{journalismLabels.editorialNotes}<textarea value={form.editorialNotes} maxLength={10000} rows={5} onChange={(event) => setForm((current) => ({ ...current, editorialNotes: event.target.value }))} aria-invalid={Boolean(errors.editorialNotes)} aria-describedby={errors.editorialNotes ? "metadata-notes-error" : undefined} className="rounded-lg border px-3 py-2.5 font-normal" />{errors.editorialNotes ? <span id="metadata-notes-error" role="alert" className="font-normal text-red-700">Tối đa 10.000 ký tự.</span> : null}</label>
         {errors.form ? <p role="alert" className="text-sm text-red-700">{errors.form}</p> : null}
-        <div className="flex justify-end gap-2"><button type="button" onClick={close} disabled={busy} className="rounded-lg border px-4 py-2 font-semibold">Hủy</button><button type="submit" disabled={busy} aria-busy={busy} className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Đang lưu..." : "Lưu thay đổi"}</button></div>
+        <div className="flex justify-end gap-2"><button type="button" onClick={close} disabled={busy || saved} className="rounded-lg border px-4 py-2 font-semibold">Hủy</button><button type="submit" disabled={busy || saved} aria-busy={busy} className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Đang lưu..." : saved ? "Đã lưu" : "Lưu thay đổi"}</button></div>
       </form>
     </dialog>
   </>;
