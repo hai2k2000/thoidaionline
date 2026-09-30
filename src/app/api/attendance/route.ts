@@ -1,7 +1,8 @@
 import { apiError, apiJson, requireReadActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { FOREIGN_REPORTERS, isForeignReporter } from "@/lib/onlineWorkLanguage.mjs";
+import { isForeignReporter } from "@/lib/onlineWorkLanguage.mjs";
 import { calculateAttendance } from "@/lib/attendanceWorkday";
+import { clampAttendanceEndDate } from "@/lib/attendanceRecentRange.mjs";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -16,8 +17,6 @@ type AttendanceRow = {
   workday?: number;
   staff_users?: { full_name: string } | null;
 };
-
-type ContextRow = { work_date: string; start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; status: string; staff_id?: string; staff_name?: string };
 
 const isValidDate = (value: string) => {
   if (!DATE_PATTERN.test(value)) return false;
@@ -40,6 +39,9 @@ export async function GET(request: Request) {
   const date = params.get("date") ?? "";
   const period = params.get("period") ?? "day";
   const scope = params.get("scope") ?? "personal";
+  const recent = params.get("recent") === "1";
+  const offset = Math.max(0, Number.parseInt(params.get("offset") ?? "0", 10) || 0);
+  const limit = Math.min(31, Math.max(1, Number.parseInt(params.get("limit") ?? "10", 10) || 10));
   if (!isValidDate(date) || !["personal", "organization"].includes(scope) || !["day", "week", "month"].includes(period)) {
     return apiError("invalid_request", 400);
   }
@@ -50,10 +52,12 @@ export async function GET(request: Request) {
   // Organization-wide attendance is deliberately an admin-only scope. The
   // personal scope remains tied to the signed-in actor even for administrators.
   const organizationScope = scope === "organization";
-  const anchor = new Date(`${date}T12:00:00Z`);
-  const monthStart = `${date.slice(0, 7)}-01`;
-  let rangeStart = date;
-  let rangeEnd = date;
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+  const anchorDate = clampAttendanceEndDate(date, today);
+  const anchor = new Date(`${anchorDate}T12:00:00Z`);
+  const monthStart = `${anchorDate.slice(0, 7)}-01`;
+  let rangeStart = anchorDate;
+  let rangeEnd = anchorDate;
   if (period === "week") {
     const day = anchor.getUTCDay();
     const mondayOffset = day === 0 ? -6 : 1 - day;
@@ -68,6 +72,19 @@ export async function GET(request: Request) {
     const end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0, 12));
     rangeEnd = end.toISOString().slice(0, 10);
   }
+  rangeEnd = clampAttendanceEndDate(rangeEnd, today);
+  if (rangeStart > rangeEnd) rangeStart = rangeEnd;
+  const summaryRangeStart = rangeStart;
+  const summaryRangeEnd = rangeEnd;
+  if (recent) {
+    const requestedEnd = new Date(`${anchorDate}T12:00:00Z`);
+    requestedEnd.setUTCDate(requestedEnd.getUTCDate() - offset);
+    const end = clampAttendanceEndDate(requestedEnd.toISOString().slice(0, 10), today);
+    const start = new Date(`${end}T12:00:00Z`);
+    start.setUTCDate(start.getUTCDate() - (limit - 1));
+    rangeStart = start.toISOString().slice(0, 10);
+    rangeEnd = end;
+  }
   let dayQuery = serverSupabase
     .from("attendance_logs")
     .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name)")
@@ -78,8 +95,8 @@ export async function GET(request: Request) {
   let monthQuery = serverSupabase
     .from("attendance_logs")
     .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name)")
-    .gte("work_date", period === "day" ? monthStart : rangeStart)
-    .lte("work_date", period === "day" ? date : rangeEnd)
+    .gte("work_date", period === "day" ? monthStart : summaryRangeStart)
+    .lte("work_date", period === "day" ? anchorDate : summaryRangeEnd)
     .order("work_date", { ascending: true })
     .limit(10000);
 
@@ -94,8 +111,8 @@ export async function GET(request: Request) {
   }
 
   if (dayResult.error || monthResult.error) return apiError("operation_failed", 500);
-  const contextStart = period === "day" ? monthStart : rangeStart;
-  const contextEnd = period === "day" ? date : rangeEnd;
+  const contextStart = period === "day" ? monthStart : summaryRangeStart;
+  const contextEnd = period === "day" ? anchorDate : summaryRangeEnd;
   const leaveQuery = serverSupabase.from("leave_requests")
     .select("start_date,end_date,start_period,end_period,leave_type,status,requester:staff_users!leave_requests_requester_id_fkey(id,full_name)")
     .eq("status", "approved").lte("start_date", contextEnd).gte("end_date", contextStart).limit(500);
@@ -110,9 +127,12 @@ export async function GET(request: Request) {
   if (leaveResult.error || onlineResult.error) return apiError("operation_failed", 500);
   const leaves = (leaveResult.data ?? []) as unknown as Array<{ start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; requester: { id: string; full_name: string } | null }>;
   const online = (onlineResult.data ?? []) as unknown as Array<{ work_date: string; staff: { id: string; full_name: string } | null }>;
-  const foreignStaff = organizationScope
-    ? (await serverSupabase.from("staff_users").select("id,full_name,username").eq("active", true).in("username", Object.keys(FOREIGN_REPORTERS))).data ?? []
-    : [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }];
+  const staffResult = organizationScope
+    ? await serverSupabase.from("staff_users").select("id,full_name,username").eq("active", true).order("full_name")
+    : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
+  if (staffResult.error) return apiError("operation_failed", 500);
+  const staffRows = staffResult.data ?? [];
+  const foreignStaff = staffRows.filter((staff) => isForeignReporter(staff.username));
   const foreignById = new Map(foreignStaff.filter((staff) => isForeignReporter(staff.username)).map((staff) => [staff.id, staff]));
   // A blank weekend schedule means the whole foreign-language team works online by default.
   for (const staff of foreignById.values()) {
@@ -186,18 +206,26 @@ export async function GET(request: Request) {
       result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name }, workday: 1 });
       existing.add(key);
     }
+    if (recent) {
+      for (const staff of staffRows) {
+        for (const workDate of dates(from, to)) {
+          const key = `${staff.id}:${workDate}`;
+          if (existing.has(key)) continue;
+          result.push({ id: `absent-${staff.id}-${workDate}`, user_id: staff.id, work_date: workDate, check_in: null, check_out: null, note: "Vắng", status: "absent", staff_users: { full_name: staff.full_name }, workday: 0 });
+          existing.add(key);
+        }
+      }
+    }
     return result.sort((a, b) => {
+      const byDate = b.work_date.localeCompare(a.work_date);
+      if (byDate) return byDate;
       const aLastPunch = a.check_out ?? a.check_in;
       const bLastPunch = b.check_out ?? b.check_in;
       if (aLastPunch && bLastPunch) {
-        const byDate = b.work_date.localeCompare(a.work_date);
-        if (byDate) return byDate;
         const byLatestPunch = bLastPunch.localeCompare(aLastPunch);
         if (byLatestPunch) return byLatestPunch;
       } else if (aLastPunch) return -1;
       else if (bLastPunch) return 1;
-      const byDate = b.work_date.localeCompare(a.work_date);
-      if (byDate) return byDate;
       return (a.staff_users?.full_name ?? "").localeCompare(b.staff_users?.full_name ?? "", "vi");
     });
   };
@@ -205,7 +233,7 @@ export async function GET(request: Request) {
     scope: organizationScope ? "organization" : "personal",
     demo: false,
     rows: contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd),
-    monthlyRows: contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : rangeStart, period === "day" ? date : rangeEnd),
+    monthlyRows: contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : summaryRangeStart, period === "day" ? anchorDate : summaryRangeEnd),
     message: `Đã tải ${(dayResult.data ?? []).length} bản ghi theo ${period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}.`,
   });
 }

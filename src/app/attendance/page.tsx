@@ -60,6 +60,7 @@ const leaveTypeLabel: Record<string, string> = {
 };
 
 const toDateInput = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const today = toDateInput();
 
 const leaveDurationDays = (startDate: string, endDate: string) => {
   if (!startDate || !endDate || endDate < startDate) return 0;
@@ -102,6 +103,9 @@ export default function AttendancePage() {
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
   const [selectedDate, setSelectedDate] = useState(toDateInput());
   const [period, setPeriod] = useState<"day" | "week" | "month">("day");
+  const [recentOffset, setRecentOffset] = useState(0);
+  const [recentRows, setRecentRows] = useState<AttendanceRow[]>([]);
+  const [recentLoading, setRecentLoading] = useState(false);
   const [message, setMessage] = useState("Đang tải dữ liệu chấm công...");
   const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([]);
   const [syncBusy, setSyncBusy] = useState(false);
@@ -169,7 +173,8 @@ export default function AttendancePage() {
 
   const loadAttendance = useCallback(async () => {
     const scope = isOrganizationView ? "organization" : "personal";
-    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&period=${period}&scope=${scope}`, {
+    const recentMode = period === "day";
+    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&period=${period}&scope=${scope}&recent=${recentMode ? "1" : "0"}&offset=${recentOffset}&limit=10`, {
       cache: "no-store",
     });
     const payload = await response.json().catch(() => null) as {
@@ -179,15 +184,23 @@ export default function AttendancePage() {
     } | null;
     if (!response.ok || !payload) {
       setRows([]);
+      setRecentRows([]);
       setMonthlyRows([]);
       setMessage("⚠️ Chưa tải được dữ liệu chấm công.");
       return;
     }
     const dayList = payload.rows ?? [];
     setRows(dayList);
+    setRecentRows((current) => !recentMode || recentOffset === 0 ? dayList : [...current, ...dayList.filter((row) => !current.some((item) => item.id === row.id))]);
     setMonthlyRows(payload.monthlyRows ?? []);
     setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi.`}`);
-  }, [isOrganizationView, period, selectedDate]);
+  }, [isOrganizationView, period, recentOffset, selectedDate]);
+
+  const loadOlderAttendance = async () => {
+    setRecentLoading(true);
+    setRecentOffset((value) => value + 10);
+    setRecentLoading(false);
+  };
 
   const loadLeaveRequests = useCallback(async () => {
     const range = selectedRange(selectedDate, period);
@@ -250,6 +263,11 @@ export default function AttendancePage() {
     }, 5000);
     return () => window.clearInterval(interval);
   }, [user, isOrganizationView, loadAttendance, loadSyncStatus]);
+
+  useEffect(() => {
+    setRecentOffset(0);
+    setRecentRows([]);
+  }, [selectedDate, period, isOrganizationView]);
 
   useEffect(() => {
     if (!selectedSummaryEmployee) return;
@@ -376,7 +394,8 @@ export default function AttendancePage() {
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                max={today}
+                onChange={(e) => setSelectedDate(e.target.value > today ? today : e.target.value)}
                 className="mt-1 w-full rounded border px-3 py-2"
               />
             </label>
@@ -414,7 +433,7 @@ export default function AttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {(recentRows.length ? recentRows : rows).map((r) => (
                 <tr key={r.id} className="border-t">
                   <td className="px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{formatAttendanceDate(r.work_date)}</td>
@@ -425,11 +444,16 @@ export default function AttendancePage() {
                   <td className="min-w-64 px-3 py-2">{r.note ?? ""}</td>
                 </tr>
               ))}
-              {rows.length === 0 ? (
+              {(recentRows.length ? recentRows : rows).length === 0 ? (
                 <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={8}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
               ) : null}
             </tbody>
           </table>
+          </div>
+          <div className="mt-3 flex justify-center">
+            {period === "day" ? <button type="button" onClick={() => void loadOlderAttendance()} disabled={recentLoading} className="min-h-11 rounded border px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              {recentLoading ? "Đang tải..." : "Tải thêm 10 ngày cũ hơn"}
+            </button> : null}
           </div>
         </section>
 
