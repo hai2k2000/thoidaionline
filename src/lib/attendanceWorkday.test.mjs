@@ -81,8 +81,27 @@ test("Wise On 39 sync note alone is removed", () => {
   assert.equal(calculate("08:00", "17:00", { existingNote: "Đồng bộ từ Wise On 39" }).note, "");
 });
 
+test("realtime Wise Eye On 39 sync note is removed", () => {
+  assert.equal(calculate("08:00", "17:00", { existingNote: "Đồng bộ realtime từ Wise Eye On 39" }).note, "");
+});
+
 test("Wise On 39 sync note matching is case and whitespace tolerant", () => {
   assert.equal(calculate("08:00", "17:00", { existingNote: "  đồng   bộ từ WiseOn39  " }).note, "");
+});
+
+test("all Wise Eye On 39 sync note variants are removed", () => {
+  for (const note of [
+    "Đồng bộ từ Wise Eye On 39",
+    "Đồng bộ realtime từ Wise Eye On 39",
+    "đồng   bộ realtime từ WiseOn39",
+  ]) {
+    assert.equal(calculate("08:00", "17:00", { existingNote: note }).note, "");
+  }
+});
+
+test("approved business trip counts a full day and a half day", () => {
+  assert.equal(calculate(null, null, { exceptional: true, exceptionalWorkday: 1, extraNotes: ["Công tác"] }).workday, 1);
+  assert.equal(calculate(null, null, { exceptional: true, exceptionalWorkday: 0.5, extraNotes: ["Công tác theo buổi"] }).workday, 0.5);
 });
 
 test("Wise On 39 sync note is removed while late note remains", () => {
