@@ -1,0 +1,2210 @@
+{
+  "schema_version": 1,
+  "branch": "ops/migration-history-reconciliation-20260930",
+  "base_commit": "bb8d5a6be3445466e922ff0d13641b644e6bc41f",
+  "production_ledger": {
+    "row_count": 88,
+    "duplicate_versions": [],
+    "malformed_versions": [],
+    "whitespace_anomalies": [],
+    "rows": [
+      {
+        "order": 1,
+        "version": "20260318101500",
+        "name": "baseline",
+        "statement_count": 71,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630333138313031353030"
+      },
+      {
+        "order": 2,
+        "version": "20260318132500",
+        "name": "add_username_to_staff_users",
+        "statement_count": 3,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630333138313332353030"
+      },
+      {
+        "order": 3,
+        "version": "20260320114500",
+        "name": "hr_assets_documents_performance_mvp",
+        "statement_count": 66,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630333230313134353030"
+      },
+      {
+        "order": 4,
+        "version": "20260320141500",
+        "name": "employee_profile_file",
+        "statement_count": 1,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630333230313431353030"
+      },
+      {
+        "order": 5,
+        "version": "20260813110000",
+        "name": "task_evaluation_checkpoints",
+        "statement_count": 19,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133313130303030"
+      },
+      {
+        "order": 6,
+        "version": "20260813155000",
+        "name": "allow_tbt_task_evaluation",
+        "statement_count": 5,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133313535303030"
+      },
+      {
+        "order": 7,
+        "version": "20260813172000",
+        "name": "task_plans_recipients_self_claim",
+        "statement_count": 16,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133313732303030"
+      },
+      {
+        "order": 8,
+        "version": "20260813184000",
+        "name": "secure_task_rpc_execution",
+        "statement_count": 14,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133313834303030"
+      },
+      {
+        "order": 9,
+        "version": "20260813210000",
+        "name": "password_reset_security",
+        "statement_count": 19,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133323130303030"
+      },
+      {
+        "order": 10,
+        "version": "20260813220000",
+        "name": "task_evaluation_total_score",
+        "statement_count": 5,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133323230303030"
+      },
+      {
+        "order": 11,
+        "version": "20260813230000",
+        "name": "admin_role_user_policy",
+        "statement_count": 5,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133323330303030"
+      },
+      {
+        "order": 12,
+        "version": "20260813233000",
+        "name": "tbt_evaluation_guard",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133323333303030"
+      },
+      {
+        "order": 13,
+        "version": "20260813234500",
+        "name": "creator_evaluation_guard",
+        "statement_count": 5,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383133323334353030"
+      },
+      {
+        "order": 14,
+        "version": "20260814070000",
+        "name": "job_titles",
+        "statement_count": 18,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134303730303030"
+      },
+      {
+        "order": 15,
+        "version": "20260814090000",
+        "name": "task_priority_neutral_default",
+        "statement_count": 4,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134303930303030"
+      },
+      {
+        "order": 16,
+        "version": "20260814102000",
+        "name": "bulk_task_plans",
+        "statement_count": 16,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134313032303030"
+      },
+      {
+        "order": 17,
+        "version": "20260814113000",
+        "name": "localize_role_names",
+        "statement_count": 11,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134313133303030"
+      },
+      {
+        "order": 18,
+        "version": "20260814130000",
+        "name": "staff_list_order",
+        "statement_count": 4,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134313330303030"
+      },
+      {
+        "order": 19,
+        "version": "20260814160000",
+        "name": "employee_password_reset_admin",
+        "statement_count": 14,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134313630303030"
+      },
+      {
+        "order": 20,
+        "version": "20260814170000",
+        "name": "employee_password_reset_hardening",
+        "statement_count": 10,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134313730303030"
+      },
+      {
+        "order": 21,
+        "version": "20260814180000",
+        "name": "phase0_semantic_bridge",
+        "statement_count": 1,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134313830303030"
+      },
+      {
+        "order": 22,
+        "version": "20260814190000",
+        "name": "phase1_authorization_facade",
+        "statement_count": 44,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383134313930303030"
+      },
+      {
+        "order": 23,
+        "version": "20260817050000",
+        "name": "phase3_additive_task_schema",
+        "statement_count": 55,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137303530303030"
+      },
+      {
+        "order": 24,
+        "version": "20260817060000",
+        "name": "phase4_personal_task_workflow",
+        "statement_count": 23,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137303630303030"
+      },
+      {
+        "order": 25,
+        "version": "20260817070000",
+        "name": "phase5_task_detail_workflow",
+        "statement_count": 25,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137303730303030"
+      },
+      {
+        "order": 26,
+        "version": "20260817080000",
+        "name": "phase6_assign_watcher_recurrence",
+        "statement_count": 12,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137303830303030"
+      },
+      {
+        "order": 27,
+        "version": "20260817090000",
+        "name": "phase7_shared_rubric_evaluation",
+        "statement_count": 22,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137303930303030"
+      },
+      {
+        "order": 28,
+        "version": "20260817100000",
+        "name": "phase8_rls_hardening",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137313030303030"
+      },
+      {
+        "order": 29,
+        "version": "20260817110000",
+        "name": "department_manager_prerequisite",
+        "statement_count": 4,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137313130303030"
+      },
+      {
+        "order": 30,
+        "version": "20260817120000",
+        "name": "assignee_manager_watchers",
+        "statement_count": 6,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137313230303030"
+      },
+      {
+        "order": 31,
+        "version": "20260817165000",
+        "name": "task_qualitative_evaluations",
+        "statement_count": 16,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137313635303030"
+      },
+      {
+        "order": 32,
+        "version": "20260817171500",
+        "name": "personnel_evaluation_scope",
+        "statement_count": 12,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137313731353030"
+      },
+      {
+        "order": 33,
+        "version": "20260817190000",
+        "name": "admin_set_staff_password",
+        "statement_count": 3,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383137313930303030"
+      },
+      {
+        "order": 34,
+        "version": "20260818120000",
+        "name": "leader_task_qualitative_evaluation",
+        "statement_count": 11,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383138313230303030"
+      },
+      {
+        "order": 35,
+        "version": "20260818123000",
+        "name": "monthly_evaluation_auto_open",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383138313233303030"
+      },
+      {
+        "order": 36,
+        "version": "20260818130000",
+        "name": "personnel_task_popup",
+        "statement_count": 12,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383138313330303030"
+      },
+      {
+        "order": 37,
+        "version": "20260818133000",
+        "name": "cycle_history_and_month_dedup",
+        "statement_count": 12,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383138313333303030"
+      },
+      {
+        "order": 38,
+        "version": "20260819103000",
+        "name": "canonical_job_titles",
+        "statement_count": 1,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383139313033303030"
+      },
+      {
+        "order": 39,
+        "version": "20260819123000",
+        "name": "role_lifecycle_and_tbt_direct",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383139313233303030"
+      },
+      {
+        "order": 40,
+        "version": "20260819150000",
+        "name": "fix_role_display_name_encoding",
+        "statement_count": 1,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383139313530303030"
+      },
+      {
+        "order": 41,
+        "version": "20260819152000",
+        "name": "tbt_direct_publish",
+        "statement_count": 5,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383139313532303030"
+      },
+      {
+        "order": 42,
+        "version": "20260820090000",
+        "name": "task_assignment_reviewer_daily_due_time",
+        "statement_count": 14,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383230303930303030"
+      },
+      {
+        "order": 43,
+        "version": "20260820133000",
+        "name": "personal_recurrence_admin_task_edit",
+        "statement_count": 17,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383230313333303030"
+      },
+      {
+        "order": 44,
+        "version": "20260820153000",
+        "name": "job_title_department_manager_sync",
+        "statement_count": 13,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383230313533303030"
+      },
+      {
+        "order": 45,
+        "version": "20260820154500",
+        "name": "deputy_editor_tbt_evaluation",
+        "statement_count": 6,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383230313534353030"
+      },
+      {
+        "order": 46,
+        "version": "20260820180000",
+        "name": "task_assignment_leadership_upload",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383230313830303030"
+      },
+      {
+        "order": 47,
+        "version": "20260820192000",
+        "name": "task_priority_edit",
+        "statement_count": 6,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383230313932303030"
+      },
+      {
+        "order": 48,
+        "version": "20260821100000",
+        "name": "atomic_task_assignment_priority",
+        "statement_count": 11,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313030303030"
+      },
+      {
+        "order": 49,
+        "version": "20260821130000",
+        "name": "user_notification_reads",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313330303030"
+      },
+      {
+        "order": 50,
+        "version": "20260821140000",
+        "name": "weekly_evaluation_cycles",
+        "statement_count": 14,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313430303030"
+      },
+      {
+        "order": 51,
+        "version": "20260821150000",
+        "name": "monthly_duty_tasks",
+        "statement_count": 10,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313530303030"
+      },
+      {
+        "order": 52,
+        "version": "20260821160000",
+        "name": "duty_positions",
+        "statement_count": 10,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313630303030"
+      },
+      {
+        "order": 53,
+        "version": "20260821164500",
+        "name": "primary_assignee_completion",
+        "statement_count": 8,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313634353030"
+      },
+      {
+        "order": 54,
+        "version": "20260821170000",
+        "name": "completion_reviewer_roles",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313730303030"
+      },
+      {
+        "order": 55,
+        "version": "20260821180000",
+        "name": "leadership_evaluation_routing",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313830303030"
+      },
+      {
+        "order": 56,
+        "version": "20260821190000",
+        "name": "department_manager_assignment",
+        "statement_count": 4,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383231313930303030"
+      },
+      {
+        "order": 57,
+        "version": "20260822070000",
+        "name": "monthly_duty_roster",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232303730303030"
+      },
+      {
+        "order": 58,
+        "version": "20260822074500",
+        "name": "duty_exclude_general",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232303734353030"
+      },
+      {
+        "order": 59,
+        "version": "20260822080000",
+        "name": "duty_interval_fix",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232303830303030"
+      },
+      {
+        "order": 60,
+        "version": "20260822090000",
+        "name": "duty_deadline_2200",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232303930303030"
+      },
+      {
+        "order": 61,
+        "version": "20260822100000",
+        "name": "duty_step_editors",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313030303030"
+      },
+      {
+        "order": 62,
+        "version": "20260822110000",
+        "name": "online_work_schedule",
+        "statement_count": 13,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313130303030"
+      },
+      {
+        "order": 63,
+        "version": "20260822120000",
+        "name": "restore_thanhhai_general",
+        "statement_count": 5,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313230303030"
+      },
+      {
+        "order": 64,
+        "version": "20260822130000",
+        "name": "duty_vietnamese_reporters_only",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313330303030"
+      },
+      {
+        "order": 65,
+        "version": "20260822140000",
+        "name": "online_work_foreign_reporters_only",
+        "statement_count": 13,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313430303030"
+      },
+      {
+        "order": 66,
+        "version": "20260822150000",
+        "name": "reporter_language_job_titles",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313530303030"
+      },
+      {
+        "order": 67,
+        "version": "20260822160000",
+        "name": "online_work_multiple_staff",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313630303030"
+      },
+      {
+        "order": 68,
+        "version": "20260822170000",
+        "name": "duty_strict_vietnamese_reporters",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313730303030"
+      },
+      {
+        "order": 69,
+        "version": "20260822180000",
+        "name": "fix_staff_password_trigger_search_path",
+        "statement_count": 4,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313830303030"
+      },
+      {
+        "order": 70,
+        "version": "20260822190000",
+        "name": "duty_partial_days",
+        "statement_count": 9,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232313930303030"
+      },
+      {
+        "order": 71,
+        "version": "20260822200000",
+        "name": "account_personalization",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232323030303030"
+      },
+      {
+        "order": 72,
+        "version": "20260822200100",
+        "name": "exempt_duty_from_manager_watcher",
+        "statement_count": 4,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232323030313030"
+      },
+      {
+        "order": 73,
+        "version": "20260822210000",
+        "name": "reactivate_tri_su_role",
+        "statement_count": 3,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232323130303030"
+      },
+      {
+        "order": 74,
+        "version": "20260822220000",
+        "name": "move_thanhhai_to_general_staff_role",
+        "statement_count": 4,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383232323230303030"
+      },
+      {
+        "order": 75,
+        "version": "20260823170000",
+        "name": "duty_reviews",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383233313730303030"
+      },
+      {
+        "order": 76,
+        "version": "20260825180000",
+        "name": "task_completion_scoring",
+        "statement_count": 7,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383235313830303030"
+      },
+      {
+        "order": 77,
+        "version": "20260825180500",
+        "name": "tbt_assignment_db_policy",
+        "statement_count": 6,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383235313830353030"
+      },
+      {
+        "order": 78,
+        "version": "20260825180600",
+        "name": "tbt_assignment_scope",
+        "statement_count": 6,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383235313830363030"
+      },
+      {
+        "order": 79,
+        "version": "20260825181000",
+        "name": "editorial_board_manager",
+        "statement_count": 3,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383235313831303030"
+      },
+      {
+        "order": 80,
+        "version": "20260826090000",
+        "name": "editable_requirement_score",
+        "statement_count": 6,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383236303930303030"
+      },
+      {
+        "order": 81,
+        "version": "20260826110000",
+        "name": "work_schedules",
+        "statement_count": 4,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383236313130303030"
+      },
+      {
+        "order": 82,
+        "version": "20260826120000",
+        "name": "self_claim_manager_approval",
+        "statement_count": 2,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383236313230303030"
+      },
+      {
+        "order": 83,
+        "version": "20260826170000",
+        "name": "task_flow_hardening",
+        "statement_count": 10,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383236313730303030"
+      },
+      {
+        "order": 84,
+        "version": "20260826180000",
+        "name": "assigned_task_acceptance",
+        "statement_count": 6,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383236313830303030"
+      },
+      {
+        "order": 85,
+        "version": "20260826180100",
+        "name": "fix_completion_audit",
+        "statement_count": 3,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383236313830313030"
+      },
+      {
+        "order": 86,
+        "version": "20260826190000",
+        "name": "direct_assignment_in_progress",
+        "statement_count": 5,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630383236313930303030"
+      },
+      {
+        "order": 87,
+        "version": "20260927100000",
+        "name": "task_edit_cancel_permissions",
+        "statement_count": 1,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630393237313030303030"
+      },
+      {
+        "order": 88,
+        "version": "20260929110000",
+        "name": "creator_only_task_edit_cancel",
+        "statement_count": 1,
+        "version_length": 14,
+        "version_bytes": 14,
+        "version_hex": "3230323630393239313130303030"
+      }
+    ]
+  },
+  "local_migrations": {
+    "file_count": 147,
+    "rows": [
+      {
+        "version": "20260318101500",
+        "filename": "20260318101500_baseline.sql",
+        "sha256": "04b6b7d0c7370f132f3bbed2767eb83aeef28de7c529e7db0a179d269abb2485",
+        "introducing_commit": "d4effb7274420c417658d8fc5bd460733d00a120",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260318132500",
+        "filename": "20260318132500_add_username_to_staff_users.sql",
+        "sha256": "461563aeb23acb62018c25abff5796828e94f01aa1311679d017e5a67bc725c6",
+        "introducing_commit": "d4effb7274420c417658d8fc5bd460733d00a120",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260320114500",
+        "filename": "20260320114500_hr_assets_documents_performance_mvp.sql",
+        "sha256": "474c829877a47753c87148a43ead06571ff3428d0f84f02cf1facdfb7b8b19e2",
+        "introducing_commit": "3f0c384ea558f631ba10455243923d7f7e46c717",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260320141500",
+        "filename": "20260320141500_employee_profile_file.sql",
+        "sha256": "c89fcaa6a376b1a4e31d7dba56dfb03ed1d5609a66c4c292c9ede8337e73ce27",
+        "introducing_commit": "d4effb7274420c417658d8fc5bd460733d00a120",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813110000",
+        "filename": "20260813110000_task_evaluation_checkpoints.sql",
+        "sha256": "8dc597934a90f01e43b0ff68723daf50b0e361e8f8e362f3bd4ed986384c24f7",
+        "introducing_commit": "56d4c22e99ba848c3acfba482a4a9f42553034a8",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813155000",
+        "filename": "20260813155000_allow_tbt_task_evaluation.sql",
+        "sha256": "e64047bbde866727e42dc20d58bd64d9e4950a02c5d2e99d003137fc4ec7c5c0",
+        "introducing_commit": "0eabdb8cad382c64b649244ff85d0a821d75969e",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813172000",
+        "filename": "20260813172000_task_plans_recipients_self_claim.sql",
+        "sha256": "dfc8eee060abf1c9b1f7322521152ce123f304a2095493f6d70e26fe17785a3f",
+        "introducing_commit": "3f2555cbf8b47eee1c3f2b0e19b6e98a18ec1a97",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813184000",
+        "filename": "20260813184000_secure_task_rpc_execution.sql",
+        "sha256": "6a412f010049c120d06167e6f1622e0923a73401f50dc234f4f1ae20b4353879",
+        "introducing_commit": "3f2555cbf8b47eee1c3f2b0e19b6e98a18ec1a97",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813210000",
+        "filename": "20260813210000_password_reset_security.sql",
+        "sha256": "a45bd6940692bb554beb9275717e9cedabb4ca5d1be8ea572d35c2c775084a58",
+        "introducing_commit": "d9c3bf81f44165de780e4fdfb18676ff17c6f197",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813220000",
+        "filename": "20260813220000_task_evaluation_total_score.sql",
+        "sha256": "0c605442e6b40f3114f931791b1620cd4f8c486b9a0557171b0fe83f04f36105",
+        "introducing_commit": "3f2555cbf8b47eee1c3f2b0e19b6e98a18ec1a97",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813230000",
+        "filename": "20260813230000_admin_role_user_policy.sql",
+        "sha256": "465b99f9333c52c55fd4ea0821fb0e1e151ff2e8f855610dbf1061124ff397e6",
+        "introducing_commit": "3f2555cbf8b47eee1c3f2b0e19b6e98a18ec1a97",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813233000",
+        "filename": "20260813233000_tbt_evaluation_guard.sql",
+        "sha256": "064a215f15aa9855ec2568796adf9ceefb992d842d0b809ad341690219688978",
+        "introducing_commit": "3f2555cbf8b47eee1c3f2b0e19b6e98a18ec1a97",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260813234500",
+        "filename": "20260813234500_creator_evaluation_guard.sql",
+        "sha256": "186b20cae2f1b940bb5ebabe3ef622daac852d15952b0f3903d735a1946f8d8b",
+        "introducing_commit": "3f2555cbf8b47eee1c3f2b0e19b6e98a18ec1a97",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814070000",
+        "filename": "20260814070000_job_titles.sql",
+        "sha256": "74a1870a3cdb21d391013ba6de89fa76e5896da15762d69813a2cc8fce75d191",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814090000",
+        "filename": "20260814090000_task_priority_neutral_default.sql",
+        "sha256": "f2d9e4e5ba2a627d70fcf45751e9a05bd8077e4eecc8fe5dab094c8624e293a7",
+        "introducing_commit": "3f2555cbf8b47eee1c3f2b0e19b6e98a18ec1a97",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814102000",
+        "filename": "20260814102000_bulk_task_plans.sql",
+        "sha256": "b3ae48c9ede223f92823827a813fa6409a90c797d5b37eea45683b3f4b1a5931",
+        "introducing_commit": "3f2555cbf8b47eee1c3f2b0e19b6e98a18ec1a97",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814113000",
+        "filename": "20260814113000_localize_role_names.sql",
+        "sha256": "b0c90ccf46a75dca2d6ace9d3d56cd730500853996d44942ceb5e347a6be03c6",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814130000",
+        "filename": "20260814130000_staff_list_order.sql",
+        "sha256": "bf29b0e9f5912dfc5456c12debcd310cfb988e12df348ef046d4064bc3980ca7",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814160000",
+        "filename": "20260814160000_employee_password_reset_admin.sql",
+        "sha256": "21198e8092da7a557fc9351aaa5fd8cf02fa7217acabc543561f824eb9a28dbb",
+        "introducing_commit": "3077197d6a823d2dc06e186e3056aadb3afa4f16",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814170000",
+        "filename": "20260814170000_employee_password_reset_hardening.sql",
+        "sha256": "5583bfa2cf1af13f88e11fce3a58d6afd2c87172f8ce1d837c9c4d649837c533",
+        "introducing_commit": "a6fc918c34af85a20186133e359c8a3f31aaae33",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814180000",
+        "filename": "20260814180000_phase0_semantic_bridge.sql",
+        "sha256": "39ff1577ae716a4ed72fd06ab4c79827637b22a3bf42bdedc7c750b878225a10",
+        "introducing_commit": "2da45519858c508900f27bfd9a86922c64370a7e",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260814190000",
+        "filename": "20260814190000_phase1_authorization_facade.sql",
+        "sha256": "f5823511db0e2d100afc7b78e4fd234619a0e6dc3557674e38ac2bd7fd6250b8",
+        "introducing_commit": "fbf2d33f02de6de5aec935b956bd7cf5ea948cc7",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817050000",
+        "filename": "20260817050000_phase3_additive_task_schema.sql",
+        "sha256": "ab397870dd4b6cc94e64874ad8a25a8fd2e52d67554ffd153cc3615162862dbe",
+        "introducing_commit": "f21050961905eac1d419eaf79bc9525c4f80ffbe",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817060000",
+        "filename": "20260817060000_phase4_personal_task_workflow.sql",
+        "sha256": "971128ece7500be96a93dcc4107b40026e97c9034948667469a2792d92951246",
+        "introducing_commit": "ef936dda900e5b5202bfd9f4ad565e0b901ecba5",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817070000",
+        "filename": "20260817070000_phase5_task_detail_workflow.sql",
+        "sha256": "ac388ce8be23c66be1eb8eaad83d7da93d2cdbf8762a3e8ccb844ad668faa2df",
+        "introducing_commit": "eab9954989c5e69c2bc8be0ed05dedbc1301e496",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817080000",
+        "filename": "20260817080000_phase6_assign_watcher_recurrence.sql",
+        "sha256": "3dea291c6d2d7a92ac820879ac4f09f7a25460cd64c4f1c53d2d47687eeb8ee7",
+        "introducing_commit": "cf91810f9a7e08cc436e50a5a6dc765a480cbe62",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817090000",
+        "filename": "20260817090000_phase7_shared_rubric_evaluation.sql",
+        "sha256": "1cfc2a8bddee996f626ca3798d4f59b1ecd7aa70896c59c6e6f163890274b843",
+        "introducing_commit": "ab03b9cac09a713059b3ae8f59bbf655a8c12546",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817100000",
+        "filename": "20260817100000_phase8_rls_hardening.sql",
+        "sha256": "bcd1e2a2ca7d138c4b81bc82667218e09d522c857b78cc726245566216f61486",
+        "introducing_commit": "f9facff523547c495eb08af693f77381197f5018",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817110000",
+        "filename": "20260817110000_department_manager_prerequisite.sql",
+        "sha256": "0001d8476c717a392b44c206bc9a8790bc2e717432dcd2dd782bda7152cffad7",
+        "introducing_commit": "a802c5f1d8cf9bc40a49645fe1194cad1e5e3068",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817120000",
+        "filename": "20260817120000_assignee_manager_watchers.sql",
+        "sha256": "76791d2166fccd1db73cf403cd080421b1df4267a27a63ff379bf745f5b1fb2c",
+        "introducing_commit": "2c9fe7a895d5b06e791644dfb4a252553e862a22",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817165000",
+        "filename": "20260817165000_task_qualitative_evaluations.sql",
+        "sha256": "33f83fbaf2d603f33defe8a189871237ebb07285d3be97edd0e320ff122a127f",
+        "introducing_commit": "96fd1ec542515f427effbef2601f8876a01014db",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817171500",
+        "filename": "20260817171500_personnel_evaluation_scope.sql",
+        "sha256": "a42abe9f07ef5cdf2f4f1713b65f2b0e4147c4a1c0067be0fe5d54b771b0d6c3",
+        "introducing_commit": "c2255e16abc24fc90c4761a90ec5e6e9a176789e",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260817190000",
+        "filename": "20260817190000_admin_set_staff_password.sql",
+        "sha256": "6c123837ec5c10614f139002f3945fe0e289b536aa49ff7785cd2c38e93ae5f7",
+        "introducing_commit": "88b6fda43777ed9680b28ac1c82f363ed9ed5327",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260818120000",
+        "filename": "20260818120000_leader_task_qualitative_evaluation.sql",
+        "sha256": "90a9c4eaf5229880f959d9e6e8df0c6e43cb404402df59f205e03ff2be8b7b94",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260818123000",
+        "filename": "20260818123000_monthly_evaluation_auto_open.sql",
+        "sha256": "e4e1e4d35e869240b790f7df42b883a5990a0d4b3f7cbe42f398f42156d7dda6",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260818130000",
+        "filename": "20260818130000_personnel_task_popup.sql",
+        "sha256": "892013ee66e2d09088263ff9e04c022f9f8d9e6024c60ee430ca60db80f73c19",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260818133000",
+        "filename": "20260818133000_cycle_history_and_month_dedup.sql",
+        "sha256": "393f4a305b1a913b5ad206e2079ca2943ae60b372f93c8e07f0d6ae05b02cb0a",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260819103000",
+        "filename": "20260819103000_canonical_job_titles.sql",
+        "sha256": "1cd6da9c70a3bb19556a003c47a55f072281fbbe544cfecf79239a623a741b5d",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260819123000",
+        "filename": "20260819123000_role_lifecycle_and_tbt_direct.sql",
+        "sha256": "cbe433abe700e702ca92cfc48f48795ccc0975c789200010ecda6cd49668718d",
+        "introducing_commit": "e4d7350fd9c4fa12395fe817daf418059919ab43",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260819150000",
+        "filename": "20260819150000_fix_role_display_name_encoding.sql",
+        "sha256": "26c4f95c1b43b70794cd03295979be95760ad12097007db0335e106fcdcaf8dd",
+        "introducing_commit": "0c53701865fb7ed2fcb455ffc4e6d87f2c1f93af",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260819152000",
+        "filename": "20260819152000_tbt_direct_publish.sql",
+        "sha256": "de03b549a0cf11961d2322dfddbbae6acb7278e891f8292b18f6aff14df07111",
+        "introducing_commit": "b1b983d4886e0b07a33e1f920b1fc6aed0cea04b",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260820090000",
+        "filename": "20260820090000_task_assignment_reviewer_daily_due_time.sql",
+        "sha256": "c3f9f35df22ea382e768dc1aa8d02dcd5e56ffde917dd918b4ccc70f728a9b3f",
+        "introducing_commit": "b8a7e68b4e61fec501673c401899d9629a0f8f27",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260820133000",
+        "filename": "20260820133000_personal_recurrence_admin_task_edit.sql",
+        "sha256": "fd63a357d881db3c86e7cf0ba923a5ddca897271067b92f30f6425de997c0b26",
+        "introducing_commit": "2aa07c962afe1c214e091dfc4dcdd544683146b5",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260820153000",
+        "filename": "20260820153000_job_title_department_manager_sync.sql",
+        "sha256": "c15493b6258e91e21c7180cf11a4bbb4e4597f4ca52c9c1ec508d4145c12e6f7",
+        "introducing_commit": "2a7220f0638904aea84efd1517558540d185e148",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260820154500",
+        "filename": "20260820154500_deputy_editor_tbt_evaluation.sql",
+        "sha256": "d281aa69dc30e7cb7c60a6ca682b28909cd84ca046d865c46676c9c3c05d120e",
+        "introducing_commit": "ff5b060e9782abcf3ff7cc0a5b42ff84780cfcac",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260820180000",
+        "filename": "20260820180000_task_assignment_leadership_upload.sql",
+        "sha256": "6e9712bf485503d806183846b0b223e61500d34fe527b148efe9c317aae103f9",
+        "introducing_commit": "e24200f2e403ca00a3243b231d650d5c607c81b2",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260820192000",
+        "filename": "20260820192000_task_priority_edit.sql",
+        "sha256": "9f1e09296ec3f61b9883e1b4e4255d0cab0e0e2ff93ca0f7d5d4939ff1d69d1f",
+        "introducing_commit": "b5a7dea3cc29675c3ff767a88360fdd2646dca17",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821100000",
+        "filename": "20260821100000_atomic_task_assignment_priority.sql",
+        "sha256": "cd7853b9248743090bbac4be2aa14c32e5a9e4021d18a8beeeb5515bf3035c3e",
+        "introducing_commit": "b5a7dea3cc29675c3ff767a88360fdd2646dca17",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821130000",
+        "filename": "20260821130000_user_notification_reads.sql",
+        "sha256": "cd69cfe383961261333b3a1d0bbe46aa8cefa7adb629780f7d5d104e1e24771c",
+        "introducing_commit": "5563954230d9eea18ca70a7cb2c0dec91bca8db1",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821140000",
+        "filename": "20260821140000_weekly_evaluation_cycles.sql",
+        "sha256": "44b776d14665657e473a289c8c2304421affcfeb3a135190a7abf1ced470bb14",
+        "introducing_commit": "08e5955a722d982c48bedf047126485971279c17",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821150000",
+        "filename": "20260821150000_monthly_duty_tasks.sql",
+        "sha256": "33302c5df054b6a832345aeb1e1cf066367a287ea0f267a2759210b073fc76ed",
+        "introducing_commit": "dd88d6a7fb2bbc7d2e78afc671866ceb21f0d367",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821160000",
+        "filename": "20260821160000_duty_positions.sql",
+        "sha256": "d459addd3e46aad6c7a09d2e02730074b9cd844e18fbaa0e41eb9c9c92303701",
+        "introducing_commit": "2b24250b01b37efb02e935f519fa2d0f9fd6ce99",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821164500",
+        "filename": "20260821164500_primary_assignee_completion.sql",
+        "sha256": "6923211e6f90af18adf7ede2eb048309bdbf9711c475dd99b84784f894e0c28e",
+        "introducing_commit": "fbc245eaa46f991f043c868e6d48bc9cfdd29321",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821170000",
+        "filename": "20260821170000_completion_reviewer_roles.sql",
+        "sha256": "130d544947f2a7fa71adc6cd5012908abfa21c0c3f14e61c99eec3377320099a",
+        "introducing_commit": "98bb7269dabe332205309b088a4a82c71e66c5f8",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821180000",
+        "filename": "20260821180000_leadership_evaluation_routing.sql",
+        "sha256": "be7c6a6dfdf138eabeb455ba616ab7850eb9831b1198999577b8714ff74ac7c4",
+        "introducing_commit": "48b214e510bde6d0850ca6affe2c824765f467bb",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260821190000",
+        "filename": "20260821190000_department_manager_assignment.sql",
+        "sha256": "09fa676bbaaf9d2ca1e4d6719f74f5fd9fde5fec986b6f41e61d65507c3f911c",
+        "introducing_commit": "14809a0f6316e8aa4bc25bc3fed0b41d89f76ade",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822070000",
+        "filename": "20260822070000_monthly_duty_roster.sql",
+        "sha256": "8bd94bd7a06db9942c25505b4490afae9b45cb2ee88ec0cab02ffaf9cc52c8c9",
+        "introducing_commit": "95d26df9108015049738aa1ba9017edcf1875ec0",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822074500",
+        "filename": "20260822074500_duty_exclude_general.sql",
+        "sha256": "f545d9f6ae2f521fd43ec4667c8ffe84ce9efec42b8b537a022a1d4bed184940",
+        "introducing_commit": "e521e41c96da47d3a5e27532ed236fedb114588d",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822080000",
+        "filename": "20260822080000_duty_interval_fix.sql",
+        "sha256": "b76c5bcc4acbb08091457b6a049080c0b94e7b657fabc775bb34cbebddab4ee4",
+        "introducing_commit": "4896339f192c68662d6917ff0f027c20d29d12b4",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822090000",
+        "filename": "20260822090000_duty_deadline_2200.sql",
+        "sha256": "e9410d08d3adec27adebd0263278630cbd6527af93b8a3618eb56f77b4a7976f",
+        "introducing_commit": "54ab1d7b264536f755bbe79eb217d562933b5266",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822100000",
+        "filename": "20260822100000_duty_step_editors.sql",
+        "sha256": "a768bfd4b3f3f72040b4374c5a2f6c49149e2a89fdf05e8e220064774b294232",
+        "introducing_commit": "61f0dd8c2ed966a5f013bc498b352ed8719d8ef2",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822110000",
+        "filename": "20260822110000_online_work_schedule.sql",
+        "sha256": "8b08d185ec6bfed057a41ba3214332a60164d4bd6f8c6698435892842153cc76",
+        "introducing_commit": "46d2b7832970c266f40b70a9f930ef13744bf992",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822120000",
+        "filename": "20260822120000_restore_thanhhai_general.sql",
+        "sha256": "76dec8a372858e310a3908fa46c83de80f019c8054958ebe4f56942d6310958d",
+        "introducing_commit": "e0414699c2bf76b623f5ac32e10b20fca34038dc",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822130000",
+        "filename": "20260822130000_duty_vietnamese_reporters_only.sql",
+        "sha256": "e29b747a9023c8d8820352d467b4f45f9c05981b47c19e9620dc0ce76af96db5",
+        "introducing_commit": "5f06eb37669008f946bd381d961d72c0029dc061",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822140000",
+        "filename": "20260822140000_online_work_foreign_reporters_only.sql",
+        "sha256": "db8e830b2fb861456abb8e800993c3a7ee5028697eb849a484ee2ef458de5e93",
+        "introducing_commit": "5f06eb37669008f946bd381d961d72c0029dc061",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822150000",
+        "filename": "20260822150000_reporter_language_job_titles.sql",
+        "sha256": "46544ba8fc4dc6870e32617352137b6ca206edffba6322d8d0c04aadfe36f248",
+        "introducing_commit": "5f06eb37669008f946bd381d961d72c0029dc061",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822160000",
+        "filename": "20260822160000_online_work_multiple_staff.sql",
+        "sha256": "4786fe7386e6fafa8e2e6509e7e00b0b214025871831c4fd30f3326e7ddb1cac",
+        "introducing_commit": "d44d76e3b1dcdcd8b36dec4c447fa3c8f9d7a1a0",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822170000",
+        "filename": "20260822170000_duty_strict_vietnamese_reporters.sql",
+        "sha256": "c249739b8456ed0ad8666f722c53e6dab3125c4644cf806e75f47d230f48df56",
+        "introducing_commit": "ed7be342d09d0ed8225d05d4fe6d7e019925e718",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822180000",
+        "filename": "20260822180000_fix_staff_password_trigger_search_path.sql",
+        "sha256": "ec145a3829ee789f528cac4d4ad299834f5026cf9c7728f0d0163a3925848d06",
+        "introducing_commit": "1203877c775a16d4cb5ed909f532a1909f01d8d4",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822190000",
+        "filename": "20260822190000_duty_partial_days.sql",
+        "sha256": "0de535de14f5a5cbdc236b001d335f53796e89e95027b61efa78ce41553af94f",
+        "introducing_commit": "1203877c775a16d4cb5ed909f532a1909f01d8d4",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822200000",
+        "filename": "20260822200000_account_personalization.sql",
+        "sha256": "9c928d81c2f8e07df5697d3d46754d0dd0befaeb3d67c1ad581b79fb4f25ab2f",
+        "introducing_commit": "9d60eecb713ed2191f0b5aaf00dbe69a9a48fa4e",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822200100",
+        "filename": "20260822200100_exempt_duty_from_manager_watcher.sql",
+        "sha256": "a7356cd60773c851c017f67d046110e967c0d44c671e8ec4e3afac013dbe086c",
+        "introducing_commit": "9bf4806a76dabeddb7892c5e733f8d92666f52a7",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822210000",
+        "filename": "20260822210000_reactivate_tri_su_role.sql",
+        "sha256": "329a9f48ba443f91d148bc3699e453984a33975e12420be01fe0bff97435928e",
+        "introducing_commit": "42ffbe6727932f244301ece014f4a06b1b11b6ca",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260822220000",
+        "filename": "20260822220000_move_thanhhai_to_general_staff_role.sql",
+        "sha256": "892793d260313848e16b445d7d1a7f843c46cccdfe502fb96e624ea02ad89379",
+        "introducing_commit": "7adbc6c9d748964975d34d6d8b5cd5d1ef4130f6",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260823170000",
+        "filename": "20260823170000_duty_reviews.sql",
+        "sha256": "b7b02be54c9aa93f552890a899ebe12508b540ab757032b019ce1260dc1d65f0",
+        "introducing_commit": "e3b535004737b9dfe77785b154f8d873ef61fc78",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260825180000",
+        "filename": "20260825180000_task_completion_scoring.sql",
+        "sha256": "72c9d87824e5596f8dde570bd33f24c05bc5fef54bd7f3c87bc3ff2b1b634223",
+        "introducing_commit": "f0afad2d926b27ebf30849aa8a2f07b86b8683b2",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260825180500",
+        "filename": "20260825180500_tbt_assignment_db_policy.sql",
+        "sha256": "74bd90045f4afa93d47ef41722f4bea730a87bc60653fa3e881ca9ef363e96d6",
+        "introducing_commit": "f0afad2d926b27ebf30849aa8a2f07b86b8683b2",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260825180600",
+        "filename": "20260825180600_tbt_assignment_scope.sql",
+        "sha256": "3aaf9ac0bc57bffe31891d4f270d077942cea48e6c1e622cb1fa50720e6d7e7b",
+        "introducing_commit": "f0afad2d926b27ebf30849aa8a2f07b86b8683b2",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260825181000",
+        "filename": "20260825181000_editorial_board_manager.sql",
+        "sha256": "786c0329cf8d6d6f1798ca3fa88b344fe09fd7159aa68d79456d762519eb97a5",
+        "introducing_commit": "efcba3482f7db687a7c890e47a0bbe81c79c30e0",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260826090000",
+        "filename": "20260826090000_editable_requirement_score.sql",
+        "sha256": "ca43d43363996cb9c2a793c455c1d295e204c754f07f518b8a3f2d0c8c7934fe",
+        "introducing_commit": "315103fc93e46ed386469849382f2473054a53fc",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260826110000",
+        "filename": "20260826110000_work_schedules.sql",
+        "sha256": "50473b4b9bf1cb30a9a98e4d43470617928ed6f2ec3e6eeca52d400e084d2e0c",
+        "introducing_commit": "e22a29c82f41e795546659cc681a85645d78f7bf",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260826120000",
+        "filename": "20260826120000_self_claim_manager_approval.sql",
+        "sha256": "bb8653365702da591e6bfb272c442bd7f13263b6309b322721393c64b02d5618",
+        "introducing_commit": "df94dbb953268787094332c2f8d8318505d6046a",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260826170000",
+        "filename": "20260826170000_task_flow_hardening.sql",
+        "sha256": "ccf9154fab2771cdfd5f7a10434c1f710714b6a67eec8934715692150864ffd9",
+        "introducing_commit": "8bcea13ccd4b3f9cc8e6e6fecbe7c668eeb4a5dc",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260826180000",
+        "filename": "20260826180000_assigned_task_acceptance.sql",
+        "sha256": "2bf7b1cb3559858b2b76b406e8a27dd9099254caa555552f04ac53f69aaab799",
+        "introducing_commit": "c9d9964484dc01446feb34905a53f6e850604d33",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260826180100",
+        "filename": "20260826180100_fix_completion_audit.sql",
+        "sha256": "8d67123011d5df13e08318d2ad1e90715e61047f3f02117a7672e2e2511d1f76",
+        "introducing_commit": "b10d89fbb7be7f62c2853b92237de360bb64b8c4",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260826190000",
+        "filename": "20260826190000_direct_assignment_in_progress.sql",
+        "sha256": "c35c13ea1cc1780a405673b533cd5c7fd87aa5cb0719de4bce563b245f4eccd4",
+        "introducing_commit": "8a55106eec12b18386b121ec4ad49e13a74d26f9",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260826200000",
+        "filename": "20260826200000_harden_direct_assignment.sql",
+        "sha256": "346fd48f132f4e353f2facfa7079209fd3e8a165172c7c6f28bbb7125a209687",
+        "introducing_commit": "d4e44bcb119364d375d3f61c9da40ca1a26beddf",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260826210000",
+        "filename": "20260826210000_task_workflow_hardening.sql",
+        "sha256": "d704eea05a25126beff86af3dbf3e74b4aa26fa0e8ad772b7639fdf836477663",
+        "introducing_commit": "a81e84d0e8742751253f8d91b88809628c439f3c",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260827160000",
+        "filename": "20260827160000_require_task_score_before_done.sql",
+        "sha256": "5447be4843bce1bc8e68ee7900e05faff77ab9845dfc851c79ac7734fc22520f",
+        "introducing_commit": "9b5b086c5a75e2d41e59eba2d340f702b97545d0",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260829100000",
+        "filename": "20260829100000_require_fresh_task_score.sql",
+        "sha256": "b771f3be12be6cfecdd147f6dc5454823f63569d8801b671141d72428ba34f94",
+        "introducing_commit": "ba643f29f1b0efe2deab55cfb8405f92237e11be",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260829110000",
+        "filename": "20260829110000_strict_fresh_task_score.sql",
+        "sha256": "9344b90542ebde7b0917f5da755972cbdfd21569af173b1d5ab9d867a2a6b0b3",
+        "introducing_commit": "b47cc624e423a0c93b908fd8f67eb537b1cd52a2",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260829120000",
+        "filename": "20260829120000_sync_progress_on_completion.sql",
+        "sha256": "809300244e6920ff2fae5a19b300d4924d01d9e22052a219380acc74d2d2ccee",
+        "introducing_commit": "e19f6480d06277343e19ba72408e90e5300a59be",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260829130000",
+        "filename": "20260829130000_harden_admin_task_edit.sql",
+        "sha256": "98df2c4c273dc6ceff0bea7cd7245ec82e12bcb1c8652e8b4f5b90359ae4acaf",
+        "introducing_commit": "3ff73979e4b1f3439f8d653f08442a9a3e626afc",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260830100000",
+        "filename": "20260830100000_fix_leadership_assignment_scope.sql",
+        "sha256": "dc909d062d34a26c9cd09cdd0af0d6e46c30ceda5963a603a055bb36ee485ec4",
+        "introducing_commit": "831e11af03c903d21e79c8dc605dc40d2b774570",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260830120000",
+        "filename": "20260830120000_revalidate_recurrence_membership.sql",
+        "sha256": "40684e3bab859e388a08e5bf2e01e5c99883b9b67f605e5283c8cce6704d9663",
+        "introducing_commit": "579e739b46452a9046996599925e0127ff22f826",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260901095000",
+        "filename": "20260901095000_backend_security_hardening.sql",
+        "sha256": "0cc36d051080c36d88c879535c8f121cfee806260b2720d4c299a718130d5348",
+        "introducing_commit": "623166dc14cf9ee2647d7975bd85ad5201f60ef3",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260909110000",
+        "filename": "20260909110000_attendance_sync.sql",
+        "sha256": "c2111567d4536e20325095e7dbf29f8b412245d039151294abedd6d4c2ffd57e",
+        "introducing_commit": "0e94b4ffc12393a793eaf4d9f925540a911b7058",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260909121500",
+        "filename": "20260909121500_seed_online_work_september.sql",
+        "sha256": "06b3020c52fb0e025b8ec14eccb296ac859d3b1d7bd3e927d89eb23a86489516",
+        "introducing_commit": "75a16cdf3d6b808551f497e5d463b0276ee79268",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260909143000",
+        "filename": "20260909143000_allow_hongninh_duty_editor.sql",
+        "sha256": "325d4575530799613c16eb12860d50200e4b02cc70bcf769b54507bcc8a507c6",
+        "introducing_commit": "9ecd6fc2a149c2c5efaa798cc15e92349485a084",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260909170000",
+        "filename": "20260909170000_three_position_duty_roster.sql",
+        "sha256": "416f7cbdf9b41c2d272d23fca5562bc83473d01ca97c5894ded4195e35326f39",
+        "introducing_commit": "4cde0656485b4ef9ba11a6f01f59b0b18c4b8429",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260910090000",
+        "filename": "20260910090000_leave_requests.sql",
+        "sha256": "d574464bea6efcc58e93b5fa15da04d43e4cbeaab024ce7682d05537fad9ff78",
+        "introducing_commit": "c2ca305e6a76b20e0121d26ce4365eb3378d29dc",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260910150000",
+        "filename": "20260910150000_long_leave_tbt_approval.sql",
+        "sha256": "f47c6704cf2e8d08fdc5811ae859cc28cc5f350e61ecfebe7c659eb6f1fb7edf",
+        "introducing_commit": "542c31c8fd92e8b026740124596dc8e6b9810d01",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260911083000",
+        "filename": "20260911083000_fix_first_login_default_password.sql",
+        "sha256": "7bc0ac7da8911b22b665758b54640952c8790646b5f0cd3c9e4dd98f08ddb227",
+        "introducing_commit": "798d0221e155af0fa7a59770d59fe4290184d8ae",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260911110000",
+        "filename": "20260911110000_enable_deputy_department_assignment.sql",
+        "sha256": "d025b9fc703c1d51e3f94a09e8d9f31aa82140e0ad1bf6b11d00630c124f57d1",
+        "introducing_commit": "f90974c645ecf67a8a1df2417492399b552849bd",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260911133000",
+        "filename": "20260911133000_scope_leave_review_to_department.sql",
+        "sha256": "3aa311d931001e6d584d0fcecedd8a5426c5524a52b7a0c6dd679d34c25a09bc",
+        "introducing_commit": "64dbd0462dbb0cb9050c8f4ac9179a5c740458ba",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260911150000",
+        "filename": "20260911150000_lock_task_completion_scores.sql",
+        "sha256": "fc3a83fb53aedf183415ed0cd2b8d2b857cb6b17480c60f86a9d5e423a6ccee6",
+        "introducing_commit": "70052592046c27012329a21729d4ba32a0839a3b",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260911170000",
+        "filename": "20260911170000_atomic_attendance_completion.sql",
+        "sha256": "0e482381a3623bf6c0b1c925716259e1c58000cac1a51d55ffb80b3ede2545ff",
+        "introducing_commit": "c49a7554a7fd17a12de60d75e54920b94d37f359",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260911180000",
+        "filename": "20260911180000_align_deputy_assignment_reviewer.sql",
+        "sha256": "338eb0638f02c36a5db6887816816ba8128e1c796f2097a020c203d1412b0e76",
+        "introducing_commit": "ec7327bc0701fffd9bc844430cab08e799cc0b30",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260911190000",
+        "filename": "20260911190000_enforce_first_login_password_change.sql",
+        "sha256": "1823b698dbc1b2bfc66e5d1841dc3aee73da8ac7945fac7228e8126d6aa1194c",
+        "introducing_commit": "65f4ed2f2272329e8ab79f787704bb9c37f8aff6",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260911230000",
+        "filename": "20260911230000_atomic_attendance_log_merge.sql",
+        "sha256": "b879322f230dbc02693adeba91290de6a70c78296d6fdd23b235ccbf7ed9afb8",
+        "introducing_commit": "7d6a18051945ebb8bc8a5a0854a1a32b24d766ca",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260915120000",
+        "filename": "20260915120000_personal_work_plans.sql",
+        "sha256": "f4990fe98528e8624bffa36ae377f03ab008f45859418b7039b67da0d0e26ea3",
+        "introducing_commit": "52a0c12cb3e45e868fc36a618315f8da767b8625",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260916100000",
+        "filename": "20260916100000_phase1a_rbac_core.sql",
+        "sha256": "3c355d2fdbb4c23ca7d79817f9b3c0e7a3b9e367ccf13070841bba19ba203034",
+        "introducing_commit": "67bdb9786fcd20dd66864bce158bede88f69041b",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260916103000",
+        "filename": "20260916103000_phase1a_rbac_db_helper.sql",
+        "sha256": "48e7bcde94fae9184c5726e3eb42799148e8d77e88180d46b919765a2caa0b98",
+        "introducing_commit": "25b76412c6ccd5d579db45a85cb7d6a10794946f",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260916104500",
+        "filename": "20260916104500_phase1a_rbac_compatibility_completion.sql",
+        "sha256": "3ffe5a1ec6ca306443ceb69e2478e8aeb379ef45f05c0ca041c5a13c8542a17e",
+        "introducing_commit": "25b76412c6ccd5d579db45a85cb7d6a10794946f",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260917200000",
+        "filename": "20260917200000_org_rbac_r2_tbt_label.sql",
+        "sha256": "fdce8d4ce7e19b1f67d9183b09bd7515dfd7987932f7ed55c187e736418dd801",
+        "introducing_commit": "13067f564cd7c1988e0f189a00d3cac4c5ed8b1d",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260918100000",
+        "filename": "20260918100000_journalism_tasks_j2_schema.sql",
+        "sha256": "9f707262958fee0f160f5beafb42dbdca302c59b65f7bc9120607d0763f05c45",
+        "introducing_commit": "3957d0b005ba3ae8eed4907bf131b434200727b7",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260918120000",
+        "filename": "20260918120000_journalism_tasks_j3_mutations.sql",
+        "sha256": "38a60fc0056a4c0479a5062c412fb5c3a065e15dac6aef30f957690a6efd4ad3",
+        "introducing_commit": "8841fb3884654eaf61b2d578c654ae1b26ed62ce",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260918130000",
+        "filename": "20260918130000_journalism_topics_series_j5_read.sql",
+        "sha256": "7d85abec0110efb0421a79a4a95d2bd45914b203c00e0995defa22024b650517",
+        "introducing_commit": "258ca393f82950591819827ad4b10e40d05fd775",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260918140000",
+        "filename": "20260918140000_journalism_topics_series_j5_management.sql",
+        "sha256": "81bbdd399bda2adf1a9ac4205fd24aa41b9afc912daf0661b4146a8a402e1cb6",
+        "introducing_commit": "539b671e34df1dc1d04922b95e465e10a0d80b11",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260918150000",
+        "filename": "20260918150000_journalism_topics_series_j5_associations.sql",
+        "sha256": "fa6bbc73eabd787c386df2d7861b0a996d618b0f5da00801afc0247fc5e198ba",
+        "introducing_commit": "fca071cb1fb52e8b5b2f4d4969a0839ab50bed30",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260919110000",
+        "filename": "20260919110000_journalism_manual_publication_reporting.sql",
+        "sha256": "cb1f33f74694b1546227224031f4ab2df5449f211905e509e1348bc0906e9f57",
+        "introducing_commit": "c8fbfef63d7037b699779d843a2cad15abebc4df",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260919120000",
+        "filename": "20260919120000_journalism_publication_verification.sql",
+        "sha256": "7c2b23f84e7a760d7a836fe5269a4d341535fe0350c080fb89bbc1d310bebe7b",
+        "introducing_commit": "664fd6232ab22e8994a22bdabe65c9c6bccd3d3a",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260921150000",
+        "filename": "20260921150000_event_assignment_v1.sql",
+        "sha256": "795a075e518fb844e6371feead9dc632f7a679df900e6d001693223fdecc73cb",
+        "introducing_commit": "3e84274d9a52767c674ccb9dce49db3f2fe93d03",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260922120000",
+        "filename": "20260922120000_journalism_content_department_scope.sql",
+        "sha256": "6fcbacd6326d90c83d29425f083539b5cc823ad828e90dfe5ab6a3027cfa9485",
+        "introducing_commit": "3b228fa14bbb1afaae407744a6bc9e34a578f715",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260922123000",
+        "filename": "20260922123000_journalism_department_code_alignment.sql",
+        "sha256": "7d5f348e24bb09c1782a92fc178a4189c972546cc83aea7d7b7b1c7973fbc990",
+        "introducing_commit": "50359024fdd6a0ade8513ccdbe62831f35957d25",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260922130000",
+        "filename": "20260922130000_journalism_manual_publication_reconciliation.sql",
+        "sha256": "8c264362cd3bfb43eebf67e81ebfabd3944d09db62ee1e94eddd424f1dcc11c2",
+        "introducing_commit": "2a1ecf59bea18d823124cb7754424497e3c8e410",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260923110000",
+        "filename": "20260923110000_journalism_scope_hardening.sql",
+        "sha256": "44a1a5bb6a00f50d1a574226c4eecd7b9f0f7f659655d7fbfa7673ab3e88372c",
+        "introducing_commit": "cdf9805ca0338fa8d2252ca7c9999c2bed76daa8",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260923150000",
+        "filename": "20260923150000_journalism_admin_scope.sql",
+        "sha256": "c9f96435470c104530bc95ea543a1a18aed8cea52e08ab684f2ddc8cd2b4020b",
+        "introducing_commit": "890c4d1508eb52658a2bcf43b09b6657422b9665",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260924100000",
+        "filename": "20260924100000_attendance_reconciliation.sql",
+        "sha256": "1f96c5fc9099ead855e418e3b03ba8bf028ee77a3b8ebb5da6fcf4a6d14d3f1e",
+        "introducing_commit": "3e18b8429161b45f2fa09d9242ac0849885b0d60",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260924120000",
+        "filename": "20260924120000_task_approval_gates.sql",
+        "sha256": "01e596d40b8a67ee5aba1e4bf9d812fada83e81c2b088aa793e3d0563ab2d406",
+        "introducing_commit": "620dc692d66cf2984663f3997fe7d4baaf12a5ec",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260924130000",
+        "filename": "20260924130000_task_assignment_semantics.sql",
+        "sha256": "1e73517a03978953baace24c8db79807cfe39e4d79b1953811432e87920381f3",
+        "introducing_commit": "b90d244e48765fb44050a2d64f274f199b3d3f85",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260925100000",
+        "filename": "20260925100000_journalism_self_registration.sql",
+        "sha256": "4d390ad7e8eb225f04cb98ce54d7a0853812122030f4a609ca15d3141dd42ac7",
+        "introducing_commit": "16e90485beb9c97233e23049d36614b659a70c8a",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260925110000",
+        "filename": "20260925110000_task_assignment_batch_idempotency.sql",
+        "sha256": "a2ac4e34f1ba9e480a772e22bdfbf86eac55bc36574ff40e6a79979a3cec6f62",
+        "introducing_commit": "4bc62e6f3c5ba85802e1436ba068c4a7ab8762c3",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260925111000",
+        "filename": "20260925111000_task_assignment_batch_rpc.sql",
+        "sha256": "9da658c4cc220722bc44ef590b2d885c7c7cda0f211f8bc2bf80bfaef64c9c65",
+        "introducing_commit": "440f59ef9d09acf663c310284832595721f653ab",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260926140000",
+        "filename": "20260926140000_department_plans_v2.sql",
+        "sha256": "42eb4ddbbf4f2efd2c1019ba2ccbaabcd24c25144234c04e4d485cd051131b25",
+        "introducing_commit": "97d02dd7bbd8662e737aa61ebe1e861c55ac18c9",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260926150000",
+        "filename": "20260926150000_department_plan_to_task_v1.sql",
+        "sha256": "49cddd98a1ba84a1f9e3fa2716d796118d8dad08daa72743d8644cafd6cfe3a7",
+        "introducing_commit": "d35651d5c60f1393521ba7befb4e8c85143213e7",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260926160000",
+        "filename": "20260926160000_department_plan_assignment_v2.sql",
+        "sha256": "e47912051552b415afa593e11ad33aeef7bd3f3358c534d38f7b22edc73b9559",
+        "introducing_commit": "d5b227a187f5e39105e32cf898d93442c6dc9c9d",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260927100000",
+        "filename": "20260927100000_task_edit_cancel_permissions.sql",
+        "sha256": "3de57f1979c817388b4a365a1e28d843a7745b6455dd638d7379acef5640cc65",
+        "introducing_commit": "b2a5d4291118c61e4992621f1ef85a3e7abe4d87",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260928140000",
+        "filename": "20260928140000_tbt_any_assignee.sql",
+        "sha256": "375a86a303c001bdea98d5d50590f3efbb321bc060a1ac062ff569d3496f30fa",
+        "introducing_commit": "12b2f97e0ae182f70a2ac9842ee45875625bd961",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260928140100",
+        "filename": "20260928140100_tbt_recurrence_without_manager.sql",
+        "sha256": "86e651d233201c0c079a060c5c6c54d4bd9269d8895c32034dfb0d9501ba40a0",
+        "introducing_commit": "12b2f97e0ae182f70a2ac9842ee45875625bd961",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260928160000",
+        "filename": "20260928160000_admin_edit_cancel_after_approval.sql",
+        "sha256": "3bf9ba7c38bd91432c23380b1d9609d8f96cea57a9059e17227925c8d376522d",
+        "introducing_commit": "6f47cfc3c274892607ae11d70d6e07f36326ab26",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260928160100",
+        "filename": "20260928160100_task_deadline_admin_override.sql",
+        "sha256": "42fa1ba637c681de2479d428225f00887f5a1e8cfa1ff064c607db53d7d1c66f",
+        "introducing_commit": "6f47cfc3c274892607ae11d70d6e07f36326ab26",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260928160200",
+        "filename": "20260928160200_personal_deadline_approval_guard.sql",
+        "sha256": "902e3d6629668bcd2898581e28d8d1daa963d1ec377e58582799f6a9fcef3f69",
+        "introducing_commit": "ddc1d90cf30b6c972d72982511a4a55b0ac8d9a7",
+        "reachable_from_integration": true,
+        "classification": "PENDING_UNRELATED"
+      },
+      {
+        "version": "20260929110000",
+        "filename": "20260929110000_creator_only_task_edit_cancel.sql",
+        "sha256": "b857d702658cd258c3cb17738dd5a700d4227b24ab78a0cc64148193f213deee",
+        "introducing_commit": "f0c5b8f3295cae00a2fe1ad6f1f530640f85d734",
+        "reachable_from_integration": true,
+        "classification": "ALREADY_APPLIED"
+      },
+      {
+        "version": "20260930100000",
+        "filename": "20260930100000_global_creator_mutation_policy.sql",
+        "sha256": "a48093b331dff89af535a85b7c8ece4874283e3b812344c1159fa34074b69b66",
+        "introducing_commit": "bb8d5a6be3445466e922ff0d13641b644e6bc41f",
+        "reachable_from_integration": true,
+        "classification": "PENDING_APPROVED"
+      },
+      {
+        "version": "20260930110000",
+        "filename": "20260930110000_global_task_creator_mutation_policy.sql",
+        "sha256": "8f031d5d9498bcced459cf88a860fe6fc074d97c7a24003c177642fb164aaefc",
+        "introducing_commit": "bb8d5a6be3445466e922ff0d13641b644e6bc41f",
+        "reachable_from_integration": true,
+        "classification": "PENDING_APPROVED"
+      },
+      {
+        "version": "20260930120000",
+        "filename": "20260930120000_global_mutation_cancelled_admin_guard.sql",
+        "sha256": "4fa7b0e34b8a4ca94209cd9d21011d4002c72138d472ff06aef67c49f3404a0d",
+        "introducing_commit": "bb8d5a6be3445466e922ff0d13641b644e6bc41f",
+        "reachable_from_integration": true,
+        "classification": "PENDING_APPROVED"
+      }
+    ]
+  },
+  "comparison": {
+    "present_local": [
+      "20260318101500",
+      "20260318132500",
+      "20260320114500",
+      "20260320141500",
+      "20260813110000",
+      "20260813155000",
+      "20260813172000",
+      "20260813184000",
+      "20260813210000",
+      "20260813220000",
+      "20260813230000",
+      "20260813233000",
+      "20260813234500",
+      "20260814070000",
+      "20260814090000",
+      "20260814102000",
+      "20260814113000",
+      "20260814130000",
+      "20260814160000",
+      "20260814170000",
+      "20260814180000",
+      "20260814190000",
+      "20260817050000",
+      "20260817060000",
+      "20260817070000",
+      "20260817080000",
+      "20260817090000",
+      "20260817100000",
+      "20260817110000",
+      "20260817120000",
+      "20260817165000",
+      "20260817171500",
+      "20260817190000",
+      "20260818120000",
+      "20260818123000",
+      "20260818130000",
+      "20260818133000",
+      "20260819103000",
+      "20260819123000",
+      "20260819150000",
+      "20260819152000",
+      "20260820090000",
+      "20260820133000",
+      "20260820153000",
+      "20260820154500",
+      "20260820180000",
+      "20260820192000",
+      "20260821100000",
+      "20260821130000",
+      "20260821140000",
+      "20260821150000",
+      "20260821160000",
+      "20260821164500",
+      "20260821170000",
+      "20260821180000",
+      "20260821190000",
+      "20260822070000",
+      "20260822074500",
+      "20260822080000",
+      "20260822090000",
+      "20260822100000",
+      "20260822110000",
+      "20260822120000",
+      "20260822130000",
+      "20260822140000",
+      "20260822150000",
+      "20260822160000",
+      "20260822170000",
+      "20260822180000",
+      "20260822190000",
+      "20260822200000",
+      "20260822200100",
+      "20260822210000",
+      "20260822220000",
+      "20260823170000",
+      "20260825180000",
+      "20260825180500",
+      "20260825180600",
+      "20260825181000",
+      "20260826090000",
+      "20260826110000",
+      "20260826120000",
+      "20260826170000",
+      "20260826180000",
+      "20260826180100",
+      "20260826190000",
+      "20260927100000",
+      "20260929110000"
+    ],
+    "missing_local": [],
+    "local_only": [
+      "20260826200000",
+      "20260826210000",
+      "20260827160000",
+      "20260829100000",
+      "20260829110000",
+      "20260829120000",
+      "20260829130000",
+      "20260830100000",
+      "20260830120000",
+      "20260901095000",
+      "20260909110000",
+      "20260909121500",
+      "20260909143000",
+      "20260909170000",
+      "20260910090000",
+      "20260910150000",
+      "20260911083000",
+      "20260911110000",
+      "20260911133000",
+      "20260911150000",
+      "20260911170000",
+      "20260911180000",
+      "20260911190000",
+      "20260911230000",
+      "20260915120000",
+      "20260916100000",
+      "20260916103000",
+      "20260916104500",
+      "20260917200000",
+      "20260918100000",
+      "20260918120000",
+      "20260918130000",
+      "20260918140000",
+      "20260918150000",
+      "20260919110000",
+      "20260919120000",
+      "20260921150000",
+      "20260922120000",
+      "20260922123000",
+      "20260922130000",
+      "20260923110000",
+      "20260923150000",
+      "20260924100000",
+      "20260924120000",
+      "20260924130000",
+      "20260925100000",
+      "20260925110000",
+      "20260925111000",
+      "20260926140000",
+      "20260926150000",
+      "20260926160000",
+      "20260928140000",
+      "20260928140100",
+      "20260928160000",
+      "20260928160100",
+      "20260928160200",
+      "20260930100000",
+      "20260930110000",
+      "20260930120000"
+    ],
+    "approved_pending": [
+      "20260930100000",
+      "20260930110000",
+      "20260930120000"
+    ],
+    "unrelated_pending": [
+      "20260826200000",
+      "20260826210000",
+      "20260827160000",
+      "20260829100000",
+      "20260829110000",
+      "20260829120000",
+      "20260829130000",
+      "20260830100000",
+      "20260830120000",
+      "20260901095000",
+      "20260909110000",
+      "20260909121500",
+      "20260909143000",
+      "20260909170000",
+      "20260910090000",
+      "20260910150000",
+      "20260911083000",
+      "20260911110000",
+      "20260911133000",
+      "20260911150000",
+      "20260911170000",
+      "20260911180000",
+      "20260911190000",
+      "20260911230000",
+      "20260915120000",
+      "20260916100000",
+      "20260916103000",
+      "20260916104500",
+      "20260917200000",
+      "20260918100000",
+      "20260918120000",
+      "20260918130000",
+      "20260918140000",
+      "20260918150000",
+      "20260919110000",
+      "20260919120000",
+      "20260921150000",
+      "20260922120000",
+      "20260922123000",
+      "20260922130000",
+      "20260923110000",
+      "20260923150000",
+      "20260924100000",
+      "20260924120000",
+      "20260924130000",
+      "20260925100000",
+      "20260925110000",
+      "20260925111000",
+      "20260926140000",
+      "20260926150000",
+      "20260926160000",
+      "20260928140000",
+      "20260928140100",
+      "20260928160000",
+      "20260928160100",
+      "20260928160200"
+    ],
+    "unknown": []
+  },
+  "recovered_historical_files": [],
+  "runner": {
+    "before": "history conflict: local-only migrations detected; no apply performed",
+    "after": "read-only list shows 56 unrelated pending plus 3 approved pending"
+  },
+  "production_modified": false
+}
