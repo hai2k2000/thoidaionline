@@ -49,9 +49,10 @@ test("task repository filters canonical and legacy task natures compatibly", () 
   assert.match(repository, /task_type\.is\.null,plan_period\.eq\.ad_hoc,self_claimable\.eq\.false/);
 });
 
-test("admin task-list actions are available for assigned tasks", () => {
+test("task-list actions use the shared creator mutation policy for assigned tasks", () => {
   const shell = read("../components/TaskCenterShell.tsx");
-  assert.match(shell, /currentUserRole === "admin"\) return task\.status !== "cancelled";/);
+  assert.match(shell, /canEditCreatorMutation/);
+  assert.match(shell, /taskLifecycleState/);
   assert.doesNotMatch(shell, /currentUserRole === "admin"\) return task\.status !== "cancelled" && task\.compatibility_task_type === "personal"/);
 });
 
@@ -64,9 +65,10 @@ test("progress workflow exposes explicit cancel and reschedule labels", () => {
   assert.match(page, /personalDeadline/);
 });
 
-test("admin task-list actions are not limited to personal tasks", () => {
+test("task-list mutation actions are not limited to personal tasks", () => {
   const shell = read("../components/TaskCenterShell.tsx");
-  assert.match(shell, /currentUserRole === "admin"\) return task\.status !== "cancelled";/);
+  assert.match(shell, /canEditCreatorMutation/);
+  assert.match(shell, /taskLifecycleState/);
   assert.doesNotMatch(shell, /currentUserRole === "admin"\) return task\.status !== "cancelled" && task\.compatibility_task_type === "personal"/);
 });
 

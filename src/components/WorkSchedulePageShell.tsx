@@ -5,6 +5,7 @@ import AppNav from "@/components/AppNav";
 import EventAssignmentPanel from "@/components/EventAssignmentPanel";
 import { personalPlanErrorMessage } from "@/lib/personalPlanError";
 import Time24hInput from "@/components/Time24hInput";
+import { canEditCreatorMutation, personalScheduleLifecycleState } from "@/lib/creatorMutationPolicy.mjs";
 
 type Person = {
   id: string;
@@ -27,7 +28,7 @@ type Row = {
   participant_ids: string[];
   created_by: string;
   schedule_scope: "personal" | "organization" | null;
-  approval_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | null;
+  approval_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CANCELLED" | null;
   approver?: { full_name?: string } | null;
   reviewer?: { full_name?: string } | null;
   reviewed_at: string | null;
@@ -57,9 +58,18 @@ const approvalLabel = (status: Row["approval_status"]) => status === "PENDING_AP
   ? "Chờ phê duyệt"
   : status === "REJECTED" ? "Từ chối" : "Đã duyệt";
 
+const canMutatePersonalPlan = (row: Row, currentUserId: string | undefined, isAdmin: boolean) =>
+  canEditCreatorMutation({
+    actorId: currentUserId,
+    createdBy: row.created_by,
+    isAdmin,
+    state: personalScheduleLifecycleState(row.approval_status),
+  });
+
 export default function WorkSchedulePageShell({
   people,
   currentUserId,
+  currentUserRole,
   approvalActorId,
   canReviewPersonalPlans = false,
   userLabel,
@@ -71,6 +81,7 @@ export default function WorkSchedulePageShell({
 }: {
   people: Person[];
   currentUserId?: string;
+  currentUserRole?: string;
   approvalActorId?: string;
   canReviewPersonalPlans?: boolean;
   userLabel: string;
@@ -235,7 +246,9 @@ export default function WorkSchedulePageShell({
   const deletePlan = async (id: string) => {
     if (!window.confirm("Xóa kế hoạch này?")) return;
     const endpoint = scheduleScope === "self" ? "/api/work-schedule/personal" : "/api/work-schedule";
-    const response = await fetch(`${endpoint}?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const revision = rows.find((row) => row.id === id)?.workflow_revision;
+    if (!Number.isSafeInteger(revision)) return;
+    const response = await fetch(`${endpoint}?id=${encodeURIComponent(id)}&workflowRevision=${encodeURIComponent(String(revision))}`, { method: "DELETE" });
     if (response.ok) setRetryToken((value) => value + 1);
   };
   const reviewPlan = async (row: Row, action: "approve" | "reject") => {
@@ -527,7 +540,7 @@ export default function WorkSchedulePageShell({
                                   {row.reviewed_at ? <p>Thời gian duyệt: {new Date(row.reviewed_at).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</p> : null}
                                   {row.approval_status === "REJECTED" && row.review_note ? <p className="text-red-700">Lý do từ chối: {row.review_note}</p> : null}
                                 </div> : null}
-                                {currentUserId && row.created_by === currentUserId ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => void deletePlan(row.id)} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Xóa kế hoạch</button></div> : null}
+                                {currentUserId && canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => void deletePlan(row.id)} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Hủy kế hoạch</button></div> : null}
                               </article>
                             ))}
                         </td>

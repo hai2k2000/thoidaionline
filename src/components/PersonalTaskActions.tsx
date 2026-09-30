@@ -55,11 +55,15 @@ export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit
     </div>
   );
   if (!canEdit && !canComplete) return null;
-  const editHref = isAdmin ? `/tasks/${taskId}/admin-edit` : `/tasks/personal/${taskId}/edit`;
+  const editHref = isAdmin
+    ? `/tasks/${taskId}/admin-edit`
+    : taskType === "assigned"
+      ? `/tasks/${taskId}`
+      : `/tasks/personal/${taskId}/edit`;
   return (
     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
       {canEdit ? <Link href={editHref} className="rounded border px-2 py-1 text-xs font-semibold">
-        Sửa
+        {taskType === "assigned" && !isAdmin ? "Mở để sửa" : "Sửa"}
       </Link> : null}
       {canComplete ? <button disabled={busy} onClick={() => mutate("complete")} className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
         Hoàn thành

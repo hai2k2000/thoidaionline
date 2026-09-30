@@ -13,6 +13,7 @@ import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
 import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
 import type { TaskCenterView } from "@/lib/taskCenterView";
 import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
+import { canEditCreatorMutation, taskLifecycleState } from "@/lib/creatorMutationPolicy.mjs";
 
 type Props = {
   canAssignTask: boolean;
@@ -63,10 +64,13 @@ const dueText = (dueDate: string | null, dueTime: string | null) => {
 };
 
 const canEditOwnTask = (task: TaskListResult["items"][number], currentUserId: string, currentUserRole: string) => {
-  if (task.legacy_read_only || (task.created_by !== currentUserId && currentUserRole !== "admin")) return false;
-  if (currentUserRole === "admin") return task.status !== "cancelled";
-  if (["done", "cancelled"].includes(task.status)) return false;
-  return task.compatibility_task_type === "personal";
+  if (task.legacy_read_only) return false;
+  return canEditCreatorMutation({
+    actorId: currentUserId,
+    createdBy: task.created_by,
+    isAdmin: currentUserRole === "admin",
+    state: taskLifecycleState(task),
+  });
 };
 
 const requirementsOf = (task: TaskListResult["items"][number]) => {

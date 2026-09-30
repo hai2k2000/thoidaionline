@@ -75,6 +75,17 @@ export async function PATCH(request: Request) {
   const id = typeof body?.id === "string" ? body.id : "";
   const action = typeof body?.action === "string" ? body.action : "";
   if (!id) return apiError("invalid_request", 400);
+  if (action === "edit") {
+    const startDate = typeof body?.startDate === "string" ? body.startDate : "";
+    const endDate = typeof body?.endDate === "string" ? body.endDate : "";
+    const startPeriod = typeof body?.startPeriod === "string" ? body.startPeriod : "full";
+    const endPeriod = typeof body?.endPeriod === "string" ? body.endPeriod : "full";
+    const leaveType = typeof body?.leaveType === "string" ? body.leaveType : "annual";
+    const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
+    if (!isValidDate(startDate) || !isValidDate(endDate) || endDate < startDate || !PERIODS.has(startPeriod) || !PERIODS.has(endPeriod) || !TYPES.has(leaveType) || reason.length < 3 || reason.length > 1000) return apiError("invalid_request", 400);
+    const result = await serverSupabase.rpc("api_edit_leave_request", { p_actor: guard.actor.id, p_request_id: id, p_start_date: startDate, p_end_date: endDate, p_start_period: startPeriod, p_end_period: endPeriod, p_leave_type: leaveType, p_reason: reason });
+    return result.error ? rpcFailure(result.error) : apiJson({ request: result.data });
+  }
   if (action === "cancel") {
     const result = await serverSupabase.rpc("api_cancel_leave_request", { p_actor: guard.actor.id, p_request_id: id });
     return result.error ? rpcFailure(result.error) : apiJson({ request: result.data });

@@ -1,5 +1,6 @@
 import type { PermissionSet } from "./permissions";
 import { isLeadershipAssignmentReviewer } from "./taskReviewerPolicy.mjs";
+import { canCancelCreatorMutation, canEditCreatorMutation, taskLifecycleState } from "./creatorMutationPolicy.mjs";
 
 export type AuthorizationActor = {
   id: string;
@@ -53,7 +54,6 @@ export type TaskAction =
   | "leader_evaluate"
   | "legacy_evaluate";
 
-const TERMINAL_TASK_STATES = new Set(["done", "cancelled"]);
 
 export function isTaskAssignmentApproved(task: Pick<TaskAccessSnapshot, "approvalRequired" | "assignmentApprovalState" | "status">): boolean {
   if (task.approvalRequired !== true) return false;
@@ -62,25 +62,19 @@ export function isTaskAssignmentApproved(task: Pick<TaskAccessSnapshot, "approva
 }
 
 export function canCreatorEditTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
-  return task.createdBy === actor.id
-    && !TERMINAL_TASK_STATES.has(task.status);
+  return canEditCreatorMutation({ actorId: actor.id, createdBy: task.createdBy, isAdmin: false, state: taskLifecycleState(task) });
 }
 
 export function canCreatorCancelTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
-  return task.createdBy === actor.id
-    && !TERMINAL_TASK_STATES.has(task.status);
+  return canCancelCreatorMutation({ actorId: actor.id, createdBy: task.createdBy, isAdmin: false, state: taskLifecycleState(task) });
 }
 
 export function canEditTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
-  if (actor.roleCode === "admin") return task.status !== "cancelled";
-  if (TERMINAL_TASK_STATES.has(task.status)) return false;
-  return canCreatorEditTask(actor, task);
+  return canEditCreatorMutation({ actorId: actor.id, createdBy: task.createdBy, isAdmin: actor.roleCode === "admin", state: taskLifecycleState(task) });
 }
 
 export function canCancelTask(actor: AuthorizationActor, task: TaskAccessSnapshot): boolean {
-  if (actor.roleCode === "admin") return task.status !== "cancelled";
-  if (TERMINAL_TASK_STATES.has(task.status)) return false;
-  return canCreatorCancelTask(actor, task);
+  return canCancelCreatorMutation({ actorId: actor.id, createdBy: task.createdBy, isAdmin: actor.roleCode === "admin", state: taskLifecycleState(task) });
 }
 
 export type EvaluationDecision =
@@ -162,7 +156,10 @@ export function canTaskAction(
   }
 
   if (actor.roleCode === "tbt_read_only") return false;
-  if (actor.roleCode === "tong_bien_tap" && !["assign", "comment", "leader_evaluate", "review"].includes(action)) {
+  if (actor.roleCode === "tong_bien_tap" && ![
+    "assign", "comment", "leader_evaluate", "review",
+    "update", "assigned_cancel", "personal_edit", "personal_deadline", "personal_cancel",
+  ].includes(action)) {
     return false;
   }
 
@@ -174,7 +171,8 @@ export function canTaskAction(
     case "assigned_cancel":
       return canCancelTask(actor, task);
     case "admin_edit":
-      return actor.roleCode === "admin";
+      return actor.roleCode === "admin"
+        && canEditCreatorMutation({ actorId: actor.id, createdBy: task.createdBy, isAdmin: true, state: taskLifecycleState(task) });
     case "claim":
       return task.selfClaimable
         && task.status === "new"
@@ -214,10 +212,10 @@ export function canTaskAction(
     case "personal_edit":
     case "personal_deadline":
       return task.taskType === "personal"
-        && (actor.roleCode === "admin" || canCreatorEditTask(actor, task));
+        && canEditTask(actor, task);
     case "personal_cancel":
       return task.taskType === "personal"
-        && (actor.roleCode === "admin" || canCreatorCancelTask(actor, task));
+        && canCancelTask(actor, task);
     case "personal_complete":
       return task.taskType === "personal"
         && (task.ownerId === actor.id || actor.roleCode === "admin")

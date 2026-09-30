@@ -427,7 +427,7 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
     ? "not_required"
     : (row.task_status_events ?? []).some((event) => event.from_status === "waiting" && event.to_status === "in_progress")
       ? "approved"
-      : row.status === "rejected" ? "rejected" : "pending",
+      : row.status === "rejected" ? "rejected" : ["in_progress", "blocked", "pending_review", "done"].includes(row.status) ? "approved" : "pending",
   participants: (row.task_assignees ?? []).map((participant) => ({
     userId: participant.user_id,
     assignmentRole: participant.assignment_role,

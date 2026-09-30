@@ -27,28 +27,45 @@ test("creator can edit/cancel own unapproved waiting and rejected tasks", () => 
   }
 });
 
-test("non-admin may edit/cancel until completion approval", () => {
-  const inProgress = task({ status: "in_progress", assignmentApprovalState: "approved" });
-  assert.equal(canTaskAction(actor(), inProgress, "personal_edit"), true);
-  assert.equal(canTaskAction(actor(), inProgress, "personal_cancel"), true);
-  const pendingReview = task({ status: "pending_review", assignmentApprovalState: "approved" });
-  assert.equal(canTaskAction(actor(), pendingReview, "personal_edit"), true);
-  assert.equal(canTaskAction(actor(), pendingReview, "personal_cancel"), true);
-  const approved = task({ status: "done", assignmentApprovalState: "approved" });
-  assert.equal(canTaskAction(actor(), approved, "personal_edit"), false);
-  assert.equal(canTaskAction(actor(), approved, "personal_cancel"), false);
+test("creator keeps mutation rights for every pending task status despite assignment metadata", () => {
+  for (const value of [
+    task({ status: "new", assignmentApprovalState: "approved" }),
+    task({ status: "in_progress", assignmentApprovalState: "approved" }),
+    task({ status: "blocked", assignmentApprovalState: "approved" }),
+    task({ status: "waiting", assignmentApprovalState: "approved" }),
+    task({ status: "rejected", assignmentApprovalState: "approved" }),
+    task({ status: "pending_review", assignmentApprovalState: "approved" }),
+  ]) {
+    assert.equal(canTaskAction(actor(), value, "personal_edit"), true);
+    assert.equal(canTaskAction(actor(), value, "personal_cancel"), true);
+  }
+});
+
+test("creator is blocked only at done, while cancelled remains immutable", () => {
+  for (const value of [task({ status: "done", assignmentApprovalState: "approved" }), task({ status: "cancelled" })]) {
+    assert.equal(canTaskAction(actor(), value, "personal_edit"), false);
+    assert.equal(canTaskAction(actor(), value, "personal_cancel"), false);
+  }
 });
 
 test("only admin may edit or cancel approved tasks, including terminal tasks", () => {
-  const approved = task({ status: "in_progress", assignmentApprovalState: "approved", taskType: "assigned" });
+  const approved = task({ status: "done", assignmentApprovalState: "approved", taskType: "assigned" });
   const admin = actor({ id: "admin", roleCode: "admin" });
   const manager = actor({ id: "manager", roleCode: "truong_phong", permissions: normalizePermissions({ can_assign_task: true }) });
   assert.equal(canTaskAction(manager, approved, "update"), false);
   assert.equal(canTaskAction(manager, approved, "assigned_cancel"), false);
-  assert.equal(canTaskAction(admin, task({ ...approved, status: "done" }), "update"), true);
-  assert.equal(canTaskAction(admin, task({ ...approved, status: "done" }), "assigned_cancel"), true);
+  assert.equal(canTaskAction(admin, approved, "update"), true);
+  assert.equal(canTaskAction(admin, approved, "assigned_cancel"), true);
   assert.equal(canTaskAction(admin, task({ ...approved, status: "cancelled" }), "update"), false);
   assert.equal(canTaskAction(admin, task({ ...approved, status: "cancelled" }), "assigned_cancel"), false);
+});
+
+test("admin mutation actions fail closed when creator identity is missing", () => {
+  const admin = actor({ id: "admin", roleCode: "admin" });
+  const legacy = task({ createdBy: null, status: "done", assignmentApprovalState: "approved" });
+  assert.equal(canTaskAction(admin, legacy, "admin_edit"), false);
+  assert.equal(canTaskAction(admin, legacy, "update"), false);
+  assert.equal(canTaskAction(admin, legacy, "assigned_cancel"), false);
 });
 
 test("unrelated managers and leadership cannot edit or cancel another creator's task", () => {
@@ -59,6 +76,13 @@ test("unrelated managers and leadership cannot edit or cancel another creator's 
   assert.equal(canTaskAction(manager, approved, "assigned_cancel"), false);
   assert.equal(canTaskAction(tbt, approved, "update"), false);
   assert.equal(canTaskAction(tbt, approved, "assigned_cancel"), false);
+});
+
+test("leadership creator keeps pending mutation rights", () => {
+  const pending = task({ status: "waiting", assignmentApprovalState: "pending", taskType: "assigned" });
+  const tbt = actor({ id: "creator", roleCode: "tong_bien_tap", roleLevel: 4 });
+  assert.equal(canTaskAction(tbt, pending, "update"), true);
+  assert.equal(canTaskAction(tbt, pending, "assigned_cancel"), true);
 });
 
 test("hard delete is not exposed by the task action contract", () => {

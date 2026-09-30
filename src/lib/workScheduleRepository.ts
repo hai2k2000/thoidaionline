@@ -224,12 +224,16 @@ export const workScheduleRepository = {
     return error ? { ok: false as const, error } : { ok: true as const, row: data };
   },
 
-  async removePersonal(actorId: string, id: string, isAdmin = false) {
-    let query = serverSupabase.from("work_schedules").delete().eq("id", id)
-      .or("schedule_scope.eq.personal,schedule_scope.is.null");
-    if (!isAdmin) query = query.eq("created_by", actorId);
-    const { error } = await query;
-    return error ? { ok: false as const, error } : { ok: true as const };
+  async removePersonal(actorId: string, id: string, expectedRevision?: number | null) {
+    if (expectedRevision === undefined || expectedRevision === null) {
+      return { ok: false as const, error: { code: "40001", message: "workflow revision required" } };
+    }
+    const { data, error } = await serverSupabase.rpc("api_cancel_personal_work_schedule", {
+      p_actor: actorId,
+      p_id: id,
+      p_expected_revision: expectedRevision,
+    });
+    return error ? { ok: false as const, error } : { ok: true as const, row: data };
   },
 
   async removeOrganization(actorId: string, id: string, isAdmin = false) {

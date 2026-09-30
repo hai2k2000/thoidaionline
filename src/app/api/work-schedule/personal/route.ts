@@ -99,12 +99,15 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  const id = new URL(request.url).searchParams.get("id");
-  if (!id) return apiError("invalid_request", 400);
+  const params = new URL(request.url).searchParams;
+  const id = params.get("id");
+  const revisionRaw = params.get("workflowRevision");
+  const workflowRevision = revisionRaw === null ? null : Number(revisionRaw);
+  if (!id || workflowRevision === null || !Number.isSafeInteger(workflowRevision)) return apiError("invalid_request", 400);
   const result = await workScheduleRepository.removePersonal(
     guard.actor.id,
     id,
-    guard.actor.role_code === "admin",
+    workflowRevision,
   );
   return result.ok ? apiJson({ ok: true }) : rpcFailure(result.error);
 }
