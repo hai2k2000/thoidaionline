@@ -57,9 +57,9 @@ export default function Time24hInput({ onInvalid, onInput, onBlur, onChange, onK
     if (element.selectionStart === element.selectionEnd) {
       const caret = element.selectionStart ?? 0;
       if (event.key === "Backspace" && caret > 0 && element.value[caret - 1] === ":") {
-        element.setSelectionRange(Math.max(0, caret - 2), caret);
+        element.setSelectionRange(Math.max(0, caret - 2), Math.max(0, caret - 1));
       } else if (event.key === "Delete" && element.value[caret] === ":") {
-        element.setSelectionRange(caret, Math.min(element.value.length, caret + 2));
+        element.setSelectionRange(Math.min(element.value.length, caret + 1), Math.min(element.value.length, caret + 2));
       }
     }
     onKeyDown?.(event);
