@@ -209,6 +209,8 @@ export async function GET(request: Request) {
     if (recent) {
       for (const staff of staffRows) {
         for (const workDate of dates(from, to)) {
+          const dayOfWeek = new Date(`${workDate}T12:00:00Z`).getUTCDay();
+          if (dayOfWeek === 0 || dayOfWeek === 6) continue;
           const key = `${staff.id}:${workDate}`;
           if (existing.has(key)) continue;
           result.push({ id: `absent-${staff.id}-${workDate}`, user_id: staff.id, work_date: workDate, check_in: null, check_out: null, note: "Vắng", status: "absent", staff_users: { full_name: staff.full_name }, workday: 0 });

@@ -23,6 +23,12 @@ test("future requested end is clamped to Vietnam today", () => {
   assert.equal(clampAttendanceEndDate("2026-09-29", "2026-09-30"), "2026-09-29");
 });
 
+test("weekend dates are not default attendance workdays", () => {
+  const route = readFileSync(new URL("../app/api/attendance/route.ts", import.meta.url), "utf8");
+  assert.match(route, /const dayOfWeek = new Date\(`\$\{workDate\}T12:00:00Z`\)\.getUTCDay\(\);/);
+  assert.match(route, /if \(dayOfWeek === 0 \|\| dayOfWeek === 6\) continue;/);
+});
+
 test("attendance API fills absent rows and UI defaults to ten recent days", () => {
   const route = readFileSync(new URL("../app/api/attendance/route.ts", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/attendance/page.tsx", import.meta.url), "utf8");
