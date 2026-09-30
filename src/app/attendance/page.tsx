@@ -187,6 +187,7 @@ export default function AttendancePage() {
       setRecentRows([]);
       setMonthlyRows([]);
       setMessage("⚠️ Chưa tải được dữ liệu chấm công.");
+      setRecentLoading(false);
       return;
     }
     const dayList = payload.rows ?? [];
@@ -194,12 +195,12 @@ export default function AttendancePage() {
     setRecentRows((current) => !recentMode || recentOffset === 0 ? dayList : [...current, ...dayList.filter((row) => !current.some((item) => item.id === row.id))]);
     setMonthlyRows(payload.monthlyRows ?? []);
     setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi.`}`);
+    setRecentLoading(false);
   }, [isOrganizationView, period, recentOffset, selectedDate]);
 
   const loadOlderAttendance = async () => {
     setRecentLoading(true);
     setRecentOffset((value) => value + 10);
-    setRecentLoading(false);
   };
 
   const loadLeaveRequests = useCallback(async () => {
