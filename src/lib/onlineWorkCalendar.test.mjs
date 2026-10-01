@@ -23,8 +23,8 @@ test('buildOnlineWorkWeeks preserves blank weekdays and masks weekends', () => {
   ]);
   assert.equal(weeks[0][0].assignments.length, 0);
   assert.equal(weeks[0][2].assignments.length, 1);
-  assert.equal(weeks[0][5].weekendLabel, 'Tất cả ban tiếng Anh');
-  assert.equal(weeks[0][6].weekendLabel, 'Tất cả ban tiếng Anh');
+  assert.equal(weeks[0][5].weekendLabel, 'Tất cả ban ngoại ngữ');
+  assert.equal(weeks[0][6].weekendLabel, 'Tất cả ban ngoại ngữ');
   assert.equal(weeks[0][5].assignments.length, 0);
 });
 

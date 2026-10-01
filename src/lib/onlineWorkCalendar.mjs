@@ -36,7 +36,7 @@ export function buildOnlineWorkWeeks(from, to, rows) {
     dates.slice(weekIndex * 7, weekIndex * 7 + 7).map((date) => ({
       date,
       assignments: isWeekend(date) ? [] : (byDate.get(date) ?? []),
-      weekendLabel: isWeekend(date) ? 'Tất cả ban tiếng Anh' : null,
+      weekendLabel: isWeekend(date) ? 'Tất cả ban ngoại ngữ' : null,
     })),
   );
 }
