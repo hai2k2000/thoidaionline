@@ -85,7 +85,7 @@ test("the API exposes one explicit POST action", () => {
 test("the UI requires persisted state before opening canonical assignment", () => {
   assert.match(dialog, /Hãy lưu hoặc hủy thay đổi mục kế hoạch trước khi giao việc/);
   assert.match(dialog, /disabled=\{saving \|\| dirty\}/);
-  assert.match(dialog, /DepartmentPlanAssignmentDialog/);
+  assert.match(dialog, /DepartmentPlanQuickAssignDialog/);
   assert.match(dialog, /linkedTask/);
 });
 

@@ -224,6 +224,42 @@ async function assignTask(request: Request, itemId: string) {
   return apiJson({ task: result.data, linkedTaskId: result.data.id });
 }
 
+async function quickAssignTask(request: Request, itemId: string) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const id = asUuid(itemId);
+  if (!id) return apiError("invalid_request", 400);
+  const current = await departmentPlanRepository.getItem(id);
+  if (current.error) return repositoryError(current.error);
+  if (!current.data) return apiError("not_found", 404);
+  const plan = await departmentPlanRepository.getPlan(current.data.department_plan_id);
+  if (plan.error) return repositoryError(plan.error);
+  if (!plan.data) return apiError("not_found", 404);
+  if (!scopeFor(guard.actor, plan.data.department_id)) return apiError("forbidden", 403);
+
+  const body = await readJsonObject(request);
+  const assigneeId = asUuid(body?.assigneeId);
+  const dueDate = typeof body?.dueDate === "string" ? body.dueDate : "";
+  const dueTime = typeof body?.dueTime === "string" ? body.dueTime : "";
+  const priority = typeof body?.priority === "string" ? body.priority : "normal";
+  const note = body?.note === null || body?.note === undefined ? null : typeof body.note === "string" ? body.note.trim() : undefined;
+  if (!assigneeId || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)
+      || !/^([01]\d|2[0-3]):[0-5]\d$/.test(dueTime)
+      || !["low", "normal", "high", "urgent"].includes(priority)
+      || note === undefined || (note?.length ?? 0) > 2000) return apiError("invalid_request", 400);
+
+  const result = await departmentPlanRepository.quickAssignTaskFromItem(guard.actor.id, id, {
+    assigneeId,
+    dueDate,
+    dueTime,
+    priority: priority as "low" | "normal" | "high" | "urgent",
+    note: note || null,
+  });
+  if (result.error) return repositoryError(result.error);
+  if (!result.data) return apiError("operation_failed", 500);
+  return apiJson({ task: result.data, linkedTaskId: result.data.id }, 201);
+}
+
 async function createTask(request: Request, itemId: string) {
   void request;
   const guard = await requireMutationActor();
@@ -283,4 +319,4 @@ async function deleteItem(_request: Request, itemId: string) {
   return apiJson({ deleted: true });
 }
 
-export const departmentPlanHandlers = { list, report, createPlan, listItems, createItem, getItem, assignTask, createTask, updateItem, deleteItem };
+export const departmentPlanHandlers = { list, report, createPlan, listItems, createItem, getItem, assignTask, quickAssignTask, createTask, updateItem, deleteItem };

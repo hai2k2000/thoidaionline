@@ -25,6 +25,7 @@ export type DepartmentPlanItemRow = {
   assignment_state: "unassigned" | "department_wide" | "assigned";
   work_status: "planned" | "in_progress" | "completed" | "cancelled";
   linked_task_id: string | null;
+  linked_task_status?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -51,6 +52,18 @@ export type RepositoryResult<T> =
 
 const PLAN_FIELDS = "id,department_id,period_type,period_start,period_end,created_by,created_at,updated_at";
 const ITEM_FIELDS = "id,department_plan_id,department_id,title,description,requirements,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,created_at,updated_at";
+const ITEM_WITH_TASK_FIELDS = `${ITEM_FIELDS},linked_task:tasks!department_plan_items_linked_task_id_fkey(status)`;
+
+type DepartmentPlanItemWithTask = DepartmentPlanItemRow & {
+  linked_task?: { status: string } | Array<{ status: string }> | null;
+};
+
+const withLinkedTaskStatus = (item: DepartmentPlanItemWithTask): DepartmentPlanItemRow => {
+  const linked = Array.isArray(item.linked_task) ? item.linked_task[0] : item.linked_task;
+  const row = { ...item, linked_task_status: linked?.status ?? null };
+  delete row.linked_task;
+  return row;
+};
 
 export const departmentPlanRepository = {
   async getDepartment(departmentId: string) {
@@ -99,12 +112,14 @@ export const departmentPlanRepository = {
   },
 
   async listPlanItems(planId: string) {
-    return serverSupabase
+    const result = await serverSupabase
       .from("department_plan_items")
-      .select(ITEM_FIELDS)
+      .select(ITEM_WITH_TASK_FIELDS)
       .eq("department_plan_id", planId)
       .order("due_at", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
+    if (result.error) return result;
+    return { data: (result.data ?? []).map((item) => withLinkedTaskStatus(item as DepartmentPlanItemWithTask)), error: null };
   },
 
   async getOrCreatePlanForMutation(
@@ -219,6 +234,26 @@ export const departmentPlanRepository = {
         p_actor_id: actorId,
         p_item_id: itemId,
         p_input: input,
+      })
+      .single<DepartmentPlanLinkedTask>();
+  },
+
+  async quickAssignTaskFromItem(actorId: string, itemId: string, input: {
+    assigneeId: string;
+    dueDate: string;
+    dueTime: string;
+    priority: "low" | "normal" | "high" | "urgent";
+    note: string | null;
+  }) {
+    return serverSupabase
+      .rpc("api_quick_assign_department_plan_task_v1", {
+        p_actor_id: actorId,
+        p_item_id: itemId,
+        p_assignee_id: input.assigneeId,
+        p_due_date: input.dueDate,
+        p_due_time: input.dueTime,
+        p_priority: input.priority,
+        p_note: input.note,
       })
       .single<DepartmentPlanLinkedTask>();
   },
