@@ -16,7 +16,7 @@ type AttendanceRow = {
   note: string | null;
   status: string | null;
   workday?: number;
-  staff_users?: { full_name: string; role_code?: string | null } | null;
+  staff_users?: { full_name: string; roles?: { code?: string | null } | { code?: string | null }[] | null } | null;
 };
 
 const isValidDate = (value: string) => {
@@ -88,14 +88,14 @@ export async function GET(request: Request) {
   }
   let dayQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name,role_code)")
+    .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name,roles(code))")
     .gte("work_date", rangeStart)
     .lte("work_date", rangeEnd)
     .order("check_in", { ascending: true, nullsFirst: false })
     .limit(500);
   let monthQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name,role_code)")
+    .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name,roles(code))")
     .gte("work_date", period === "day" ? monthStart : summaryRangeStart)
     .lte("work_date", period === "day" ? anchorDate : summaryRangeEnd)
     .order("work_date", { ascending: true })
@@ -129,10 +129,12 @@ export async function GET(request: Request) {
   const leaves = (leaveResult.data ?? []) as unknown as Array<{ start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; requester: { id: string; full_name: string } | null }>;
   const online = (onlineResult.data ?? []) as unknown as Array<{ work_date: string; staff: { id: string; full_name: string } | null }>;
   const staffResult = organizationScope
-    ? await serverSupabase.from("staff_users").select("id,full_name,username").eq("active", true).order("full_name")
+    ? await serverSupabase.from("staff_users").select("id,full_name,username,roles(code)").eq("active", true).order("full_name")
     : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
   if (staffResult.error) return apiError("operation_failed", 500);
-  const staffRows = (staffResult.data ?? []).filter((staff) => isAttendanceListedStaff(staff));
+  const staffRows = organizationScope
+    ? (staffResult.data ?? []).filter((staff) => isAttendanceListedStaff({ full_name: staff.full_name, role_code: "roles" in staff ? (staff.roles as { code?: string | null }[] | null)?.[0]?.code : null }))
+    : (staffResult.data ?? []);
   const foreignStaff = staffRows.filter((staff) => isForeignReporter(staff.username));
   const foreignById = new Map(foreignStaff.filter((staff) => isForeignReporter(staff.username)).map((staff) => [staff.id, staff]));
   // A blank weekend schedule means the whole foreign-language team works online by default.
@@ -179,7 +181,7 @@ export async function GET(request: Request) {
     return { ...row, workday: calculation.workday, note: calculation.note };
   });
   const contextRows = (items: AttendanceRow[], from: string, to: string) => {
-    const result = withNotes(items).filter((row) => isAttendanceListedStaff({ full_name: row.staff_users?.full_name, role_code: row.staff_users?.role_code }));
+    const result = withNotes(items).filter((row) => !organizationScope || isAttendanceListedStaff({ full_name: row.staff_users?.full_name, role_code: Array.isArray(row.staff_users?.roles) ? row.staff_users.roles[0]?.code : row.staff_users?.roles?.code }));
     const existing = new Set(result.map((row) => `${row.user_id}:${row.work_date}`));
     const dates = (start: string, end: string) => {
       const out: string[] = [];

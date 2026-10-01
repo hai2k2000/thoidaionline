@@ -456,7 +456,7 @@ export default function AttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {(recentRows.length ? recentRows : rows).filter((r) => isAttendanceListedStaff({ full_name: r.staff_users?.full_name, role_code: "employee" })).map((r) => (
+              {(isOrganizationView ? (recentRows.length ? recentRows : rows).filter((r) => isAttendanceListedStaff({ full_name: r.staff_users?.full_name, role_code: "employee" })) : (recentRows.length ? recentRows : rows)).map((r) => (
                 <tr key={r.id} className="border-t">
                   <td className="px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{formatAttendanceDate(r.work_date)}</td>
@@ -467,7 +467,7 @@ export default function AttendancePage() {
                   <td className="min-w-64 px-3 py-2">{r.note ?? ""}</td>
                 </tr>
               ))}
-              {(recentRows.length ? recentRows : rows).filter((r) => isAttendanceListedStaff({ full_name: r.staff_users?.full_name, role_code: "employee" })).length === 0 ? (
+              {(isOrganizationView ? (recentRows.length ? recentRows : rows).filter((r) => isAttendanceListedStaff({ full_name: r.staff_users?.full_name, role_code: "employee" })) : (recentRows.length ? recentRows : rows)).length === 0 ? (
                 <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={8}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
               ) : null}
             </tbody>
@@ -531,7 +531,7 @@ export default function AttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {monthlySummary.filter((r) => isAttendanceListedStaff({ full_name: r.name, role_code: "employee" })).map((r) => (
+              {(isOrganizationView ? monthlySummary.filter((r) => isAttendanceListedStaff({ full_name: r.name, role_code: "employee" })) : monthlySummary).map((r) => (
                 <tr key={`sum-${r.userId}`} className="border-t cursor-pointer" onClick={() => setSelectedSummaryEmployee({ userId: r.userId, name: r.name })} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedSummaryEmployee({ userId: r.userId, name: r.name }); } }} tabIndex={0} aria-label={`Xem chi tiết chấm công của ${r.name}`}>
                   <td className="px-3 py-2 font-semibold text-orange-700 underline-offset-2 hover:underline">{r.name}</td>
                   <td className="px-3 py-2 text-right">{r.daysPresent}</td>
@@ -540,7 +540,7 @@ export default function AttendancePage() {
                   <td className="px-3 py-2 text-right">{r.businessDays}</td>
                 </tr>
               ))}
-              {monthlySummary.filter((r) => isAttendanceListedStaff({ full_name: r.name, role_code: "employee" })).length === 0 ? (
+              {(isOrganizationView ? monthlySummary.filter((r) => isAttendanceListedStaff({ full_name: r.name, role_code: "employee" })) : monthlySummary).length === 0 ? (
                 <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={5}>Chưa có dữ liệu tổng công.</td></tr>
               ) : null}
             </tbody>
