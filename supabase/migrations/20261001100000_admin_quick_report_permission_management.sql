@@ -32,7 +32,6 @@ begin
       and u.active = true
       and r.active = true
       and p.code = 'permission.manage'
-      and g.scope in ('all', 'self')
   ) then
     raise exception 'Forbidden.' using errcode = '42501';
   end if;
