@@ -7,7 +7,7 @@ import {
   type PermissionMatrixPermissionRow,
   type PermissionMatrixRoleRow,
 } from "@/lib/permissionMatrix";
-import { apiError, apiJson, requireReadActor, rpcFailure } from "@/lib/serverApi";
+import { apiError, apiJson, asUuid, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -35,7 +35,31 @@ export async function GET() {
   ) });
 }
 
-export async function POST() { return apiJson({ error: { code: "read_only" } }, 405); }
-export async function PUT() { return apiJson({ error: { code: "read_only" } }, 405); }
-export async function PATCH() { return apiJson({ error: { code: "read_only" } }, 405); }
-export async function DELETE() { return apiJson({ error: { code: "read_only" } }, 405); }
+export async function POST(request: Request) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const body = await readJsonObject(request);
+  const roleId = asUuid(body?.roleId);
+  const action = body?.action;
+  if (!roleId || (action !== "grant" && action !== "revoke")) return apiError("invalid_request", 400);
+  try {
+    const actor = await loadRbacActor(guard.actor);
+    if (!hasPermission(actor, "permission.manage")) return apiError("forbidden", 403);
+    const { data, error } = await serverSupabase.rpc("api_set_quick_report_permission", {
+      p_actor_id: guard.actor.id,
+      p_role_id: roleId,
+      p_granted: action === "grant",
+    });
+    if (error) return rpcFailure(error);
+    return apiJson({ result: data });
+  } catch (error) {
+    return rpcFailure(error as { code?: string | null });
+  }
+}
+
+export async function PUT(request: Request) { return POST(request); }
+export async function PATCH(request: Request) { return POST(request); }
+export async function DELETE(request: Request) {
+  const body = await readJsonObject(request);
+  return POST(new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify({ ...body, action: "revoke" }) }));
+}
