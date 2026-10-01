@@ -5,6 +5,8 @@ import test from "node:test";
 const route = readFileSync(new URL("../app/api/permissions/route.ts", import.meta.url), "utf8");
 const page = readFileSync(new URL("../app/permissions/page.tsx", import.meta.url), "utf8");
 const migration = readFileSync(new URL("../../supabase/migrations/20261001100000_admin_quick_report_permission_management.sql", import.meta.url), "utf8");
+const userGrantMigration = readFileSync(new URL("../../supabase/migrations/20261001110000_user_specific_permission_grants.sql", import.meta.url), "utf8");
+const repository = readFileSync(new URL("./rbac/repository.ts", import.meta.url), "utf8");
 
 test("permission management exposes the exact Quick Report catalog metadata", () => {
   assert.match(page, /task\.quick_report\.create/);
@@ -46,4 +48,32 @@ test("the permissions page provides grant/revoke controls without changing Quick
   assert.match(page, /revoke|thu hồi|tắt/i);
   assert.match(page, /Thu hồi quyền Tạo\/Báo cáo công việc phát sinh/);
   assert.doesNotMatch(page, /workflow_type|REPORT_ONLY|api_create_quick_report_v1/);
+});
+
+test("user-specific Quick Report grants are additive, unique, auditable, and server-only", () => {
+  assert.match(userGrantMigration, /create table if not exists public\.user_permission_grants/i);
+  assert.match(userGrantMigration, /unique \(user_id, permission_id\)/i);
+  assert.match(userGrantMigration, /api_set_user_quick_report_permission/i);
+  assert.match(userGrantMigration, /on conflict \(user_id, permission_id\) do nothing/i);
+  assert.match(userGrantMigration, /delete from public\.user_permission_grants/i);
+  assert.match(userGrantMigration, /public\.audit_logs/);
+  assert.match(userGrantMigration, /grant execute on function public\.api_set_user_quick_report_permission\(uuid,\s*uuid,\s*boolean\) to service_role/i);
+  assert.match(userGrantMigration, /revoke all on function public\.api_set_user_quick_report_permission\(uuid,\s*uuid,\s*boolean\) from public,\s*anon,\s*authenticated/i);
+});
+
+test("effective RBAC loads role and direct user grants through the shared resolver", () => {
+  assert.match(userGrantMigration, /user_permission_grants/i);
+  assert.match(userGrantMigration, /role_permission_grants[\s\S]*union all[\s\S]*user_permission_grants/i);
+  assert.match(repository, /api_list_role_permission_grants/);
+});
+
+test("permission management exposes user source metadata and direct mutation controls", () => {
+  assert.match(route, /userId/);
+  assert.match(route, /setQuickReportUserPermission/);
+  assert.match(repository, /setQuickReportUserPermission/);
+  assert.match(repository, /api_set_user_quick_report_permission/);
+  assert.match(repository, /permission\.manage/);
+  assert.match(page, /Tìm người dùng|userQuery/);
+  assert.match(page, /Vai trò|Trực tiếp|Hiệu lực/);
+  assert.match(page, /userId/);
 });

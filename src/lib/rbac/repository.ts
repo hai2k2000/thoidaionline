@@ -1,6 +1,7 @@
 import "server-only";
 
 import { serverSupabase } from "@/lib/serverSupabase";
+import { hasPermission } from "./authorization";
 import type { RbacActor, RbacGrant, RbacScope } from "./types";
 
 type GrantRow = { permission_code: string; scope: RbacScope };
@@ -26,4 +27,21 @@ export function createRbacRequestContext() {
       return pending;
     },
   };
+}
+
+export async function setQuickReportUserPermission(
+  actor: RbacActor,
+  userId: string,
+  granted: boolean,
+) {
+  if (!hasPermission(actor, "permission.manage")) {
+    throw Object.assign(new Error("permission_denied"), { code: "42501" });
+  }
+  const { data, error } = await serverSupabase.rpc("api_set_user_quick_report_permission", {
+    p_actor_id: actor.id,
+    p_user_id: userId,
+    p_granted: granted,
+  });
+  if (error) throw error;
+  return data;
 }
