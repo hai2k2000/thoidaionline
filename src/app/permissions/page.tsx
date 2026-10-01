@@ -14,6 +14,12 @@ const scopeLabels: Record<string, string> = {
   all: "Toàn cơ quan",
 };
 
+const moduleLabels: Record<string, string> = { task: "Công việc", permission: "Phân quyền" };
+const QUICK_REPORT_CODE = "task.quick_report.create";
+const QUICK_REPORT_NAME = "Tạo/Báo cáo công việc phát sinh";
+const QUICK_REPORT_DESCRIPTION = "Cho phép tạo công việc phát sinh không cần phê duyệt, bao gồm tạo một việc hoặc nhiều việc cùng lúc.";
+const QUICK_REPORT_REVOKE_CONFIRMATION = "Thu hồi quyền Tạo/Báo cáo công việc phát sinh?";
+
 export default function PermissionsPage() {
   const router = useRouter();
   const { loading: authLoading, user, logout } = useAuth();
@@ -21,6 +27,7 @@ export default function PermissionsPage() {
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState("Đang tải ma trận phân quyền...");
+  const [pendingRoleId, setPendingRoleId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setMessage("Đang tải ma trận phân quyền...");
@@ -33,8 +40,26 @@ export default function PermissionsPage() {
       return;
     }
     setRoles(payload.roles ?? []);
-    setMessage("Dữ liệu chỉ đọc từ RBAC hiện hành.");
+    setMessage("Dữ liệu RBAC hiện hành; quyền báo cáo việc phát sinh có thể cập nhật theo vai trò.");
   }, [router]);
+
+  const setQuickReportPermission = useCallback(async (roleId: string, granted: boolean) => {
+    if (!granted && !window.confirm(QUICK_REPORT_REVOKE_CONFIRMATION)) return;
+    setPendingRoleId(roleId);
+    const response = await fetch("/api/permissions", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ roleId, action: granted ? "grant" : "revoke" }),
+    });
+    if (!response.ok) {
+      setMessage(response.status === 403 ? "Bạn không có quyền thay đổi phân quyền." : "Không thể cập nhật quyền.");
+      setPendingRoleId(null);
+      return;
+    }
+    await load();
+    setPendingRoleId(null);
+  }, [load]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,7 +87,7 @@ export default function PermissionsPage() {
           <header className="mb-5 overflow-hidden rounded-2xl border border-orange-200 bg-white shadow-sm">
             <div className="h-1.5 bg-gradient-to-r from-orange-500 via-red-500 to-amber-400" />
             <div className="p-5 sm:flex sm:items-end sm:justify-between sm:gap-6">
-              <div><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">RBAC · Chỉ đọc</p><h1 className="mt-1 text-2xl font-bold">Ma trận phân quyền</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">Vai trò → Mô-đun → Quyền → Phạm vi. Dữ liệu lấy trực tiếp từ permission grants hiện hành; màn hình này không thay đổi quyền.</p></div>
+              <div><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">RBAC · Quản trị quyền</p><h1 className="mt-1 text-2xl font-bold">Ma trận phân quyền</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">Vai trò → Mô-đun → Quyền → Phạm vi. Admin có thể cấp hoặc thu hồi quyền báo cáo việc phát sinh theo vai trò.</p></div>
               <button type="button" onClick={() => void load()} className="mt-4 rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600 sm:mt-0">Tải lại</button>
             </div>
           </header>
@@ -81,10 +106,10 @@ export default function PermissionsPage() {
               </div>
               <div className="divide-y divide-slate-100">
                 {role.modules.map((module) => <section key={module.key} className="grid md:grid-cols-[180px_1fr]">
-                  <div className="bg-orange-50/70 px-4 py-3 font-bold uppercase tracking-wide text-orange-900 sm:px-5">Mô-đun: {module.key}</div>
+                  <div className="bg-orange-50/70 px-4 py-3 font-bold uppercase tracking-wide text-orange-900 sm:px-5">Mô-đun: {moduleLabels[module.key] ?? module.key}</div>
                   <div className="divide-y divide-slate-100">{module.permissions.map((permission) => <div key={permission.id} className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(220px,1fr)_minmax(180px,0.8fr)] sm:px-5">
-                    <div><p className="font-semibold text-slate-900">{permission.name}</p><p className="font-mono text-xs text-slate-500">Quyền: {permission.code}</p>{permission.description ? <p className="mt-1 text-xs text-slate-500">{permission.description}</p> : null}</div>
-                    <div><p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Phạm vi</p><div className="flex flex-wrap gap-1.5">{permission.scopes.length > 0 ? permission.scopes.map((scope) => <span key={scope} className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800 ring-1 ring-orange-200">{scopeLabels[scope] ?? scope}</span>) : <span className="text-xs italic text-slate-400">Không được cấp</span>}</div></div>
+                    <div><p className="font-semibold text-slate-900">{permission.code === QUICK_REPORT_CODE ? QUICK_REPORT_NAME : permission.name}</p><p className="font-mono text-xs text-slate-500">Quyền: {permission.code}</p>{permission.code === QUICK_REPORT_CODE ? <p className="mt-1 text-xs text-slate-500">{QUICK_REPORT_DESCRIPTION}</p> : permission.description ? <p className="mt-1 text-xs text-slate-500">{permission.description}</p> : null}</div>
+                    <div><p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Phạm vi</p><div className="flex flex-wrap items-center gap-1.5">{permission.scopes.length > 0 ? permission.scopes.map((scope) => <span key={scope} className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800 ring-1 ring-orange-200">{scopeLabels[scope] ?? scope}</span>) : <span className="text-xs italic text-slate-400">Không được cấp</span>}{permission.code === QUICK_REPORT_CODE ? (() => { const granted = permission.scopes.some((scope) => scope === "self" || scope === "all"); return <button type="button" disabled={pendingRoleId === role.id} onClick={() => void setQuickReportPermission(role.id, !granted)} className={`rounded-lg px-3 py-1.5 text-xs font-bold text-white transition disabled:cursor-wait disabled:opacity-60 ${granted ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>{granted ? "Thu hồi" : "Cấp quyền"}</button>; })() : null}</div></div>
                   </div>)}</div>
                 </section>)}
               </div>
