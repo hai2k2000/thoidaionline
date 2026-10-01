@@ -21,3 +21,7 @@ export function isAttendanceListedStaff(staff) {
 export function isAttendanceListedUser(user) {
   return isAttendanceListedStaff(user);
 }
+
+export function roleCodeFromRelation(roles) {
+  return Array.isArray(roles) ? roles[0]?.code ?? null : roles?.code ?? null;
+}

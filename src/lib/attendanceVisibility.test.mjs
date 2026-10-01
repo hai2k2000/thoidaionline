@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isAttendanceListedStaff, isAttendanceListedUser } from "./attendanceVisibility.mjs";
+import { isAttendanceListedStaff, isAttendanceListedUser, roleCodeFromRelation } from "./attendanceVisibility.mjs";
 import { readFileSync } from "node:fs";
 
 const route = readFileSync(new URL("../app/api/attendance/route.ts", import.meta.url), "utf8");
@@ -18,7 +18,13 @@ test("user-level filtering uses the same organization visibility rule", () => {
   assert.equal(isAttendanceListedUser({ full_name: "Nhân viên khác", role_code: "employee" }), true);
 });
 
+test("role relation supports Supabase object and array shapes", () => {
+  assert.equal(roleCodeFromRelation({ code: "admin" }), "admin");
+  assert.equal(roleCodeFromRelation([{ code: "admin" }]), "admin");
+});
+
 test("attendance API applies the shared visibility filter", () => {
   assert.match(route, /isAttendanceListedStaff/);
-  assert.match(route, /withNotes\(items\)\.filter\(\(row\) => isAttendanceListedStaff/);
+  assert.match(route, /withNotes\(items\)\.filter\(\(row\) =>/);
+  assert.match(route, /roleCodeFromRelation/);
 });

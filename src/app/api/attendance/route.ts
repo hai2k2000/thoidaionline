@@ -3,7 +3,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { isForeignReporter } from "@/lib/onlineWorkLanguage.mjs";
 import { calculateAttendance } from "@/lib/attendanceWorkday";
 import { clampAttendanceEndDate } from "@/lib/attendanceRecentRange.mjs";
-import { isAttendanceListedStaff } from "@/lib/attendanceVisibility.mjs";
+import { isAttendanceListedStaff, roleCodeFromRelation } from "@/lib/attendanceVisibility.mjs";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
     : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
   if (staffResult.error) return apiError("operation_failed", 500);
   const staffRows = organizationScope
-    ? (staffResult.data ?? []).filter((staff) => isAttendanceListedStaff({ full_name: staff.full_name, role_code: "roles" in staff ? (staff.roles as { code?: string | null }[] | null)?.[0]?.code : null }))
+    ? (staffResult.data ?? []).filter((staff) => isAttendanceListedStaff({ full_name: staff.full_name, role_code: "roles" in staff ? roleCodeFromRelation(staff.roles) : null }))
     : (staffResult.data ?? []);
   const foreignStaff = staffRows.filter((staff) => isForeignReporter(staff.username));
   const foreignById = new Map(foreignStaff.filter((staff) => isForeignReporter(staff.username)).map((staff) => [staff.id, staff]));
@@ -181,7 +181,7 @@ export async function GET(request: Request) {
     return { ...row, workday: calculation.workday, note: calculation.note };
   });
   const contextRows = (items: AttendanceRow[], from: string, to: string) => {
-    const result = withNotes(items).filter((row) => !organizationScope || isAttendanceListedStaff({ full_name: row.staff_users?.full_name, role_code: Array.isArray(row.staff_users?.roles) ? row.staff_users.roles[0]?.code : row.staff_users?.roles?.code }));
+    const result = withNotes(items).filter((row) => !organizationScope || isAttendanceListedStaff({ full_name: row.staff_users?.full_name, role_code: roleCodeFromRelation(row.staff_users?.roles) }));
     const existing = new Set(result.map((row) => `${row.user_id}:${row.work_date}`));
     const dates = (start: string, end: string) => {
       const out: string[] = [];
