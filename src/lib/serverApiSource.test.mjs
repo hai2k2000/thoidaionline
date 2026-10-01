@@ -66,14 +66,15 @@ const permissionsRoute = readFileSync(
   "utf8",
 );
 
-test("permission API is server-grant authorized and read-only", () => {
+test("permission API is server-grant authorized and mutation-guarded", () => {
   assert.match(permissionsRoute, /loadRbacActor/);
   assert.match(permissionsRoute, /permission\.manage/);
   assert.match(permissionsRoute, /permissions/);
   assert.match(permissionsRoute, /role_permission_grants/);
   assert.match(permissionsRoute, /requireReadActor/);
+  assert.match(permissionsRoute, /requireMutationActor/);
+  assert.match(permissionsRoute, /api_set_quick_report_permission/);
   for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
     assert.match(permissionsRoute, new RegExp(`export async function ${method}`));
-    assert.match(permissionsRoute, new RegExp(`${method}[\\s\\S]{0,300}405`));
   }
 });

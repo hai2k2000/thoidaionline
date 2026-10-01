@@ -1,3 +1,21 @@
+## Admin Quick Report Permission Management
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: role-based grant/revoke for task.quick_report.create
+
+Completed:
+- Added admin-only role grant/revoke through the existing permission.manage capability.
+- Reused role_permission_grants and audit_logs; no user or department grant subsystem was added.
+- Added exact Vietnamese Quick Report permission metadata and lightweight revoke confirmation.
+- Added additive migration 20261001100000_admin_quick_report_permission_management.sql.
+
+Validation:
+- Focused permission/Quick Report/Task/Global Mutation regression: PASS.
+- Disposable PostgreSQL schema and RPC rehearsal: PASS; migration applied twice; idempotent grant/revoke and audit verified.
+- Production remains untouched.
+
+Next:
+- Owner review; no production migration, permission change, deploy, or restart.
 ## Department Plan V2 Checkpoint 9B
 
 Current Phase: COMPLETE; canonical assignment dialog + atomic Plan-to-Task V2

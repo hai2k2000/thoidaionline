@@ -46,27 +46,30 @@ test("matrix preserves multiple scopes without inferring other permissions", () 
   assert.deepEqual(manage.scopes, []);
 });
 
-test("permissions route requires server permission.manage and rejects all mutations", () => {
+test("permissions route requires server permission.manage and protects mutations", () => {
   const route = readFileSync("src/app/api/permissions/route.ts", "utf8");
   assert.match(route, /requireReadActor/);
+  assert.match(route, /requireMutationActor/);
   assert.match(route, /loadRbacActor/);
   assert.match(route, /hasPermission\([^\n]*permission\.manage/);
   for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
     assert.match(route, new RegExp(`export async function ${method}`));
-    assert.match(route, new RegExp(`${method}[\\s\\S]{0,500}405`));
+    assert.match(route, new RegExp(`export async function ${method}`));
   }
   assert.doesNotMatch(route, /role_code\s*===\s*["']admin["']/);
   assert.match(route, /role_permission_grants/);
   assert.match(route, /permissions/);
 });
 
-test("permissions page is read-only and presents the role/module/permission/scope hierarchy", () => {
+test("permissions page presents the role/module/permission/scope hierarchy and Quick Report controls", () => {
   const page = readFileSync("src/app/permissions/page.tsx", "utf8");
   assert.match(page, /ROLE|Vai trò/);
   assert.match(page, /MODULE|Mô-đun|module/i);
   assert.match(page, /PERMISSION|Quyền|permission/i);
   assert.match(page, /SCOPE|Phạm vi|scope/i);
-  assert.doesNotMatch(page, /method:\s*["'](?:POST|PATCH|PUT|DELETE)["']/);
+  assert.match(page, /task\.quick_report\.create/);
+  assert.match(page, /Tạo\/Báo cáo công việc phát sinh/);
+  assert.match(page, /method:\s*["']POST["']/);
   assert.doesNotMatch(page, /Tạo vai trò|Thêm vai trò|Đổi tên|Khóa|Mở khóa/);
 });
 
