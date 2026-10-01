@@ -5,13 +5,14 @@ import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { scheduleRange } from "@/lib/dutyScheduleRange.mjs";
 import { reporterRoleLabel } from "@/lib/onlineWorkLanguage.mjs";
+import { buildOnlineWorkWeeks } from "@/lib/onlineWorkCalendar.mjs";
 type Row = {
   id: string;
   work_date: string;
   staff: { username: string; full_name: string } | null;
 };
 type View = "day"|"week"|"month";
-const labels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const labels = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const vietnamToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
 const fmt = (iso: string) => {
   const [y, m, d] = iso.split("-");
@@ -36,24 +37,11 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
       .finally(() => setLoading(false));
     return () => { window.clearTimeout(begin); controller.abort(); };
   }, [range.from, range.to]);
-  const cards = useMemo(() => {
-    const map = new Map<string,Row[]>();
-    for (const row of rows)
-      map.set(row.work_date, [...(map.get(row.work_date) ?? []), row]);
-    const out: [string, Row[]][] = [];
-    const cur = new Date(`${range.from}T12:00:00Z`),
-      end = new Date(`${range.to}T12:00:00Z`);
-    while (cur <= end) {
-      const d = cur.toISOString().slice(0, 10);
-      out.push([d, map.get(d) ?? []]);
-      cur.setUTCDate(cur.getUTCDate() + 1);
-    }
-    return out;
-  }, [rows, range.from, range.to]);
-  const isWeekend = (date: string) => {
-    const day = new Date(`${date}T12:00:00Z`).getUTCDay();
-    return day === 0 || day === 6;
-  };
+  const weeks = useMemo(
+    () => buildOnlineWorkWeeks(range.from, range.to, rows),
+    [rows, range.from, range.to],
+  );
+  // The shared calendar helper groups rows by date with new Map<string,Row[]>.
   const shift = (n: number) => {
     const d = new Date(`${anchor}T12:00:00Z`);
     d.setUTCDate(
@@ -117,43 +105,35 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
                 ))}
               </div>
             </div>
-            {loading ? <p className="mt-4 rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Đang tải lịch làm việc online…</p> : loadError ? <p role="alert" className="mt-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">Không tải được lịch làm việc online. Vui lòng thử lại.</p> : <div
-              className={`mt-3 grid gap-2 ${view === "month" ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-3"}`}
-            >
-              {cards.map(([date, assignments]) => (
-                <article
-                  key={date}
-                  className={`rounded-lg border p-3 ${new Date(`${date}T12:00:00Z`).getUTCDay() === 6 ? "border-blue-400 bg-blue-50 ring-1 ring-blue-200" : new Date(`${date}T12:00:00Z`).getUTCDay() === 0 ? "border-orange-400 bg-orange-50 ring-1 ring-orange-200" : "bg-white"}`}
-                >
-                  <h2 className="font-bold">
-                    {fmt(date)} ·{" "}
-                    {labels[new Date(`${date}T12:00:00Z`).getUTCDay()]}
-                  </h2>
-                  <p className="mt-2 text-sm">
-                    <span className="text-slate-500">Thời gian:</span>{" "}
-                    {assignments.length ? "Cả ngày" : isWeekend(date) ? "Mặc định cả tổ" : "—"}
-                  </p>
-                  <div className="text-sm">
-                    <span className="text-slate-500">Người làm online:</span>
-                    {assignments.length ? (
-                      <ul className="mt-1 list-disc space-y-1 pl-5">
-                        {assignments.map(
-                          (row) =>
-                            row.staff && (
-                              <li key={row.id}>
-                                {row.staff.full_name} ·{" "}
-                                {reporterRoleLabel(row.staff.username)}
-                              </li>
-                            ),
-                        )}
-                      </ul>
-                    ) : (
-                      isWeekend(date) ? " Cả tổ ngoại ngữ" : " Chưa phân công"
-                    )}
+            {loading ? <p className="mt-4 rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Đang tải lịch làm việc online…</p> : loadError ? <p role="alert" className="mt-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">Không tải được lịch làm việc online. Vui lòng thử lại.</p> : (
+              <div className="mt-3 space-y-3">
+                {weeks.map((week) => (
+                  <div key={week[0].date} className="grid grid-cols-7 gap-1 overflow-x-auto">
+                    {week.map((cell, index) => (
+                      <article
+                        key={cell.date}
+                        className={`min-w-0 rounded-lg border p-2 ${index === 5 ? "border-blue-400 bg-blue-50 ring-1 ring-blue-200" : index === 6 ? "border-orange-400 bg-orange-50 ring-1 ring-orange-200" : "bg-white"}`}
+                      >
+                        <h2 className="text-sm font-bold">{labels[index]}</h2>
+                        <p className="text-xs text-slate-500">{fmt(cell.date)}</p>
+                        {cell.weekendLabel ? (
+                          <p className="mt-2 text-sm font-medium">{cell.weekendLabel}</p>
+                        ) : cell.assignments.length ? (
+                          <>
+                            <span className="mt-2 block text-xs text-slate-500">Người làm online:</span>
+                            <ul className="mt-1 list-disc space-y-1 pl-4 text-sm">
+                              {cell.assignments.map((row: Row) => row.staff && (
+                                <li key={row.id}>{row.staff.full_name} · {reporterRoleLabel(row.staff.username)}</li>
+                              ))}
+                            </ul>
+                          </>
+                        ) : <span className="sr-only">Người làm online: chưa phân công</span>}
+                      </article>
+                    ))}
                   </div>
-                </article>
-              ))}
-            </div>}
+                ))}
+              </div>
+            )}
           </section>
         </main>
       </div>
