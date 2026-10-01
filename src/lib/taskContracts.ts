@@ -3,6 +3,25 @@ import type { CanonicalTaskStatus, CanonicalTaskType } from "./taskCompatibility
 
 export type AssignmentRole = "owner" | "assignee" | "watcher";
 export type AssignmentSource = "leadership_assigned" | "self_registered" | "legacy_unknown";
+export type TaskWorkflowType = "STANDARD" | "REPORT_ONLY";
+export type QuickReportCategory = "computer" | "network" | "printer_device" | "facilities" | "official_document" | "administration" | "other";
+export type QuickReportStatus = "in_progress" | "done";
+export type QuickReportRow = {
+  title: string;
+  category: QuickReportCategory;
+  workDate: string;
+  startedTime: string;
+  completedTime: string | null;
+  status: QuickReportStatus;
+  notes: string;
+};
+export type QuickReportBatchInput = { requestId: string; rows: QuickReportRow[] };
+export type QuickReportBatchResult = {
+  batchId: string;
+  tasks: Array<{ ordinal: number; id: string; title: string }>;
+  count: number;
+  replayed: boolean;
+};
 
 export type JournalismPublicationStatus =
   | "not_published"
@@ -103,6 +122,12 @@ export type TaskListItemDto = {
   created_at: string;
   status: CanonicalTaskStatus;
   approval_required: boolean;
+  workflow_type: TaskWorkflowType;
+  report_category: QuickReportCategory | null;
+  report_work_date: string | null;
+  report_started_time: string | null;
+  report_completed_time: string | null;
+  report_notes: string | null;
   assignment_source?: AssignmentSource;
   assignment_approved_by?: string | null;
   assignment_approved_at?: string | null;
@@ -366,6 +391,10 @@ export interface TaskRepository {
     actorId: string,
     input: PersonalTaskInput,
   ): Promise<RepositoryResult<{ id: string }>>;
+  createQuickReportBatch(
+    actorId: string,
+    input: QuickReportBatchInput,
+  ): Promise<RepositoryResult<QuickReportBatchResult>>;
   editPersonal(
     actorId: string, taskId: string, input: PersonalTaskEditInput,
   ): Promise<RepositoryResult<{ id: string }>>;

@@ -88,6 +88,7 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
   return (
     <TaskCenterShell
       canAssignTask={user.permissions.can_assign_task}
+      canQuickReport={user.rbacPermissions.includes("task.quick_report.create")}
       canAccessJournalism={journalismAllowed}
       canClaimTasks={!['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
       canReviewTaskApprovals={canReviewTaskApprovals}

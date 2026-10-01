@@ -21,6 +21,8 @@ import type {
   LegacyUpdateTaskInput,
   PersonalTaskEditInput,
   PersonalTaskInput,
+  QuickReportBatchInput,
+  QuickReportBatchResult,
   TaskAssignmentBatchResult,
   RepositoryResult,
   JournalismTaskDetailDto,
@@ -40,6 +42,12 @@ const TASK_BASE_FIELDS = [
   "created_at",
   "status",
   "approval_required",
+  "workflow_type",
+  "report_category",
+  "report_work_date",
+  "report_started_time",
+  "report_completed_time",
+  "report_notes",
   "assignment_source",
   "assignment_approved_by",
   "assignment_approved_at",
@@ -230,6 +238,7 @@ type TaskAccessRow = {
   task_type: "assigned" | "personal" | null;
   status: string;
   approval_required: boolean;
+  workflow_type?: string | null;
   task_status_events: { from_status: string | null; to_status: string }[] | null;
   task_assignees: {
     user_id: string;
@@ -644,6 +653,7 @@ export const taskRepository: TaskRepository = {
     }
     let query = serverSupabase.from("tasks").select(TASK_LIST_FIELDS, { count: "exact" })
       .eq("approval_required", true)
+      .neq("workflow_type", "REPORT_ONLY")
       .eq("status", queue === "assignment" ? "waiting" : "pending_review")
       .neq("task_category", "duty")
       .order("created_at", { ascending: false });
@@ -862,6 +872,23 @@ export const taskRepository: TaskRepository = {
       p_evaluation_criteria: input.evaluationCriteria,
       p_recurrence_frequency: input.recurrenceFrequency,
       p_recurrence_ends_on: input.recurrenceEndsOn,
+    },
+  ),
+
+  createQuickReportBatch: (actorId, input: QuickReportBatchInput) => mutation<QuickReportBatchResult>(
+    "api_create_quick_report_v1",
+    {
+      p_actor_id: actorId,
+      p_request_id: input.requestId,
+      p_rows: input.rows.map((row) => ({
+        title: row.title,
+        category: row.category,
+        work_date: row.workDate,
+        started_time: row.startedTime,
+        completed_time: row.completedTime,
+        status: row.status,
+        notes: row.notes,
+      })),
     },
   ),
 

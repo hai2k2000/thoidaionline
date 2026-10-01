@@ -7,11 +7,13 @@ import type {
 import type { ServerAuthUser } from "./serverSession";
 import { parseTaskListSearchParams } from "./taskFilters.mjs";
 import { canUseJournalism } from "./journalismScope.mjs";
+import { normalizeQuickReportBatch } from "./quickReportContract.mjs";
 import type {
   AssignedTaskInput,
   LegacyEvaluationInput,
   TaskAssignmentBatchInput,
   TaskAssignmentBatchTask,
+  QuickReportBatchInput,
   TaskRepository,
 } from "./taskContracts";
 
@@ -395,6 +397,26 @@ export function createTaskApplication(deps: Dependencies) {
       return result.ok
         ? deps.json({ task: result.data }, 201)
         : deps.rpcFailure(result.error);
+    },
+
+    async quickReport(request: Request) {
+      const guarded = await guardedBody(request);
+      if (guarded instanceof Response) return guarded;
+      const { actor, body } = guarded;
+      if (!actor.rbacPermissions.includes("task.quick_report.create")) return deps.error("forbidden", 403);
+      const requestId = deps.asUuid(body.requestId);
+      if (!requestId) return deps.error("invalid_request", 400);
+      let rows: ReturnType<typeof normalizeQuickReportBatch>;
+      try {
+        rows = normalizeQuickReportBatch(body.rows);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "invalid quick report";
+        const match = /^row (\d+): (.+)$/.exec(message);
+        return deps.json({ error: { code: "invalid_request", rowIndex: match ? Number(match[1]) - 1 : null, message: match?.[2] ?? message } }, 400);
+      }
+      const input = { requestId, rows } as QuickReportBatchInput;
+      const result = await deps.repository.createQuickReportBatch(actor.id, input);
+      return result.ok ? deps.json(result.data, 201) : deps.rpcFailure(result.error);
     },
 
     async editPersonal(request: Request, taskIdValue: unknown) {
