@@ -77,3 +77,29 @@ test("permission management exposes user source metadata and direct mutation con
   assert.match(page, /Vai trò|Trực tiếp|Hiệu lực/);
   assert.match(page, /userId/);
 });
+
+test("permission page compacts role and user management behind tabs", () => {
+  assert.match(page, /Theo vai trò/);
+  assert.match(page, /Theo người dùng/);
+  assert.match(page, /activeTab/);
+  assert.match(page, /selectedPermission/);
+  assert.match(page, /Chi tiết quyền/);
+});
+
+test("user tab defaults to effective users and provides an explicit show-all action", () => {
+  assert.match(page, /effectiveOnly/);
+  assert.match(page, /Hiện tất cả người dùng/);
+  assert.match(page, /Đang có quyền/);
+  assert.match(page, /Chưa có quyền/);
+  assert.match(page, /Cấp trực tiếp/);
+  assert.match(page, /Qua vai trò/);
+});
+
+test("user management is searchable and paginated with compact table columns", () => {
+  assert.match(page, /Tìm người dùng/);
+  assert.match(page, /currentUserPage/);
+  assert.match(page, /USERS_PER_PAGE/);
+  assert.match(page, /Người dùng/);
+  assert.match(page, /Thao tác/);
+  assert.match(page, /Math\.ceil/);
+});
