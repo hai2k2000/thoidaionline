@@ -3,6 +3,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { isForeignReporter } from "@/lib/onlineWorkLanguage.mjs";
 import { calculateAttendance } from "@/lib/attendanceWorkday";
 import { clampAttendanceEndDate } from "@/lib/attendanceRecentRange.mjs";
+import { isAttendanceListedStaff } from "@/lib/attendanceVisibility.mjs";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -15,7 +16,7 @@ type AttendanceRow = {
   note: string | null;
   status: string | null;
   workday?: number;
-  staff_users?: { full_name: string } | null;
+  staff_users?: { full_name: string; role_code?: string | null } | null;
 };
 
 const isValidDate = (value: string) => {
@@ -87,14 +88,14 @@ export async function GET(request: Request) {
   }
   let dayQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name)")
+    .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name,role_code)")
     .gte("work_date", rangeStart)
     .lte("work_date", rangeEnd)
     .order("check_in", { ascending: true, nullsFirst: false })
     .limit(500);
   let monthQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name)")
+    .select("id,user_id,work_date,check_in,check_out,note,status,staff_users(full_name,role_code)")
     .gte("work_date", period === "day" ? monthStart : summaryRangeStart)
     .lte("work_date", period === "day" ? anchorDate : summaryRangeEnd)
     .order("work_date", { ascending: true })
@@ -131,7 +132,7 @@ export async function GET(request: Request) {
     ? await serverSupabase.from("staff_users").select("id,full_name,username").eq("active", true).order("full_name")
     : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
   if (staffResult.error) return apiError("operation_failed", 500);
-  const staffRows = staffResult.data ?? [];
+  const staffRows = (staffResult.data ?? []).filter((staff) => isAttendanceListedStaff(staff));
   const foreignStaff = staffRows.filter((staff) => isForeignReporter(staff.username));
   const foreignById = new Map(foreignStaff.filter((staff) => isForeignReporter(staff.username)).map((staff) => [staff.id, staff]));
   // A blank weekend schedule means the whole foreign-language team works online by default.
@@ -178,7 +179,7 @@ export async function GET(request: Request) {
     return { ...row, workday: calculation.workday, note: calculation.note };
   });
   const contextRows = (items: AttendanceRow[], from: string, to: string) => {
-    const result = withNotes(items);
+    const result = withNotes(items).filter((row) => isAttendanceListedStaff({ full_name: row.staff_users?.full_name, role_code: row.staff_users?.role_code }));
     const existing = new Set(result.map((row) => `${row.user_id}:${row.work_date}`));
     const dates = (start: string, end: string) => {
       const out: string[] = [];
