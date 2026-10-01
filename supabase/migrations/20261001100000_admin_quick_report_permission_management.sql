@@ -60,20 +60,22 @@ begin
     get diagnostics v_changed = row_count;
   end if;
 
-  insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, new_data)
-  values (
-    p_actor_id,
-    'admin',
-    'role_permission_grant',
-    p_role_id,
-    case when p_granted then 'grant_permission' else 'revoke_permission' end,
-    jsonb_build_object(
-      'permission_code', 'task.quick_report.create',
-      'role_id', p_role_id,
-      'scope', 'all',
-      'changed', v_changed
-    )
-  );
+  if v_changed > 0 then
+    insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, new_data)
+    values (
+      p_actor_id,
+      'admin',
+      'role_permission_grant',
+      p_role_id,
+      case when p_granted then 'grant_permission' else 'revoke_permission' end,
+      jsonb_build_object(
+        'permission_code', 'task.quick_report.create',
+        'role_id', p_role_id,
+        'scope', 'all',
+        'changed', v_changed
+      )
+    );
+  end if;
 
   return jsonb_build_object(
     'roleId', p_role_id,

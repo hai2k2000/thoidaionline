@@ -31,12 +31,14 @@ test("role mutation RPC is admin-authorized, idempotent, auditable, and server-o
   assert.match(migration, /grant_permission/);
   assert.match(migration, /revoke_permission/);
   assert.match(migration, /public\.audit_logs/);
+  assert.match(migration, /if v_changed > 0 then/);
   assert.match(migration, /revoke all on function public\.api_set_quick_report_permission\(uuid,\s*uuid,\s*boolean\) from public,\s*anon,\s*authenticated/i);
   assert.match(migration, /grant execute on function public\.api_set_quick_report_permission\(uuid,\s*uuid,\s*boolean\) to service_role/i);
 });
 
 test("unsupported direct user and department grant models are not introduced", () => {
   assert.doesNotMatch(migration, /user_permission|department_permission|permission_inherit/i);
+  assert.doesNotMatch(migration, /role_permissions/);
 });
 
 test("the permissions page provides grant/revoke controls without changing Quick Report workflow", () => {
