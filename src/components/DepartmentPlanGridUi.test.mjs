@@ -55,3 +55,11 @@ test("assignment popup and responsive cards remain unchanged", () => {
   assert.match(source, /md:hidden/);
   assert.match(source, /<article key=\{row\.key\}/);
 });
+
+test("persisted unlinked rows open the same validated assignment flow", () => {
+  const actionStart = source.indexOf("row.linkedTaskId ? <a");
+  const actionEnd = source.indexOf("</div></td>", actionStart);
+  const actions = source.slice(actionStart, actionEnd);
+  assert.match(actions, /onClick=\{\(\) => void openAssignment\(row\)\}/);
+  assert.doesNotMatch(actions, /onClick=\{\(\) => setAssignmentId\(row\.id!\)\}/);
+});
