@@ -26,10 +26,17 @@ export type DepartmentPlanItemRow = {
   work_status: "planned" | "in_progress" | "completed" | "cancelled";
   linked_task_id: string | null;
   linked_task_status?: string | null;
+  linked_task_assignees?: DepartmentPlanLinkedAssignee[];
   created_by: string;
   created_at: string;
   updated_at: string;
   created_by_name?: string | null;
+};
+
+export type DepartmentPlanLinkedAssignee = {
+  user_id: string;
+  assignment_role: "owner" | "assignee" | "watcher" | string;
+  full_name: string | null;
 };
 
 export type DepartmentPlanLinkedTask = {
@@ -39,6 +46,8 @@ export type DepartmentPlanLinkedTask = {
   department_id: string | null;
   assignee_id: string | null;
   owner_id: string | null;
+  workflow_type?: string | null;
+  task_assignees?: DepartmentPlanLinkedAssignee[];
 };
 
 export type DepartmentPlanItemPatch = Partial<Pick<
@@ -52,15 +61,38 @@ export type RepositoryResult<T> =
 
 const PLAN_FIELDS = "id,department_id,period_type,period_start,period_end,created_by,created_at,updated_at";
 const ITEM_FIELDS = "id,department_plan_id,department_id,title,description,requirements,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,created_at,updated_at";
-const ITEM_WITH_TASK_FIELDS = `${ITEM_FIELDS},linked_task:tasks!department_plan_items_linked_task_id_fkey(status)`;
+const LINKED_TASK_FIELDS = "id,title,status,department_id,assignee_id,owner_id,workflow_type,task_assignees(user_id,assignment_role,status,staff_users(full_name))";
+const ITEM_WITH_TASK_FIELDS = `${ITEM_FIELDS},linked_task:tasks!department_plan_items_linked_task_id_fkey(status,task_assignees(user_id,assignment_role,status,staff_users(full_name)))`;
 
 type DepartmentPlanItemWithTask = DepartmentPlanItemRow & {
-  linked_task?: { status: string } | Array<{ status: string }> | null;
+  linked_task?: { status: string; task_assignees?: RawTaskAssignee[] } | Array<{ status: string; task_assignees?: RawTaskAssignee[] }> | null;
 };
+
+type RawTaskAssignee = {
+  user_id: string;
+  assignment_role: string;
+  staff_users?: { full_name: string | null } | Array<{ full_name: string | null }> | null;
+};
+
+const participantName = (participant: RawTaskAssignee) => {
+  const staff = Array.isArray(participant.staff_users) ? participant.staff_users[0] : participant.staff_users;
+  return staff?.full_name ?? null;
+};
+
+const mapParticipants = (participants: RawTaskAssignee[] | null | undefined): DepartmentPlanLinkedAssignee[] =>
+  (participants ?? []).map((participant) => ({
+    user_id: participant.user_id,
+    assignment_role: participant.assignment_role,
+    full_name: participantName(participant),
+  }));
 
 const withLinkedTaskStatus = (item: DepartmentPlanItemWithTask): DepartmentPlanItemRow => {
   const linked = Array.isArray(item.linked_task) ? item.linked_task[0] : item.linked_task;
-  const row = { ...item, linked_task_status: linked?.status ?? null };
+  const row = {
+    ...item,
+    linked_task_status: linked?.status ?? null,
+    linked_task_assignees: mapParticipants(linked?.task_assignees),
+  };
   delete row.linked_task;
   return row;
 };
@@ -172,8 +204,6 @@ export const departmentPlanRepository = {
     const plan = await this.getPlan(planId);
     if (plan.error) return plan;
     if (!plan.data) return { data: null, error: { code: "P0002", message: "plan not found" } };
-    const assignee = await this.validateAssignee(plan.data.department_id, input.assignee_id);
-    if (assignee.error) return { data: null, error: assignee.error };
     return serverSupabase
       .from("department_plan_items")
       .insert({
@@ -184,8 +214,10 @@ export const departmentPlanRepository = {
         description: input.description ?? null,
         requirements: input.requirements ?? null,
         due_at: input.due_at ?? null,
-        assignee_id: input.assignee_id ?? null,
-        assignment_state: input.assignment_state ?? "unassigned",
+        // Generic saves are Plan-only. Explicit assignment goes through the
+        // transactional RPC and is the only path that writes assignee_id.
+        assignee_id: null,
+        assignment_state: input.assignment_state === "department_wide" ? "department_wide" : "unassigned",
         work_status: input.work_status ?? "planned",
       })
       .select(ITEM_FIELDS)
@@ -193,16 +225,18 @@ export const departmentPlanRepository = {
   },
 
   async updateItem(itemId: string, patch: DepartmentPlanItemPatch) {
-    if (patch.assignee_id !== undefined) {
-      const current = await this.getItem(itemId);
-      if (current.error) return current;
-      if (!current.data) return { data: null, error: { code: "P0002", message: "item not found" } };
-      const assignee = await this.validateAssignee(current.data.department_id, patch.assignee_id);
-      if (assignee.error) return { data: null, error: assignee.error };
-    }
+    const safePatch = {
+      ...(patch.title !== undefined ? { title: patch.title } : {}),
+      ...(patch.description !== undefined ? { description: patch.description } : {}),
+      ...(patch.requirements !== undefined ? { requirements: patch.requirements } : {}),
+      ...(patch.due_at !== undefined ? { due_at: patch.due_at } : {}),
+      ...(patch.work_status !== undefined ? { work_status: patch.work_status } : {}),
+      ...(patch.assignment_state === "department_wide" ? { assignment_state: "department_wide", assignee_id: null } : {}),
+      ...(patch.assignment_state === "unassigned" ? { assignment_state: "unassigned", assignee_id: null } : {}),
+    };
     return serverSupabase
       .from("department_plan_items")
-      .update({ ...patch, updated_at: new Date().toISOString() })
+      .update({ ...safePatch, updated_at: new Date().toISOString() })
       .eq("id", itemId)
       .select(ITEM_FIELDS)
       .maybeSingle<DepartmentPlanItemRow>();
@@ -223,9 +257,12 @@ export const departmentPlanRepository = {
     if (!item.data?.linked_task_id) return { data: null, error: null };
     return serverSupabase
       .from("tasks")
-      .select("id,title,status,department_id,assignee_id,owner_id")
+      .select(LINKED_TASK_FIELDS)
       .eq("id", item.data.linked_task_id)
-      .maybeSingle();
+      .maybeSingle<DepartmentPlanLinkedTask & { task_assignees?: RawTaskAssignee[] }>()
+      .then((result) => result.error || !result.data
+        ? result
+        : { data: { ...result.data, task_assignees: mapParticipants(result.data.task_assignees) }, error: null });
   },
 
   async assignTaskFromItem(actorId: string, itemId: string, input: Record<string, unknown>) {
@@ -239,23 +276,54 @@ export const departmentPlanRepository = {
   },
 
   async quickAssignTaskFromItem(actorId: string, itemId: string, input: {
-    assigneeId: string;
+    assigneeIds: string[];
     dueDate: string;
     dueTime: string;
     priority: "low" | "normal" | "high" | "urgent";
     note: string | null;
   }) {
     return serverSupabase
-      .rpc("api_quick_assign_department_plan_task_v1", {
+      .rpc("api_assign_department_plan_task_v2", {
         p_actor_id: actorId,
         p_item_id: itemId,
-        p_assignee_id: input.assigneeId,
-        p_due_date: input.dueDate,
-        p_due_time: input.dueTime,
-        p_priority: input.priority,
-        p_note: input.note,
+        p_input: {
+          assigneeIds: input.assigneeIds,
+          dueDate: input.dueDate,
+          dueTime: input.dueTime,
+          priority: input.priority,
+          note: input.note,
+        },
       })
       .single<DepartmentPlanLinkedTask>();
+  },
+
+  // Kept for older callers while new compact assignment uses the V2 array.
+  async quickAssignTaskFromItemLegacy(actorId: string, itemId: string, input: {
+    assigneeId: string;
+    dueDate: string;
+    dueTime: string;
+    priority: "low" | "normal" | "high" | "urgent";
+    note: string | null;
+  }) {
+    return serverSupabase.rpc("api_quick_assign_department_plan_task_v1", {
+      p_actor_id: actorId,
+      p_item_id: itemId,
+      p_assignee_id: input.assigneeId,
+      p_due_date: input.dueDate,
+      p_due_time: input.dueTime,
+      p_priority: input.priority,
+      p_note: input.note,
+    }).single<DepartmentPlanLinkedTask>();
+  },
+
+  async createAndAssignItem(actorId: string, planId: string, input: Record<string, unknown>) {
+    return serverSupabase
+      .rpc("api_create_department_plan_task_v2", {
+        p_actor_id: actorId,
+        p_plan_id: planId,
+        p_input: input,
+      })
+      .single<{ task: DepartmentPlanLinkedTask; item: DepartmentPlanItemRow }>();
   },
 
   async createTaskFromItem(actorId: string, itemId: string) {

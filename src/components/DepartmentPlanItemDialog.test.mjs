@@ -8,7 +8,7 @@ test("detail dialog loads without mutation and exposes approved fields", () => {
   const source = read("DepartmentPlanItemDialog.tsx");
   assert.match(source, /fetch\(`\/api\/planning\/department\/items\/\$\{itemId\}`\)/);
   assert.doesNotMatch(source.slice(0, source.indexOf("const save")), /method:\s*["'](POST|PATCH|DELETE)/);
-  for (const field of ["title", "description", "requirements", "dueAt", "assigneeId", "assignmentState", "workStatus", "created_by", "created_at", "updated_at"]) assert.match(source, new RegExp(field));
+  for (const field of ["title", "description", "requirements", "dueAt", "workStatus", "created_by", "created_at", "updated_at"]) assert.match(source, new RegExp(field));
 });
 
 test("dialog saves the item and requires an explicit Plan-to-Task action", () => {

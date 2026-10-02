@@ -55,7 +55,7 @@ test("compact UI filters Plan department staff and exposes only quick fields", (
   for (const label of ["Người thực hiện", "Hạn hoàn thành", "Mức độ ưu tiên", "Ghi chú", "Hủy", "Giao việc"]) {
     assert.match(dialog, new RegExp(label));
   }
-  assert.doesNotMatch(dialog, /CanonicalAssignmentForm|collaborator|watcher|attachment|recurrence/i);
+  assert.doesNotMatch(dialog, /CanonicalAssignmentForm|attachment|recurrence/i);
   assert.match(grid + detail, /Giao việc nhanh/);
   assert.match(grid + detail, /Xem công việc/);
 });

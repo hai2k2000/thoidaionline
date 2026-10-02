@@ -96,7 +96,7 @@ test("opening, saving, and editing do not implicitly create a Task", () => {
 });
 
 test("linked state exposes the canonical Task detail", () => {
-  assert.match(dialog, /Mở công việc/);
+  assert.match(dialog, /Xem công việc/);
   assert.match(dialog, /href=\{"\/tasks\/" \+ linkedTask\.id\}/);
   assert.match(handlers, /linkedTask: linkedTask\.data/);
 });
