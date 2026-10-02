@@ -11,10 +11,9 @@ export const QUICK_REPORT_CATEGORIES = [
   "other",
 ];
 
-const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ALLOWED_FIELDS = new Set([
-  "title", "category", "workDate", "startedTime", "completedTime", "status", "notes",
+  "title", "category", "startDate", "completionDate", "status", "notes",
 ]);
 
 const clean = (value, max) => {
@@ -23,10 +22,13 @@ const clean = (value, max) => {
   return [...normalized].length <= max ? normalized : "";
 };
 
-export function validateQuickReportTimeRange(startedTime, completedTime) {
-  if (!HH_MM.test(startedTime ?? "")) return "startedTime";
-  if (completedTime !== null && !HH_MM.test(completedTime ?? "")) return "completedTime";
-  if (completedTime !== null && completedTime < startedTime) return "completedTime";
+export function validateQuickReportDateRange(startDate, completionDate) {
+  if (!DATE.test(startDate ?? "")) return "startDate";
+  if (completionDate !== null && !DATE.test(completionDate ?? "")) return "completionDate";
+  const parsedStart = new Date(`${startDate}T00:00:00Z`);
+  if (parsedStart.toISOString().slice(0, 10) !== startDate) return "startDate";
+  if (completionDate !== null && new Date(`${completionDate}T00:00:00Z`).toISOString().slice(0, 10) !== completionDate) return "completionDate";
+  if (completionDate !== null && completionDate < startDate) return "completionDate";
   return null;
 }
 
@@ -37,22 +39,19 @@ export function normalizeQuickReportRow(value) {
   }
   const title = clean(value.title, 500);
   const category = QUICK_REPORT_CATEGORIES.find((item) => item === value.category);
-  const workDate = typeof value.workDate === "string" && DATE.test(value.workDate) ? value.workDate : null;
-  const parsedDate = workDate ? new Date(`${workDate}T00:00:00Z`) : null;
-  const startedTime = typeof value.startedTime === "string" ? value.startedTime : "";
-  const completedTime = value.completedTime === "" || value.completedTime === null || value.completedTime === undefined
+  const startDate = typeof value.startDate === "string" && DATE.test(value.startDate) ? value.startDate : null;
+  const completionDate = value.completionDate === "" || value.completionDate === null || value.completionDate === undefined
     ? null
-    : typeof value.completedTime === "string" ? value.completedTime : "";
+    : typeof value.completionDate === "string" && DATE.test(value.completionDate) ? value.completionDate : "";
   const status = value.status === "in_progress" || value.status === "done" ? value.status : null;
   const notes = clean(value.notes ?? "", 10000);
   if (!title) throw new Error("title");
   if (!category) throw new Error("category");
-  if (!workDate || !parsedDate || parsedDate.toISOString().slice(0, 10) !== workDate) throw new Error("workDate");
-  const timeError = validateQuickReportTimeRange(startedTime, completedTime);
-  if (timeError) throw new Error(timeError);
+  const dateError = validateQuickReportDateRange(startDate, completionDate);
+  if (dateError) throw new Error(dateError);
   if (!status) throw new Error("status");
-  if (status === "done" && completedTime === null) throw new Error("completedTime");
-  return { title, category, workDate, startedTime, completedTime, status, notes };
+  if (status === "done" && completionDate === null) throw new Error("completionDate");
+  return { title, category, startDate, completionDate, status, notes };
 }
 
 export function normalizeQuickReportBatch(value) {
