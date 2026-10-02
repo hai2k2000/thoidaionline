@@ -6,13 +6,16 @@ const page = readFileSync(new URL("../app/tasks/quick-report/page.tsx", import.m
 const form = readFileSync(new URL("../components/QuickReportForm.tsx", import.meta.url), "utf8");
 const tasks = readFileSync(new URL("../app/tasks/page.tsx", import.meta.url), "utf8");
 
-test("quick report UI is permission-gated and offers both creation modes", () => {
+test("quick report UI is permission-gated and uses one date-only unified form", () => {
   assert.match(page, /task\.quick_report\.create/);
-  assert.match(form, /Một việc/);
-  assert.match(form, /Nhiều việc/);
-  assert.match(form, /\+ Thêm dòng/);
+  assert.doesNotMatch(form, /Một việc/);
+  assert.doesNotMatch(form, /Nhiều việc/);
+  assert.match(form, /\+ Thêm việc/);
   assert.match(form, /crypto\.randomUUID/);
-  assert.match(form, /Time24hInput/);
+  assert.doesNotMatch(form, /Time24hInput/);
+  assert.match(form, /startDate/);
+  assert.match(form, /completionDate/);
+  assert.match(form, /Xóa/);
   assert.match(form, /rows\.length >= 50/);
 });
 

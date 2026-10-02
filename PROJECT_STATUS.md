@@ -387,3 +387,28 @@ Safety:
 
 Next:
 - Owner review and separately authorized integration/deployment checkpoint.
+## Quick Report UX V2
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: unified date-only Quick Report form
+
+Completed:
+- Replaced the single/batch tabs with one unified form containing one row by default, add/remove row controls, and one atomic submit path.
+- Replaced user-entered HH:mm fields with start/completion dates; same-day completion is valid, completion before start is rejected, and in-progress rows may omit completion date.
+- Preserved REPORT_ONLY workflow, self-report authorization, user/role permission checks, max 50 rows, idempotency, reporting visibility, and approval isolation.
+- Added a minimal additive RPC replacement migration to validate date-only rows and retain existing task storage.
+
+Validation:
+- Focused Quick Report/date/UI/server/reporting tests: 17/17 PASS.
+- RBAC, mutation, approval, and Task Center regressions: 31/31 PASS.
+- TypeScript, changed-file ESLint, route manifest, and git diff check: PASS.
+- Direct production-like Next build with production environment: PASS.
+- Disposable PostgreSQL function rehearsal: PASS; no production mutation.
+
+Blockers:
+- The normal build preflight cannot pass in this worktree because its local `integration/production` branch is stale at `4ca39fd`; canonical `origin/integration/production` and this branch base are `b56d0df`.
+
+Production mutation: NONE.
+
+Next:
+- Refresh the local integration ref in a clean integration worktree, rerun the normal lineage-gated build, then owner review.
