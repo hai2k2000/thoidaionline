@@ -335,6 +335,32 @@ Blockers:
 Follow Up:
 - Owner may separately authorize a controlled deployment and service-cache ownership normalization.
 
+## Department Plan Quick Assign V1
+
+Feature branch: `feature/department-plan-quick-assign-v1`
+Migration: `20261001120000_department_plan_quick_assign_v1.sql`
+
+Implemented:
+- Added an atomic, service-role-only Department Plan quick-assign RPC.
+- Reused `department_plan_items.linked_task_id` and canonical `api_assign_task_v2`.
+- Added compact assignee/due date/due time/priority/note UI and linked Task status projection.
+- Preserved normal `STANDARD` Task workflow, Task Approval, and Global Mutation Policy semantics.
+
+Validation:
+- Quick Assign focused tests: 6/6 PASS.
+- Department Plan checkpoint/navigation/report/PDF regressions: PASS.
+- Task Assignment, Task Approval, creator mutation, admin edit, and Global Mutation Policy regressions: PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- Required-route manifest: PASS.
+- `git diff --check`: PASS.
+- Disposable production-compatible PostgreSQL rehearsal: PASS; valid assignment, duplicate rejection, cross-department rejection, and unauthorized actor rejection verified.
+
+Safety:
+- Production unchanged: NONE.
+- Migration not applied to production.
+- Feature branch intentionally fails the release lineage guard until merged into `integration/production`.
+
 ## Department Plan V2 Checkpoint 8
 
 Current Phase: COMPLETE; Department Plan PDF export
