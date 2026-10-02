@@ -27,7 +27,7 @@ test("assignment states remain separate from work status and support valid unass
   assert.match(source, /department_wide/);
   assert.match(source, /assignment_state/);
   assert.match(source, /work_status/);
-  assert.match(source, /Việc chung của phòng/);
+  assert.match(source, /Cả phòng/);
   assert.match(source, /planned/);
 });
 

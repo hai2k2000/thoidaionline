@@ -1,3 +1,10 @@
+# Department Plan Real + Multi-Assignment V2 Blocker Closure
+
+- Phase A completed: canonical leadership-mapped assignee eligibility is aligned with the existing assignment scope, and successful assignment responses rehydrate linked Task participants/status before reaching the UI.
+- Focused Department Plan/leadership/task assignment regressions: PASS.
+- TypeScript, changed-file ESLint, route manifest, git diff --check, disposable PostgreSQL migration rehearsal, and production-like webpack build: PASS.
+- Production mutation: NONE.
+
 ## Admin Quick Report Permission Management
 
 Current Phase: implementation complete; pre-production owner review

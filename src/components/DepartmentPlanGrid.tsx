@@ -13,8 +13,8 @@ type Draft = {
   key: string;
   id?: string;
   title: string;
-  assigneeId: string;
   assignmentState: DepartmentPlanItemRow["assignment_state"];
+  assigneeNames: string[];
   dueAt: string;
   workStatus: DepartmentPlanItemRow["work_status"];
   linkedTaskId: string | null;
@@ -54,11 +54,6 @@ const linkedTaskStatusLabel = (status: string | null | undefined, linked: boolea
   return "Đang thực hiện";
 };
 
-const assignmentLabels = {
-  unassigned: "Chưa phân công",
-  department_wide: "Cả phòng", // Same persisted state previously labeled "Việc chung của phòng".
-} as const;
-
 const vietnamDateParts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" });
 const toInputDate = (value: string | null) => {
   if (!value) return "";
@@ -68,10 +63,8 @@ const toInputDate = (value: string | null) => {
   return parts.year && parts.month && parts.day ? `${parts.year}-${parts.month}-${parts.day}` : "";
 };
 const toVietnamIsoDate = (value: string) => `${value}T00:00:00+07:00`;
-const assignmentValue = (row: Pick<Draft, "assignmentState" | "assigneeId">) => row.assignmentState === "assigned" ? row.assigneeId : row.assignmentState;
-const assignmentPatch = (value: string): Partial<Draft> => value === "unassigned" || value === "department_wide" ? { assignmentState: value as Draft["assignmentState"], assigneeId: "" } : { assignmentState: "assigned", assigneeId: value };
-const newDraft = (): Draft => ({ key: `new-${Date.now()}-${Math.random()}`, title: "", assigneeId: "", assignmentState: "unassigned", dueAt: "", workStatus: "planned", linkedTaskId: null, dirty: true, saving: false, error: "" });
-const fromItem = (item: DepartmentPlanItemRow): Draft => ({ key: item.id, id: item.id, title: item.title, assigneeId: item.assignee_id ?? "", assignmentState: item.assignment_state, dueAt: toInputDate(item.due_at), workStatus: item.work_status, linkedTaskId: item.linked_task_id, linkedTaskStatus: item.linked_task_status, dirty: false, saving: false, error: "" });
+const newDraft = (): Draft => ({ key: `new-${Date.now()}-${Math.random()}`, title: "", assignmentState: "unassigned", assigneeNames: [], dueAt: "", workStatus: "planned", linkedTaskId: null, dirty: true, saving: false, error: "" });
+const fromItem = (item: DepartmentPlanItemRow): Draft => ({ key: item.id, id: item.id, title: item.title, assignmentState: item.assignment_state, assigneeNames: item.linked_task_assignees?.filter((participant) => participant.assignment_role !== "watcher").map((participant) => participant.full_name).filter((name): name is string => Boolean(name)) ?? [], dueAt: toInputDate(item.due_at), workStatus: item.work_status, linkedTaskId: item.linked_task_id, linkedTaskStatus: item.linked_task_status, dirty: false, saving: false, error: "" });
 
 const outsidePeriod = (value: string, period: DepartmentPlanPeriod) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -120,12 +113,34 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
 
   const update = (key: string, patch: Partial<Draft>) => setRows((current) => current.map((row) => row.key === key ? { ...row, ...patch, dirty: true, error: "" } : row));
 
+  const openAssignment = async (row: Draft) => {
+    if (row.saving || !row.title.trim()) {
+      update(row.key, { error: "Vui lòng nhập nội dung công việc." });
+      return;
+    }
+    if (plan) {
+      setAssignmentId(row.key);
+      return;
+    }
+    const response = await fetch("/api/planning/department", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ departmentId, periodType: period.periodType, periodStart: period.periodStart }),
+    });
+    if (!response.ok) {
+      update(row.key, { error: "Không thể mở kỳ kế hoạch." });
+      return;
+    }
+    const payload = await response.json() as { plan: DepartmentPlanRow };
+    setPlan(payload.plan);
+    setAssignmentId(row.key);
+  };
+
   const save = async (key: string) => {
     const row = rows.find((candidate) => candidate.key === key);
     if (!row || row.saving || savingKeys.current.has(key)) return;
     if (!row.title.trim()) { update(key, { error: "Vui lòng nhập nội dung công việc." }); return; }
     if (row.dueAt && !/^\d{4}-\d{2}-\d{2}$/.test(row.dueAt)) { update(key, { error: "Hạn hoàn thành không hợp lệ." }); return; }
-    if (row.assignmentState === "assigned" && !row.assigneeId) { update(key, { error: "Vui lòng chọn người thực hiện." }); return; }
     savingKeys.current.add(key);
     setRows((current) => current.map((candidate) => candidate.key === key ? { ...candidate, saving: true, error: "" } : candidate));
     try {
@@ -137,7 +152,7 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
         currentPlan = planPayload.plan;
         setPlan(currentPlan);
       }
-      const body = { title: row.title.trim(), assignee_id: row.assignmentState === "assigned" ? row.assigneeId : null, assignment_state: row.assignmentState, due_at: row.dueAt ? new Date(toVietnamIsoDate(row.dueAt)).toISOString() : null, work_status: row.workStatus };
+      const body = { title: row.title.trim(), due_at: row.dueAt ? new Date(toVietnamIsoDate(row.dueAt)).toISOString() : null, ...(row.linkedTaskId ? {} : { work_status: row.workStatus }) };
       const response = row.id
         ? await fetch(`/api/planning/department/items/${row.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
         : await fetch(`/api/planning/department/${currentPlan.id}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -185,15 +200,15 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
           <tbody>{rows.map((row, index) => {
             const draft = !row.id;
             const dirty = Boolean(row.id && row.dirty);
-            const actionLabel = row.linkedTaskId ? "Xem công việc" : "Giao việc nhanh";
+            const actionLabel = row.linkedTaskId ? "Xem công việc" : row.assignmentState === "assigned" ? "Giao việc" : "Giao việc nhanh";
             return <tr key={row.key} className={`border-b border-slate-100 align-middle last:border-0 hover:bg-orange-50/40 ${draft ? "bg-slate-50/70" : ""} ${dirty ? "bg-amber-50/50" : ""}`}>
               <td className="px-2 py-2 align-middle font-bold tabular-nums text-slate-400">{index + 1}</td>
               <td className="px-2 py-2 align-middle"><input autoFocus={draft && index === rows.length - 1} value={row.title} onChange={(event) => update(row.key, { title: event.target.value })} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void save(row.key); } }} placeholder="Nhập nội dung công việc" aria-label={`Nội dung công việc ${index + 1}`} className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm shadow-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />{row.error ? <p className="mt-1 text-xs font-semibold text-red-700" role="alert">{row.error}</p> : null}</td>
-              <td className="px-2 py-2 align-middle"><select value={assignmentValue(row)} onChange={(event) => { const value = event.target.value; update(row.key, assignmentPatch(value)); }} aria-label={`Người thực hiện ${index + 1}`} className="h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"><option value="unassigned">{assignmentLabels.unassigned}</option><option value="department_wide">{assignmentLabels.department_wide}</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}</select></td>
+              <td className="px-2 py-2 align-middle"><p className="line-clamp-2 text-xs font-semibold text-slate-700">{row.linkedTaskId ? row.assigneeNames.join(", ") || "Đã giao" : row.assignmentState === "assigned" ? "Chưa tạo công việc" : row.assignmentState === "department_wide" ? "Cả phòng" : "Chưa giao"}</p></td>
               <td className="px-2 py-2 align-middle"><input type="date" value={row.dueAt} onChange={(event) => update(row.key, { dueAt: event.target.value })} aria-label={`Hạn hoàn thành ${index + 1}`} className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />{outsidePeriod(row.dueAt, period) ? <p className="mt-1 text-[11px] text-amber-700">Hạn hoàn thành nằm ngoài kỳ kế hoạch</p> : null}</td>
               <td className="px-2 py-2 align-middle"><select value={row.workStatus} onChange={(event) => update(row.key, { workStatus: event.target.value as Draft["workStatus"] })} aria-label={`Trạng thái công việc ${index + 1}`} disabled={Boolean(row.linkedTaskId)} className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100">{row.linkedTaskId ? <option value={row.workStatus}>{linkedTaskStatusLabel(row.linkedTaskStatus, true)}</option> : Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td>
               <td className="px-2 py-2 align-middle"><div className="flex items-center justify-end gap-1.5">
-                {draft ? <><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="h-8 rounded-lg bg-orange-600 px-2.5 text-xs font-bold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu"}</button><button type="button" disabled={row.saving} onClick={() => cancelEdits(row)} className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-50">Hủy</button></> : dirty ? <><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="h-8 rounded-lg bg-orange-600 px-2.5 text-xs font-bold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu"}</button><button type="button" disabled={row.saving} onClick={() => cancelEdits(row)} className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-50">Hủy</button></> : row.linkedTaskId ? <a href={`/tasks/${row.linkedTaskId}`} className="inline-flex h-8 min-w-[100px] items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400">{actionLabel}</a> : <button type="button" disabled={row.saving} onClick={() => setAssignmentId(row.id!)} className="h-8 min-w-[92px] whitespace-nowrap rounded-lg bg-orange-600 px-2.5 text-xs font-bold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50">{actionLabel}</button>}
+                {draft ? <><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="h-8 rounded-lg bg-orange-600 px-2.5 text-xs font-bold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu"}</button><button type="button" disabled={row.saving || !row.title.trim()} onClick={() => void openAssignment(row)} className="h-8 min-w-[92px] whitespace-nowrap rounded-lg border border-orange-300 bg-white px-2.5 text-xs font-bold text-orange-700 disabled:opacity-50">Giao việc</button><button type="button" disabled={row.saving} onClick={() => cancelEdits(row)} className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-50">Hủy</button></> : dirty ? <><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="h-8 rounded-lg bg-orange-600 px-2.5 text-xs font-bold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu"}</button><button type="button" disabled={row.saving} onClick={() => cancelEdits(row)} className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-50">Hủy</button></> : row.linkedTaskId ? <a href={`/tasks/${row.linkedTaskId}`} className="inline-flex h-8 min-w-[100px] items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400">{actionLabel}</a> : <button type="button" disabled={row.saving} onClick={() => setAssignmentId(row.id!)} className="h-8 min-w-[92px] whitespace-nowrap rounded-lg bg-orange-600 px-2.5 text-xs font-bold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50">{actionLabel}</button>}
                 {!draft ? <div className="flex items-center gap-1">
                   <IconActionButton label="Chi tiết" onClick={() => setDetailId(row.id!)}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 10.5v5M12 7.5h.01" /></svg></IconActionButton>
                   <IconActionButton label="Chỉnh sửa" onClick={() => setDetailId(row.id!)}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L18.8 8.7a2.2 2.2 0 0 0-3.1-3.1L4 16.5Z" /><path d="m14.5 7.5 2 2" /></svg></IconActionButton>
@@ -210,9 +225,9 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
         const dirty = Boolean(row.id && row.dirty);
         return <article key={row.key} className={`rounded-xl border p-3 shadow-sm ${draft ? "border-slate-200 bg-slate-50/70" : "border-slate-200 bg-white"} ${dirty ? "border-amber-300 bg-amber-50/40" : ""}`}>
           <div className="flex items-start gap-2"><span className="pt-1 text-xs font-bold tabular-nums text-slate-400">{String(index + 1).padStart(2, "0")}</span><div className="min-w-0 flex-1"><input autoFocus={draft && index === rows.length - 1} value={row.title} onChange={(event) => update(row.key, { title: event.target.value })} placeholder="Nhập nội dung công việc" aria-label={`Nội dung công việc ${index + 1}`} className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-semibold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />{row.error ? <p className="mt-1 text-xs font-semibold text-red-700" role="alert">{row.error}</p> : null}</div></div>
-          <div className="mt-2 grid grid-cols-2 gap-2"><label className="grid gap-1 text-[11px] font-semibold text-slate-500">Người thực hiện<select value={assignmentValue(row)} onChange={(event) => { const value = event.target.value; update(row.key, assignmentPatch(value)); }} className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"><option value="unassigned">{assignmentLabels.unassigned}</option><option value="department_wide">{assignmentLabels.department_wide}</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}</select></label><label className="grid gap-1 text-[11px] font-semibold text-slate-500">Trạng thái<select value={row.workStatus} onChange={(event) => update(row.key, { workStatus: event.target.value as Draft["workStatus"] })} disabled={Boolean(row.linkedTaskId)} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100">{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
+          <div className="mt-2 grid grid-cols-2 gap-2"><div className="grid gap-1 text-[11px] font-semibold text-slate-500"><span>Người thực hiện</span><p className="min-h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-800">{row.linkedTaskId ? row.assigneeNames.join(", ") || "Đã giao" : row.assignmentState === "assigned" ? "Chưa tạo công việc" : "Chưa giao"}</p></div><label className="grid gap-1 text-[11px] font-semibold text-slate-500">Trạng thái<select value={row.workStatus} onChange={(event) => update(row.key, { workStatus: event.target.value as Draft["workStatus"] })} disabled={Boolean(row.linkedTaskId)} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100">{row.linkedTaskId ? <option value={row.workStatus}>{linkedTaskStatusLabel(row.linkedTaskStatus, true)}</option> : Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
           <div className="mt-2 grid grid-cols-2 gap-2"><label className="grid gap-1 text-[11px] font-semibold text-slate-500">Hạn hoàn thành<input type="date" value={row.dueAt} onChange={(event) => update(row.key, { dueAt: event.target.value })} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" /></label><div /></div>
-          <div className="mt-3 flex items-center justify-between gap-2">{draft ? <div className="flex gap-1.5"><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="h-8 rounded-lg bg-orange-600 px-3 text-xs font-bold text-white disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu"}</button><button type="button" disabled={row.saving} onClick={() => cancelEdits(row)} className="h-8 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 disabled:opacity-50">Hủy</button></div> : dirty ? <div className="flex gap-1.5"><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="h-8 rounded-lg bg-orange-600 px-3 text-xs font-bold text-white disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu"}</button><button type="button" disabled={row.saving} onClick={() => cancelEdits(row)} className="h-8 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 disabled:opacity-50">Hủy</button></div> : row.linkedTaskId ? <a href={`/tasks/${row.linkedTaskId}`} className="inline-flex h-8 min-w-[100px] items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-800">Xem công việc</a> : <button type="button" disabled={row.saving} onClick={() => setAssignmentId(row.id!)} className="h-8 min-w-[92px] whitespace-nowrap rounded-lg bg-orange-600 px-3 text-xs font-bold text-white disabled:opacity-50">Giao việc nhanh</button>} {!draft ? <div className="flex items-center gap-1">
+          <div className="mt-3 flex items-center justify-between gap-2">{draft ? <div className="flex gap-1.5"><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="h-8 rounded-lg bg-orange-600 px-3 text-xs font-bold text-white disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu"}</button><button type="button" disabled={row.saving || !row.title.trim()} onClick={() => void openAssignment(row)} className="h-8 rounded-lg border border-orange-300 px-3 text-xs font-bold text-orange-700 disabled:opacity-50">Giao việc</button><button type="button" disabled={row.saving} onClick={() => cancelEdits(row)} className="h-8 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 disabled:opacity-50">Hủy</button></div> : dirty ? <div className="flex gap-1.5"><button type="button" disabled={row.saving} onClick={() => void save(row.key)} className="h-8 rounded-lg bg-orange-600 px-3 text-xs font-bold text-white disabled:opacity-50">{row.saving ? "Đang lưu…" : "Lưu"}</button><button type="button" disabled={row.saving} onClick={() => cancelEdits(row)} className="h-8 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 disabled:opacity-50">Hủy</button></div> : row.linkedTaskId ? <a href={`/tasks/${row.linkedTaskId}`} className="inline-flex h-8 min-w-[100px] items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-800">Xem công việc</a> : <button type="button" disabled={row.saving} onClick={() => setAssignmentId(row.id!)} className="h-8 min-w-[92px] whitespace-nowrap rounded-lg bg-orange-600 px-3 text-xs font-bold text-white disabled:opacity-50">Giao việc nhanh</button>} {!draft ? <div className="flex items-center gap-1">
                   <IconActionButton label="Chi tiết" onClick={() => setDetailId(row.id!)}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 10.5v5M12 7.5h.01" /></svg></IconActionButton>
                   <IconActionButton label="Chỉnh sửa" onClick={() => setDetailId(row.id!)}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L18.8 8.7a2.2 2.2 0 0 0-3.1-3.1L4 16.5Z" /><path d="m14.5 7.5 2 2" /></svg></IconActionButton>
                   <IconActionButton label="Xóa" destructive disabled={row.saving} onClick={() => void remove(row)}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M9 7V4.5h6V7M7 7l.8 13h8.4L17 7" /></svg></IconActionButton>
@@ -223,8 +238,43 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
         <button type="button" onClick={() => { setRows((current) => [...current, newDraft()]); setMessage(""); }} className="min-h-9 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-bold text-white shadow-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">+ Thêm dòng</button>
       </div>
       {!rows.length ? <p className="py-8 text-center text-sm text-slate-600">Chưa có kế hoạch cho kỳ này. Bấm “+ Thêm dòng” để bắt đầu.</p> : null}
-          {detailId ? <DepartmentPlanItemDialog itemId={detailId} period={period} employees={employees} departmentName={departmentName} departmentCode={departmentCode} departmentManagerId={departmentManagerId} scopeKind={scopeKind} assignmentDepartments={assignmentDepartments} assignmentPeople={assignmentPeople} assignmentScope={assignmentScope} onClose={() => setDetailId(null)} onAssigned={(task) => { setRows((current) => current.map((row) => row.id === detailId ? { ...row, linkedTaskId: task.id, linkedTaskStatus: "new", dirty: false } : row)); setDetailId(null); setMessage("Đã giao việc."); }} onSaved={(item) => { setRows((current) => current.map((row) => row.id === item.id ? fromItem(item) : row)); setMessage("Đã lưu chi tiết công việc."); }} /> : null}
-      {assignmentId ? (() => { const row = rows.find((candidate) => candidate.id === assignmentId); const stored = initialItems.find((candidate) => candidate.id === assignmentId); const item = row?.id ? stored ?? { id: row.id, department_plan_id: plan?.id ?? "", department_id: departmentId, title: row.title, description: null, requirements: null, due_at: row.dueAt ? new Date(toVietnamIsoDate(row.dueAt)).toISOString() : null, assignee_id: row.assigneeId || null, assignment_state: row.assignmentState, work_status: row.workStatus, linked_task_id: row.linkedTaskId, created_by: "", created_at: "", updated_at: "" } satisfies DepartmentPlanItemRow : null; return row && item && !row.dirty ? <DepartmentPlanQuickAssignDialog item={item} assignmentPeople={assignmentPeople} onClose={() => setAssignmentId(null)} onAssigned={(task) => { setRows((current) => current.map((candidate) => candidate.id === assignmentId ? { ...candidate, linkedTaskId: task.id, linkedTaskStatus: "new", dirty: false } : candidate)); setAssignmentId(null); setMessage("Đã giao việc."); }} /> : null; })() : null}
+          {detailId ? <DepartmentPlanItemDialog itemId={detailId} period={period} employees={employees} departmentName={departmentName} departmentCode={departmentCode} departmentManagerId={departmentManagerId} scopeKind={scopeKind} assignmentDepartments={assignmentDepartments} assignmentPeople={assignmentPeople} assignmentScope={assignmentScope} onClose={() => setDetailId(null)} onAssigned={(task, assignedItem) => { setRows((current) => current.map((row) => row.id === detailId ? (assignedItem ? fromItem(assignedItem) : { ...row, linkedTaskId: task.id, linkedTaskStatus: task.status, dirty: false }) : row)); setDetailId(null); setMessage("Đã giao việc."); }} onSaved={(item) => { setRows((current) => current.map((row) => row.id === item.id ? fromItem(item) : row)); setMessage("Đã lưu chi tiết công việc."); }} /> : null}
+      {assignmentId ? (() => {
+        const row = rows.find((candidate) => candidate.key === assignmentId || candidate.id === assignmentId);
+        if (!row) return null;
+        const stored = row.id ? initialItems.find((candidate) => candidate.id === row.id) : null;
+        const item = stored ?? {
+          id: row.id ?? row.key,
+          department_plan_id: plan?.id ?? "",
+          department_id: departmentId,
+          title: row.title,
+          description: null,
+          requirements: null,
+          due_at: row.dueAt ? new Date(toVietnamIsoDate(row.dueAt)).toISOString() : null,
+          assignee_id: null,
+          assignment_state: row.assignmentState,
+          work_status: row.workStatus,
+          linked_task_id: row.linkedTaskId,
+          created_by: "",
+          created_at: "",
+          updated_at: "",
+        } satisfies DepartmentPlanItemRow;
+        return <DepartmentPlanQuickAssignDialog
+          item={item}
+          planId={plan?.id}
+          isDraft={!row.id}
+          draftDueAt={row.dueAt ? new Date(toVietnamIsoDate(row.dueAt)).toISOString() : undefined}
+          assignmentPeople={assignmentPeople}
+          onClose={() => setAssignmentId(null)}
+          onAssigned={(task, assignedItem) => {
+            setRows((current) => current.map((candidate) => candidate.key === row.key
+              ? assignedItem ? fromItem(assignedItem) : { ...candidate, linkedTaskId: task.id, linkedTaskStatus: "new", dirty: false }
+              : candidate));
+            setAssignmentId(null);
+            setMessage("Đã giao việc.");
+          }}
+        />;
+      })() : null}
     </section>
   );
 

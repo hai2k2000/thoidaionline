@@ -59,3 +59,36 @@ test("linked Task participant projection remains authoritative", () => {
   assert.match(repository, /linked_task_assignees/);
   assert.match(repository, /linked_task_status/);
 });
+
+test("standalone release metadata includes both Department Plan assignment migrations", () => {
+  const packager = read(new URL("../../scripts/package-standalone.mjs", import.meta.url));
+  const verifier = read(new URL("../../scripts/verify-standalone-artifact.mjs", import.meta.url));
+  for (const migration of [
+    "20261001120000_department_plan_quick_assign_v1.sql",
+    "20261002130000_department_plan_real_multi_assignment_v2.sql",
+  ]) {
+    const pattern = new RegExp(migration.replaceAll(".", "\\."));
+    assert.match(packager, pattern);
+    assert.match(verifier, pattern);
+  }
+});
+
+test("linked Plan items keep assignment metadata authoritative", () => {
+  assert.match(handlers, /current\.data\.linked_task_id[\s\S]*assignment_state/);
+  assert.match(migration, /new\.linked_task_id is not null[\s\S]*assignment_state.*assigned/);
+});
+
+
+test("leadership-mapped assignees use the canonical department scope exception", () => {
+  assert.match(migration, /left join public\.job_titles jt/);
+  assert.match(migration, /left join public\.roles rr/);
+  assert.match(migration, /ld\.code\s*=\s*'leadership'/);
+  assert.match(migration, /pho_tong_bien_tap/);
+  assert.match(migration, /lower\(coalesce\(jt\.code, ''\)\)\s*=\s*'truong_phong'/);
+});
+
+test("assignment responses rehydrate linked participants before returning", () => {
+  assert.match(handlers, /getLinkedTask\(id\)/);
+  assert.match(handlers, /linked_task_assignees/);
+  assert.match(handlers, /linkedItem\.data[\s\S]*linked_task_assignees/);
+});

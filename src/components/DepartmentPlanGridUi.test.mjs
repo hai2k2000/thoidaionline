@@ -13,7 +13,7 @@ test("add-row action is below the grid, not in the header", () => {
 
 test("persisted rows keep non-wrapping text primary actions", () => {
   assert.match(source, /Giao việc/);
-  assert.match(source, /Mở công việc/);
+  assert.match(source, /Xem công việc/);
   assert.match(source, /min-w-\[92px\] whitespace-nowrap/);
   assert.match(source, /min-w-\[100px\].*whitespace-nowrap/);
   assert.doesNotMatch(source, /details className=\"relative\"/);
@@ -33,15 +33,11 @@ test("draft rows keep save and cancel controls", () => {
   assert.match(source, /onClick=\{\(\) => cancelEdits\(row\)\}/);
 });
 
-test("assignee state is represented by one control", () => {
-  assert.equal((source.match(/value=\{assignmentValue\(row\)\}/g) ?? []).length, 2);
-  assert.equal((source.match(/<option value=\"unassigned\">/g) ?? []).length, 2);
-  assert.equal((source.match(/<option value=\"department_wide\">/g) ?? []).length, 2);
-  assert.match(source, /department_wide: "Cả phòng"/);
-  assert.match(source, /assignmentState: "assigned"/);
-  assert.match(source, /assigneeId: value/);
-  assert.doesNotMatch(source, /Có người thực hiện/);
-  assert.match(source, /employees\.map\(\(employee\) => <option/);
+test("generic Plan rows do not expose an assignment claim control", () => {
+  assert.doesNotMatch(source, /assignmentValue|assignmentPatch/);
+  assert.doesNotMatch(source, /employees\.map\(\(employee\) => <option/);
+  assert.match(source, /Chưa tạo công việc/);
+  assert.match(source, /Giao việc/);
 });
 
 test("date-only input preserves Vietnam calendar date for persistence", () => {
@@ -53,8 +49,8 @@ test("date-only input preserves Vietnam calendar date for persistence", () => {
 });
 
 test("assignment popup and responsive cards remain unchanged", () => {
-  assert.match(source, /setAssignmentId\(row\.id!\)/);
-  assert.match(source, /DepartmentPlanAssignmentDialog/);
+  assert.match(source, /setAssignmentId\(row\.key\)/);
+  assert.match(source, /DepartmentPlanQuickAssignDialog/);
   assert.match(source, /linkedTaskId/);
   assert.match(source, /md:hidden/);
   assert.match(source, /<article key=\{row\.key\}/);
