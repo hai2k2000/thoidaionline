@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const migration = readFileSync(new URL("../../supabase/migrations/20261001090000_quick_report_task_v1.sql", import.meta.url), "utf8");
+const uxMigration = readFileSync(new URL("../../supabase/migrations/20261002150000_quick_report_ux_v2.sql", import.meta.url), "utf8");
 const catalog = readFileSync(new URL("./rbac/permissionCatalog.ts", import.meta.url), "utf8");
 
 test("quick report migration is additive and explicit", () => {
@@ -19,4 +20,11 @@ test("quick report migration is additive and explicit", () => {
 
 test("RBAC catalog exposes a dedicated quick-report permission", () => {
   assert.match(catalog, /task\.quick_report\.create/);
+});
+
+test("UX migration keeps the hardened RPC and validates date-only ranges", () => {
+  assert.match(uxMigration, /create or replace function public\.api_create_quick_report_v1/);
+  assert.match(uxMigration, /start_date date,completion_date date/);
+  assert.match(uxMigration, /completion_date < v_row\.start_date/);
+  assert.match(uxMigration, /grant execute on function/);
 });

@@ -9,9 +9,8 @@ export type QuickReportStatus = "in_progress" | "done";
 export type QuickReportRow = {
   title: string;
   category: QuickReportCategory;
-  workDate: string;
-  startedTime: string;
-  completedTime: string | null;
+  startDate: string;
+  completionDate: string | null;
   status: QuickReportStatus;
   notes: string;
 };

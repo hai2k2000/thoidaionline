@@ -14,8 +14,8 @@ const actor = {
   permissions: normalizePermissions({}), rbacPermissions: ["task.quick_report.create"],
 };
 const validRow = (overrides = {}) => ({
-  title: "Sửa máy in", category: "printer_device", workDate: "2026-10-01",
-  startedTime: "09:15", completedTime: "09:30", status: "done", notes: "Xong", ...overrides,
+  title: "Sửa máy in", category: "printer_device", startDate: "2026-10-01",
+  completionDate: "2026-10-01", status: "done", notes: "Xong", ...overrides,
 });
 
 const harness = (actorOverride = {}) => {

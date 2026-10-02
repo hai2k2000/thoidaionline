@@ -22,7 +22,7 @@ test("Department Plan uses the canonical form and one-task dialog contract", () 
 
 test("linked items expose only the existing Task", () => {
   const source = read("DepartmentPlanGrid.tsx") + read("DepartmentPlanItemDialog.tsx");
-  assert.match(source, /Mở công việc/);
+  assert.match(source, /Xem công việc/);
   assert.match(source, /linkedTaskId|linked_task_id/);
 });
 

@@ -16,13 +16,16 @@ test("item persistence derives department from the parent plan", () => {
   const source = read("departmentPlanRepository.ts");
   assert.match(source, /department_id:\s*plan\.data\.department_id/);
   assert.doesNotMatch(source, /input\.department_id/);
-  assert.match(source, /validateAssignee\(plan\.data\.department_id/);
+  assert.match(source, /assignee_id:\s*null/);
+  assert.match(source, /assignment_state:\s*input\.assignment_state/);
 });
 
 test("handlers authorize parent scope before every item operation", () => {
   const source = read("departmentPlanHandlers.ts");
   assert.match(source, /getPlan\(id\)[\s\S]*scopeFor\(guard\.actor, plan\.data\.department_id\)/);
-  assert.match(source, /linked_task_id.*department_id.*department_plan_id/);
+  assert.match(source, /linked_task_id.*body/);
+  assert.match(source, /department_id.*body/);
+  assert.match(source, /department_plan_id.*body/);
   assert.match(source, /requireReadActor/);
   assert.match(source, /requireMutationActor/);
 });
