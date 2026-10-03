@@ -88,7 +88,7 @@ export default function DepartmentPlanReport({
   const weeklyStart = period.periodType === "weekly" ? period.periodStart : currentWeeklyPeriod.periodStart;
   const monthlyStart = period.periodType === "monthly" ? period.periodStart : currentMonthlyPeriod.periodStart;
 
-  const exportPdf = async () => {
+  const exportDocx = async () => {
     if (exporting) return;
     setExporting(true);
     setError("");
@@ -97,10 +97,10 @@ export default function DepartmentPlanReport({
       if (filters.employeeId) query.set("employeeId", filters.employeeId);
       if (filters.workStatus) query.set("status", filters.workStatus);
       if (filters.assignmentState) query.set("assignmentState", filters.assignmentState);
-      const response = await fetch(`/api/planning/department/reports/pdf?${query.toString()}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("Không thể xuất PDF báo cáo.");
+      const response = await fetch(`/api/planning/department/reports/docx?${query.toString()}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Không thể xuất báo cáo Word.");
       const blob = await response.blob();
-      const filename = response.headers.get("Content-Disposition")?.match(/filename="([^\"]+)"/)?.[1] ?? `bao-cao-ke-hoach-phong-${period.periodStart}.pdf`;
+      const filename = response.headers.get("Content-Disposition")?.match(/filename="([^\"]+)"/)?.[1] ?? `Bao_cao_cong_tac_${period.periodStart}.docx`;
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -160,7 +160,7 @@ export default function DepartmentPlanReport({
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-indigo-900 ring-1 ring-indigo-200 hover:bg-indigo-50" href={departmentPlanUrl(period.periodType, period.periodStart, departmentId)}>← Quay lại kế hoạch kỳ</Link>
-                <button type="button" onClick={() => void exportPdf()} disabled={exporting} className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60">{exporting ? "Đang xuất PDF…" : "Xuất PDF"}</button>
+                <button type="button" onClick={() => void exportDocx()} disabled={exporting} className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60">{exporting ? "Đang xuất Word…" : "Xuất báo cáo Word"}</button>
               </div>
             </div>
           </header>

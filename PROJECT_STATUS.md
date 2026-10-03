@@ -1,3 +1,22 @@
+
+## Department Period Report Word Export
+
+Current Phase: COMPLETE; implementation and pre-production validation
+Current Task: Word-only period report export
+
+Completed:
+- Replaced Department Period Report UI export action with the authenticated DOCX route while preserving selected period, department, and filters.
+- Implemented editable Word report structure with sections I–IV, real report rows, Vietnamese text, and approved filenames.
+- Preserved existing PDF backend files and unrelated Department Plan business logic.
+
+Validation:
+- DOCX exporter regression: 5/5 PASS.
+- Department Plan focused regression: 130 PASS, 1 pre-existing bundle check skipped.
+- TypeScript, changed-file ESLint, git diff --check, route manifest, and production-like build: PASS.
+- Sample DOCX opened successfully in Microsoft Word; PNG renderer unavailable because VPS has no LibreOffice and local renderer lacks pdf2image in its default Python.
+
+Production mutation: pending immutable artifact packaging and activation.
+
 # Department Plan Real + Multi-Assignment V2 Blocker Closure
 
 - Phase A completed: canonical leadership-mapped assignee eligibility is aligned with the existing assignment scope, and successful assignment responses rehydrate linked Task participants/status before reaching the UI.
