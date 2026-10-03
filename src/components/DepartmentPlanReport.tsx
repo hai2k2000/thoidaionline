@@ -110,7 +110,7 @@ export default function DepartmentPlanReport({
       anchor.remove();
       URL.revokeObjectURL(url);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể xuất PDF báo cáo.");
+      setError(reason instanceof Error ? reason.message : "Không thể xuất báo cáo Word.");
     } finally {
       setExporting(false);
     }
