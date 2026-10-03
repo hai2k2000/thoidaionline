@@ -15,7 +15,7 @@ Validation:
 - TypeScript, changed-file ESLint, git diff --check, route manifest, and production-like build: PASS.
 - Sample DOCX opened successfully in Microsoft Word; PNG renderer unavailable because VPS has no LibreOffice and local renderer lacks pdf2image in its default Python.
 
-Production mutation: pending immutable artifact packaging and activation.
+Production mutation: COMPLETE — immutable artifact activated and health-checked.
 
 # Department Plan Real + Multi-Assignment V2 Blocker Closure
 
