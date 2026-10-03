@@ -9,10 +9,12 @@ import { listJournalismWorkKinds } from "@/lib/taskRepository";
 import { loadJournalismTaskStructureOptions } from "@/lib/journalismStructureRepository";
 import { canUseJournalism } from "@/lib/journalismScope.mjs";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-export default async function TaskDetailPage({ params }: Props) {
+export default async function TaskDetailPage({ params, searchParams }: Props) {
   const user = await getSessionUser();
+  const rawReturnTo = (await searchParams).returnTo;
+  const returnTo = typeof rawReturnTo === "string" && rawReturnTo.startsWith("/reports/work") && !rawReturnTo.startsWith("//") ? rawReturnTo : null;
   if (!user) redirect("/login");
   const journalismAllowed = canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions });
   const taskId = asUuid((await params).id);
@@ -57,7 +59,7 @@ export default async function TaskDetailPage({ params }: Props) {
     && detailResult.data.journalism?.publication_report?.reported_by !== user.id
     && await authorizeJournalismPermission(user, accessResult.data, "journalism.publication.verify");
   const structureOptions = journalismAllowed && detailResult.data.journalism ? await loadJournalismTaskStructureOptions(user, accessResult.data, actor) : { topics: [], series: [], canAssign: false };
-  return <TaskDetailShell task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} journalismStructureOptions={structureOptions} capabilities={{
+  return <TaskDetailShell returnTo={returnTo} task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} journalismStructureOptions={structureOptions} capabilities={{
     report: action("report"),
     completeAssigned: action("complete_assigned"),
     review: action("review"),
