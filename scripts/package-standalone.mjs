@@ -23,6 +23,13 @@ if (existsSync(output)) throw new Error(`artifact already exists: ${output}`);
 execFileSync(process.execPath, ["scripts/check-required-routes.mjs"], { cwd: root, stdio: "inherit" });
 await mkdir(output, { recursive: true });
 await cp(standalone, output, { recursive: true });
+// Next 16 standalone tracing can omit framework constants required by the runtime.
+const nextFramework = join(root, "node_modules", "next", "dist", "lib", "framework");
+const outputNextFramework = join(output, "node_modules", "next", "dist", "lib", "framework");
+if (existsSync(nextFramework)) {
+  await mkdir(outputNextFramework, { recursive: true });
+  await cp(nextFramework, outputNextFramework, { recursive: true });
+}
 await mkdir(join(output, ".next", "cache"), { recursive: true });
 await cp(join(build, "static"), join(output, ".next", "static"), { recursive: true });
 if (existsSync(join(root, "public"))) await cp(join(root, "public"), join(output, "public"), { recursive: true });
