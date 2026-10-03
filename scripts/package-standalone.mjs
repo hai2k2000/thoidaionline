@@ -52,7 +52,8 @@ await writeFile(join(output, "MIGRATION_REFERENCE"), [
   "supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql",
   "supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql",
   "supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql",
-  "supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql",
+  "supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql,supabase/migrations/20261003100000_department_period_plan_v2.sql",
+  "supabase/migrations/20261003100000_department_period_plan_v2.sql",
   "",
 ].join("\n"));
 await writeFile(join(output, "package.json"), `${JSON.stringify({ name: "thoidai-work-runtime", version: "0.1.0", private: true, scripts: { start: "node start-standalone.mjs" } }, null, 2)}\n`);

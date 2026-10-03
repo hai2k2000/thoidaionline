@@ -6,6 +6,7 @@ export const REQUIRED_MIGRATIONS = [
   "20260926140000_department_plans_v2",
   "20260926150000_department_plan_to_task_v1",
   "20260926160000_department_plan_assignment_v2",
+  "20261003100000_department_period_plan_v2",
 ];
 
 export function validateMigrationState(appliedVersions, expected = REQUIRED_MIGRATIONS) {
