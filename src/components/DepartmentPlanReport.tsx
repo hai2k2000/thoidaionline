@@ -159,7 +159,7 @@ export default function DepartmentPlanReport({
                 <p className="mt-1 text-sm font-semibold text-slate-600">{departmentName} · {periodLabel}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-indigo-900 ring-1 ring-indigo-200 hover:bg-indigo-50" href={departmentPlanUrl(period.periodType, period.periodStart, departmentId)}>Mở kế hoạch</Link>
+                <Link className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-indigo-900 ring-1 ring-indigo-200 hover:bg-indigo-50" href={departmentPlanUrl(period.periodType, period.periodStart, departmentId)}>← Quay lại kế hoạch kỳ</Link>
                 <button type="button" onClick={() => void exportPdf()} disabled={exporting} className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60">{exporting ? "Đang xuất PDF…" : "Xuất PDF"}</button>
               </div>
             </div>

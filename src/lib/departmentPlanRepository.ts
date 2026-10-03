@@ -143,6 +143,15 @@ export const departmentPlanRepository = {
       .limit(100);
   },
 
+  async listImportTasksByIds(departmentId: string, taskIds: string[]) {
+    if (!taskIds.length) return { data: [], error: null };
+    return serverSupabase.from("tasks")
+      .select("id,title,description,due_date,status,assignee_id")
+      .eq("department_id", departmentId)
+      .neq("status", "cancelled")
+      .in("id", taskIds);
+  },
+
   async validateAssignee(departmentId: string, assigneeId: string | null | undefined) {
     if (!assigneeId) return { data: true, error: null };
     const result = await serverSupabase

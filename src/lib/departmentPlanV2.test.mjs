@@ -13,6 +13,7 @@ const v2SourceFiles = [
   "src/components/DepartmentPlanAssignmentDialog.tsx",
   "src/components/DepartmentPlanQuickAssignDialog.tsx",
   "src/components/DepartmentPlanReport.tsx",
+  "src/lib/departmentPlanExcel.mjs",
   "src/lib/departmentPlanDocx.ts",
   "src/lib/departmentPlanDocxExport.ts",
   "src/lib/departmentPlanPdf.ts",
@@ -20,7 +21,10 @@ const v2SourceFiles = [
 const suspiciousMojibake = [/\u00c3/, /\u00e1\u00ba/, /\u00e1\u00bb/];
 const requiredLabels = [
   "T\u1ea1o k\u1ebf ho\u1ea1ch k\u1ef3 m\u1edbi",
-  "Import k\u1ebf ho\u1ea1ch t\u1eeb Word",
+  "Import k\u1ebf ho\u1ea1ch t\u1eeb Excel",
+  "Quay l\u1ea1i k\u1ebf ho\u1ea1ch k\u1ef3",
+  "File Excel kh\u00f4ng h\u1ee3p l\u1ec7",
+  "X\u00e1c nh\u1eadn import",
   "K\u1ebf ho\u1ea1ch tu\u1ea7n",
   "K\u1ebf ho\u1ea1ch th\u00e1ng",
   "B\u00e1o c\u00e1o k\u1ef3 n\u00e0y",
@@ -56,10 +60,12 @@ test("Department Period Plan V2 does not auto-link REPORT_ONLY or pending approv
   assert.match(sql, /approval_required,false\) and new\.assignment_approved_at is null/);
 });
 
-test("DOCX import is preview-only and export uses real report rows", () => {
+test("Excel import is preview-only and DOCX export still uses real report rows", () => {
   const importRoute = readFileSync(new URL("../../src/app/api/planning/department/import/route.ts", import.meta.url), "utf8");
   const exportRoute = readFileSync(new URL("../../src/app/api/planning/department/reports/docx/route.ts", import.meta.url), "utf8");
   assert.match(importRoute, /persisted: false/);
+  assert.match(importRoute, /readDepartmentPlanExcel/);
+  assert.doesNotMatch(importRoute, /parseDepartmentPlanDocx/);
   assert.match(exportRoute, /exportDepartmentPlanDocx/);
 });
 
@@ -82,5 +88,5 @@ test("Department Period Plan V2 client bundle stays UTF-8 clean", { skip: proces
   const bundle = entry.map((chunk) => readFileSync(join(process.cwd(), ".next", chunk), "utf8")).join("\n");
   assertNoMojibake("Department Period Plan V2 client bundle", bundle);
   assert.ok(bundle.includes("T\u1ea1o k\u1ebf ho\u1ea1ch k\u1ef3 m\u1edbi"));
-  assert.ok(bundle.includes("Import k\u1ebf ho\u1ea1ch t\u1eeb Word"));
+  assert.ok(bundle.includes("Import k\u1ebf ho\u1ea1ch t\u1eeb Excel"));
 });
