@@ -53,6 +53,7 @@ export async function POST(request: Request) {
       const words = new Set(normalize(item.title).split(" ").filter((word) => word.length > 2));
       const scored = (tasks.data ?? []).map((task) => ({ task, score: normalize(task.title).split(" ").filter((word) => words.has(word)).length / Math.max(words.size, 1) })).sort((a, b) => b.score - a.score);
       const explicitTask = item.taskId ? (explicitTasks.data ?? []).find((task) => task.id === item.taskId) : null;
+      if (item.taskId && !explicitTask) throw new Error(`Task ID liên kết không tồn tại hoặc nằm ngoài phòng ban: ${item.taskId}`);
       const best = scored[0];
       return { ...item, assigneeId, assigneeName: item.assigneeNames.join("; ") || null, assigneeIds: resolvedAssignees.map((employee) => employee.id), assigneeMatches: assigneeMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), collaboratorMatches: collaboratorMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), mappingConfidence: hasAmbiguous ? "REVIEW" : hasUnresolved ? "UNRESOLVED" : "HIGH", existingTask: explicitTask ? { id: explicitTask.id, title: explicitTask.title, confidence: "HIGH" } : best?.score >= 0.7 ? { id: best.task.id, title: best.task.title, confidence: "HIGH" } : best?.score >= 0.4 ? { id: best.task.id, title: best.task.title, confidence: "REVIEW" } : null };
     });
