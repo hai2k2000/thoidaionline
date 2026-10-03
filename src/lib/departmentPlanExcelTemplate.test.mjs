@@ -23,7 +23,7 @@ const columnName = (index) => {
 
 test("template exposes approved headers, instruction sheet, formats, and validations", async () => {
   const bytes = await createDepartmentPlanExcelTemplate();
-  assert.deepEqual(await readSheetNames(Buffer.from(bytes)), ["KeHoach_Import", "HuongDan"]);
+  assert.deepEqual(await readSheetNames(Buffer.from(bytes)), ["KeHoach_Import", "Huong Dan"]);
   const rows = await readXlsxFile(Buffer.from(bytes), { sheet: "KeHoach_Import" });
   assert.deepEqual(rows[0], DEPARTMENT_PLAN_EXCEL_HEADERS);
   assert.ok(rows.slice(1).every((row) => row.every((cell) => cell == null)), "template must not contain production data");

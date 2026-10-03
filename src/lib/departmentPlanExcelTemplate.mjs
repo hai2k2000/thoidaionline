@@ -176,7 +176,7 @@ export async function createDepartmentPlanExcelTemplate() {
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <workbookPr defaultThemeVersion="164011"/>
   <bookViews><workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000" activeTab="0"/></bookViews>
-  <sheets><sheet name="KeHoach_Import" sheetId="1" r:id="rId1"/><sheet name="HuongDan" sheetId="2" r:id="rId2"/></sheets>
+  <sheets><sheet name="KeHoach_Import" sheetId="1" r:id="rId1"/><sheet name="Huong Dan" sheetId="2" r:id="rId2"/></sheets>
 </workbook>`);
   zip.file("xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
