@@ -12,14 +12,14 @@ export async function exportDepartmentPlanDocx(report: DepartmentPlanReportResul
     new TableCell({ children: [new Paragraph(item.result_this_period ?? "")] }),
   ] }));
   const doc = new Document({ sections: [{ children: [
-    new Paragraph({ text: `BÃO CÃO Káº¾ HOáº CH ${report.period.periodType === "weekly" ? "TUáº¦N" : "THÃNG"}`, heading: HeadingLevel.TITLE }),
-    new Paragraph({ children: [new TextRun({ text: `ÄÆ¡n vá»‹: ${departmentName}` })] }),
-    new Paragraph({ children: [new TextRun({ text: `Ká»³: ${report.period.periodStart} - ${report.period.periodEnd}` })] }),
-    new Paragraph({ text: "I. ThÃ´ng tin chung", heading: HeadingLevel.HEADING_1 }),
-    new Paragraph(`Tá»•ng sá»‘ Ä‘áº§u viá»‡c: ${report.items.length}`),
-    new Paragraph({ text: "II. Káº¿t quáº£ cÃ´ng tÃ¡c", heading: HeadingLevel.HEADING_1 }),
-    new Table({ rows: [new TableRow({ children: ["Nhiá»‡m vá»¥ / tÃªn viá»‡c", "Ná»™i dung / yÃªu cáº§u", "Thá»i háº¡n", "Tráº¡ng thÃ¡i", "Káº¿t quáº£ ká»³"].map((text) => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })] })) }), ...rows] }),
-    new Paragraph({ text: "III. Káº¿ hoáº¡ch cÃ´ng tÃ¡c ká»³ tiáº¿p theo", heading: HeadingLevel.HEADING_1 }),
+    new Paragraph({ text: `BÁO CÁO KẾ HOẠCH ${report.period.periodType === "weekly" ? "TUẦN" : "THÁNG"}`, heading: HeadingLevel.TITLE }),
+    new Paragraph({ children: [new TextRun({ text: `Đơn vị: ${departmentName}` })] }),
+    new Paragraph({ children: [new TextRun({ text: `Kỳ: ${report.period.periodStart} - ${report.period.periodEnd}` })] }),
+    new Paragraph({ text: "I. Thông tin chung", heading: HeadingLevel.HEADING_1 }),
+    new Paragraph(`Tổng số đầu việc: ${report.items.length}`),
+    new Paragraph({ text: "II. Kết quả công tác", heading: HeadingLevel.HEADING_1 }),
+    new Table({ rows: [new TableRow({ children: ["Nhiệm vụ / tên việc", "Nội dung / yêu cầu", "Thời hạn", "Trạng thái", "Kết quả kỳ"].map((text) => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })] })) }), ...rows] }),
+    new Paragraph({ text: "III. Kế hoạch công tác kỳ tiếp theo", heading: HeadingLevel.HEADING_1 }),
     ...report.items.filter((item) => item.carry_forward).map((item) => new Paragraph(`- ${item.title}`)),
   ] }] });
   return Packer.toBuffer(doc);

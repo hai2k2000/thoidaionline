@@ -1,8 +1,45 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 
 const sql = readFileSync(new URL("../../supabase/migrations/20261003100000_department_period_plan_v2.sql", import.meta.url), "utf8");
+const v2SourceFiles = [
+  "src/components/DepartmentPlanActions.tsx",
+  "src/components/DepartmentPlanShell.tsx",
+  "src/components/DepartmentPlanGrid.tsx",
+  "src/components/DepartmentPlanItemDialog.tsx",
+  "src/components/DepartmentPlanItemFields.tsx",
+  "src/components/DepartmentPlanAssignmentDialog.tsx",
+  "src/components/DepartmentPlanQuickAssignDialog.tsx",
+  "src/components/DepartmentPlanReport.tsx",
+  "src/lib/departmentPlanDocx.ts",
+  "src/lib/departmentPlanDocxExport.ts",
+  "src/lib/departmentPlanPdf.ts",
+];
+const suspiciousMojibake = [/\u00c3/, /\u00e1\u00ba/, /\u00e1\u00bb/];
+const requiredLabels = [
+  "T\u1ea1o k\u1ebf ho\u1ea1ch k\u1ef3 m\u1edbi",
+  "Import k\u1ebf ho\u1ea1ch t\u1eeb Word",
+  "K\u1ebf ho\u1ea1ch tu\u1ea7n",
+  "K\u1ebf ho\u1ea1ch th\u00e1ng",
+  "B\u00e1o c\u00e1o k\u1ef3 n\u00e0y",
+  "Tu\u1ea7n tr\u01b0\u1edbc",
+  "Tu\u1ea7n sau",
+  "Tu\u1ea7n n\u00e0y",
+  "N\u1ed9i dung k\u1ebf ho\u1ea1ch",
+  "Ng\u01b0\u1eddi th\u1ef1c hi\u1ec7n",
+  "H\u1ea1n ho\u00e0n th\u00e0nh",
+  "Tr\u1ea1ng th\u00e1i",
+  "Th\u00eam d\u00f2ng",
+  "Giao vi\u1ec7c",
+  "Ch\u1ed1t k\u1ef3",
+  "D\u00e0i h\u1ea1n",
+  "Chuy\u1ec3n ti\u1ebfp",
+  "\u0110\u1ecbnh k\u1ef3",
+];
+const readSource = (file) => readFileSync(join(process.cwd(), file), "utf8");
+const assertNoMojibake = (label, text) => suspiciousMojibake.forEach((pattern) => assert.doesNotMatch(text, pattern, `${label} contains ${pattern}`));
 
 test("Department Period Plan V2 migration keeps Task canonical and enforces Task x period", () => {
   assert.match(sql, /department_plan_items_task_period_uidx/);
@@ -24,4 +61,26 @@ test("DOCX import is preview-only and export uses real report rows", () => {
   const exportRoute = readFileSync(new URL("../../src/app/api/planning/department/reports/docx/route.ts", import.meta.url), "utf8");
   assert.match(importRoute, /persisted: false/);
   assert.match(exportRoute, /exportDepartmentPlanDocx/);
+});
+
+test("Department Period Plan V2 Vietnamese source stays UTF-8 clean", () => {
+  const source = v2SourceFiles.map((file) => readSource(file)).join("\n");
+  assertNoMojibake("Department Period Plan V2 source", source);
+  requiredLabels.forEach((label) => assert.ok(source.includes(label), `Missing Vietnamese label: ${label}`));
+});
+
+test("Department Period Plan V2 client bundle stays UTF-8 clean", { skip: process.env.CHECK_DEPARTMENT_PLAN_BUNDLE !== "1" }, () => {
+  const manifestPath = join(process.cwd(), ".next/server/app/planning/department/page_client-reference-manifest.js");
+  assert.ok(existsSync(manifestPath), "Department Plan client manifest is missing");
+  const manifestSource = readFileSync(manifestPath, "utf8");
+  const prefix = 'globalThis.__RSC_MANIFEST["/planning/department/page"] = ';
+  const assignment = manifestSource.lastIndexOf(prefix);
+  assert.ok(assignment >= 0, "Department Plan client manifest assignment is missing");
+  const manifest = JSON.parse(manifestSource.slice(assignment + prefix.length, manifestSource.lastIndexOf(";")));
+  const entry = manifest.entryJSFiles?.["[project]/src/app/planning/department/page"] ?? [];
+  assert.ok(entry.length > 0, "Department Plan client entry chunks are missing");
+  const bundle = entry.map((chunk) => readFileSync(join(process.cwd(), ".next", chunk), "utf8")).join("\n");
+  assertNoMojibake("Department Period Plan V2 client bundle", bundle);
+  assert.ok(bundle.includes("T\u1ea1o k\u1ebf ho\u1ea1ch k\u1ef3 m\u1edbi"));
+  assert.ok(bundle.includes("Import k\u1ebf ho\u1ea1ch t\u1eeb Word"));
 });
