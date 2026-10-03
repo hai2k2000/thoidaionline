@@ -21,9 +21,10 @@ export default function QuickReportForm() {
   const submit = async () => {
     setBusy(true); setError("");
     try {
-      const response = await fetch("/api/tasks/quick-report", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId: crypto.randomUUID(), rows }) });
-      const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
-      if (!response.ok) throw new Error(payload?.error?.message ?? "Không thể lưu báo cáo việc phát sinh.");
+      const requestId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const response = await fetch("/api/tasks/quick-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify({ requestId, rows }) });
+      const payload = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | null;
+      if (!response.ok) throw new Error(payload?.error?.message ?? (payload?.error?.code ? `Không thể lưu báo cáo (${payload.error.code}).` : "Không thể lưu báo cáo việc phát sinh."));
       router.push("/tasks"); router.refresh();
     } catch (submitError) { setError(submitError instanceof Error ? submitError.message : "Không thể lưu báo cáo việc phát sinh."); }
     finally { setBusy(false); }
