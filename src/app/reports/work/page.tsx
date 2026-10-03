@@ -11,5 +11,7 @@ export default async function WorkReportRoute({ searchParams }: { searchParams: 
   for (const [key, value] of Object.entries(params)) if (typeof value === "string") query.set(key, value);
   const result = await loadWorkReport(new Request(`https://internal/reports/work?${query}`));
   if (!result.ok) redirect("/tasks");
-  return <WorkReportPage initial={result.data} />;
+  const rawReturnTo = params.returnTo;
+  const returnTo = typeof rawReturnTo === "string" && rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : null;
+  return <WorkReportPage initial={{ ...result.data, returnTo }} />;
 }
