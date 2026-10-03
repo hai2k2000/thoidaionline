@@ -1,3 +1,27 @@
+# Department Period Plan V2 Vietnamese Mojibake Fix - 2026-10-03
+
+Current Phase: COMPLETE - source fixed, artifact verified, production activated
+Current Task: Narrow Department Period Plan V2 Vietnamese encoding correction
+
+Completed:
+- Corrected 35 malformed user-facing UTF-8 string literals (196 mojibake signature occurrences) in Department Plan actions and DOCX import/export source.
+- Added focused source and client-bundle regression guards for required Department Plan labels and suspicious UTF-8 signatures.
+- Created and pushed fix/department-period-plan-v2-vietnamese from live commit 1b5d134; application fix commit is 06b5106c4ce7413c60ee5dc6a9500353ec32086f.
+- Activated immutable release /opt/releases/thoidai-work/department-period-plan-v2-vietnamese-06b5106 with previous and rollback-2 preserved.
+
+Validation:
+- Department Plan focused suite: 110/110 PASS; Vietnamese source guard: PASS; built client bundle guard: PASS.
+- TypeScript, changed-file ESLint, git diff --check, required route manifest, production-like build, standalone artifact verification: PASS.
+- Built active client chunks contain the required Vietnamese labels and no known mojibake signatures.
+- Production service active, NRestarts=0, /login 200, protected Department Plan and Work Report APIs 401, Quick Report POST 403 unauthenticated, cache ownership PASS.
+- Authenticated live UI: NOT VERIFIED; no authorized session supplied.
+
+Production mutation:
+- Application release activated; no migration or business-logic changes.
+
+Next:
+- Monitor current/previous/rollback-2; run authenticated browser smoke when an authorized session is available.
+
 # Department Plan Real + Multi-Assignment V2 Blocker Closure
 
 - Phase A completed: canonical leadership-mapped assignee eligibility is aligned with the existing assignment scope, and successful assignment responses rehydrate linked Task participants/status before reaching the UI.
