@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -18,31 +18,31 @@ type AppNavProps = {
 
 const labels = {
   assign: "Giao vi\u1ec7c",
-  attendance: "Cháº¥m cÃ´ng",
-  "attendance-admin": "Cháº¥m cÃ´ng toÃ n cÆ¡ quan",
-  "duty-schedule": "Lá»‹ch trá»±c",
-  "online-work": "Lá»‹ch lÃ m trá»±c tuyáº¿n (ngoáº¡i ngá»¯)",
-  "online-work-admin": "Quáº£n trá»‹ lá»‹ch online",
-  "duty-roster": "Quáº£n trá»‹ lá»‹ch trá»±c",
+  attendance: "Chấm công",
+  "attendance-admin": "Chấm công toàn cơ quan",
+  "duty-schedule": "Lịch trực",
+  "online-work": "Lịch làm trực tuyến (ngoại ngữ)",
+  "online-work-admin": "Quản trị lịch online",
+  "duty-roster": "Quản trị lịch trực",
   tasks: "Qu\u1ea3n l\u00fd c\u00f4ng vi\u1ec7c",
   "work-report": "Báo cáo công việc",
-  "department-plan": "Káº¿ hoáº¡ch phÃ²ng ban",
+  "department-plan": "Kế hoạch phòng ban",
   evaluations: "\u0110\u00e1nh gi\u00e1 nh\u00e2n vi\u00ean",
-  "evaluation-summary": "Báº£ng Ä‘Ã¡nh giÃ¡ toÃ n cÆ¡ quan",
+  "evaluation-summary": "Bảng đánh giá toàn cơ quan",
   account: "T\u00e0i kho\u1ea3n",
   users: "Qu\u1ea3n l\u00fd nh\u00e2n vi\u00ean",
   departments: "Ph\u00f2ng ban",
   permissions: "Ph\u00e2n quy\u1ec1n",
-  "evaluation-rubrics": "Bá»™ tiÃªu chÃ­ Ä‘Ã¡nh giÃ¡",
-  "evaluation-cycles": "Quáº£n trá»‹ ká»³ Ä‘Ã¡nh giÃ¡",
-  "work-schedule": "Lá»‹ch lÃ m viá»‡c",
+  "evaluation-rubrics": "Bộ tiêu chí đánh giá",
+  "evaluation-cycles": "Quản trị kỳ đánh giá",
+  "work-schedule": "Lịch làm việc",
   "work-schedule-leader": "Lá»‹ch cÃ´ng tÃ¡c lÃ£nh Ä‘áº¡o",
-  "work-schedule-staff": "Káº¿ hoáº¡ch cÃ¡ nhÃ¢n",
+  "work-schedule-staff": "Kế hoạch cá nhân",
   "work-schedule-admin": "Quáº£n trá»‹ lá»‹ch cÃ´ng tÃ¡c",
-  "journalism-tasks": "CÃ´ng viá»‡c nghiá»‡p vá»¥ bÃ¡o chÃ­",
-  "journalism-structures": "Chá»§ Ä‘á» / Loáº¡t bÃ i",
-  "journalism-reports": "BÃ¡o cÃ¡o nghiá»‡p vá»¥ bÃ¡o chÃ­",
-  "journalism-calendar": "Lá»‹ch biÃªn táº­p",
+  "journalism-tasks": "Công việc nghiệp vụ báo chí",
+  "journalism-structures": "Chủ đề / Loạt bài",
+  "journalism-reports": "Báo cáo nghiệp vụ báo chí",
+  "journalism-calendar": "Lịch biên tập",
 } as const;
 
 function NavIcon({ id, active }: { id: keyof typeof labels; active: boolean }) {
@@ -92,13 +92,13 @@ function NavContent({
   return (
     <div className="flex h-full flex-col p-3.5">
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 via-white to-amber-50 px-3 py-3.5 text-center ring-1 ring-orange-100 before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-orange-500 before:via-red-500 before:to-amber-400">
-        <span className="mx-auto flex h-12 w-36 items-center justify-center overflow-hidden px-1"><Image src="/thoidai-logo.png" alt="Logo Thá»i Äáº¡i" width={144} height={48} priority className="h-auto w-full object-contain" /></span>
-        <p className="mt-1.5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Quáº£n trá»‹ cÃ´ng viá»‡c ná»™i bá»™</p>
+        <span className="mx-auto flex h-12 w-36 items-center justify-center overflow-hidden px-1"><Image src="/thoidai-logo.png" alt="Logo Thời Đại" width={144} height={48} priority className="h-auto w-full object-contain" /></span>
+        <p className="mt-1.5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Quản trị công việc nội bộ</p>
       </div>
 
       <div className="mt-4 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
-      <div className="mb-2.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-orange-100 to-amber-50 px-2.5 py-2 ring-1 ring-orange-200"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-orange-900">CÃ´ng viá»‡c</p></div><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200">{navigation.primary.length}</span></div>
-      <nav aria-label="Menu chÃ­nh" className="space-y-1">
+      <div className="mb-2.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-orange-100 to-amber-50 px-2.5 py-2 ring-1 ring-orange-200"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-orange-900">Công việc</p></div><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200">{navigation.primary.length}</span></div>
+      <nav aria-label="Menu chính" className="space-y-1">
             {navigation.primary.filter((item) => !["work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"].includes(item.id)).map((item) => (
               item.id === "work-schedule" ? <details key={item.id} open={workScheduleOpen || workScheduleActive} onToggle={(event) => setWorkScheduleOpen(event.currentTarget.open)} className="group"><summary className={linkClass(workScheduleActive)}><NavIcon id={item.id} active={workScheduleActive} /><span className="leading-snug">{labels[item.id]}</span><span className="ml-auto"><ChevronIcon open={workScheduleOpen || workScheduleActive} /></span></summary><div className="ml-8 mt-1 space-y-1 border-l border-orange-200 pl-2">{navigation.primary.filter((child) => ["work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"].includes(child.id)).map((child) => <Link key={child.id} href={child.href} aria-current={isNavigationActive(currentPath, child.href) ? "page" : undefined} onClick={onNavigate} className={linkClass(isNavigationActive(currentPath, child.href))}><span className="leading-snug">{labels[child.id]}</span></Link>)}</div></details> : (
               <Link
@@ -118,7 +118,7 @@ function NavContent({
       {navigation.journalism.length > 0 ? (
         <details open={journalismOpen || journalismActive} onToggle={(event) => setJournalismOpen(event.currentTarget.open)} className="group mt-3 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
           <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl bg-gradient-to-r from-red-100 to-orange-50 px-2.5 py-2 ring-1 ring-red-200 [&::-webkit-details-marker]:hidden"><div className="flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><path d="M4 6h16M4 12h11M4 18h16"/><circle cx="18" cy="12" r="2"/></svg></span><p className="min-w-0 text-[11px] font-extrabold uppercase leading-snug tracking-wide text-red-900">NGHIá»†P Vá»¤ BÃO CHÃ</p></div><div className="flex items-center gap-2"><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-red-700 ring-1 ring-red-200">{navigation.journalism.length}</span><ChevronIcon open={journalismOpen || journalismActive} /></div></summary>
-          <nav aria-label="Nghiá»‡p vá»¥ bÃ¡o chÃ­" className="mt-2.5 space-y-1">
+          <nav aria-label="Nghiệp vụ báo chí" className="mt-2.5 space-y-1">
             {navigation.journalism.map((item) => (
               <Link
                 key={item.id}
@@ -136,8 +136,8 @@ function NavContent({
 
       {navigation.configuration.length > 0 ? (
         <details open={configurationOpen || configurationActive} onToggle={(event) => setConfigurationOpen(event.currentTarget.open)} className="group mt-3 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl bg-gradient-to-r from-slate-200 to-slate-50 px-2.5 py-2 ring-1 ring-slate-300 [&::-webkit-details-marker]:hidden"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-600 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></svg></span><p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-800">Cáº¥u hÃ¬nh</p></div><div className="flex items-center gap-2"><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-300">{navigation.configuration.length}</span><ChevronIcon open={configurationOpen || configurationActive} /></div></summary>
-          <nav aria-label="Cáº¥u hÃ¬nh" className="mt-2.5 space-y-1">
+          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl bg-gradient-to-r from-slate-200 to-slate-50 px-2.5 py-2 ring-1 ring-slate-300 [&::-webkit-details-marker]:hidden"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-600 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></svg></span><p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-800">Cấu hình</p></div><div className="flex items-center gap-2"><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-300">{navigation.configuration.length}</span><ChevronIcon open={configurationOpen || configurationActive} /></div></summary>
+          <nav aria-label="Cấu hình" className="mt-2.5 space-y-1">
             {navigation.configuration.map((item) => (
               <Link
                 key={item.id}
@@ -156,8 +156,8 @@ function NavContent({
       <div className="mt-auto pt-3">
         <details open={accountOpen} onToggle={(event) => setAccountOpen(event.currentTarget.open)} className="group rounded-2xl bg-gradient-to-br from-slate-50 to-orange-50 p-2 ring-1 ring-slate-200 shadow-sm">
         <summary className="flex cursor-pointer list-none items-center gap-2.5 rounded-xl bg-white/80 px-2.5 py-2.5 ring-1 ring-white [&::-webkit-details-marker]:hidden">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-orange-100 text-sm font-bold text-orange-700 ring-2 ring-white shadow-sm">{avatarUrl ? <img src={avatarUrl} alt="áº¢nh Ä‘áº¡i diá»‡n" className="h-full w-full object-cover" /> : (userLabel?.trim().charAt(0).toUpperCase() ?? "?")}</span><div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">TÃ i khoáº£n</p>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-orange-100 text-sm font-bold text-orange-700 ring-2 ring-white shadow-sm">{avatarUrl ? <img src={avatarUrl} alt="Ảnh đại diện" className="h-full w-full object-cover" /> : (userLabel?.trim().charAt(0).toUpperCase() ?? "?")}</span><div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Tài khoản</p>
           <p className="mt-0.5 truncate text-sm font-semibold text-slate-700">{userLabel ?? "-"}</p>
           </div><span className="ml-auto text-slate-500"><ChevronIcon open={accountOpen} /></span>
         </summary>
@@ -264,7 +264,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
         onClick={() => setMobileOpen(true)}
         className="mb-2 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800 shadow-sm lg:hidden"
       >
-        <span>Menu chá»©c nÄƒng</span><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-orange-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <span>Menu chức năng</span><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-orange-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
 
       <div className="hidden max-h-[calc(100vh-1.5rem)] min-h-[640px] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)] lg:sticky lg:top-3 lg:block">
@@ -282,7 +282,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
         <>
           <button
             type="button"
-            aria-label="ÄÃ³ng menu"
+            aria-label="Đóng menu"
             onClick={restoreMenuFocus}
             className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden"
           />
@@ -291,7 +291,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
             ref={mobilePanelRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Menu chÃ­nh"
+            aria-label="Menu chính"
             className="fixed inset-y-0 left-0 z-50 w-[min(280px,calc(100vw-32px))] overflow-y-auto border-r bg-white shadow-2xl lg:hidden"
           >
             <NavContent
