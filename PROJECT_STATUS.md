@@ -419,3 +419,31 @@ Production mutation: NONE.
 
 Next:
 - Refresh the local integration ref in a clean integration worktree, rerun the normal lineage-gated build, then owner review.
+
+
+# Department Period Plan V2 — 2026-10-03
+
+Current Phase: COMPLETE — implemented and deployed
+Current Task: Department Period Plan V2
+
+Completed:
+- Added additive period metadata, close snapshots, carry-forward fields, and Task × Plan-period unique index.
+- Added bounded candidate scan, preview/confirm creation, manual/import preview, user/task matching signals, auto-link hooks, close RPC, and DOCX export.
+- Applied migration 20261003100000_department_period_plan_v2 after production backup; rehearsal and invariant validation passed.
+- Deployed immutable release department-period-plan-v2-a323414 with rollback pointers preserved.
+
+Validation:
+- Department Period Plan V2 targeted tests: PASS (3/3).
+- Department Plan/Work Report/Quick Report/task approval regression set: 126/127 PASS; one pre-existing stale Quick Report UI contract assertion remains unrelated.
+- TypeScript: PASS; changed-file ESLint: PASS; production-like build: PASS; standalone artifact: PASS.
+- Production service active, NRestarts=0, /login=200, protected routes return 401/307, cache ownership PASS.
+- Authenticated live smoke: NOT VERIFIED (no authenticated session supplied).
+
+Blockers:
+- none for deployment.
+
+Follow Up:
+- Expand the DOCX parser for additional department-specific Word layouts and add an authenticated end-to-end browser smoke when a session is available.
+
+Next:
+- Monitor release and rollback pointers; keep current/previous/rollback-2 retention.
