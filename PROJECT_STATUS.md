@@ -430,7 +430,7 @@ Completed:
 - Added additive period metadata, close snapshots, carry-forward fields, and Task × Plan-period unique index.
 - Added bounded candidate scan, preview/confirm creation, manual/import preview, user/task matching signals, auto-link hooks, close RPC, and DOCX export.
 - Applied migration 20261003100000_department_period_plan_v2 after production backup; rehearsal and invariant validation passed.
-- Deployed immutable release department-period-plan-v2-a323414 with rollback pointers preserved.
+- Deployed immutable release department-period-plan-v2-1b5d134 with rollback pointers preserved.
 
 Validation:
 - Department Period Plan V2 targeted tests: PASS (3/3).
