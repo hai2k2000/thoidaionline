@@ -130,7 +130,7 @@ create or replace function public.auto_link_task_to_department_plans()
 returns trigger language plpgsql security definer set search_path=public,pg_temp as $function$
 declare v_plan public.department_plans; v_existing uuid; v_due date:=coalesce(new.due_date,new.start_date,timezone('Asia/Ho_Chi_Minh',now())::date); v_relation text:=case when new.recurrence_rule_id is not null then 'RECURRING' else 'AUTO_ADDED_DURING_PERIOD' end;
 begin
-  if new.department_id is null or new.status in ('cancelled','rejected') or coalesce(new.workflow_type,'STANDARD')='REPORT_ONLY' or new.task_type='duty' or (coalesce(new.approval_required,false) and new.assignment_approved_at is null) or coalesce(new.assignment_source,'legacy_unknown') not in ('leadership_assigned','self_registered') then return new; end if;
+  if new.department_id is null or new.status in ('cancelled','rejected') or coalesce(new.workflow_type,'STANDARD')='REPORT_ONLY' or new.task_type='duty' or (coalesce(new.approval_required,false) and new.assignment_approved_at is null) or (coalesce(new.assignment_source,'legacy_unknown') not in ('leadership_assigned','self_registered') and coalesce(new.self_claimable,false) is not true) then return new; end if;
   for v_plan in select * from public.department_plans where department_id=new.department_id and status='active' and v_due between period_start and period_end loop
     if exists(select 1 from public.department_plan_items where department_plan_id=v_plan.id and linked_task_id=new.id) then continue; end if;
     select i.id into v_existing from public.department_plan_items i where i.department_plan_id=v_plan.id and i.linked_task_id is null and lower(i.title)=lower(new.title) limit 1;
@@ -155,7 +155,7 @@ drop trigger if exists department_plan_items_closed_guard on public.department_p
 create trigger department_plan_items_closed_guard before insert or update or delete on public.department_plan_items for each row execute function public.guard_closed_department_plan_v2();
 
 drop trigger if exists tasks_auto_link_department_plans on public.tasks;
-create trigger tasks_auto_link_department_plans after insert or update of status,assignment_approved_at on public.tasks for each row execute function public.auto_link_task_to_department_plans();
+create trigger tasks_auto_link_department_plans after insert or update of status,assignee_id,assignment_source,assignment_approved_at,self_claimable on public.tasks for each row execute function public.auto_link_task_to_department_plans();
 
 revoke all on function public.api_department_plan_candidates_v2(uuid,uuid,text,date,date),public.api_create_department_plan_v2(uuid,uuid,text,date,date,jsonb),public.api_close_department_plan_v2(uuid,uuid,jsonb,text) from public,anon,authenticated;
 grant execute on function public.api_department_plan_candidates_v2(uuid,uuid,text,date,date),public.api_create_department_plan_v2(uuid,uuid,text,date,date,jsonb),public.api_close_department_plan_v2(uuid,uuid,jsonb,text) to service_role;
