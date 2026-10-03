@@ -69,7 +69,7 @@ begin
       case when pi.previous_item_id is not null then 'CARRY_OVER' when t.recurrence_rule_id is not null then 'RECURRING' when coalesce(t.start_date,p_period_start)<p_period_start or coalesce(t.due_date,t.start_date)>p_period_end then 'LONG_RUNNING' else 'NEW' end period_relation,
       pi.previous_item_id,pi.result_this_period previous_result,pi.carry_over_reason previous_carry_over_reason
     from public.tasks t left join previous_items pi on pi.linked_task_id=t.id
-    where t.department_id=p_department_id and t.status in ('new','in_progress','blocked','waiting','pending_review')
+    where t.department_id=p_department_id and coalesce(t.task_category,'regular') <> 'duty' and t.status in ('new','in_progress','blocked','waiting','pending_review')
       and (((t.start_date is not null and t.start_date<=p_period_end and coalesce(t.due_date,t.start_date)>=p_period_start) or t.due_date between p_period_start and p_period_end)
         or exists(select 1 from public.task_recurrence_occurrences ro where ro.task_id=t.id and ro.scheduled_for between p_period_start and p_period_end) or pi.previous_item_id is not null)
       and not exists(select 1 from public.department_plan_items i join public.department_plans p on p.id=i.department_plan_id and p.period_type=p_period_type and p.period_start=p_period_start where i.linked_task_id=t.id)
