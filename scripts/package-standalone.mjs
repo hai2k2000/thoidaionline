@@ -52,7 +52,7 @@ await writeFile(join(output, "MIGRATION_REFERENCE"), [
   "supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql",
   "supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql",
   "supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql",
-  "supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql,supabase/migrations/20261003100000_department_period_plan_v2.sql",
+  "supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql",
   "supabase/migrations/20261003100000_department_period_plan_v2.sql",
   "",
 ].join("\n"));
@@ -72,7 +72,7 @@ await writeFile(join(output, ".release-meta"), [
   "artifact_type=next-standalone",
   `canonical_baseline=${canonicalBaseline}`,
   `artifact_bytes=${artifactBytes}`,
-  "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260926140000_department_plans_v2.sql,supabase/migrations/20260926150000_department_plan_to_task_v1.sql,supabase/migrations/20260926160000_department_plan_assignment_v2.sql,supabase/migrations/20260925100000_journalism_self_registration.sql,supabase/migrations/20260928140000_tbt_any_assignee.sql,supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql,supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql,supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql,supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql",
+  "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260926140000_department_plans_v2.sql,supabase/migrations/20260926150000_department_plan_to_task_v1.sql,supabase/migrations/20260926160000_department_plan_assignment_v2.sql,supabase/migrations/20260925100000_journalism_self_registration.sql,supabase/migrations/20260928140000_tbt_any_assignee.sql,supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql,supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql,supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql,supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql,supabase/migrations/20261003100000_department_period_plan_v2.sql",
   "env_model=symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production",
   "build_verification=production-like-env-build-pass",
   `contract_suite=${process.env.THOIDAI_CONTRACT_SUITE_RESULT || "pending"}`,
