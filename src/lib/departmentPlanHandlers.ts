@@ -111,6 +111,9 @@ async function candidates(request: Request) {
   if (!scope) return apiError("forbidden", 403);
   const period = parsePeriod(url.searchParams.get("periodType") ?? "weekly", url.searchParams.get("periodStart"));
   if (!period) return apiError("invalid_request", 400);
+  const existing = await departmentPlanRepository.getPeriod(scope.departmentId, period.periodType, period.periodStart);
+  if (existing.error) return repositoryError(existing.error);
+  if (existing.data) return apiJson({ existingPlan: serializePlan(existing.data), candidates: [] });
   const result = await departmentPlanRepository.candidates(guard.actor.id, scope.departmentId, period.periodType, period.periodStart, period.periodEnd);
   if (result.error) return repositoryError(result.error);
   return apiJson({ candidates: Array.isArray(result.data) ? result.data : [] });
@@ -125,9 +128,15 @@ async function createPlanV2(request: Request) {
   if (!scope) return apiError("forbidden", 403);
   const period = parsePeriod(body?.periodType ?? "weekly", body?.periodStart);
   if (!period || !Array.isArray(body?.items)) return apiError("invalid_request", 400);
-  const result = await departmentPlanRepository.createPlanV2(guard.actor.id, scope.departmentId, period.periodType, period.periodStart, period.periodEnd, body.items);
+  const existing = await departmentPlanRepository.getPeriod(scope.departmentId, period.periodType, period.periodStart);
+  if (existing.error) return repositoryError(existing.error);
+  if (existing.data) return apiJson({ plan: serializePlan(existing.data), existingPlan: serializePlan(existing.data), created: false }, 200);
+  const result = await departmentPlanRepository.createPlanV2Result(guard.actor.id, scope.departmentId, period.periodType, period.periodStart, period.periodEnd, body.items);
   if (result.error) return repositoryError(result.error);
-  return apiJson({ plan: result.data }, 201);
+  if (!result.data) return apiError("operation_failed", 500);
+  return result.data.created
+    ? apiJson({ plan: serializePlan(result.data.plan), created: true }, 201)
+    : apiJson({ plan: serializePlan(result.data.plan), existingPlan: serializePlan(result.data.plan), created: false }, 200);
 }
 
 async function closePlan(request: Request, planId: string) {
@@ -156,15 +165,22 @@ async function createPlan(request: Request) {
   if (!scope) return apiError("forbidden", 403);
   const period = parsePeriod(body?.periodType ?? "weekly", body?.periodStart);
   if (!period) return apiError("invalid_request", 400);
-  const result = await departmentPlanRepository.getOrCreatePlanForMutation(
+  const existing = await departmentPlanRepository.getPeriod(scope.departmentId, period.periodType, period.periodStart);
+  if (existing.error) return repositoryError(existing.error);
+  if (existing.data) return apiJson({ plan: serializePlan(existing.data), existingPlan: serializePlan(existing.data), created: false, items: [] }, 200);
+  const created = await departmentPlanRepository.createPlanV2Result(
+    guard.actor.id,
     scope.departmentId,
     period.periodType,
     period.periodStart,
     period.periodEnd,
-    guard.actor.id,
+    Array.isArray(body?.items) ? body.items : [],
   );
-  if (result.error) return repositoryError(result.error);
-  return apiJson({ plan: serializePlan(result.data), items: [] }, 201);
+  if (created.error) return repositoryError(created.error);
+  if (!created.data) return apiError("operation_failed", 500);
+  return created.data.created
+    ? apiJson({ plan: serializePlan(created.data.plan), created: true, items: [] }, 201)
+    : apiJson({ plan: serializePlan(created.data.plan), existingPlan: serializePlan(created.data.plan), created: false, items: [] }, 200);
 }
 
 async function listItems(request: Request, planId: string) {

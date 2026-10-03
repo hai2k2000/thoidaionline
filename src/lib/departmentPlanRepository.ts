@@ -208,6 +208,10 @@ export const departmentPlanRepository = {
     return serverSupabase.rpc("api_create_department_plan_v2", { p_actor_id: actorId, p_department_id: departmentId, p_period_type: periodType, p_period_start: periodStart, p_period_end: periodEnd, p_items: items }).single<DepartmentPlanRow>();
   },
 
+  async createPlanV2Result(actorId: string, departmentId: string, periodType: "weekly" | "monthly", periodStart: string, periodEnd: string, items: unknown[]) {
+    return serverSupabase.rpc("api_create_department_plan_v2_result", { p_actor_id: actorId, p_department_id: departmentId, p_period_type: periodType, p_period_start: periodStart, p_period_end: periodEnd, p_items: items }).single<{ plan: DepartmentPlanRow; created: boolean }>();
+  },
+
   async closePlan(actorId: string, planId: string, decisions: unknown[], closeNote: string | null) {
     return serverSupabase.rpc("api_close_department_plan_v2", { p_actor_id: actorId, p_plan_id: planId, p_decisions: decisions, p_close_note: closeNote }).single<DepartmentPlanRow>();
   },
