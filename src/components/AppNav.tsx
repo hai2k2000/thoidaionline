@@ -36,9 +36,9 @@ const labels = {
   "evaluation-rubrics": "Bộ tiêu chí đánh giá",
   "evaluation-cycles": "Quản trị kỳ đánh giá",
   "work-schedule": "Lịch làm việc",
-  "work-schedule-leader": "Lá»‹ch cÃ´ng tÃ¡c lÃ£nh Ä‘áº¡o",
+  "work-schedule-leader": "Lịch công tác lãnh đạo",
   "work-schedule-staff": "Kế hoạch cá nhân",
-  "work-schedule-admin": "Quáº£n trá»‹ lá»‹ch cÃ´ng tÃ¡c",
+  "work-schedule-admin": "Quản trị lịch công tác",
   "journalism-tasks": "Công việc nghiệp vụ báo chí",
   "journalism-structures": "Chủ đề / Loạt bài",
   "journalism-reports": "Báo cáo nghiệp vụ báo chí",
@@ -117,7 +117,7 @@ function NavContent({
 
       {navigation.journalism.length > 0 ? (
         <details open={journalismOpen || journalismActive} onToggle={(event) => setJournalismOpen(event.currentTarget.open)} className="group mt-3 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl bg-gradient-to-r from-red-100 to-orange-50 px-2.5 py-2 ring-1 ring-red-200 [&::-webkit-details-marker]:hidden"><div className="flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><path d="M4 6h16M4 12h11M4 18h16"/><circle cx="18" cy="12" r="2"/></svg></span><p className="min-w-0 text-[11px] font-extrabold uppercase leading-snug tracking-wide text-red-900">NGHIá»†P Vá»¤ BÃO CHÃ</p></div><div className="flex items-center gap-2"><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-red-700 ring-1 ring-red-200">{navigation.journalism.length}</span><ChevronIcon open={journalismOpen || journalismActive} /></div></summary>
+          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl bg-gradient-to-r from-red-100 to-orange-50 px-2.5 py-2 ring-1 ring-red-200 [&::-webkit-details-marker]:hidden"><div className="flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><path d="M4 6h16M4 12h11M4 18h16"/><circle cx="18" cy="12" r="2"/></svg></span><p className="min-w-0 text-[11px] font-extrabold uppercase leading-snug tracking-wide text-red-900">NGHIỆP VỤ BÁO CHÍ</p></div><div className="flex items-center gap-2"><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-red-700 ring-1 ring-red-200">{navigation.journalism.length}</span><ChevronIcon open={journalismOpen || journalismActive} /></div></summary>
           <nav aria-label="Nghiệp vụ báo chí" className="mt-2.5 space-y-1">
             {navigation.journalism.map((item) => (
               <Link
@@ -180,7 +180,7 @@ function NavContent({
           }}
           className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white/90 px-3 py-2.5 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-100 hover:text-orange-900"
         >
-          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg> ÄÄƒng xuáº¥t
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg> Đăng xuất
         </button>
         </details>
       </div>
