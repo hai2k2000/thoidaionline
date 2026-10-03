@@ -101,8 +101,8 @@ begin
     v_relation:=coalesce(nullif(v_entry->>'periodRelation',''),'NEW'); v_assignee:=v_task.assignee_id;
     v_due:=case when nullif(v_entry->>'periodMilestoneAt','') is not null then (v_entry->>'periodMilestoneAt')::timestamptz when v_task.due_date is not null then ((v_task.due_date+coalesce(v_task.due_time,time '17:00')) at time zone 'Asia/Ho_Chi_Minh') else null end;
     select i.* into v_previous from public.department_plan_items i join public.department_plans p on p.id=i.department_plan_id where i.linked_task_id=v_task.id and p.period_end<p_period_start and p.department_id=p_department_id and p.period_type=p_period_type order by p.period_end desc limit 1;
-    insert into public.department_plan_items(department_plan_id,department_id,title,description,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,period_relation,work_source,period_goal,period_milestone_at,carry_over_reason,carried_from_item_id,progress_start)
-    values(v_plan.id,p_department_id,v_task.title,v_task.description,v_due,v_assignee,case when v_assignee is null then 'unassigned' else 'assigned' end,case v_task.status when 'in_progress' then 'in_progress' when 'done' then 'completed' else 'planned' end,v_task.id,p_actor_id,v_relation,coalesce(v_task.assignment_source,'legacy_unknown'),nullif(btrim(v_entry->>'periodGoal'),''),case when nullif(v_entry->>'periodMilestoneAt','') is null then null else (v_entry->>'periodMilestoneAt')::timestamptz end,coalesce(nullif(btrim(v_entry->>'carryOverReason'),''),v_previous.carry_over_reason),v_previous.id,v_task.progress_percent)
+    insert into public.department_plan_items(department_plan_id,department_id,title,description,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,period_relation,work_source,period_goal,period_milestone_at,carry_over_reason,carried_from_item_id,progress_start,period_start_state)
+    values(v_plan.id,p_department_id,v_task.title,v_task.description,v_due,v_assignee,case when v_assignee is null then 'unassigned' else 'assigned' end,case v_task.status when 'in_progress' then 'in_progress' when 'done' then 'completed' else 'planned' end,v_task.id,p_actor_id,v_relation,coalesce(v_task.assignment_source,'legacy_unknown'),nullif(btrim(v_entry->>'periodGoal'),''),case when nullif(v_entry->>'periodMilestoneAt','') is null then null else (v_entry->>'periodMilestoneAt')::timestamptz end,coalesce(nullif(btrim(v_entry->>'carryOverReason'),''),v_previous.carry_over_reason),v_previous.id,v_task.progress_percent,v_task.status)
     on conflict (department_plan_id,linked_task_id) where linked_task_id is not null do update set period_relation=excluded.period_relation,period_goal=coalesce(excluded.period_goal,public.department_plan_items.period_goal),period_milestone_at=coalesce(excluded.period_milestone_at,public.department_plan_items.period_milestone_at),carry_over_reason=coalesce(excluded.carry_over_reason,public.department_plan_items.carry_over_reason),carried_from_item_id=coalesce(excluded.carried_from_item_id,public.department_plan_items.carried_from_item_id),updated_at=now();
   end loop;
   return v_plan;
@@ -120,7 +120,7 @@ begin
     select value into v_decision from jsonb_array_elements(coalesce(p_decisions,'[]'::jsonb)) where value->>'itemId'=v_item.id::text limit 1;
     v_classification:=coalesce(nullif(v_decision->>'classification',''),case when v_task.status='done' then 'COMPLETED' when v_task.recurrence_rule_id is not null then 'RECURRING' when v_task.status='cancelled' then 'CANCELLED' when v_task.status in ('in_progress','blocked','waiting','pending_review') then 'LONG_RUNNING' else 'NOT_CONTINUING' end);
     v_result:=coalesce(nullif(v_decision->>'result',''),v_item.result_this_period); v_carry:=coalesce((v_decision->>'carryForward')::boolean,v_classification in ('LONG_RUNNING','CARRY_OVER','RECURRING'));
-    update public.department_plan_items set close_classification=v_classification,task_status_at_close=v_task.status,result_this_period=v_result,progress_end=coalesce(v_task.progress_percent,progress_end),completed_in_period=(v_classification='COMPLETED'),carry_forward=v_carry,updated_at=now() where id=v_item.id;
+    update public.department_plan_items set close_classification=v_classification,task_status_at_close=v_task.status,result_this_period=v_result,progress_end=coalesce(v_task.progress_percent,progress_end),period_end_state=v_task.status,completed_in_period=(v_classification='COMPLETED'),carry_forward=v_carry,updated_at=now() where id=v_item.id;
   end loop;
   update public.department_plans set status='closed',closed_at=now(),closed_by=p_actor_id,close_note=nullif(btrim(p_close_note),'') where id=p_plan_id returning * into v_plan; return v_plan;
 end;
@@ -135,10 +135,24 @@ begin
     if exists(select 1 from public.department_plan_items where department_plan_id=v_plan.id and linked_task_id=new.id) then continue; end if;
     select i.id into v_existing from public.department_plan_items i where i.department_plan_id=v_plan.id and i.linked_task_id is null and lower(i.title)=lower(new.title) limit 1;
     if v_existing is not null then continue;
-    else insert into public.department_plan_items(department_plan_id,department_id,title,description,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,period_relation,work_source,progress_start) values(v_plan.id,new.department_id,new.title,new.description,case when new.due_date is null then null else ((new.due_date+coalesce(new.due_time,time '17:00')) at time zone 'Asia/Ho_Chi_Minh') end,new.assignee_id,case when new.assignee_id is null then 'unassigned' else 'assigned' end,case when new.status='in_progress' then 'in_progress' else 'planned' end,new.id,coalesce(new.created_by,v_plan.created_by),v_relation,case when coalesce(new.self_claimable,false) then 'self_registered' else new.assignment_source end,new.progress_percent) on conflict do nothing; end if;
+    else insert into public.department_plan_items(department_plan_id,department_id,title,description,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,period_relation,work_source,progress_start,period_start_state) values(v_plan.id,new.department_id,new.title,new.description,case when new.due_date is null then null else ((new.due_date+coalesce(new.due_time,time '17:00')) at time zone 'Asia/Ho_Chi_Minh') end,new.assignee_id,case when new.assignee_id is null then 'unassigned' else 'assigned' end,case when new.status='in_progress' then 'in_progress' else 'planned' end,new.id,coalesce(new.created_by,v_plan.created_by),v_relation,case when coalesce(new.self_claimable,false) then 'self_registered' else new.assignment_source end,new.progress_percent,new.status) on conflict do nothing; end if;
   end loop; return new;
 end;
 $function$;
+
+create or replace function public.guard_closed_department_plan_v2()
+returns trigger language plpgsql set search_path=public,pg_temp as $function$
+declare v_plan_id uuid:=case when tg_op='DELETE' then old.department_plan_id else new.department_plan_id end;
+begin
+  if exists(select 1 from public.department_plans where id=v_plan_id and status='closed') then
+    raise exception 'Closed department plan is read-only.' using errcode='22023';
+  end if;
+  return case when tg_op='DELETE' then old else new end;
+end;
+$function$;
+
+drop trigger if exists department_plan_items_closed_guard on public.department_plan_items;
+create trigger department_plan_items_closed_guard before insert or update or delete on public.department_plan_items for each row execute function public.guard_closed_department_plan_v2();
 
 drop trigger if exists tasks_auto_link_department_plans on public.tasks;
 create trigger tasks_auto_link_department_plans after insert or update of status,assignment_approved_at on public.tasks for each row execute function public.auto_link_task_to_department_plans();
