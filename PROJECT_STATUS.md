@@ -1,3 +1,30 @@
+# Department Period Plan Duplicate Guard - 2026-10-03
+
+Current Phase: COMPLETE - duplicate guard migrated and production release activated
+Current Task: One Plan per department/period with friendly open-existing UX
+
+Completed:
+- Added an additive unique index for department_id + period_type + period_start + period_end.
+- Added advisory-lock-backed idempotent create/result RPCs; concurrent/retry calls return the existing Plan without replaying Plan items.
+- Candidate preview and import entry points stop before scanning when the Plan already exists.
+- Added the Vietnamese existing-plan dialog with Mở kế hoạch and Đóng actions while preserving canonical department/period URL state.
+- Activated immutable release /opt/releases/thoidai-work/department-plan-duplicate-guard-1107343.
+
+Validation:
+- Department Plan regression: 92 PASS, 1 bundle-only skip; built bundle checks: 10/10 PASS.
+- Production migration rehearsal and transactional behavior tests: PASS.
+- Real concurrent production DB test: first request created=true, second created=false, exactly one Plan/item, duplicate item not inserted; test data removed.
+- TypeScript, changed-file ESLint, git diff --check, route manifest, production-like build, artifact verification: PASS.
+- Production service active, NRestarts=0, /login 200, protected Department Plan and Work Report APIs 401, cache ownership PASS.
+- Authenticated live UI: NOT VERIFIED; no authorized session supplied.
+
+Production mutation:
+- Backup: /opt/thoidai-work/backups/department-plan-duplicate-guard-pre-20261003T105753Z.
+- Migration 20261003120000_department_plan_duplicate_guard applied and recorded.
+- Rollback pointers preserve 06b5106 and 1b5d134.
+
+Next:
+- Monitor production; run authenticated browser smoke when an authorized session is available.
 # Department Plan Real + Multi-Assignment V2 Blocker Closure
 
 - Phase A completed: canonical leadership-mapped assignee eligibility is aligned with the existing assignment scope, and successful assignment responses rehydrate linked Task participants/status before reaching the UI.
