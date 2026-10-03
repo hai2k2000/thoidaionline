@@ -8,6 +8,7 @@ import {
   shiftDepartmentPlanStart,
 } from "@/lib/departmentPlanNavigation";
 import DepartmentPlanGrid from "@/components/DepartmentPlanGrid";
+import DepartmentPlanActions from "@/components/DepartmentPlanActions";
 import type { DepartmentPlanItemRow, DepartmentPlanRow } from "@/lib/departmentPlanRepository";
 import type { AssignmentDepartment, AssignmentPerson, AssignmentScope } from "@/lib/taskAssignmentRepository";
 
@@ -98,6 +99,8 @@ export default function DepartmentPlanShell({
               </Link>
             </div>
           </section>
+
+          <DepartmentPlanActions departmentId={departmentId} period={period} plan={initialPlan} items={initialItems} />
 
           <DepartmentPlanGrid departmentId={departmentId} period={period} employees={employees} initialPlan={initialPlan} initialItems={initialItems} departmentName={departmentName} departmentCode={departmentCode} departmentManagerId={departmentManagerId} scopeKind={scopeKind} assignmentDepartments={assignmentDepartments} assignmentPeople={assignmentPeople} assignmentScope={assignmentScope} />
         </main>

@@ -11,6 +11,10 @@ export type DepartmentPlanRow = {
   created_by: string;
   created_at: string;
   updated_at: string;
+  status?: "active" | "closed";
+  closed_at?: string | null;
+  closed_by?: string | null;
+  close_note?: string | null;
 };
 
 export type DepartmentPlanItemRow = {
@@ -25,6 +29,21 @@ export type DepartmentPlanItemRow = {
   assignment_state: "unassigned" | "department_wide" | "assigned";
   work_status: "planned" | "in_progress" | "completed" | "cancelled";
   linked_task_id: string | null;
+  period_relation?: "NEW" | "LONG_RUNNING" | "CARRY_OVER" | "RECURRING" | "AUTO_ADDED_DURING_PERIOD" | "IMPORTED";
+  work_source?: string | null;
+  period_goal?: string | null;
+  period_start_state?: string | null;
+  period_end_state?: string | null;
+  result_this_period?: string | null;
+  period_milestone_at?: string | null;
+  carry_over_reason?: string | null;
+  progress_start?: number | null;
+  progress_end?: number | null;
+  carried_from_item_id?: string | null;
+  close_classification?: string | null;
+  task_status_at_close?: string | null;
+  completed_in_period?: boolean | null;
+  carry_forward?: boolean | null;
   linked_task_status?: string | null;
   linked_task_assignees?: DepartmentPlanLinkedAssignee[];
   created_by: string;
@@ -59,8 +78,8 @@ export type RepositoryResult<T> =
   | { data: T; error: null }
   | { data: T | null; error: { code?: string | null; message?: string | null } };
 
-const PLAN_FIELDS = "id,department_id,period_type,period_start,period_end,created_by,created_at,updated_at";
-const ITEM_FIELDS = "id,department_plan_id,department_id,title,description,requirements,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,created_at,updated_at";
+const PLAN_FIELDS = "id,department_id,period_type,period_start,period_end,created_by,created_at,updated_at,status,closed_at,closed_by,close_note";
+const ITEM_FIELDS = "id,department_plan_id,department_id,title,description,requirements,due_at,assignee_id,assignment_state,work_status,linked_task_id,period_relation,work_source,period_goal,period_start_state,period_end_state,result_this_period,period_milestone_at,carry_over_reason,progress_start,progress_end,carried_from_item_id,close_classification,task_status_at_close,completed_in_period,carry_forward,created_by,created_at,updated_at";
 const LINKED_TASK_FIELDS = "id,title,status,department_id,assignee_id,owner_id,workflow_type,task_assignees(user_id,assignment_role,status,staff_users(full_name))";
 const ITEM_WITH_TASK_FIELDS = `${ITEM_FIELDS},linked_task:tasks!department_plan_items_linked_task_id_fkey(status,task_assignees(user_id,assignment_role,status,staff_users(full_name)))`;
 
@@ -113,6 +132,15 @@ export const departmentPlanRepository = {
       .eq("department_id", departmentId)
       .eq("active", true)
       .order("full_name", { ascending: true });
+  },
+
+  async listImportMatchTasks(departmentId: string) {
+    return serverSupabase.from("tasks")
+      .select("id,title,description,due_date,status,assignee_id")
+      .eq("department_id", departmentId)
+      .in("status", ["new", "in_progress", "blocked", "waiting", "pending_review"])
+      .order("updated_at", { ascending: false })
+      .limit(100);
   },
 
   async validateAssignee(departmentId: string, assigneeId: string | null | undefined) {
@@ -170,6 +198,18 @@ export const departmentPlanRepository = {
         p_created_by: createdBy,
       })
       .single<DepartmentPlanRow>();
+  },
+
+  async candidates(actorId: string, departmentId: string, periodType: "weekly" | "monthly", periodStart: string, periodEnd: string) {
+    return serverSupabase.rpc("api_department_plan_candidates_v2", { p_actor_id: actorId, p_department_id: departmentId, p_period_type: periodType, p_period_start: periodStart, p_period_end: periodEnd }).single<unknown[]>();
+  },
+
+  async createPlanV2(actorId: string, departmentId: string, periodType: "weekly" | "monthly", periodStart: string, periodEnd: string, items: unknown[]) {
+    return serverSupabase.rpc("api_create_department_plan_v2", { p_actor_id: actorId, p_department_id: departmentId, p_period_type: periodType, p_period_start: periodStart, p_period_end: periodEnd, p_items: items }).single<DepartmentPlanRow>();
+  },
+
+  async closePlan(actorId: string, planId: string, decisions: unknown[], closeNote: string | null) {
+    return serverSupabase.rpc("api_close_department_plan_v2", { p_actor_id: actorId, p_plan_id: planId, p_decisions: decisions, p_close_note: closeNote }).single<DepartmentPlanRow>();
   },
 
   async getPlan(planId: string) {

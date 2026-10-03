@@ -102,6 +102,50 @@ async function report(request: Request) {
   });
 }
 
+async function candidates(request: Request) {
+  const guard = await requireReadActor();
+  if (!guard.ok) return guard.response;
+  const url = new URL(request.url);
+  const target = parseTargetDepartment(url.searchParams.get("departmentId"));
+  const scope = scopeFor(guard.actor, target);
+  if (!scope) return apiError("forbidden", 403);
+  const period = parsePeriod(url.searchParams.get("periodType") ?? "weekly", url.searchParams.get("periodStart"));
+  if (!period) return apiError("invalid_request", 400);
+  const result = await departmentPlanRepository.candidates(guard.actor.id, scope.departmentId, period.periodType, period.periodStart, period.periodEnd);
+  if (result.error) return repositoryError(result.error);
+  return apiJson({ candidates: Array.isArray(result.data) ? result.data : [] });
+}
+
+async function createPlanV2(request: Request) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const body = await readJsonObject(request);
+  const target = parseTargetDepartment(body?.departmentId);
+  const scope = scopeFor(guard.actor, target);
+  if (!scope) return apiError("forbidden", 403);
+  const period = parsePeriod(body?.periodType ?? "weekly", body?.periodStart);
+  if (!period || !Array.isArray(body?.items)) return apiError("invalid_request", 400);
+  const result = await departmentPlanRepository.createPlanV2(guard.actor.id, scope.departmentId, period.periodType, period.periodStart, period.periodEnd, body.items);
+  if (result.error) return repositoryError(result.error);
+  return apiJson({ plan: result.data }, 201);
+}
+
+async function closePlan(request: Request, planId: string) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const id = asUuid(planId);
+  if (!id) return apiError("invalid_request", 400);
+  const plan = await departmentPlanRepository.getPlan(id);
+  if (plan.error) return repositoryError(plan.error);
+  if (!plan.data || !scopeFor(guard.actor, plan.data.department_id)) return apiError("forbidden", 403);
+  const body = await readJsonObject(request);
+  const decisions = Array.isArray(body?.decisions) ? body.decisions : [];
+  const closeNote = body?.closeNote === null || body?.closeNote === undefined ? null : typeof body.closeNote === "string" ? body.closeNote.trim() : null;
+  const result = await departmentPlanRepository.closePlan(guard.actor.id, id, decisions, closeNote);
+  if (result.error) return repositoryError(result.error);
+  return apiJson({ plan: result.data });
+}
+
 async function createPlan(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
@@ -402,4 +446,4 @@ async function deleteItem(_request: Request, itemId: string) {
   return apiJson({ deleted: true });
 }
 
-export const departmentPlanHandlers = { list, report, createPlan, listItems, createItem, createAndAssignItem, getItem, assignTask, quickAssignTask, createTask, updateItem, deleteItem };
+export const departmentPlanHandlers = { list, report, candidates, createPlan, createPlanV2, closePlan, listItems, createItem, createAndAssignItem, getItem, assignTask, quickAssignTask, createTask, updateItem, deleteItem };
