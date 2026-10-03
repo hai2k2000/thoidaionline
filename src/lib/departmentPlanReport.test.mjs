@@ -161,17 +161,19 @@ test("report page reuses canonical period navigation", () => {
   assert.doesNotMatch(source, /getOrCreatePlanForMutation|method: "POST"/);
 });
 
-test("report UI renders all required metrics and filters", () => {
+test("report UI renders plan-centered metrics and detail filters", () => {
   const source = readFileSync(new URL("../components/DepartmentPlanReport.tsx", import.meta.url), "utf8");
-  for (const label of ["Tổng công việc", "Hoàn thành", "Đang thực hiện", "Kế hoạch", "Quá hạn", "Chưa phân công", "Cả phòng"]) {
+  for (const label of ["Kế hoạch đầu kỳ", "Hoàn thành", "Chưa hoàn thành", "Dài hạn tiếp tục", "Chuyển tiếp kỳ sau", "Định kỳ", "Phát sinh ngoài kế hoạch", "Tỷ lệ hoàn thành kế hoạch", "I. CÔNG VIỆC TRONG KẾ HOẠCH", "II. CÔNG VIỆC PHÁT SINH TRONG KỲ", "III. TỒN ĐỌNG / NGUYÊN NHÂN / HƯỚNG XỬ LÝ", "IV. CÔNG VIỆC DÀI HẠN / CHUYỂN TIẾP", "V. KẾ HOẠCH KỲ TIẾP THEO"]) {
     assert.match(source, new RegExp(label));
   }
-  for (const label of ["Nhân viên", "Trạng thái", "Phân công"]) assert.match(source, new RegExp(label));
+  for (const label of ["Lọc nhân viên", "Trạng thái", "Phân công"]) assert.match(source, new RegExp(label));
+  assert.doesNotMatch(source, /BÁO CÁO KẾ HOẠCH/);
 });
 
-test("report UI has no mutation controls or plan-to-task calls", () => {
+test("report UI exposes only the authorized close-period action and no Task mutation", () => {
   const source = readFileSync(new URL("../components/DepartmentPlanReport.tsx", import.meta.url), "utf8");
-  assert.doesNotMatch(source, /method: "POST"|method: "PATCH"|method: "DELETE"|createTask|api\/tasks/);
+  assert.match(source, /planning\/department\/\$\{report\.plan\.id\}\/close/);
+  assert.doesNotMatch(source, /method: "PATCH"|method: "DELETE"|createTask|api\/tasks/);
 });
 
 test("report navigation preserves department and selected period", () => {
@@ -185,5 +187,11 @@ test("report navigation preserves department and selected period", () => {
 test("department plan shell links to the report without changing period", () => {
   const source = readFileSync(new URL("../components/DepartmentPlanShell.tsx", import.meta.url), "utf8");
   assert.match(source, /departmentPlanReportUrl\(period\.periodType, period\.periodStart/);
+});
+
+test("department plan shell names the report tab Tổng kết kỳ", () => {
+  const source = readFileSync(new URL("../components/DepartmentPlanShell.tsx", import.meta.url), "utf8");
+  assert.match(source, /Tổng kết kỳ/);
+  assert.doesNotMatch(source, /Báo cáo kỳ này/);
 });
 

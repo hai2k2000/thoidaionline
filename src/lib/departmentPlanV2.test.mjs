@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
@@ -27,7 +27,7 @@ const requiredLabels = [
   "X\u00e1c nh\u1eadn import",
   "K\u1ebf ho\u1ea1ch tu\u1ea7n",
   "K\u1ebf ho\u1ea1ch th\u00e1ng",
-  "B\u00e1o c\u00e1o k\u1ef3 n\u00e0y",
+  "T\u1ed5ng k\u1ebft k\u1ef3",
   "Tu\u1ea7n tr\u01b0\u1edbc",
   "Tu\u1ea7n sau",
   "Tu\u1ea7n n\u00e0y",
@@ -78,14 +78,10 @@ test("Department Period Plan V2 Vietnamese source stays UTF-8 clean", () => {
 test("Department Period Plan V2 client bundle stays UTF-8 clean", { skip: process.env.CHECK_DEPARTMENT_PLAN_BUNDLE !== "1" }, () => {
   const manifestPath = join(process.cwd(), ".next/server/app/planning/department/page_client-reference-manifest.js");
   assert.ok(existsSync(manifestPath), "Department Plan client manifest is missing");
-  const manifestSource = readFileSync(manifestPath, "utf8");
-  const prefix = 'globalThis.__RSC_MANIFEST["/planning/department/page"] = ';
-  const assignment = manifestSource.lastIndexOf(prefix);
-  assert.ok(assignment >= 0, "Department Plan client manifest assignment is missing");
-  const manifest = JSON.parse(manifestSource.slice(assignment + prefix.length, manifestSource.lastIndexOf(";")));
-  const entry = manifest.entryJSFiles?.["[project]/src/app/planning/department/page"] ?? [];
+  const chunkDir = join(process.cwd(), ".next/static/chunks/app/planning/department");
+  const entry = existsSync(chunkDir) ? readdirSync(chunkDir).filter((file) => file.endsWith(".js")).map((file) => join(chunkDir, file)) : [];
   assert.ok(entry.length > 0, "Department Plan client entry chunks are missing");
-  const bundle = entry.map((chunk) => readFileSync(join(process.cwd(), ".next", chunk), "utf8")).join("\n");
+  const bundle = entry.map((chunk) => readFileSync(chunk, "utf8")).join("\n");
   assertNoMojibake("Department Period Plan V2 client bundle", bundle);
   assert.ok(bundle.includes("T\u1ea1o k\u1ebf ho\u1ea1ch k\u1ef3 m\u1edbi"));
   assert.ok(bundle.includes("Import k\u1ebf ho\u1ea1ch t\u1eeb Excel"));
