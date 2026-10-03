@@ -4,6 +4,13 @@ export type WorkReportPeriod = "week" | "month" | "range";
 export type WorkReportSource = "assigned" | "department_plan" | "report_only";
 export type WorkReportRow = { id: string; title: string; source: WorkReportSource; sourceLabel: string; status: string; departmentId: string | null; departmentName: string | null; assigneeId: string | null; assigneeName: string | null; ownerName: string | null; reviewerName: string | null; startDate: string | null; dueDate: string | null; completedAt: string | null; description: string | null; reportNotes: string | null; workflowType: string };
 
+export type WorkReportEmployee = { id: string; full_name: string; department_id: string; username?: string | null; roles?: { code?: string | null } | Array<{ code?: string | null }> | null };
+export function isWorkReportEmployeeVisible(employee: WorkReportEmployee, excludeEmployeeId?: string | null) {
+  const role = (Array.isArray(employee.roles) ? employee.roles[0]?.code : employee.roles?.code)?.trim().toLowerCase() ?? "";
+  const username = employee.username?.trim().toLowerCase() ?? "";
+  return role !== "admin" && username !== "admin" && employee.id !== (excludeEmployeeId ?? null);
+}
+
 const TBT_ROLES = new Set(["admin", "tong_bien_tap", "tbt_read_only"]);
 export function canViewWorkReport(actor: Pick<AuthorizationActor, "roleCode" | "departmentId" | "isDepartmentManager">, departmentId: string) { return TBT_ROLES.has(actor.roleCode) || (actor.roleCode === "truong_phong" && actor.isDepartmentManager === true && actor.departmentId === departmentId); }
 export function resolveWorkReportDepartment(actor: Pick<AuthorizationActor, "roleCode" | "departmentId" | "isDepartmentManager">, requested?: string | null) { if (TBT_ROLES.has(actor.roleCode)) return requested || actor.departmentId; if (actor.roleCode === "truong_phong" && actor.isDepartmentManager && actor.departmentId) return requested && requested !== actor.departmentId ? null : actor.departmentId; return null; }

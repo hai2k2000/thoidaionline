@@ -21,7 +21,10 @@ export async function loadWorkReport(request: Request) {
   if (employeeId && !asUuid(employeeId)) return { ok: false as const, response: apiError("invalid_request", 400) };
   const source = url.searchParams.get("source") as WorkReportSource | null;
   const status = url.searchParams.get("status");
-  const report = await getWorkReport({ departmentId: scope, employeeId, ...bounds, source, status, page, pageSize });
+  const excludeEmployeeId = actor.role_code === "truong_phong" && actor.is_department_manager === true && actor.department_id === scope
+    ? actor.id
+    : null;
+  const report = await getWorkReport({ departmentId: scope, employeeId, excludeEmployeeId, ...bounds, source, status, page, pageSize });
   if (report.error) return { ok: false as const, response: apiError(report.error.code === "42501" ? "forbidden" : "operation_failed", report.error.code === "42501" ? 403 : 500) };
   return { ok: true as const, data: { actor, departmentId: scope, employeeId, source, status, period, ...bounds, report: report.data } };
 }
