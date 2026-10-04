@@ -470,7 +470,7 @@ Next:
 
 ## Department Plan Canonical Saturday-Friday Week
 
-Current Phase: implementation and production validation
+Current Phase: COMPLETE; production activated
 Current Task: fix Department Plan weekly boundary from Monday-Sunday to Saturday-Friday
 
 Completed:
@@ -489,4 +489,6 @@ Blockers:
 - none
 
 Next:
-- Build/package immutable release, run artifact and smoke checks, then activate production.
+- Immutable artifact activated as /opt/releases/thoidai-work/department-plan-saturday-friday-cd04f41.
+- Service, local/public /login, route manifest, artifact verification, and rollback pointers PASS.
+- Authenticated Department Plan UI smoke is not verified because no authorized live session was available.
