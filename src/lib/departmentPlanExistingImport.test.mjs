@@ -20,6 +20,12 @@ test("existing Plan import targets current plan and keeps duplicate Plan guard s
   assert.match(repository, /department_plan_items/);
 });
 
+test("existing Plan import uses the selected Plan dates as parser context", () => {
+  assert.match(importRoute, /const requestedPeriodType/);
+  assert.match(importRoute, /const periodStart = currentPlan\.data\.period_start/);
+  assert.match(importRoute, /const periodEnd = currentPlan\.data\.period_end/);
+});
+
 test("create flow still owns the existing-plan duplicate modal", () => {
   assert.match(actions, /if \(plan\) \{[\s\S]*openExisting\(plan\)/);
   assert.match(actions, /Kế hoạch kỳ này đã tồn tại\./);

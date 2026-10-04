@@ -33,10 +33,14 @@ export async function POST(request: Request) {
   if (!resolveDepartmentPlanScope({ id: guard.actor.id, departmentId: guard.actor.department_id, departmentCode: guard.actor.department_code, roleCode: guard.actor.role_code, roleLevel: guard.actor.role_level, isDepartmentManager: guard.actor.is_department_manager, permissions: guard.actor.permissions }, departmentId)) return apiError("forbidden", 403);
   const currentPlan = await departmentPlanRepository.getPlan(currentPlanId);
   if (currentPlan.error) return apiError("operation_failed", 500);
-  const periodType = form.get("periodType") === "monthly" ? "monthly" : "weekly";
-  const periodStart = typeof form.get("periodStart") === "string" ? String(form.get("periodStart")) : null;
-  const periodEnd = typeof form.get("periodEnd") === "string" ? String(form.get("periodEnd")) : null;
-  if (!currentPlan.data || currentPlan.data.department_id !== departmentId || currentPlan.data.period_type !== periodType || currentPlan.data.period_start !== periodStart || currentPlan.data.period_end !== periodEnd) return apiError("invalid_request", 400);
+  const requestedPeriodType = form.get("periodType") === "monthly" ? "monthly" : "weekly";
+  const requestedPeriodStart = typeof form.get("periodStart") === "string" ? String(form.get("periodStart")) : null;
+  const requestedPeriodEnd = typeof form.get("periodEnd") === "string" ? String(form.get("periodEnd")) : null;
+  if (!currentPlan.data || currentPlan.data.department_id !== departmentId || currentPlan.data.period_type !== requestedPeriodType || currentPlan.data.period_start !== requestedPeriodStart || currentPlan.data.period_end !== requestedPeriodEnd) return apiError("invalid_request", 400);
+  // The selected Plan is the source of truth for the reporting window.
+  const periodType = currentPlan.data.period_type;
+  const periodStart = currentPlan.data.period_start;
+  const periodEnd = currentPlan.data.period_end;
   if (currentPlan.data.status === "closed") return apiError("invalid_request", 400);
   try {
     const parsed = await readDepartmentPlanExcel(file, {
