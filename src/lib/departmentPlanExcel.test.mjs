@@ -29,6 +29,41 @@ test("13 approved rows produce 13 preview candidates and preserve date cells", (
   assert.equal(parsed[0].confirmationRequired, true);
 });
 
+test("Plan period is independent from task dates and legacy row period metadata", () => {
+  const context = { periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09" };
+  const values = row(1).map((value, index) => {
+    if (index === 3) return "25/09/2026";
+    if (index === 4) return "30/09/2026";
+    if (index === 9) return "03/10/2026";
+    if (index === 11) return "12/10/2026";
+    if (index === 15) return "Mới";
+    return value;
+  });
+  const parsed = parseDepartmentPlanExcelRows([headers, values], context);
+  assert.equal(parsed[0].periodStart, context.periodStart);
+  assert.equal(parsed[0].periodEnd, context.periodEnd);
+  assert.equal(parsed[0].startDate, "2026-10-03");
+  assert.equal(parsed[0].dueDate, "2026-10-12");
+});
+
+test("new work starts anywhere inside the Plan window, while carry-over and long-running may start earlier", () => {
+  const context = { periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09" };
+  const makeRow = (startDate, relation) => row(1).map((value, index) => {
+    if (index === 9) return startDate;
+    if (index === 15) return relation;
+    return value;
+  });
+  for (const startDate of ["02/10/2026", "03/10/2026", "07/10/2026", "09/10/2026"]) {
+    assert.doesNotThrow(() => parseDepartmentPlanExcelRows([headers, makeRow(startDate, "Mới")], context));
+  }
+  assert.throws(() => parseDepartmentPlanExcelRows([headers, makeRow("10/10/2026", "Mới")], context), (error) => {
+    assert.equal(error.field, "Ngày bắt đầu");
+    return /phải nằm trong kỳ đang mở/.test(error.message);
+  });
+  assert.doesNotThrow(() => parseDepartmentPlanExcelRows([headers, makeRow("25/09/2026", "Chuyển tiếp")], context));
+  assert.doesNotThrow(() => parseDepartmentPlanExcelRows([headers, makeRow("20/09/2026", "Dài hạn")], context));
+});
+
 test("Excel text and real date cells do not shift calendar dates", () => {
   assert.equal(parseDepartmentPlanExcelDate("02/10/2026"), "2026-10-02");
   assert.equal(parseDepartmentPlanExcelDate(new Date("2026-10-02T00:00:00Z")), "2026-10-02");

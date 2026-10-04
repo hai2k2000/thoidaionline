@@ -122,20 +122,26 @@ export function parseDepartmentPlanExcelRows(rows, context = {}) {
     const title = cellText(rowValue(row, header.lookup, "title"));
     if (!title) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: thiếu Tên công việc.`, { row: rowNumber, field: "Tên công việc" });
     const periodType = parsePeriodType(rowValue(row, header.lookup, "periodType"), context.periodType ?? null, rowNumber);
-    const periodStart = optionalDate(rowValue(row, header.lookup, "periodStart"), rowNumber, "Từ ngày") ?? context.periodStart ?? null;
-    const periodEnd = optionalDate(rowValue(row, header.lookup, "periodEnd"), rowNumber, "Đến ngày") ?? context.periodEnd ?? null;
+    // The open Plan owns the reporting window. Row-level period columns are
+    // legacy metadata and must not override or be compared with that Plan.
+    const periodStart = context.periodStart ?? optionalDate(rowValue(row, header.lookup, "periodStart"), rowNumber, "Từ ngày");
+    const periodEnd = context.periodEnd ?? optionalDate(rowValue(row, header.lookup, "periodEnd"), rowNumber, "Đến ngày");
     if (!periodType || !periodStart || !periodEnd) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: thiếu thông tin kỳ.`, { row: rowNumber, field: "Loại kỳ" });
     if (context.periodType && periodType !== context.periodType) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: loại kỳ không khớp kỳ đang mở.`, { row: rowNumber, field: "Loại kỳ" });
-    if (context.periodStart && periodStart !== context.periodStart) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: từ ngày không khớp kỳ đang mở.`, { row: rowNumber, field: "Từ ngày" });
-    if (context.periodEnd && periodEnd !== context.periodEnd) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: đến ngày không khớp kỳ đang mở.`, { row: rowNumber, field: "Đến ngày" });
     const taskId = cellText(rowValue(row, header.lookup, "taskId")); if (taskId && !UUID_PATTERN.test(taskId)) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: Task ID liên kết không hợp lệ.`, { row: rowNumber, field: "Task ID liên kết" });
     const confirmation = normalizedValue(rowValue(row, header.lookup, "confirmationRequired"));
+    const periodRelation = parseEnum(rowValue(row, header.lookup, "periodRelation"), PERIOD_RELATIONS, "Quan hệ với kỳ", rowNumber) ?? "IMPORTED";
+    const startDate = optionalDate(rowValue(row, header.lookup, "startDate"), rowNumber, "Ngày bắt đầu");
+    if (periodRelation === "NEW" && startDate && context.periodStart && context.periodEnd
+      && (startDate < context.periodStart || startDate > context.periodEnd)) {
+      throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: Ngày bắt đầu của công việc mới phải nằm trong kỳ đang mở.`, { row: rowNumber, field: "Ngày bắt đầu" });
+    }
     parsed.push({ rowNumber, title, description: cellText(rowValue(row, header.lookup, "description")) || null,
       departmentName: cellText(rowValue(row, header.lookup, "department")) || null, periodType, periodStart, periodEnd,
-      startDate: optionalDate(rowValue(row, header.lookup, "startDate"), rowNumber, "Ngày bắt đầu"), dueDate: optionalDate(rowValue(row, header.lookup, "dueDate"), rowNumber, "Hạn hoàn thành cuối"),
+      startDate, dueDate: optionalDate(rowValue(row, header.lookup, "dueDate"), rowNumber, "Hạn hoàn thành cuối"),
       reportDate: optionalDate(rowValue(row, header.lookup, "reportDate"), rowNumber, "Ngày báo cáo"), milestone: optionalDate(rowValue(row, header.lookup, "milestone"), rowNumber, "Mốc trong kỳ"),
       priority: parseEnum(rowValue(row, header.lookup, "priority"), PRIORITIES, "Mức ưu tiên", rowNumber), status: parseEnum(rowValue(row, header.lookup, "status"), STATUSES, "Trạng thái", rowNumber),
-      periodRelation: parseEnum(rowValue(row, header.lookup, "periodRelation"), PERIOD_RELATIONS, "Quan hệ với kỳ", rowNumber) ?? "IMPORTED",
+      periodRelation,
       workSource: parseEnum(rowValue(row, header.lookup, "workSource"), WORK_SOURCES, "Nguồn công việc", rowNumber) ?? "department_plan", taskId: taskId || null,
       assigneeNames: splitPeople(rowValue(row, header.lookup, "assignees")), collaboratorNames: splitPeople(rowValue(row, header.lookup, "collaborators")),
       confirmationRequired: ["co", "yes", "true", "1", "bat buoc"].includes(confirmation), note: cellText(rowValue(row, header.lookup, "note")) || null });
