@@ -182,6 +182,29 @@ export const departmentPlanRepository = {
         skipped.push({ taskId: null, title, reason: "already_in_plan" });
         continue;
       }
+      const assigneeIds = Array.isArray(input.assigneeIds)
+        ? input.assigneeIds.filter((value): value is string => typeof value === "string")
+        : [];
+      if (!taskId && assigneeIds.length > 0 && typeof input.dueDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) {
+        const assigned = await this.createAndAssignItem(actorId, planId, {
+          title,
+          description: typeof input.description === "string" ? input.description : "",
+          requirements: [],
+          assigneeIds,
+          dueDate: input.dueDate,
+          dueTime: "17:00",
+          priority: "normal",
+          workStatus: typeof input.status === "string" ? input.status : "planned",
+          note: null,
+        });
+        if (assigned.error) return { data: null, error: assigned.error };
+        if (assigned.data?.item) {
+          imported.push(assigned.data.item);
+          existing.push(assigned.data.item);
+          continue;
+        }
+        return { data: null, error: { code: "P0001", message: "assignment import failed" } };
+      }
       const dueDate = typeof input.dueDate === "string" && input.dueDate ? input.dueDate : task?.due_date ?? null;
       const dueAt = typeof input.milestone === "string" && input.milestone
         ? input.milestone + "T17:00:00+07:00"
@@ -456,3 +479,4 @@ export const departmentPlanRepository = {
       .single<DepartmentPlanLinkedTask>();
   },
 };
+
