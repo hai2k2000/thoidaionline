@@ -14,6 +14,7 @@ import { resolveDepartmentPlanScope } from "@/lib/departmentPlanAuthorization";
 import { getDepartmentPlanPeriod, isDepartmentPlanPeriodType } from "@/lib/departmentPlanPeriod";
 import { departmentPlanRepository, type DepartmentPlanLinkedTask } from "@/lib/departmentPlanRepository";
 import { loadAuthorizedDepartmentPlanReport } from "@/lib/departmentPlanReportService";
+import { prepareDepartmentPlanContinuationCandidates } from "@/lib/departmentPlanLongRunning";
 
 type Actor = ServerAuthUser;
 
@@ -116,7 +117,28 @@ async function candidates(request: Request) {
   if (existing.data) return apiJson({ existingPlan: serializePlan(existing.data), candidates: [] });
   const result = await departmentPlanRepository.candidates(guard.actor.id, scope.departmentId, period.periodType, period.periodStart, period.periodEnd);
   if (result.error) return repositoryError(result.error);
-  return apiJson({ candidates: Array.isArray(result.data) ? result.data : [] });
+  const rawCandidates = Array.isArray(result.data) ? result.data as Array<Record<string, unknown>> : [];
+  const normalizedCandidates: Array<Record<string, unknown> & { taskId: string | null; title: string; status: string | null; dueDate: string | null; assigneeId: string | null }> = rawCandidates.map((candidate) => ({
+    ...candidate,
+    taskId: typeof candidate.taskId === "string" ? candidate.taskId : null,
+    title: typeof candidate.title === "string" ? candidate.title : "",
+    status: typeof candidate.status === "string" ? candidate.status : null,
+    dueDate: typeof candidate.dueDate === "string" ? candidate.dueDate : null,
+    assigneeId: typeof candidate.assigneeId === "string" ? candidate.assigneeId : null,
+  }));
+  const continuationCandidates = normalizedCandidates.filter((candidate) => candidate.periodRelation === "LONG_RUNNING" || candidate.periodRelation === "CARRY_OVER" || Boolean(candidate.previousItemId));
+  const ordinaryCandidates = normalizedCandidates.filter((candidate) => !continuationCandidates.includes(candidate));
+  const sourcePeriodEnd = period.periodType === "weekly"
+    ? period.periodStart
+    : new Date(`${period.periodStart}T00:00:00Z`);
+  const sourceEnd = sourcePeriodEnd instanceof Date
+    ? new Date(sourcePeriodEnd.getTime() - 86400000).toISOString().slice(0, 10)
+    : sourcePeriodEnd;
+  const candidates = [
+    ...ordinaryCandidates,
+    ...prepareDepartmentPlanContinuationCandidates(continuationCandidates, period.periodEnd, [], sourceEnd),
+  ];
+  return apiJson({ candidates });
 }
 
 async function createPlanV2(request: Request) {
