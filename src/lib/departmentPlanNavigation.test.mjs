@@ -19,8 +19,8 @@ test("navigation shifts calendar boundaries without UTC drift", () => {
   assert.match(source, /date\.setUTCMonth\(date\.getUTCMonth\(\) \+ amount\)/);
 });
 
-test("navigation preserves Saturday weekly boundaries", () => {
-  assert.match(readFileSync(new URL("./departmentPlanPeriod.ts", import.meta.url), "utf8"), /saturdayOffset/);
+test("navigation preserves Friday weekly boundaries", () => {
+  assert.match(readFileSync(new URL("./departmentPlanPeriod.ts", import.meta.url), "utf8"), /fridayOffset/);
 });
 
 

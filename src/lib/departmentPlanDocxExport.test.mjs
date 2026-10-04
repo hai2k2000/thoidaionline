@@ -27,8 +27,8 @@ const item = (overrides = {}) => ({
   completed_in_period: false,
   carry_forward: true,
   created_by: "40000000-0000-0000-0000-000000000001",
-  created_at: "2026-10-03T00:00:00.000Z",
-  updated_at: "2026-10-03T00:00:00.000Z",
+  created_at: "2026-10-02T00:00:00.000Z",
+  updated_at: "2026-10-02T00:00:00.000Z",
   assignee_name: "Nguyễn Văn An",
   ...overrides,
 });
@@ -42,8 +42,8 @@ const report = (period, items) => ({
     period_start: period.periodStart,
     period_end: period.periodEnd,
     created_by: "40000000-0000-0000-0000-000000000001",
-    created_at: "2026-10-03T00:00:00.000Z",
-    updated_at: "2026-10-03T00:00:00.000Z",
+    created_at: "2026-10-02T00:00:00.000Z",
+    updated_at: "2026-10-02T00:00:00.000Z",
     status: "active",
   },
   employees: [],
@@ -60,14 +60,14 @@ const report = (period, items) => ({
 });
 
 test("Word export uses approved weekly and monthly filenames", () => {
-  const weekly = getDepartmentPlanPeriod("weekly", "2026-10-05");
-  const monthly = getDepartmentPlanPeriod("monthly", "2026-10-05");
-  assert.equal(departmentPlanDocxFilename(weekly, "Phòng Tổng hợp"), "Bao_cao_cong_tac_tuan_Phong_Tong_hop_05-11_10_2026.docx");
+  const weekly = getDepartmentPlanPeriod("weekly", "2026-10-09");
+  const monthly = getDepartmentPlanPeriod("monthly", "2026-10-09");
+  assert.equal(departmentPlanDocxFilename(weekly, "Phòng Tổng hợp"), "Bao_cao_cong_tac_tuan_Phong_Tong_hop_02-09_10_2026.docx");
   assert.equal(departmentPlanDocxFilename(monthly, "Phòng Tổng hợp"), "Bao_cao_cong_tac_thang_Phong_Tong_hop_10_2026.docx");
 });
 
 test("Word export creates an editable DOCX with the approved Vietnamese report structure", async () => {
-  const period = getDepartmentPlanPeriod("weekly", "2026-10-05");
+  const period = getDepartmentPlanPeriod("weekly", "2026-10-09");
   const bytes = await exportDepartmentPlanDocx(report(period, [item()]), "Phòng Tổng hợp");
   assert.equal(Buffer.from(bytes).subarray(0, 2).toString("ascii"), "PK");
   const zip = await JSZip.loadAsync(bytes);

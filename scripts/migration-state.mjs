@@ -9,6 +9,7 @@ export const REQUIRED_MIGRATIONS = [
   "20261003100000_department_period_plan_v2",
   "20261003120000_department_plan_duplicate_guard",
   "20261004100000_department_plan_saturday_friday",
+  "20261004110000_department_plan_friday_friday",
 ];
 
 export function validateMigrationState(appliedVersions, expected = REQUIRED_MIGRATIONS) {

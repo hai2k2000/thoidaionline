@@ -54,26 +54,26 @@ const render = (period, items, filters = { employeeId: null, workStatus: null, a
     periodLabel: `${period.periodStart} – ${period.periodEnd}`,
     report: report(period, items),
     filters,
-    generatedAt: new Date("2026-09-26T06:00:00.000Z"),
+    generatedAt: new Date("2026-10-02T06:00:00.000Z"),
   }),
   { fontBytes, boldFontBytes },
 );
 
 test("weekly and monthly exports use canonical periods and safe filenames", () => {
-  const weekly = getDepartmentPlanPeriod("weekly", "2026-09-23");
-  const monthly = getDepartmentPlanPeriod("monthly", "2026-09-23");
-  assert.deepEqual(weekly, { periodType: "weekly", periodStart: "2026-09-19", periodEnd: "2026-09-25" });
+  const weekly = getDepartmentPlanPeriod("weekly", "2026-09-27");
+  const monthly = getDepartmentPlanPeriod("monthly", "2026-09-27");
+  assert.deepEqual(weekly, { periodType: "weekly", periodStart: "2026-09-25", periodEnd: "2026-10-02" });
   assert.deepEqual(monthly, { periodType: "monthly", periodStart: "2026-09-01", periodEnd: "2026-09-30" });
-  assert.equal(departmentPlanPdfFilename("weekly", weekly.periodStart), "bao-cao-ke-hoach-phong-tuan-2026-09-19.pdf");
+  assert.equal(departmentPlanPdfFilename("weekly", weekly.periodStart), "bao-cao-ke-hoach-phong-tuan-2026-09-25.pdf");
   assert.equal(departmentPlanPdfFilename("monthly", monthly.periodStart), "bao-cao-ke-hoach-phong-thang-2026-09-01.pdf");
 });
 
 test("PDF embeds Vietnamese text, preserves metrics, filters, and STT sequence", async () => {
-  const period = getDepartmentPlanPeriod("weekly", "2026-09-19");
+  const period = getDepartmentPlanPeriod("weekly", "2026-09-25");
   const items = [item(0), item(1, { work_status: "in_progress" }), item(2, { assignment_state: "department_wide", assignee_id: null })];
   const output = await render(period, items, { employeeId: null, workStatus: "in_progress", assignmentState: null });
   assert.match(Buffer.from(output.bytes).subarray(0, 8).toString("ascii"), /^%PDF-/);
-  assert.equal(output.filename, "bao-cao-ke-hoach-phong-tuan-2026-09-19.pdf");
+  assert.equal(output.filename, "bao-cao-ke-hoach-phong-tuan-2026-09-25.pdf");
   assert.equal(output.pageCount, 1);
   const doc = await PDFDocument.load(output.bytes);
   assert.equal(doc.getPageCount(), 1);
@@ -82,7 +82,7 @@ test("PDF embeds Vietnamese text, preserves metrics, filters, and STT sequence",
     periodLabel: "21/09/2026 – 27/09/2026",
     report: report(period, items),
     filters: { employeeId: null, workStatus: "in_progress", assignmentState: null },
-    generatedAt: new Date("2026-09-26T06:00:00.000Z"),
+    generatedAt: new Date("2026-10-02T06:00:00.000Z"),
   });
   assert.equal(model.periodModeLabel, "Báo cáo tuần");
   assert.match(model.filtersLabel, /Trạng thái: Đang thực hiện/);
@@ -101,7 +101,7 @@ test("empty reports render a valid empty-state PDF", async () => {
 });
 
 test("large reports paginate and keep sequential row numbering in the model", async () => {
-  const period = getDepartmentPlanPeriod("weekly", "2026-09-19");
+  const period = getDepartmentPlanPeriod("weekly", "2026-09-25");
   const items = Array.from({ length: 45 }, (_, index) => item(index, { title: `Nội dung dài ${index + 1} – ${"x ".repeat(16)}` }));
   const output = await render(period, items);
   assert.ok(output.pageCount > 1, `expected multipage output, got ${output.pageCount}`);

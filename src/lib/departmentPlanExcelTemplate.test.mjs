@@ -43,8 +43,8 @@ test("a filled template row parses through the production Excel importer", async
   const zip = await JSZip.loadAsync(bytes);
   const sheet = await zip.file("xl/worksheets/sheet1.xml").async("string");
   const rowCells = [
-    "1", "Phòng Nội dung", "Tuần", "28/09/2026", "04/10/2026", "Công việc mẫu",
-    "Nội dung mẫu", "Ngô Tùng Dương", "", "28/09/2026", "02/10/2026", "04/10/2026",
+    "1", "Phòng Nội dung", "Tuần", "02/10/2026", "09/10/2026", "Công việc mẫu",
+    "Nội dung mẫu", "Ngô Tùng Dương", "", "02/10/2026", "02/10/2026", "09/10/2026",
     "", "Ưu tiên 1", "Mới", "Import", "Import", "", "Có", "Ghi chú mẫu",
   ];
   const escape = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -55,13 +55,13 @@ test("a filled template row parses through the production Excel importer", async
   const filled = await zip.generateAsync({ type: "nodebuffer" });
   const parsed = await readDepartmentPlanExcel(new File([filled], DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME), {
     periodType: "weekly",
-    periodStart: "2026-09-28",
-    periodEnd: "2026-10-04",
+    periodStart: "2026-10-02",
+    periodEnd: "2026-10-09",
   });
   assert.equal(parsed.length, 1);
   assert.equal(parsed[0].title, "Công việc mẫu");
   assert.deepEqual(parsed[0].assigneeNames, ["Ngô Tùng Dương"]);
-  assert.equal(parsed[0].dueDate, "2026-10-04");
+  assert.equal(parsed[0].dueDate, "2026-10-09");
   assert.equal(parsed[0].periodRelation, "IMPORTED");
 });
 
@@ -69,13 +69,13 @@ test("empty inline string cells are accepted without dependency trim crashes", a
   const bytes = await createDepartmentPlanExcelTemplate();
   const zip = await JSZip.loadAsync(bytes);
   const sheet = await zip.file("xl/worksheets/sheet1.xml").async("string");
-  const cells = ["1", "Phòng Nội dung", "Tuần", "28/09/2026", "04/10/2026", "Công việc rỗng tùy chọn", "Nội dung", "Ngô Tùng Dương", "", "28/09/2026", "", "04/10/2026", "", "Ưu tiên 1", "Mới", "Import", "Import", "", "", ""];
+  const cells = ["1", "Phòng Nội dung", "Tuần", "02/10/2026", "09/10/2026", "Công việc rỗng tùy chọn", "Nội dung", "Ngô Tùng Dương", "", "02/10/2026", "", "09/10/2026", "", "Ưu tiên 1", "Mới", "Import", "Import", "", "", ""];
   const escape = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const row = cells.map((value, index) => value === "" ? `<c r="${columnName(index)}2" t="str"></c>` : `<c r="${columnName(index)}2" t="inlineStr"><is><t>${escape(value)}</t></is></c>`).join("");
   zip.file("xl/worksheets/sheet1.xml", sheet.replace(/<row r="2"[^>]*>.*?<\/row>/, `<row r="2">${row}</row>`));
   const filled = await zip.generateAsync({ type: "nodebuffer" });
   await assert.rejects(() => readXlsxFile(filled, { sheet: "KeHoach_Import" }), /reading 'trim'/);
-  const parsed = await readDepartmentPlanExcel(new File([filled], DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME), { periodType: "weekly", periodStart: "2026-09-28", periodEnd: "2026-10-04" });
+  const parsed = await readDepartmentPlanExcel(new File([filled], DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME), { periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09" });
   assert.equal(parsed.length, 1);
   assert.equal(parsed[0].note, null);
   assert.deepEqual(parsed[0].collaboratorNames, []);

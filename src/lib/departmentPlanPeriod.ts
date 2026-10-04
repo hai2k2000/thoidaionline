@@ -46,9 +46,9 @@ export function canonicalizePeriodStart(
   if (!parts) throw new Error("invalid period start");
   const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
   if (periodType === "weekly") {
-    // Department Plan business weeks run Saturday through Friday.
-    const saturdayOffset = (date.getUTCDay() + 1) % 7;
-    date.setUTCDate(date.getUTCDate() - saturdayOffset);
+    // Department Plan business weeks run Friday through next Friday.
+    const fridayOffset = (date.getUTCDay() + 2) % 7;
+    date.setUTCDate(date.getUTCDate() - fridayOffset);
     return iso(date);
   }
   if (periodType === "monthly") {
@@ -67,7 +67,7 @@ export function getDepartmentPlanPeriod(
   const parts = dateParts(periodStart)!;
   const start = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
   const end = new Date(start);
-  if (periodType === "weekly") end.setUTCDate(end.getUTCDate() + 6);
+  if (periodType === "weekly") end.setUTCDate(end.getUTCDate() + 7);
   else end.setUTCMonth(end.getUTCMonth() + 1, 0);
   return { periodType, periodStart, periodEnd: iso(end) };
 }

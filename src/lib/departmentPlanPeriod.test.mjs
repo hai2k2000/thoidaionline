@@ -2,15 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getDepartmentPlanPeriod } from "./departmentPlanPeriod.ts";
 
-test("weekly periods use Saturday through Friday in Vietnam time", () => {
-  assert.deepEqual(getDepartmentPlanPeriod("weekly", "2026-10-03"), {
-    periodType: "weekly", periodStart: "2026-10-03", periodEnd: "2026-10-09",
+test("weekly periods use Friday through next Friday in Vietnam time", () => {
+  assert.deepEqual(getDepartmentPlanPeriod("weekly", "2026-10-02"), {
+    periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09",
+  });
+  assert.deepEqual(getDepartmentPlanPeriod("weekly", "2026-10-04"), {
+    periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09",
   });
   assert.deepEqual(getDepartmentPlanPeriod("weekly", "2026-10-09"), {
-    periodType: "weekly", periodStart: "2026-10-03", periodEnd: "2026-10-09",
+    periodType: "weekly", periodStart: "2026-10-09", periodEnd: "2026-10-16",
   });
   assert.deepEqual(getDepartmentPlanPeriod("weekly", "2026-10-10"), {
-    periodType: "weekly", periodStart: "2026-10-10", periodEnd: "2026-10-16",
+    periodType: "weekly", periodStart: "2026-10-09", periodEnd: "2026-10-16",
   });
 });
 
