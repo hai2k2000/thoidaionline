@@ -74,13 +74,24 @@ export async function loadAuthorizedDepartmentPlanReport(
     return { ok: false, response: apiError("invalid_request", 400) };
   }
 
-  const scope = resolveDepartmentPlanScope(asActor(guard.actor), departmentId);
+  const planIdValue = url.searchParams.get("plan_id");
+  const planId = planIdValue ? asUuid(planIdValue) : null;
+  if (planIdValue && !planId) return { ok: false, response: apiError("invalid_request", 400) };
+  const historicalPlanResult = planId ? await departmentPlanRepository.getPlan(planId) : null;
+  if (historicalPlanResult?.error) return { ok: false, response: errorResponse(historicalPlanResult.error) };
+  const historicalPlan = historicalPlanResult?.data ?? null;
+  if (planId && !historicalPlan) return { ok: false, response: apiError("not_found", 404) };
+  if (historicalPlan && departmentId && historicalPlan.department_id !== departmentId) return { ok: false, response: apiError("forbidden", 403) };
+
+  const scope = resolveDepartmentPlanScope(asActor(guard.actor), historicalPlan?.department_id ?? departmentId);
   if (!scope) return { ok: false, response: apiError("forbidden", 403) };
 
-  const period = parsePeriod(
-    url.searchParams.get("period") ?? url.searchParams.get("periodType") ?? "weekly",
-    url.searchParams.get("start") ?? url.searchParams.get("periodStart"),
-  );
+  const period = historicalPlan
+    ? { periodType: historicalPlan.period_type, periodStart: historicalPlan.period_start, periodEnd: historicalPlan.period_end }
+    : parsePeriod(
+      url.searchParams.get("period") ?? url.searchParams.get("periodType") ?? "weekly",
+      url.searchParams.get("start") ?? url.searchParams.get("periodStart"),
+    );
   if (!period) return { ok: false, response: apiError("invalid_request", 400) };
 
   const employeeValue = url.searchParams.get("employeeId");
@@ -104,7 +115,7 @@ export async function loadAuthorizedDepartmentPlanReport(
     assignmentState: assignmentValue ? assignmentValue as DepartmentPlanReportFilters["assignmentState"] : null,
   };
   const [report, department] = await Promise.all([
-    departmentPlanReportRepository.getReport(scope.departmentId, period, filters),
+    departmentPlanReportRepository.getReport(scope.departmentId, period, filters, new Date(), historicalPlan),
     departmentPlanRepository.getDepartment(scope.departmentId),
   ]);
   if (report.error) return { ok: false, response: errorResponse(report.error) };

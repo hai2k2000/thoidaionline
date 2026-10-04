@@ -46,8 +46,9 @@ export function canonicalizePeriodStart(
   if (!parts) throw new Error("invalid period start");
   const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
   if (periodType === "weekly") {
-    const mondayOffset = (date.getUTCDay() + 6) % 7;
-    date.setUTCDate(date.getUTCDate() - mondayOffset);
+    // Department Plan business weeks run Saturday through Friday.
+    const saturdayOffset = (date.getUTCDay() + 1) % 7;
+    date.setUTCDate(date.getUTCDate() - saturdayOffset);
     return iso(date);
   }
   if (periodType === "monthly") {

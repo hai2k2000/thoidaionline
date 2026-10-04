@@ -28,19 +28,27 @@ export default async function DepartmentPlanReportsPage({ searchParams }: Props)
   if (!user) redirect("/login");
   const raw = await searchParams;
   const now = new Date();
-  const period = canonicalPeriodFromQuery(first(raw.period), first(raw.start), now);
   const requestedDepartment = first(raw.departmentId);
-  const departmentId = requestedDepartment ? asUuid(requestedDepartment) : null;
-  if (requestedDepartment && !departmentId) redirect(departmentPlanReportUrl(period.periodType, period.periodStart));
-
-  const scope = resolveDepartmentPlanScope(actorFromSession(user), departmentId);
+  const requestedDepartmentId = requestedDepartment ? asUuid(requestedDepartment) : null;
+  const planIdValue = first(raw.plan_id);
+  const planId = planIdValue ? asUuid(planIdValue) : null;
+  if ((requestedDepartment && !requestedDepartmentId) || (planIdValue && !planId)) redirect("/tasks");
+  const historicalPlanResult = planId ? await departmentPlanRepository.getPlan(planId) : null;
+  if (historicalPlanResult?.error) throw new Error("Không thể tải báo cáo kế hoạch phòng.");
+  const historicalPlan = historicalPlanResult?.data ?? null;
+  if (planId && !historicalPlan) redirect("/tasks");
+  if (historicalPlan && requestedDepartmentId && historicalPlan.department_id !== requestedDepartmentId) redirect("/tasks");
+  const period = historicalPlan
+    ? { periodType: historicalPlan.period_type, periodStart: historicalPlan.period_start, periodEnd: historicalPlan.period_end }
+    : canonicalPeriodFromQuery(first(raw.period), first(raw.start), now);
+  const scope = resolveDepartmentPlanScope(actorFromSession(user), historicalPlan?.department_id ?? requestedDepartmentId);
   if (!scope) redirect("/tasks");
   const canonicalUrl = departmentPlanReportUrl(
     period.periodType,
     period.periodStart,
-    requestedDepartment ? departmentId : null,
+    requestedDepartmentId ?? scope.departmentId,
   );
-  if (first(raw.period) !== period.periodType || first(raw.start) !== period.periodStart) redirect(canonicalUrl);
+  if (!historicalPlan && (first(raw.period) !== period.periodType || first(raw.start) !== period.periodStart)) redirect(canonicalUrl);
 
   const employeeValue = first(raw.employeeId);
   const employeeId = employeeValue ? asUuid(employeeValue) : null;

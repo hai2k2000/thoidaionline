@@ -54,3 +54,11 @@ test("SQL integration coverage includes every checkpoint 1 guard", () => {
   ]) assert.match(sqlTest, new RegExp(marker, "i"));
   assert.equal((sqlTest.match(/\\ir \.\.\/migrations\/20260926140000_department_plans_v2\.sql/g) ?? []).length, 2);
 });
+
+
+ test("Saturday-Friday additive migration keeps historical rows valid", () => {
+  const saturdayMigration = readFileSync(new URL("../../supabase/migrations/20261004100000_department_plan_saturday_friday.sql", import.meta.url), "utf8");
+  assert.match(saturdayMigration, /extract\(isodow from period_start\) in \(1, 6\)/);
+  assert.match(saturdayMigration, /extract\(isodow from p_period_start\) <> 6/);
+  assert.doesNotMatch(saturdayMigration, /delete from|truncate table|drop table/i);
+});

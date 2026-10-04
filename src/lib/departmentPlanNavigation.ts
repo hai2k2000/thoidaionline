@@ -53,9 +53,11 @@ export const departmentPlanUrl = (
   periodType: DepartmentPlanPeriodType,
   periodStart: string,
   departmentId?: string | null,
+  planId?: string | null,
 ) => {
   const query = new URLSearchParams({ period: periodType, start: periodStart });
   if (departmentId) query.set("departmentId", departmentId);
+  if (planId) query.set("plan_id", planId);
   return `/planning/department?${query.toString()}`;
 };
 
@@ -63,8 +65,10 @@ export const departmentPlanReportUrl = (
   periodType: DepartmentPlanPeriodType,
   periodStart: string,
   departmentId?: string | null,
+  planId?: string | null,
 ) => {
   const query = new URLSearchParams({ period: periodType, start: periodStart });
   if (departmentId) query.set("departmentId", departmentId);
+  if (planId) query.set("plan_id", planId);
   return `/planning/reports?${query.toString()}`;
 };

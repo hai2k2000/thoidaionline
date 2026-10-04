@@ -466,3 +466,27 @@ Follow Up:
 
 Next:
 - Monitor release and rollback pointers; keep current/previous/rollback-2 retention.
+
+
+## Department Plan Canonical Saturday-Friday Week
+
+Current Phase: implementation and production validation
+Current Task: fix Department Plan weekly boundary from Monday-Sunday to Saturday-Friday
+
+Completed:
+- Confirmed live source and database constraints were both Monday-based.
+- Changed the shared Department Plan helper and Excel fixtures to Saturday-Friday.
+- Added explicit `plan_id` loading so historical plans keep their stored dates and remain scoped.
+- Added additive migration 20261004100000_department_plan_saturday_friday.sql; no historical rows are rewritten.
+
+Validation:
+- Focused Department Plan regression: 33/33 PASS.
+- Migration rehearsal on restored disposable PostgreSQL database: PASS.
+- Production backup created before migration: /opt/thoidai-work/backups/department-plan-saturday-friday-pre-20261004T020238Z.dump.
+- Production migration applied and schema/history checks: PASS.
+
+Blockers:
+- none
+
+Next:
+- Build/package immutable release, run artifact and smoke checks, then activate production.
