@@ -152,6 +152,74 @@ export const departmentPlanRepository = {
       .in("id", taskIds);
   },
 
+  async importItemsIntoPlan(actorId: string, planId: string, inputs: Array<Record<string, unknown>>) {
+    const plan = await this.getPlan(planId);
+    if (plan.error) return plan;
+    if (!plan.data) return { data: null, error: { code: "P0002", message: "plan not found" } };
+    if (plan.data.status === "closed") return { data: null, error: { code: "22023", message: "closed plan" } };
+
+    const taskIds = inputs.map((input) => typeof input.taskId === "string" ? input.taskId : null).filter((id): id is string => Boolean(id));
+    const taskResult = await this.listImportTasksByIds(plan.data.department_id, taskIds);
+    if (taskResult.error) return { data: null, error: taskResult.error };
+    const tasks = (taskResult.data ?? []) as Array<{ id: string; title: string; description: string | null; due_date: string | null; status: string; assignee_id: string | null }>;
+    const existingResult = await this.listPlanItems(planId);
+    if (existingResult.error) return { data: null, error: existingResult.error };
+    const existing = existingResult.data ?? [];
+    const normalizedTitle = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const imported: DepartmentPlanItemRow[] = [];
+    const skipped: Array<{ taskId: string | null; title: string; reason: string }> = [];
+
+    for (const input of inputs) {
+      const taskId = typeof input.taskId === "string" ? input.taskId : null;
+      const title = typeof input.title === "string" ? input.title.trim() : "";
+      const task = taskId ? tasks.find((candidate) => candidate.id === taskId) : null;
+      if (taskId && !task) return { data: null, error: { code: "42501", message: "task outside department" } };
+      if (taskId && existing.some((item) => item.linked_task_id === taskId)) {
+        skipped.push({ taskId, title: task?.title ?? title, reason: "already_in_plan" });
+        continue;
+      }
+      if (!taskId && (!title || existing.some((item) => normalizedTitle(item.title) === normalizedTitle(title)))) {
+        skipped.push({ taskId: null, title, reason: "already_in_plan" });
+        continue;
+      }
+      const dueDate = typeof input.dueDate === "string" && input.dueDate ? input.dueDate : task?.due_date ?? null;
+      const dueAt = typeof input.milestone === "string" && input.milestone
+        ? input.milestone + "T17:00:00+07:00"
+        : dueDate ? dueDate + "T17:00:00+07:00" : null;
+      const workStatus = typeof input.status === "string" && ["planned", "in_progress", "completed", "cancelled"].includes(input.status)
+        ? input.status
+        : task?.status === "in_progress" ? "in_progress" : task?.status === "done" ? "completed" : "planned";
+      const row = {
+        department_plan_id: planId,
+        department_id: plan.data.department_id,
+        title: task?.title ?? title,
+        description: task?.description ?? (typeof input.description === "string" ? input.description.trim() || null : null),
+        due_at: dueAt,
+        assignee_id: task?.assignee_id ?? null,
+        assignment_state: task?.assignee_id ? "assigned" : "unassigned",
+        work_status: workStatus,
+        linked_task_id: task?.id ?? null,
+        created_by: actorId,
+        period_relation: typeof input.periodRelation === "string" ? input.periodRelation : "IMPORTED",
+        work_source: typeof input.workSource === "string" ? input.workSource : "department_plan",
+        period_milestone_at: typeof input.milestone === "string" && input.milestone ? input.milestone + "T17:00:00+07:00" : null,
+        carry_over_reason: typeof input.carryOverReason === "string" ? input.carryOverReason : null,
+      };
+      const result = await serverSupabase.from("department_plan_items").insert(row).select(ITEM_FIELDS).single<DepartmentPlanItemRow>();
+      if (result.error) {
+        if (result.error.code === "23505" && task?.id) {
+          skipped.push({ taskId: task.id, title: task.title, reason: "already_in_plan" });
+          continue;
+        }
+        return { data: null, error: result.error };
+      }
+      imported.push(result.data);
+      existing.push(result.data);
+    }
+    return { data: { imported, skipped }, error: null };
+  },
+
+
   async validateAssignee(departmentId: string, assigneeId: string | null | undefined) {
     if (!assigneeId) return { data: true, error: null };
     const result = await serverSupabase
