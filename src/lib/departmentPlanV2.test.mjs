@@ -24,7 +24,7 @@ const requiredLabels = [
   "Import k\u1ebf ho\u1ea1ch t\u1eeb Excel",
   "Quay l\u1ea1i k\u1ebf ho\u1ea1ch k\u1ef3",
   "File Excel kh\u00f4ng h\u1ee3p l\u1ec7",
-  "X\u00e1c nh\u1eadn import",
+  "X\u00e1c nh\u1eadn v\u00e0 giao vi\u1ec7c",
   "K\u1ebf ho\u1ea1ch tu\u1ea7n",
   "K\u1ebf ho\u1ea1ch th\u00e1ng",
   "T\u1ed5ng k\u1ebft k\u1ef3",

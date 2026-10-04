@@ -16,6 +16,8 @@ type ImportedRow = {
   status: string | null;
   dueDate: string | null;
   milestone: string | null;
+  startDate?: string | null;
+  reportDate?: string | null;
 };
 
 const normalizePlanTitle = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -64,21 +66,25 @@ export async function POST(request: Request) {
       const assigneeMatches = resolveNames(item.assigneeNames);
       const collaboratorMatches = resolveNames(item.collaboratorNames);
       const resolvedAssignees = assigneeMatches.filter((entry) => entry.matches.length === 1).map((entry) => entry.matches[0]);
-      const peopleMatches = [...assigneeMatches, ...collaboratorMatches];
-      const hasAmbiguous = peopleMatches.some((entry) => entry.matches.length > 1);
-      const hasUnresolved = peopleMatches.some((entry) => entry.matches.length === 0);
-      const assigneeId = assigneeMatches.length === 1 && assigneeMatches[0].matches.length === 1 ? assigneeMatches[0].matches[0].id : null;
+      const resolvedCollaborators = collaboratorMatches.filter((entry) => entry.matches.length === 1).map((entry) => entry.matches[0]);
+      const hasAmbiguous = assigneeMatches.some((entry) => entry.matches.length > 1);
+      const hasUnresolved = assigneeMatches.some((entry) => entry.matches.length === 0);
+      const assigneeIds = [...new Set(resolvedAssignees.map((employee) => employee.id))];
+      const collaboratorIds = [...new Set(resolvedCollaborators.map((employee) => employee.id))].filter((id) => !assigneeIds.includes(id));
       const words = new Set(normalize(item.title).split(" ").filter((word) => word.length > 2));
       const scored = (tasks.data ?? []).map((task) => ({ task, score: normalize(task.title).split(" ").filter((word) => words.has(word)).length / Math.max(words.size, 1) })).sort((a, b) => b.score - a.score);
       const explicitTask = item.taskId ? (explicitTasks.data ?? []).find((task) => task.id === item.taskId) : null;
       if (item.taskId && !explicitTask) throw new Error(`Task ID liên kết không tồn tại hoặc nằm ngoài phòng ban: ${item.taskId}`);
       const best = scored[0];
-      const existingTask = explicitTask ? { id: explicitTask.id, title: explicitTask.title, confidence: "HIGH" as const } : best?.score >= 0.7 ? { id: best.task.id, title: best.task.title, confidence: "HIGH" as const } : best?.score >= 0.4 ? { id: best.task.id, title: best.task.title, confidence: "REVIEW" as const } : null;
+      const existingTask = explicitTask ? { id: explicitTask.id, title: explicitTask.title, assigneeId: explicitTask.assignee_id, confidence: "HIGH" as const } : best?.score >= 0.7 ? { id: best.task.id, title: best.task.title, assigneeId: best.task.assignee_id, confidence: "HIGH" as const } : best?.score >= 0.4 ? { id: best.task.id, title: best.task.title, assigneeId: best.task.assignee_id, confidence: "REVIEW" as const } : null;
       const matchedTaskId = item.taskId ?? existingTask?.id ?? null;
       const alreadyInPlan = Boolean((matchedTaskId && existingTaskIds.has(matchedTaskId)) || (!matchedTaskId && existingTitles.has(normalizePlanTitle(item.title))));
-      return { ...item, assigneeId, assigneeName: item.assigneeNames.join("; ") || null, assigneeIds: resolvedAssignees.map((employee) => employee.id), assigneeMatches: assigneeMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), collaboratorMatches: collaboratorMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), mappingConfidence: peopleMatches.length === 0 ? undefined : hasAmbiguous ? "REVIEW" : hasUnresolved ? "UNRESOLVED" : "HIGH", existingTask, alreadyInPlan, warning: alreadyInPlan ? "Công việc đã có trong kế hoạch kỳ này" : null };
+      const assignmentDifference = Boolean(existingTask && assigneeIds.length > 0 && existingTask.assigneeId && !assigneeIds.includes(existingTask.assigneeId));
+      const mappingConfidence = item.assigneeNames.length === 0 ? undefined : hasAmbiguous ? "REVIEW" : hasUnresolved || assigneeIds.length === 0 ? "UNRESOLVED" : "HIGH";
+      const missingDeadline = assigneeIds.length > 0 && !item.dueDate;
+      return { ...item, assigneeName: item.assigneeNames.join("; ") || null, assigneeIds, collaboratorIds, assigneeMatches: assigneeMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), collaboratorMatches: collaboratorMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), mappingConfidence, assignmentDifference, mappingBlocking: (item.assigneeNames.length > 0 && (mappingConfidence === "REVIEW" || mappingConfidence === "UNRESOLVED")) || assignmentDifference || missingDeadline, existingTask, alreadyInPlan, warning: assignmentDifference ? "Người thực hiện khác Task hiện tại — cần xem xét" : missingDeadline ? "Cần Hạn hoàn thành để giao việc" : alreadyInPlan ? "Công việc đã có trong kế hoạch kỳ này" : null };
     });
-    return apiJson({ candidates, persisted: false });
+    return apiJson({ candidates, employeeOptions: (employees.data ?? []).map((employee) => ({ id: employee.id, full_name: employee.full_name })), persisted: false });
   } catch (error) {
     if (error instanceof DepartmentPlanExcelValidationError) {
       return Response.json({ ok: false, error: error.code, row: error.row, field: error.field, message: error.message }, { status: 400 });

@@ -101,7 +101,7 @@ test("Department Plan Excel UI is preview-only and rejects DOCX", () => {
   assert.match(actions, /Import kế hoạch từ Excel/);
   assert.match(actions, /accept="\.xlsx"/);
   assert.doesNotMatch(actions, /accept="\.docx"/);
-  assert.match(actions, /Xác nhận import/);
+  assert.match(actions, /Xác nhận và giao việc/);
   assert.match(route, /persisted: false/);
   assert.match(route, /INVALID_IMPORT_FILE/);
   assert.match(route, /generic\.test/);

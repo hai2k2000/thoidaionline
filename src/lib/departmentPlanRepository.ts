@@ -191,6 +191,7 @@ export const departmentPlanRepository = {
           description: typeof input.description === "string" ? input.description : "",
           requirements: [],
           assigneeIds,
+          collaboratorIds: Array.isArray(input.collaboratorIds) ? input.collaboratorIds.filter((value): value is string => typeof value === "string") : [],
           dueDate: input.dueDate,
           dueTime: "17:00",
           priority: "normal",
@@ -199,8 +200,17 @@ export const departmentPlanRepository = {
         });
         if (assigned.error) return { data: null, error: assigned.error };
         if (assigned.data?.item) {
-          imported.push(assigned.data.item);
-          existing.push(assigned.data.item);
+          const metadata = {
+            period_relation: typeof input.periodRelation === "string" ? input.periodRelation : "IMPORTED",
+            work_source: typeof input.workSource === "string" ? input.workSource : "department_plan",
+            period_milestone_at: typeof input.milestone === "string" && input.milestone ? input.milestone + "T17:00:00+07:00" : null,
+            carry_over_reason: typeof input.carryOverReason === "string" ? input.carryOverReason : null,
+          };
+          const updated = await serverSupabase.from("department_plan_items").update(metadata).eq("id", assigned.data.item.id).select(ITEM_FIELDS).single<DepartmentPlanItemRow>();
+          if (updated.error) return { data: null, error: updated.error };
+          const assignedItem = updated.data ?? assigned.data.item;
+          imported.push(assignedItem);
+          existing.push(assignedItem);
           continue;
         }
         return { data: null, error: { code: "P0001", message: "assignment import failed" } };

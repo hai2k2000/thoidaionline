@@ -26,6 +26,19 @@ test("existing Plan import uses the selected Plan dates as parser context", () =
   assert.match(importRoute, /const periodEnd = currentPlan\.data\.period_end/);
 });
 
+test("Excel confirmation is the single assignment approval and blocks unresolved rows", () => {
+  assert.match(actions, /Xác nhận và giao việc/);
+  assert.match(actions, /mappingBlocking/);
+  assert.match(actions, /assigneeOverrides/);
+  assert.match(actions, /collaboratorIds/);
+  assert.match(importRoute, /employeeOptions/);
+  assert.match(importRoute, /assignmentDifference/);
+  assert.match(confirmRoute, /allowedIds/);
+  assert.match(confirmRoute, /listActiveEmployees/);
+  assert.match(repository, /createAndAssignItem/);
+  assert.match(repository, /collaboratorIds/);
+});
+
 test("create flow still owns the existing-plan duplicate modal", () => {
   assert.match(actions, /if \(plan\) \{[\s\S]*openExisting\(plan\)/);
   assert.match(actions, /Kế hoạch kỳ này đã tồn tại\./);
