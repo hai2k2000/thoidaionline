@@ -95,6 +95,21 @@ test("missing required title returns a row-level Vietnamese validation error", (
   assert.throws(() => parseDepartmentPlanExcelRows([headers, values], { periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09" }), /Dòng 2: thiếu Tên công việc\./);
 });
 
+test("Excel import preserves Vietnamese Unicode at the parser/API boundary", () => {
+  const values = row(1).map((value, index) => {
+    if (index === 5) return "Tạo kế hoạch kỳ mới";
+    if (index === 6) return "Import kế hoạch từ Excel — Phòng Nội dung";
+    if (index === 7) return "Nguyễn Hồng Khánh";
+    return value;
+  });
+  const parsed = parseDepartmentPlanExcelRows([headers, values], { periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09" });
+  assert.equal(parsed[0].title, "Tạo kế hoạch kỳ mới");
+  assert.equal(parsed[0].description, "Import kế hoạch từ Excel — Phòng Nội dung");
+  assert.deepEqual(parsed[0].assigneeNames, ["Nguyễn Hồng Khánh"]);
+  const route = readFileSync(new URL("../app/api/planning/department/import/route.ts", import.meta.url), "utf8");
+  for (const mojibake of ["Ã", "Â", "Ä", "áº", "á»", "káº"]) assert.doesNotMatch(route, new RegExp(mojibake));
+});
+
 test("Department Plan Excel UI is preview-only and rejects DOCX", () => {
   const actions = readFileSync(new URL("../components/DepartmentPlanActions.tsx", import.meta.url), "utf8");
   const route = readFileSync(new URL("../app/api/planning/department/import/route.ts", import.meta.url), "utf8");
