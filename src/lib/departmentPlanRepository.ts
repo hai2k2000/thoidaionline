@@ -174,12 +174,16 @@ export const departmentPlanRepository = {
       const title = typeof input.title === "string" ? input.title.trim() : "";
       const task = taskId ? tasks.find((candidate) => candidate.id === taskId) : null;
       if (taskId && !task) return { data: null, error: { code: "42501", message: "task outside department" } };
+      const mergeDuplicate = input.mergeDuplicate === true;
+      if (input.duplicateRequiresConfirmation === true && !mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
       if (taskId && existing.some((item) => item.linked_task_id === taskId)) {
-        skipped.push({ taskId, title: task?.title ?? title, reason: "already_in_plan" });
+        if (!mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
+        skipped.push({ taskId, title: task?.title ?? title, reason: "merged_existing" });
         continue;
       }
       if (!taskId && (!title || existing.some((item) => normalizedTitle(item.title) === normalizedTitle(title)))) {
-        skipped.push({ taskId: null, title, reason: "already_in_plan" });
+        if (!mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
+        skipped.push({ taskId: null, title, reason: "merged_existing" });
         continue;
       }
       const assigneeIds = Array.isArray(input.assigneeIds)

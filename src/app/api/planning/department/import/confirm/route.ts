@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   if (employeeIds.error) return repositoryError(employeeIds.error);
   const allowedIds = new Set((employeeIds.data ?? []).map((employee) => employee.id));
   for (const item of items) {
+    if (item.duplicateRequiresConfirmation === true && item.mergeDuplicate !== true) return apiError("invalid_request", 400);
     const assigneeIds = Array.isArray(item.assigneeIds) ? item.assigneeIds.filter((value): value is string => typeof value === "string") : [];
     if (assigneeIds.some((id) => !allowedIds.has(id))) return apiError("forbidden", 403);
     if (assigneeIds.length > 0 && (typeof item.dueDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(item.dueDate))) return apiError("invalid_request", 400);

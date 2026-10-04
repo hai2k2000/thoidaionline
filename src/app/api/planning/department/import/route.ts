@@ -18,6 +18,8 @@ type ImportedRow = {
   milestone: string | null;
   startDate?: string | null;
   reportDate?: string | null;
+  duplicateType?: string | null;
+  duplicateOf?: number | null;
 };
 
 const normalizePlanTitle = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
   const departmentIdValue = form.get("department_id") ?? form.get("departmentId");
   const departmentId = typeof departmentIdValue === "string" ? String(departmentIdValue) : guard.actor.department_id;
   const currentPlanId = asUuid(form.get("current_plan_id") ?? form.get("currentPlanId"));
-  if (!currentPlanId) return Response.json({ error: { code: "no_plan", message: "Kỳ này chưa có kế hoạch." } }, { status: 409 });
+  if (!currentPlanId) return Response.json({ error: { code: "no_plan", message: "Ká»³ nÃ y chÆ°a cÃ³ káº¿ hoáº¡ch." } }, { status: 409 });
   if (!resolveDepartmentPlanScope({ id: guard.actor.id, departmentId: guard.actor.department_id, departmentCode: guard.actor.department_code, roleCode: guard.actor.role_code, roleLevel: guard.actor.role_level, isDepartmentManager: guard.actor.is_department_manager, permissions: guard.actor.permissions }, departmentId)) return apiError("forbidden", 403);
   const currentPlan = await departmentPlanRepository.getPlan(currentPlanId);
   if (currentPlan.error) return apiError("operation_failed", 500);
@@ -49,6 +51,7 @@ export async function POST(request: Request) {
       periodType,
       periodStart,
       periodEnd,
+      preserveDuplicates: true,
     });
     const explicitTaskIds = parsed.map((item: ImportedRow) => item.taskId).filter(Boolean) as string[];
     const [employees, tasks, explicitTasks, planItems] = await Promise.all([departmentPlanRepository.listActiveEmployees(departmentId!), departmentPlanRepository.listImportMatchTasks(departmentId!), departmentPlanRepository.listImportTasksByIds(departmentId!, explicitTaskIds), departmentPlanRepository.listPlanItems(currentPlanId)]);
@@ -74,15 +77,18 @@ export async function POST(request: Request) {
       const words = new Set(normalize(item.title).split(" ").filter((word) => word.length > 2));
       const scored = (tasks.data ?? []).map((task) => ({ task, score: normalize(task.title).split(" ").filter((word) => words.has(word)).length / Math.max(words.size, 1) })).sort((a, b) => b.score - a.score);
       const explicitTask = item.taskId ? (explicitTasks.data ?? []).find((task) => task.id === item.taskId) : null;
-      if (item.taskId && !explicitTask) throw new Error(`Task ID liên kết không tồn tại hoặc nằm ngoài phòng ban: ${item.taskId}`);
+      if (item.taskId && !explicitTask) throw new Error(`Task ID liÃªn káº¿t khÃ´ng tá»“n táº¡i hoáº·c náº±m ngoÃ i phÃ²ng ban: ${item.taskId}`);
       const best = scored[0];
       const existingTask = explicitTask ? { id: explicitTask.id, title: explicitTask.title, assigneeId: explicitTask.assignee_id, confidence: "HIGH" as const } : best?.score >= 0.7 ? { id: best.task.id, title: best.task.title, assigneeId: best.task.assignee_id, confidence: "HIGH" as const } : best?.score >= 0.4 ? { id: best.task.id, title: best.task.title, assigneeId: best.task.assignee_id, confidence: "REVIEW" as const } : null;
       const matchedTaskId = item.taskId ?? existingTask?.id ?? null;
       const alreadyInPlan = Boolean((matchedTaskId && existingTaskIds.has(matchedTaskId)) || (!matchedTaskId && existingTitles.has(normalizePlanTitle(item.title))));
+      const duplicateType = item.duplicateType ?? (alreadyInPlan ? (matchedTaskId ? "CURRENT_PLAN_TASK" : "CURRENT_PLAN_TITLE") : null);
+      const duplicateOf = item.duplicateOf ?? null;
+      const duplicateRequiresConfirmation = Boolean(duplicateType);
       const assignmentDifference = Boolean(existingTask && assigneeIds.length > 0 && existingTask.assigneeId && !assigneeIds.includes(existingTask.assigneeId));
       const mappingConfidence = item.assigneeNames.length === 0 ? undefined : hasAmbiguous ? "REVIEW" : hasUnresolved || assigneeIds.length === 0 ? "UNRESOLVED" : "HIGH";
       const missingDeadline = assigneeIds.length > 0 && !item.dueDate;
-      return { ...item, assigneeName: item.assigneeNames.join("; ") || null, assigneeIds, collaboratorIds, assigneeMatches: assigneeMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), collaboratorMatches: collaboratorMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), mappingConfidence, assignmentDifference, mappingBlocking: (item.assigneeNames.length > 0 && (mappingConfidence === "REVIEW" || mappingConfidence === "UNRESOLVED")) || assignmentDifference || missingDeadline, existingTask, alreadyInPlan, warning: assignmentDifference ? "Người thực hiện khác Task hiện tại — cần xem xét" : missingDeadline ? "Cần Hạn hoàn thành để giao việc" : alreadyInPlan ? "Công việc đã có trong kế hoạch kỳ này" : null };
+      return { ...item, assigneeName: item.assigneeNames.join("; ") || null, assigneeIds, collaboratorIds, assigneeMatches: assigneeMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), collaboratorMatches: collaboratorMatches.map((entry) => ({ name: entry.name, matches: entry.matches.map((employee) => ({ id: employee.id, full_name: employee.full_name })) })), mappingConfidence, assignmentDifference, mappingBlocking: (item.assigneeNames.length > 0 && (mappingConfidence === "REVIEW" || mappingConfidence === "UNRESOLVED")) || assignmentDifference || missingDeadline, existingTask, alreadyInPlan, duplicateType, duplicateOf, duplicateRequiresConfirmation, warning: assignmentDifference ? "NgÆ°á»i thá»±c hiá»‡n khÃ¡c Task hiá»‡n táº¡i â€” cáº§n xem xÃ©t" : missingDeadline ? "Cáº§n Háº¡n hoÃ n thÃ nh Ä‘á»ƒ giao viá»‡c" : duplicateType ? "DÃ²ng trÃ¹ng â€” cáº§n chá»§ phÃ²ng xÃ¡c nháº­n gá»™p" : alreadyInPlan ? "CÃ´ng viá»‡c Ä‘Ã£ cÃ³ trong káº¿ hoáº¡ch ká»³ nÃ y" : null };
     });
     return apiJson({ candidates, employeeOptions: (employees.data ?? []).map((employee) => ({ id: employee.id, full_name: employee.full_name })), persisted: false });
   } catch (error) {
@@ -90,6 +96,6 @@ export async function POST(request: Request) {
       return Response.json({ ok: false, error: error.code, row: error.row, field: error.field, message: error.message }, { status: 400 });
     }
     console.error("Department Plan Excel import failed", error);
-    return Response.json({ ok: false, error: "INVALID_IMPORT_FILE", message: "Không thể đọc file Excel. Vui lòng kiểm tra lại file mẫu." }, { status: 400 });
+    return Response.json({ ok: false, error: "INVALID_IMPORT_FILE", message: "KhÃ´ng thá»ƒ Ä‘á»c file Excel. Vui lÃ²ng kiá»ƒm tra láº¡i file máº«u." }, { status: 400 });
   }
 }
