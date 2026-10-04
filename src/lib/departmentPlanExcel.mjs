@@ -50,6 +50,16 @@ const WORK_SOURCES = new Map([
 ]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+export class DepartmentPlanExcelValidationError extends Error {
+  constructor(message, { row, field } = {}) {
+    super(message);
+    this.name = "DepartmentPlanExcelValidationError";
+    this.code = "INVALID_IMPORT_ROW";
+    this.row = row ?? null;
+    this.field = field ?? null;
+  }
+}
+
 export const normalizeExcelText = (value) => String(value ?? "")
   .normalize("NFC").replace(/[\u00a0\r\n]+/g, " ").replace(/\s+/g, " ").trim();
 export const normalizeExcelHeader = (value) => normalizeExcelText(value).normalize("NFD")
@@ -76,7 +86,7 @@ export const parseDepartmentPlanExcelDate = (value) => {
   if (match) return isoFromParts(Number(match[1]), Number(match[2]), Number(match[3]));
   return null;
 };
-const splitPeople = (value) => cellText(value).split(";").map((name) => name.trim()).filter(Boolean);
+const splitPeople = (value) => cellText(value).split(";").map(cellText).filter(Boolean);
 const sheetIsInstructional = (name) => /huong dan|vi du|example|readme|danh muc/i.test(normalizedValue(name));
 const headerForRows = (rows) => {
   for (let index = 0; index < Math.min(rows.length, 30); index += 1) {
@@ -89,18 +99,18 @@ const headerForRows = (rows) => {
   }
   return null;
 };
-const parseEnum = (value, map, label) => {
+const parseEnum = (value, map, label, rowNumber) => {
   const text = normalizedValue(value); if (!text) return null;
-  const result = map.get(text); if (!result) throw new Error(`${label} không hợp lệ: ${cellText(value)}`); return result;
+  const result = map.get(text); if (!result) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: ${label} không hợp lệ: ${cellText(value)}.`, { row: rowNumber, field: label }); return result;
 };
-const parsePeriodType = (value, fallback) => {
+const parsePeriodType = (value, fallback, rowNumber) => {
   const text = normalizedValue(value); if (!text) return fallback ?? null;
-  const result = PERIOD_TYPES.get(text); if (!result) throw new Error(`Loại kỳ không hợp lệ: ${cellText(value)}`); return result;
+  const result = PERIOD_TYPES.get(text); if (!result) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: Loại kỳ không hợp lệ: ${cellText(value)}.`, { row: rowNumber, field: "Loại kỳ" }); return result;
 };
 const rowValue = (row, lookup, key) => lookup.has(key) ? row[lookup.get(key)] : null;
 const optionalDate = (value, rowNumber, label) => {
   if (value == null || cellText(value) === "") return null;
-  const parsed = parseDepartmentPlanExcelDate(value); if (!parsed) throw new Error(`Dòng ${rowNumber}: ${label} không hợp lệ.`); return parsed;
+  const parsed = parseDepartmentPlanExcelDate(value); if (!parsed) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: ${label} không hợp lệ.`, { row: rowNumber, field: label }); return parsed;
 };
 
 export function parseDepartmentPlanExcelRows(rows, context = {}) {
@@ -108,24 +118,25 @@ export function parseDepartmentPlanExcelRows(rows, context = {}) {
   const parsed = [];
   for (let index = header.rowIndex + 1; index < rows.length; index += 1) {
     const row = rows[index] ?? []; if (!row.map(cellText).some(Boolean)) continue;
-    const title = cellText(rowValue(row, header.lookup, "title")); if (!title) continue;
     const rowNumber = index + 1;
-    const periodType = parsePeriodType(rowValue(row, header.lookup, "periodType"), context.periodType ?? null);
+    const title = cellText(rowValue(row, header.lookup, "title"));
+    if (!title) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: thiếu Tên công việc.`, { row: rowNumber, field: "Tên công việc" });
+    const periodType = parsePeriodType(rowValue(row, header.lookup, "periodType"), context.periodType ?? null, rowNumber);
     const periodStart = optionalDate(rowValue(row, header.lookup, "periodStart"), rowNumber, "Từ ngày") ?? context.periodStart ?? null;
     const periodEnd = optionalDate(rowValue(row, header.lookup, "periodEnd"), rowNumber, "Đến ngày") ?? context.periodEnd ?? null;
-    if (!periodType || !periodStart || !periodEnd) throw new Error(`Dòng ${rowNumber}: thiếu thông tin kỳ.`);
-    if (context.periodType && periodType !== context.periodType) throw new Error(`Dòng ${rowNumber}: loại kỳ không khớp kỳ đang mở.`);
-    if (context.periodStart && periodStart !== context.periodStart) throw new Error(`Dòng ${rowNumber}: từ ngày không khớp kỳ đang mở.`);
-    if (context.periodEnd && periodEnd !== context.periodEnd) throw new Error(`Dòng ${rowNumber}: đến ngày không khớp kỳ đang mở.`);
-    const taskId = cellText(rowValue(row, header.lookup, "taskId")); if (taskId && !UUID_PATTERN.test(taskId)) throw new Error(`Dòng ${rowNumber}: Task ID liên kết không hợp lệ.`);
+    if (!periodType || !periodStart || !periodEnd) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: thiếu thông tin kỳ.`, { row: rowNumber, field: "Loại kỳ" });
+    if (context.periodType && periodType !== context.periodType) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: loại kỳ không khớp kỳ đang mở.`, { row: rowNumber, field: "Loại kỳ" });
+    if (context.periodStart && periodStart !== context.periodStart) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: từ ngày không khớp kỳ đang mở.`, { row: rowNumber, field: "Từ ngày" });
+    if (context.periodEnd && periodEnd !== context.periodEnd) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: đến ngày không khớp kỳ đang mở.`, { row: rowNumber, field: "Đến ngày" });
+    const taskId = cellText(rowValue(row, header.lookup, "taskId")); if (taskId && !UUID_PATTERN.test(taskId)) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: Task ID liên kết không hợp lệ.`, { row: rowNumber, field: "Task ID liên kết" });
     const confirmation = normalizedValue(rowValue(row, header.lookup, "confirmationRequired"));
     parsed.push({ rowNumber, title, description: cellText(rowValue(row, header.lookup, "description")) || null,
       departmentName: cellText(rowValue(row, header.lookup, "department")) || null, periodType, periodStart, periodEnd,
       startDate: optionalDate(rowValue(row, header.lookup, "startDate"), rowNumber, "Ngày bắt đầu"), dueDate: optionalDate(rowValue(row, header.lookup, "dueDate"), rowNumber, "Hạn hoàn thành cuối"),
       reportDate: optionalDate(rowValue(row, header.lookup, "reportDate"), rowNumber, "Ngày báo cáo"), milestone: optionalDate(rowValue(row, header.lookup, "milestone"), rowNumber, "Mốc trong kỳ"),
-      priority: parseEnum(rowValue(row, header.lookup, "priority"), PRIORITIES, "Mức ưu tiên"), status: parseEnum(rowValue(row, header.lookup, "status"), STATUSES, "Trạng thái"),
-      periodRelation: parseEnum(rowValue(row, header.lookup, "periodRelation"), PERIOD_RELATIONS, "Quan hệ với kỳ") ?? "IMPORTED",
-      workSource: parseEnum(rowValue(row, header.lookup, "workSource"), WORK_SOURCES, "Nguồn công việc") ?? "department_plan", taskId: taskId || null,
+      priority: parseEnum(rowValue(row, header.lookup, "priority"), PRIORITIES, "Mức ưu tiên", rowNumber), status: parseEnum(rowValue(row, header.lookup, "status"), STATUSES, "Trạng thái", rowNumber),
+      periodRelation: parseEnum(rowValue(row, header.lookup, "periodRelation"), PERIOD_RELATIONS, "Quan hệ với kỳ", rowNumber) ?? "IMPORTED",
+      workSource: parseEnum(rowValue(row, header.lookup, "workSource"), WORK_SOURCES, "Nguồn công việc", rowNumber) ?? "department_plan", taskId: taskId || null,
       assigneeNames: splitPeople(rowValue(row, header.lookup, "assignees")), collaboratorNames: splitPeople(rowValue(row, header.lookup, "collaborators")),
       confirmationRequired: ["co", "yes", "true", "1", "bat buoc"].includes(confirmation), note: cellText(rowValue(row, header.lookup, "note")) || null });
   }
@@ -138,7 +149,7 @@ export async function readDepartmentPlanExcel(file, context = {}) {
   if (!(file instanceof File)) throw new Error("File Excel không hợp lệ.");
   if (!file.name.toLowerCase().endsWith(".xlsx") || file.size < 1 || file.size > MAX_FILE_BYTES) throw new Error("File Excel không hợp lệ: chỉ hỗ trợ .xlsx tối đa 10 MB.");
   const buffer = Buffer.from(await file.arrayBuffer()); const names = await readSheetNames(buffer); const candidates = [];
-  for (const name of names) { if (sheetIsInstructional(name)) continue; const rows = await readXlsxFile(buffer, { sheet: name }); if (headerForRows(rows)) candidates.push({ name, rows }); }
+  for (const name of names) { if (sheetIsInstructional(name)) continue; const rows = await readXlsxFile(buffer, { sheet: name, trim: false }); if (headerForRows(rows)) candidates.push({ name, rows }); }
   const preferred = candidates.find((sheet) => normalizeExcelHeader(sheet.name) === "kehoach import");
   if (!preferred && candidates.length !== 1) throw new Error("File Excel không hợp lệ: cần một sheet dữ liệu kế hoạch duy nhất.");
   return deduplicateDepartmentPlanExcelRows(parseDepartmentPlanExcelRows((preferred ?? candidates[0]).rows, context));

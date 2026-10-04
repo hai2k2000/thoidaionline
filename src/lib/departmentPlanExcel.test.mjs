@@ -45,6 +45,21 @@ test("invalid dates and unsupported enum values return friendly validation", () 
   assert.throws(() => parseDepartmentPlanExcelRows([headers, row(1).map((value, index) => index === 13 ? "Ưu tiên 9" : value)], { periodType: "weekly", periodStart: "2026-09-28", periodEnd: "2026-10-04" }), /Mức ưu tiên không hợp lệ/);
 });
 
+test("optional blank cells and empty trailing columns never crash", () => {
+  const values = row(1).map((value, index) => ([8, 12, 17, 19].includes(index) ? undefined : value));
+  assert.doesNotThrow(() => parseDepartmentPlanExcelRows([headers, values.concat([undefined, undefined])], { periodType: "weekly", periodStart: "2026-09-28", periodEnd: "2026-10-04" }));
+  const parsed = parseDepartmentPlanExcelRows([headers, values], { periodType: "weekly", periodStart: "2026-09-28", periodEnd: "2026-10-04" });
+  assert.deepEqual(parsed[0].collaboratorNames, []);
+  assert.equal(parsed[0].reportDate, null);
+  assert.equal(parsed[0].taskId, null);
+  assert.equal(parsed[0].note, null);
+});
+
+test("missing required title returns a row-level Vietnamese validation error", () => {
+  const values = row(1).map((value, index) => index === 5 ? "" : value);
+  assert.throws(() => parseDepartmentPlanExcelRows([headers, values], { periodType: "weekly", periodStart: "2026-09-28", periodEnd: "2026-10-04" }), /Dòng 2: thiếu Tên công việc\./);
+});
+
 test("Department Plan Excel UI is preview-only and rejects DOCX", () => {
   const actions = readFileSync(new URL("../components/DepartmentPlanActions.tsx", import.meta.url), "utf8");
   const route = readFileSync(new URL("../app/api/planning/department/import/route.ts", import.meta.url), "utf8");
@@ -53,7 +68,7 @@ test("Department Plan Excel UI is preview-only and rejects DOCX", () => {
   assert.doesNotMatch(actions, /accept="\.docx"/);
   assert.match(actions, /Xác nhận import/);
   assert.match(route, /persisted: false/);
-  assert.match(route, /File Excel không hợp lệ/);
+  assert.match(route, /INVALID_IMPORT_FILE/);
   assert.match(route, /generic\.test/);
   assert.match(route, /item\.taskId/);
 });

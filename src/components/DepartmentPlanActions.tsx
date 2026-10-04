@@ -110,8 +110,8 @@ export default function DepartmentPlanActions({ departmentId, period, plan, item
     try {
       const body = new FormData(); body.set("file", file); body.set("department_id", departmentId); body.set("current_plan_id", plan.id); body.set("periodType", period.periodType); body.set("periodStart", period.periodStart); body.set("periodEnd", period.periodEnd);
       const response = await fetch("/api/planning/department/import", { method: "POST", body });
-      const data = await response.json().catch(() => null) as { candidates?: Candidate[]; error?: { message?: string } } | null;
-      if (!response.ok) throw new Error(data?.error?.message ?? "File Excel không hợp lệ.");
+      const data = await response.json().catch(() => null) as { candidates?: Candidate[]; message?: string; error?: { message?: string } } | null;
+      if (!response.ok) throw new Error(data?.message ?? data?.error?.message ?? "File Excel không hợp lệ.");
       const importedCandidates = data?.candidates ?? [];
       setCandidates(importedCandidates); setSelected(importedCandidates.map(candidateKey)); setLinkExisting(Object.fromEntries(importedCandidates.filter((item) => item.existingTask && !item.alreadyInPlan && item.existingTask.confidence === "HIGH").map((item) => [candidateKey(item), true]))); setImportingExistingPlan(true); setOpen(true); setMessage("Đã tạo bản xem trước từ file Excel. Chưa lưu dữ liệu.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "File Excel không hợp lệ."); }

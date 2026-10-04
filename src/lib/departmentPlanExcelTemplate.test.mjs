@@ -65,6 +65,22 @@ test("a filled template row parses through the production Excel importer", async
   assert.equal(parsed[0].periodRelation, "IMPORTED");
 });
 
+test("empty inline string cells are accepted without dependency trim crashes", async () => {
+  const bytes = await createDepartmentPlanExcelTemplate();
+  const zip = await JSZip.loadAsync(bytes);
+  const sheet = await zip.file("xl/worksheets/sheet1.xml").async("string");
+  const cells = ["1", "Phòng Nội dung", "Tuần", "28/09/2026", "04/10/2026", "Công việc rỗng tùy chọn", "Nội dung", "Ngô Tùng Dương", "", "28/09/2026", "", "04/10/2026", "", "Ưu tiên 1", "Mới", "Import", "Import", "", "", ""];
+  const escape = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const row = cells.map((value, index) => value === "" ? `<c r="${columnName(index)}2" t="str"></c>` : `<c r="${columnName(index)}2" t="inlineStr"><is><t>${escape(value)}</t></is></c>`).join("");
+  zip.file("xl/worksheets/sheet1.xml", sheet.replace(/<row r="2"[^>]*>.*?<\/row>/, `<row r="2">${row}</row>`));
+  const filled = await zip.generateAsync({ type: "nodebuffer" });
+  await assert.rejects(() => readXlsxFile(filled, { sheet: "KeHoach_Import" }), /reading 'trim'/);
+  const parsed = await readDepartmentPlanExcel(new File([filled], DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME), { periodType: "weekly", periodStart: "2026-09-28", periodEnd: "2026-10-04" });
+  assert.equal(parsed.length, 1);
+  assert.equal(parsed[0].note, null);
+  assert.deepEqual(parsed[0].collaboratorNames, []);
+});
+
 test("template download action is adjacent to the Excel import action", async () => {
   const actions = await readFile(new URL("../components/DepartmentPlanActions.tsx", import.meta.url), "utf8");
   const importIndex = actions.indexOf("Import kế hoạch từ Excel");

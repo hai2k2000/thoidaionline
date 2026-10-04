@@ -1,5 +1,5 @@
 import { apiError, apiJson, asUuid, requireMutationActor } from "@/lib/serverApi";
-import { readDepartmentPlanExcel } from "@/lib/departmentPlanExcel.mjs";
+import { DepartmentPlanExcelValidationError, readDepartmentPlanExcel } from "@/lib/departmentPlanExcel.mjs";
 import { resolveDepartmentPlanScope } from "@/lib/departmentPlanAuthorization";
 import { departmentPlanRepository } from "@/lib/departmentPlanRepository";
 
@@ -76,6 +76,10 @@ export async function POST(request: Request) {
     });
     return apiJson({ candidates, persisted: false });
   } catch (error) {
-    return Response.json({ error: { code: "invalid_request", message: error instanceof Error ? error.message : "File Excel không hợp lệ." } }, { status: 400 });
+    if (error instanceof DepartmentPlanExcelValidationError) {
+      return Response.json({ ok: false, error: error.code, row: error.row, field: error.field, message: error.message }, { status: 400 });
+    }
+    console.error("Department Plan Excel import failed", error);
+    return Response.json({ ok: false, error: "INVALID_IMPORT_FILE", message: "Không thể đọc file Excel. Vui lòng kiểm tra lại file mẫu." }, { status: 400 });
   }
 }
