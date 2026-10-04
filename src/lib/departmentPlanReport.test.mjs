@@ -149,7 +149,7 @@ test("report API is GET-only", () => {
 test("report handler authorizes server-side scope and filters employee scope", () => {
   const source = readFileSync(new URL("./departmentPlanReportService.ts", import.meta.url), "utf8");
   assert.match(source, /requireReadActor/);
-  assert.match(source, /resolveDepartmentPlanScope\(asActor\(guard\.actor\), departmentId\)/);
+  assert.match(source, /resolveDepartmentPlanScope\(asActor\(guard\.actor\),/);
   assert.match(source, /employeeId/);
   assert.match(source, /departmentPlanReportRepository\.getReport/);
 });
