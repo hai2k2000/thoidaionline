@@ -95,7 +95,7 @@ const headerForRows = (rows) => {
       const normalized = normalizeExcelHeader(value);
       for (const [key, aliases] of HEADER_DEFINITIONS) if (!lookup.has(key) && aliases.includes(normalized)) lookup.set(key, column);
     });
-    if (lookup.has("title") && (lookup.has("periodType") || lookup.has("periodStart") || lookup.has("periodEnd"))) return { rowIndex: index, lookup };
+    if (lookup.has("title")) return { rowIndex: index, lookup };
   }
   return null;
 };
@@ -121,18 +121,18 @@ export function parseDepartmentPlanExcelRows(rows, context = {}) {
     const rowNumber = index + 1;
     const title = cellText(rowValue(row, header.lookup, "title"));
     if (!title) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: thiếu Tên công việc.`, { row: rowNumber, field: "Tên công việc" });
-    const periodType = parsePeriodType(rowValue(row, header.lookup, "periodType"), context.periodType ?? null, rowNumber);
+    const periodType = parsePeriodType(rowValue(row, header.lookup, "periodType"), context.periodType ?? "weekly", rowNumber);
     // The open Plan owns the reporting window. Row-level period columns are
     // legacy metadata and must not override or be compared with that Plan.
     const periodStart = context.periodStart ?? optionalDate(rowValue(row, header.lookup, "periodStart"), rowNumber, "Từ ngày");
     const periodEnd = context.periodEnd ?? optionalDate(rowValue(row, header.lookup, "periodEnd"), rowNumber, "Đến ngày");
-    if (!periodType || !periodStart || !periodEnd) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: thiếu thông tin kỳ.`, { row: rowNumber, field: "Loại kỳ" });
+    if (!periodType) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: thiếu thông tin kỳ.`, { row: rowNumber, field: "Loại kỳ" });
     if (context.periodType && periodType !== context.periodType) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: loại kỳ không khớp kỳ đang mở.`, { row: rowNumber, field: "Loại kỳ" });
     const taskId = cellText(rowValue(row, header.lookup, "taskId")); if (taskId && !UUID_PATTERN.test(taskId)) throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: Task ID liên kết không hợp lệ.`, { row: rowNumber, field: "Task ID liên kết" });
     const confirmation = normalizedValue(rowValue(row, header.lookup, "confirmationRequired"));
     const periodRelation = parseEnum(rowValue(row, header.lookup, "periodRelation"), PERIOD_RELATIONS, "Quan hệ với kỳ", rowNumber) ?? "IMPORTED";
     const startDate = optionalDate(rowValue(row, header.lookup, "startDate"), rowNumber, "Ngày bắt đầu");
-    if (periodRelation === "NEW" && startDate && context.periodStart && context.periodEnd
+    if (periodRelation === "NEW" && startDate && context.periodStart && context.periodEnd && header.lookup.has("periodRelation")
       && (startDate < context.periodStart || startDate > context.periodEnd)) {
       throw new DepartmentPlanExcelValidationError(`Dòng ${rowNumber}: Ngày bắt đầu của công việc mới phải nằm trong kỳ đang mở.`, { row: rowNumber, field: "Ngày bắt đầu" });
     }
@@ -156,7 +156,7 @@ export async function readDepartmentPlanExcel(file, context = {}) {
   if (!file.name.toLowerCase().endsWith(".xlsx") || file.size < 1 || file.size > MAX_FILE_BYTES) throw new Error("File Excel không hợp lệ: chỉ hỗ trợ .xlsx tối đa 10 MB.");
   const buffer = Buffer.from(await file.arrayBuffer()); const names = await readSheetNames(buffer); const candidates = [];
   for (const name of names) { if (sheetIsInstructional(name)) continue; const rows = await readXlsxFile(buffer, { sheet: name, trim: false }); if (headerForRows(rows)) candidates.push({ name, rows }); }
-  const preferred = candidates.find((sheet) => normalizeExcelHeader(sheet.name) === "kehoach import");
+  const preferred = candidates.find((sheet) => ["kehoach", "kehoach import"].includes(normalizeExcelHeader(sheet.name)));
   if (!preferred && candidates.length !== 1) throw new Error("File Excel không hợp lệ: cần một sheet dữ liệu kế hoạch duy nhất.");
   return deduplicateDepartmentPlanExcelRows(parseDepartmentPlanExcelRows((preferred ?? candidates[0]).rows, context));
 }

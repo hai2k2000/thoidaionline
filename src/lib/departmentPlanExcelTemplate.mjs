@@ -3,29 +3,16 @@ import JSZip from "jszip";
 export const DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME = "Mau_Import_Ke_Hoach_Phong.xlsx";
 
 export const DEPARTMENT_PLAN_EXCEL_HEADERS = [
-  "STT",
-  "Phòng ban",
-  "Loại kỳ",
-  "Từ ngày",
-  "Đến ngày",
   "Tên công việc",
   "Nội dung / yêu cầu",
   "Người thực hiện",
   "Người phối hợp",
   "Ngày bắt đầu",
-  "Mốc trong kỳ",
-  "Hạn hoàn thành cuối",
-  "Ngày báo cáo",
-  "Mức ưu tiên",
-  "Trạng thái",
-  "Quan hệ với kỳ",
-  "Nguồn công việc",
-  "Task ID liên kết",
-  "Yêu cầu xác nhận",
+  "Hạn hoàn thành",
   "Ghi chú",
 ];
 
-const DATE_COLUMNS = new Set([3, 4, 9, 10, 11, 12]);
+const DATE_COLUMNS = new Set([4, 5]);
 const TEMPLATE_ROW_COUNT = 100;
 
 const escapeXml = (value) => String(value)
@@ -63,26 +50,20 @@ const worksheetXml = () => {
       .join("");
     return `<row r="${rowNumber}" customFormat="1" customHeight="1" ht="22">${cells}</row>`;
   }).join("");
-  const widths = [8, 20, 12, 13, 13, 32, 42, 28, 28, 13, 13, 17, 13, 15, 18, 24, 22, 38, 18, 30]
+  const widths = [32, 42, 28, 28, 13, 17, 30]
     .map((width, index) => `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`)
     .join("");
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <sheetPr><outlinePr summaryBelow="1" summaryRight="1"/><pageSetUpPr fitToPage="1"/></sheetPr>
-  <dimension ref="A1:T${TEMPLATE_ROW_COUNT + 1}"/>
+  <dimension ref="A1:G${TEMPLATE_ROW_COUNT + 1}"/>
   <sheetViews><sheetView tabSelected="1" workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>
   <sheetFormatPr defaultRowHeight="18"/>
   <cols>${widths}</cols>
   <sheetData><row r="1" customFormat="1" customHeight="1" ht="34">${headerCells}</row>${blankRows}</sheetData>
-  <autoFilter ref="A1:T${TEMPLATE_ROW_COUNT + 1}"/>
-  <dataValidations count="7">
-    <dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="C2:C${TEMPLATE_ROW_COUNT + 1}"><formula1>"Tuần,Tháng"</formula1></dataValidation>
-    <dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="N2:N${TEMPLATE_ROW_COUNT + 1}"><formula1>"Ưu tiên 1,Ưu tiên 2,Ưu tiên 3"</formula1></dataValidation>
-    <dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="O2:O${TEMPLATE_ROW_COUNT + 1}"><formula1>"Mới,Đang thực hiện,Hoàn thành,Đã hủy"</formula1></dataValidation>
-    <dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="P2:P${TEMPLATE_ROW_COUNT + 1}"><formula1>"Mới,Dài hạn,Chuyển tiếp,Định kỳ,Phát sinh trong kỳ,Import"</formula1></dataValidation>
-    <dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="Q2:Q${TEMPLATE_ROW_COUNT + 1}"><formula1>"Lãnh đạo giao,Tự nhận,Giao việc,Import"</formula1></dataValidation>
-    <dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="S2:S${TEMPLATE_ROW_COUNT + 1}"><formula1>"Có,Không"</formula1></dataValidation>
-    <dataValidation type="date" allowBlank="1" showErrorMessage="1" operator="between" sqref="D2:E${TEMPLATE_ROW_COUNT + 1} J2:M${TEMPLATE_ROW_COUNT + 1}"><formula1>DATE(2000,1,1)</formula1><formula2>DATE(2100,12,31)</formula2></dataValidation>
+  <autoFilter ref="A1:G${TEMPLATE_ROW_COUNT + 1}"/>
+  <dataValidations count="1">
+    <dataValidation type="date" allowBlank="1" showErrorMessage="1" operator="between" sqref="E2:F${TEMPLATE_ROW_COUNT + 1}"><formula1>DATE(2000,1,1)</formula1><formula2>DATE(2100,12,31)</formula2></dataValidation>
   </dataValidations>
   <pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>
 </worksheet>`;
@@ -92,7 +73,7 @@ const instructionXml = () => {
   const rows = [
     "Hướng dẫn nhập kế hoạch phòng",
     "",
-    "1. Nhập một công việc trên mỗi dòng của sheet KeHoach_Import.",
+    "1. Nhập một công việc trên mỗi dòng của sheet Kế hoạch.",
     "2. Không đổi tên hoặc xóa dòng tiêu đề. Có thể để trống các cột không áp dụng.",
     "3. Các cột ngày dùng định dạng dd/mm/yyyy. Không nhập ngày kết thúc trước ngày bắt đầu.",
     "4. Người thực hiện và Người phối hợp có thể nhập nhiều người, ngăn cách bằng dấu chấm phẩy (;).",
@@ -176,7 +157,7 @@ export async function createDepartmentPlanExcelTemplate() {
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <workbookPr defaultThemeVersion="164011"/>
   <bookViews><workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000" activeTab="0"/></bookViews>
-  <sheets><sheet name="KeHoach_Import" sheetId="1" r:id="rId1"/><sheet name="Huong Dan" sheetId="2" r:id="rId2"/></sheets>
+  <sheets><sheet name="Kế hoạch" sheetId="1" r:id="rId1"/><sheet name="Huong Dan" sheetId="2" r:id="rId2"/></sheets>
 </workbook>`);
   zip.file("xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">

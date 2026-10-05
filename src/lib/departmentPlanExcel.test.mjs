@@ -9,6 +9,14 @@ import {
 } from "./departmentPlanExcel.mjs";
 
 const headers = ["STT", "Phòng ban", "Loại kỳ", "Từ ngày", "Đến ngày", "Tên công việc", "Nội dung / yêu cầu", "Người thực hiện", "Người phối hợp", "Ngày bắt đầu", "Mốc trong kỳ", "Hạn hoàn thành cuối", "Ngày báo cáo", "Mức ưu tiên", "Trạng thái", "Quan hệ với kỳ", "Nguồn công việc", "Task ID liên kết", "Yêu cầu xác nhận", "Ghi chú"];
+
+test("canonical seven-column workbook uses plan context and accepts unresolved assignees", () => {
+  const simple = [["Tên công việc", "Nội dung / yêu cầu", "Người thực hiện", "Người phối hợp", "Ngày bắt đầu", "Hạn hoàn thành", "Ghi chú"], ["Sửa chữa Phòng Truyền thông", "Bảo trì", "Ngô Tùng Dương; Nguyễn Hồng Khánh", "Phạm Thị Thu Hương", "03/10/2026", "12/10/2026", "Gấp"]];
+  const parsed = parseDepartmentPlanExcelRows(simple, { periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09" });
+  assert.equal(parsed[0].title, "Sửa chữa Phòng Truyền thông");
+  assert.equal(parsed[0].dueDate, "2026-10-12");
+  assert.deepEqual(parsed[0].assigneeNames, ["Ngô Tùng Dương", "Nguyễn Hồng Khánh"]);
+});
 const row = (index) => [index, "Phòng Nội dung", "Tuần", "02/10/2026", "09/10/2026", `Công việc ${index}`, "Nội dung", index === 1 ? "Ngô Tùng Dương; Nguyễn Hồng Khánh" : "Ngô Tùng Dương", "", "02/10/2026", "02/10/2026", new Date("2026-10-12T00:00:00Z"), "", "Ưu tiên 1", "Đang thực hiện", "Import", "Kế hoạch phòng", "", index === 1 ? "Có" : "", ""];
 
 test("approved Excel headers are normalized by name instead of fixed positions", () => {

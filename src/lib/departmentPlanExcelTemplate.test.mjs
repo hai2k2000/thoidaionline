@@ -23,8 +23,8 @@ const columnName = (index) => {
 
 test("template exposes approved headers, instruction sheet, formats, and validations", async () => {
   const bytes = await createDepartmentPlanExcelTemplate();
-  assert.deepEqual(await readSheetNames(Buffer.from(bytes)), ["KeHoach_Import", "Huong Dan"]);
-  const rows = await readXlsxFile(Buffer.from(bytes), { sheet: "KeHoach_Import" });
+  assert.deepEqual(await readSheetNames(Buffer.from(bytes)), ["Kế hoạch", "Huong Dan"]);
+  const rows = await readXlsxFile(Buffer.from(bytes), { sheet: "Kế hoạch" });
   assert.deepEqual(rows[0], DEPARTMENT_PLAN_EXCEL_HEADERS);
   assert.ok(rows.slice(1).every((row) => row.every((cell) => cell == null)), "template must not contain production data");
   assert.equal(DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME, "Mau_Import_Ke_Hoach_Phong.xlsx");
@@ -32,9 +32,9 @@ test("template exposes approved headers, instruction sheet, formats, and validat
   const sheetXml = await zip.file("xl/worksheets/sheet1.xml").async("string");
   const styles = await zip.file("xl/styles.xml").async("string");
   assert.match(styles, /formatCode="dd\/mm\/yyyy"/);
-  assert.match(sheetXml, /<dataValidations count="7">/);
-  assert.match(sheetXml, /sqref="O2:O101"/);
-  assert.match(sheetXml, /sqref="D2:E101 J2:M101"/);
+  assert.match(sheetXml, /<dataValidations count="1">/);
+  assert.match(sheetXml, /sqref="E2:F101"/);
+  assert.doesNotMatch(sheetXml, /sqref="D2:E101 J2:M101"/);
   assert.match(sheetXml, /<sheetView tabSelected="1"/);
 });
 
@@ -43,12 +43,10 @@ test("a filled template row parses through the production Excel importer", async
   const zip = await JSZip.loadAsync(bytes);
   const sheet = await zip.file("xl/worksheets/sheet1.xml").async("string");
   const rowCells = [
-    "1", "Phòng Nội dung", "Tuần", "02/10/2026", "09/10/2026", "Công việc mẫu",
-    "Nội dung mẫu", "Ngô Tùng Dương", "", "02/10/2026", "02/10/2026", "09/10/2026",
-    "", "Ưu tiên 1", "Mới", "Import", "Import", "", "Có", "Ghi chú mẫu",
+    "Công việc mẫu", "Nội dung mẫu", "Ngô Tùng Dương", "", "02/10/2026", "09/10/2026", "Ghi chú mẫu",
   ];
   const escape = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const dateColumns = new Set([3, 4, 9, 10, 11, 12]);
+  const dateColumns = new Set([4, 5]);
   const cells = rowCells.map((value, index) => `<c r="${columnName(index)}2" s="${dateColumns.has(index) ? 2 : 3}" t="inlineStr"><is><t>${escape(value)}</t></is></c>`).join("");
   const patched = sheet.replace(/<row r="2"[^>]*>.*?<\/row>/, `<row r="2" customFormat="1" customHeight="1" ht="22">${cells}</row>`);
   zip.file("xl/worksheets/sheet1.xml", patched);
@@ -69,12 +67,12 @@ test("empty inline string cells are accepted without dependency trim crashes", a
   const bytes = await createDepartmentPlanExcelTemplate();
   const zip = await JSZip.loadAsync(bytes);
   const sheet = await zip.file("xl/worksheets/sheet1.xml").async("string");
-  const cells = ["1", "Phòng Nội dung", "Tuần", "02/10/2026", "09/10/2026", "Công việc rỗng tùy chọn", "Nội dung", "Ngô Tùng Dương", "", "02/10/2026", "", "09/10/2026", "", "Ưu tiên 1", "Mới", "Import", "Import", "", "", ""];
+  const cells = ["Công việc rỗng tùy chọn", "Nội dung", "Ngô Tùng Dương", "", "02/10/2026", "09/10/2026", ""];
   const escape = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const row = cells.map((value, index) => value === "" ? `<c r="${columnName(index)}2" t="str"></c>` : `<c r="${columnName(index)}2" t="inlineStr"><is><t>${escape(value)}</t></is></c>`).join("");
   zip.file("xl/worksheets/sheet1.xml", sheet.replace(/<row r="2"[^>]*>.*?<\/row>/, `<row r="2">${row}</row>`));
   const filled = await zip.generateAsync({ type: "nodebuffer" });
-  await assert.rejects(() => readXlsxFile(filled, { sheet: "KeHoach_Import" }), /reading 'trim'/);
+  await assert.rejects(() => readXlsxFile(filled, { sheet: "Kế hoạch" }), /reading 'trim'/);
   const parsed = await readDepartmentPlanExcel(new File([filled], DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME), { periodType: "weekly", periodStart: "2026-10-02", periodEnd: "2026-10-09" });
   assert.equal(parsed.length, 1);
   assert.equal(parsed[0].note, null);
