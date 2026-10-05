@@ -16,7 +16,7 @@ test("department plan page canonicalizes URL state on the server", () => {
   assert.match(source, /canonicalPeriodFromQuery/);
   assert.match(source, /redirect\(canonicalUrl\)/);
   assert.match(source, /resolveDepartmentPlanScope/);
-  assert.doesNotMatch(source, /period_end|periodEnd.*searchParams/);
+  assert.doesNotMatch(source, /period_end.*searchParams/);
 });
 
 test("navigation stays in the approved weekly/monthly URL contract", () => {

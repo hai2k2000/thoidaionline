@@ -11,6 +11,10 @@ export type DepartmentPlanRow = {
   created_by: string;
   created_at: string;
   updated_at: string;
+  status?: "active" | "closed";
+  closed_at?: string | null;
+  closed_by?: string | null;
+  close_note?: string | null;
 };
 
 export type DepartmentPlanItemRow = {
@@ -25,6 +29,21 @@ export type DepartmentPlanItemRow = {
   assignment_state: "unassigned" | "department_wide" | "assigned";
   work_status: "planned" | "in_progress" | "completed" | "cancelled";
   linked_task_id: string | null;
+  period_relation?: "NEW" | "LONG_RUNNING" | "CARRY_OVER" | "RECURRING" | "AUTO_ADDED_DURING_PERIOD" | "IMPORTED";
+  work_source?: string | null;
+  period_goal?: string | null;
+  period_start_state?: string | null;
+  period_end_state?: string | null;
+  result_this_period?: string | null;
+  period_milestone_at?: string | null;
+  carry_over_reason?: string | null;
+  progress_start?: number | null;
+  progress_end?: number | null;
+  carried_from_item_id?: string | null;
+  close_classification?: string | null;
+  task_status_at_close?: string | null;
+  completed_in_period?: boolean | null;
+  carry_forward?: boolean | null;
   linked_task_status?: string | null;
   linked_task_assignees?: DepartmentPlanLinkedAssignee[];
   created_by: string;
@@ -59,8 +78,8 @@ export type RepositoryResult<T> =
   | { data: T; error: null }
   | { data: T | null; error: { code?: string | null; message?: string | null } };
 
-const PLAN_FIELDS = "id,department_id,period_type,period_start,period_end,created_by,created_at,updated_at";
-const ITEM_FIELDS = "id,department_plan_id,department_id,title,description,requirements,due_at,assignee_id,assignment_state,work_status,linked_task_id,created_by,created_at,updated_at";
+const PLAN_FIELDS = "id,department_id,period_type,period_start,period_end,created_by,created_at,updated_at,status,closed_at,closed_by,close_note";
+const ITEM_FIELDS = "id,department_plan_id,department_id,title,description,requirements,due_at,assignee_id,assignment_state,work_status,linked_task_id,period_relation,work_source,period_goal,period_start_state,period_end_state,result_this_period,period_milestone_at,carry_over_reason,progress_start,progress_end,carried_from_item_id,close_classification,task_status_at_close,completed_in_period,carry_forward,created_by,created_at,updated_at";
 const LINKED_TASK_FIELDS = "id,title,status,department_id,assignee_id,owner_id,workflow_type,task_assignees(user_id,assignment_role,status,staff_users(full_name))";
 const ITEM_WITH_TASK_FIELDS = `${ITEM_FIELDS},linked_task:tasks!department_plan_items_linked_task_id_fkey(status,task_assignees(user_id,assignment_role,status,staff_users(full_name)))`;
 
@@ -114,6 +133,129 @@ export const departmentPlanRepository = {
       .eq("active", true)
       .order("full_name", { ascending: true });
   },
+
+  async listImportMatchTasks(departmentId: string) {
+    return serverSupabase.from("tasks")
+      .select("id,title,description,due_date,status,assignee_id")
+      .eq("department_id", departmentId)
+      .in("status", ["new", "in_progress", "blocked", "waiting", "pending_review"])
+      .order("updated_at", { ascending: false })
+      .limit(100);
+  },
+
+  async listImportTasksByIds(departmentId: string, taskIds: string[]) {
+    if (!taskIds.length) return { data: [], error: null };
+    return serverSupabase.from("tasks")
+      .select("id,title,description,due_date,status,assignee_id")
+      .eq("department_id", departmentId)
+      .neq("status", "cancelled")
+      .in("id", taskIds);
+  },
+
+  async importItemsIntoPlan(actorId: string, planId: string, inputs: Array<Record<string, unknown>>) {
+    const plan = await this.getPlan(planId);
+    if (plan.error) return plan;
+    if (!plan.data) return { data: null, error: { code: "P0002", message: "plan not found" } };
+    if (plan.data.status === "closed") return { data: null, error: { code: "22023", message: "closed plan" } };
+
+    const taskIds = inputs.map((input) => typeof input.taskId === "string" ? input.taskId : null).filter((id): id is string => Boolean(id));
+    const taskResult = await this.listImportTasksByIds(plan.data.department_id, taskIds);
+    if (taskResult.error) return { data: null, error: taskResult.error };
+    const tasks = (taskResult.data ?? []) as Array<{ id: string; title: string; description: string | null; due_date: string | null; status: string; assignee_id: string | null }>;
+    const existingResult = await this.listPlanItems(planId);
+    if (existingResult.error) return { data: null, error: existingResult.error };
+    const existing = existingResult.data ?? [];
+    const normalizedTitle = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const imported: DepartmentPlanItemRow[] = [];
+    const skipped: Array<{ taskId: string | null; title: string; reason: string }> = [];
+
+    for (const input of inputs) {
+      const taskId = typeof input.taskId === "string" ? input.taskId : null;
+      const title = typeof input.title === "string" ? input.title.trim() : "";
+      const task = taskId ? tasks.find((candidate) => candidate.id === taskId) : null;
+      if (taskId && !task) return { data: null, error: { code: "42501", message: "task outside department" } };
+      const mergeDuplicate = input.mergeDuplicate === true;
+      if (input.duplicateRequiresConfirmation === true && !mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
+      if (taskId && existing.some((item) => item.linked_task_id === taskId)) {
+        if (!mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
+        skipped.push({ taskId, title: task?.title ?? title, reason: "merged_existing" });
+        continue;
+      }
+      if (!taskId && (!title || existing.some((item) => normalizedTitle(item.title) === normalizedTitle(title)))) {
+        if (!mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
+        skipped.push({ taskId: null, title, reason: "merged_existing" });
+        continue;
+      }
+      const assigneeIds = Array.isArray(input.assigneeIds)
+        ? input.assigneeIds.filter((value): value is string => typeof value === "string")
+        : [];
+      if (!taskId && assigneeIds.length > 0 && typeof input.dueDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) {
+        const assigned = await this.createAndAssignItem(actorId, planId, {
+          title,
+          description: typeof input.description === "string" ? input.description : "",
+          requirements: [],
+          assigneeIds,
+          collaboratorIds: Array.isArray(input.collaboratorIds) ? input.collaboratorIds.filter((value): value is string => typeof value === "string") : [],
+          dueDate: input.dueDate,
+          dueTime: "17:00",
+          priority: "normal",
+          workStatus: typeof input.status === "string" ? input.status : "planned",
+          note: null,
+        });
+        if (assigned.error) return { data: null, error: assigned.error };
+        if (assigned.data?.item) {
+          const metadata = {
+            period_relation: typeof input.periodRelation === "string" ? input.periodRelation : "IMPORTED",
+            work_source: typeof input.workSource === "string" ? input.workSource : "department_plan",
+            period_milestone_at: typeof input.milestone === "string" && input.milestone ? input.milestone + "T17:00:00+07:00" : null,
+            carry_over_reason: typeof input.carryOverReason === "string" ? input.carryOverReason : null,
+          };
+          const updated = await serverSupabase.from("department_plan_items").update(metadata).eq("id", assigned.data.item.id).select(ITEM_FIELDS).single<DepartmentPlanItemRow>();
+          if (updated.error) return { data: null, error: updated.error };
+          const assignedItem = updated.data ?? assigned.data.item;
+          imported.push(assignedItem);
+          existing.push(assignedItem);
+          continue;
+        }
+        return { data: null, error: { code: "P0001", message: "assignment import failed" } };
+      }
+      const dueDate = typeof input.dueDate === "string" && input.dueDate ? input.dueDate : task?.due_date ?? null;
+      const dueAt = typeof input.milestone === "string" && input.milestone
+        ? input.milestone + "T17:00:00+07:00"
+        : dueDate ? dueDate + "T17:00:00+07:00" : null;
+      const workStatus = typeof input.status === "string" && ["planned", "in_progress", "completed", "cancelled"].includes(input.status)
+        ? input.status
+        : task?.status === "in_progress" ? "in_progress" : task?.status === "done" ? "completed" : "planned";
+      const row = {
+        department_plan_id: planId,
+        department_id: plan.data.department_id,
+        title: task?.title ?? title,
+        description: task?.description ?? (typeof input.description === "string" ? input.description.trim() || null : null),
+        due_at: dueAt,
+        assignee_id: task?.assignee_id ?? null,
+        assignment_state: task?.assignee_id ? "assigned" : "unassigned",
+        work_status: workStatus,
+        linked_task_id: task?.id ?? null,
+        created_by: actorId,
+        period_relation: typeof input.periodRelation === "string" ? input.periodRelation : "IMPORTED",
+        work_source: typeof input.workSource === "string" ? input.workSource : "department_plan",
+        period_milestone_at: typeof input.milestone === "string" && input.milestone ? input.milestone + "T17:00:00+07:00" : null,
+        carry_over_reason: typeof input.carryOverReason === "string" ? input.carryOverReason : null,
+      };
+      const result = await serverSupabase.from("department_plan_items").insert(row).select(ITEM_FIELDS).single<DepartmentPlanItemRow>();
+      if (result.error) {
+        if (result.error.code === "23505" && task?.id) {
+          skipped.push({ taskId: task.id, title: task.title, reason: "already_in_plan" });
+          continue;
+        }
+        return { data: null, error: result.error };
+      }
+      imported.push(result.data);
+      existing.push(result.data);
+    }
+    return { data: { imported, skipped }, error: null };
+  },
+
 
   async validateAssignee(departmentId: string, assigneeId: string | null | undefined) {
     if (!assigneeId) return { data: true, error: null };
@@ -170,6 +312,22 @@ export const departmentPlanRepository = {
         p_created_by: createdBy,
       })
       .single<DepartmentPlanRow>();
+  },
+
+  async candidates(actorId: string, departmentId: string, periodType: "weekly" | "monthly", periodStart: string, periodEnd: string) {
+    return serverSupabase.rpc("api_department_plan_candidates_v2", { p_actor_id: actorId, p_department_id: departmentId, p_period_type: periodType, p_period_start: periodStart, p_period_end: periodEnd }).single<unknown[]>();
+  },
+
+  async createPlanV2(actorId: string, departmentId: string, periodType: "weekly" | "monthly", periodStart: string, periodEnd: string, items: unknown[]) {
+    return serverSupabase.rpc("api_create_department_plan_v2", { p_actor_id: actorId, p_department_id: departmentId, p_period_type: periodType, p_period_start: periodStart, p_period_end: periodEnd, p_items: items }).single<DepartmentPlanRow>();
+  },
+
+  async createPlanV2Result(actorId: string, departmentId: string, periodType: "weekly" | "monthly", periodStart: string, periodEnd: string, items: unknown[]) {
+    return serverSupabase.rpc("api_create_department_plan_v2_result", { p_actor_id: actorId, p_department_id: departmentId, p_period_type: periodType, p_period_start: periodStart, p_period_end: periodEnd, p_items: items }).single<{ plan: DepartmentPlanRow; created: boolean }>();
+  },
+
+  async closePlan(actorId: string, planId: string, decisions: unknown[], closeNote: string | null) {
+    return serverSupabase.rpc("api_close_department_plan_v2", { p_actor_id: actorId, p_plan_id: planId, p_decisions: decisions, p_close_note: closeNote }).single<DepartmentPlanRow>();
   },
 
   async getPlan(planId: string) {
@@ -335,3 +493,4 @@ export const departmentPlanRepository = {
       .single<DepartmentPlanLinkedTask>();
   },
 };
+

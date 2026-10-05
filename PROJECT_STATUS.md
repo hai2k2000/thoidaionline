@@ -1,3 +1,22 @@
+
+## Department Period Report Word Export
+
+Current Phase: COMPLETE; implementation and pre-production validation
+Current Task: Word-only period report export
+
+Completed:
+- Replaced Department Period Report UI export action with the authenticated DOCX route while preserving selected period, department, and filters.
+- Implemented editable Word report structure with sections I–IV, real report rows, Vietnamese text, and approved filenames.
+- Preserved existing PDF backend files and unrelated Department Plan business logic.
+
+Validation:
+- DOCX exporter regression: 5/5 PASS.
+- Department Plan focused regression: 130 PASS, 1 pre-existing bundle check skipped.
+- TypeScript, changed-file ESLint, git diff --check, route manifest, and production-like build: PASS.
+- Sample DOCX opened successfully in Microsoft Word; PNG renderer unavailable because VPS has no LibreOffice and local renderer lacks pdf2image in its default Python.
+
+Production mutation: COMPLETE — immutable artifact activated and health-checked.
+
 # Department Plan Real + Multi-Assignment V2 Blocker Closure
 
 - Phase A completed: canonical leadership-mapped assignee eligibility is aligned with the existing assignment scope, and successful assignment responses rehydrate linked Task participants/status before reaching the UI.
@@ -419,3 +438,55 @@ Production mutation: NONE.
 
 Next:
 - Refresh the local integration ref in a clean integration worktree, rerun the normal lineage-gated build, then owner review.
+
+
+# Department Period Plan V2 — 2026-10-03
+
+Current Phase: COMPLETE — implemented and deployed
+Current Task: Department Period Plan V2
+
+Completed:
+- Added additive period metadata, close snapshots, carry-forward fields, and Task × Plan-period unique index.
+- Added bounded candidate scan, preview/confirm creation, manual/import preview, user/task matching signals, auto-link hooks, close RPC, and DOCX export.
+- Applied migration 20261003100000_department_period_plan_v2 after production backup; rehearsal and invariant validation passed.
+- Deployed immutable release department-period-plan-v2-a323414 with rollback pointers preserved.
+
+Validation:
+- Department Period Plan V2 targeted tests: PASS (3/3).
+- Department Plan/Work Report/Quick Report/task approval regression set: 126/127 PASS; one pre-existing stale Quick Report UI contract assertion remains unrelated.
+- TypeScript: PASS; changed-file ESLint: PASS; production-like build: PASS; standalone artifact: PASS.
+- Production service active, NRestarts=0, /login=200, protected routes return 401/307, cache ownership PASS.
+- Authenticated live smoke: NOT VERIFIED (no authenticated session supplied).
+
+Blockers:
+- none for deployment.
+
+Follow Up:
+- Expand the DOCX parser for additional department-specific Word layouts and add an authenticated end-to-end browser smoke when a session is available.
+
+Next:
+- Monitor release and rollback pointers; keep current/previous/rollback-2 retention.
+
+
+## Department Plan Canonical Saturday-Friday Week
+
+Current Phase: implementation and production validation
+Current Task: fix Department Plan weekly boundary from Monday-Sunday to Saturday-Friday
+
+Completed:
+- Confirmed live source and database constraints were both Monday-based.
+- Changed the shared Department Plan helper and Excel fixtures to Saturday-Friday.
+- Added explicit `plan_id` loading so historical plans keep their stored dates and remain scoped.
+- Added additive migration 20261004100000_department_plan_saturday_friday.sql; no historical rows are rewritten.
+
+Validation:
+- Focused Department Plan regression: 33/33 PASS.
+- Migration rehearsal on restored disposable PostgreSQL database: PASS.
+- Production backup created before migration: /opt/thoidai-work/backups/department-plan-saturday-friday-pre-20261004T020238Z.dump.
+- Production migration applied and schema/history checks: PASS.
+
+Blockers:
+- none
+
+Next:
+- Build/package immutable release, run artifact and smoke checks, then activate production.

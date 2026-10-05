@@ -8,6 +8,7 @@ import {
   shiftDepartmentPlanStart,
 } from "@/lib/departmentPlanNavigation";
 import DepartmentPlanGrid from "@/components/DepartmentPlanGrid";
+import DepartmentPlanActions from "@/components/DepartmentPlanActions";
 import type { DepartmentPlanItemRow, DepartmentPlanRow } from "@/lib/departmentPlanRepository";
 import type { AssignmentDepartment, AssignmentPerson, AssignmentScope } from "@/lib/taskAssignmentRepository";
 
@@ -27,6 +28,7 @@ type Props = {
   employees: Array<{ id: string; full_name: string; department_id: string }>;
   initialPlan: DepartmentPlanRow | null;
   initialItems: DepartmentPlanItemRow[];
+  historicalPlanId?: string | null;
 };
 
 const tabClass = (active: boolean) => `rounded-xl px-4 py-2.5 text-sm font-bold transition ${active
@@ -49,6 +51,7 @@ export default function DepartmentPlanShell({
   employees,
   initialPlan,
   initialItems,
+  historicalPlanId = null,
 }: Props) {
   const weeklyStart = period.periodType === "weekly" ? period.periodStart : currentWeeklyPeriod.periodStart;
   const monthlyStart = period.periodType === "monthly" ? period.periodStart : currentMonthlyPeriod.periodStart;
@@ -78,7 +81,7 @@ export default function DepartmentPlanShell({
             <div className="flex flex-wrap gap-2">
               <Link className={tabClass(period.periodType === "weekly")} href={departmentPlanUrl("weekly", weeklyStart, departmentId)}>Kế hoạch tuần</Link>
               <Link className={tabClass(period.periodType === "monthly")} href={departmentPlanUrl("monthly", monthlyStart, departmentId)}>Kế hoạch tháng</Link>
-              <Link className="rounded-xl px-4 py-2.5 text-sm font-bold text-indigo-700 hover:bg-indigo-50" href={departmentPlanReportUrl(period.periodType, period.periodStart, departmentId)}>Báo cáo kỳ này</Link>
+              <Link className="rounded-xl px-4 py-2.5 text-sm font-bold text-indigo-700 hover:bg-indigo-50" href={departmentPlanReportUrl(period.periodType, period.periodStart, departmentId, historicalPlanId)}>Tổng kết kỳ</Link>
             </div>
           </section>
 
@@ -98,6 +101,8 @@ export default function DepartmentPlanShell({
               </Link>
             </div>
           </section>
+
+          <DepartmentPlanActions departmentId={departmentId} period={period} plan={initialPlan} items={initialItems} />
 
           <DepartmentPlanGrid departmentId={departmentId} period={period} employees={employees} initialPlan={initialPlan} initialItems={initialItems} departmentName={departmentName} departmentCode={departmentCode} departmentManagerId={departmentManagerId} scopeKind={scopeKind} assignmentDepartments={assignmentDepartments} assignmentPeople={assignmentPeople} assignmentScope={assignmentScope} />
         </main>

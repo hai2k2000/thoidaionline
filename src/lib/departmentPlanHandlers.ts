@@ -14,6 +14,7 @@ import { resolveDepartmentPlanScope } from "@/lib/departmentPlanAuthorization";
 import { getDepartmentPlanPeriod, isDepartmentPlanPeriodType } from "@/lib/departmentPlanPeriod";
 import { departmentPlanRepository, type DepartmentPlanLinkedTask } from "@/lib/departmentPlanRepository";
 import { loadAuthorizedDepartmentPlanReport } from "@/lib/departmentPlanReportService";
+import { prepareDepartmentPlanContinuationCandidates } from "@/lib/departmentPlanLongRunning";
 
 type Actor = ServerAuthUser;
 
@@ -102,6 +103,80 @@ async function report(request: Request) {
   });
 }
 
+async function candidates(request: Request) {
+  const guard = await requireReadActor();
+  if (!guard.ok) return guard.response;
+  const url = new URL(request.url);
+  const target = parseTargetDepartment(url.searchParams.get("departmentId"));
+  const scope = scopeFor(guard.actor, target);
+  if (!scope) return apiError("forbidden", 403);
+  const period = parsePeriod(url.searchParams.get("periodType") ?? "weekly", url.searchParams.get("periodStart"));
+  if (!period) return apiError("invalid_request", 400);
+  const existing = await departmentPlanRepository.getPeriod(scope.departmentId, period.periodType, period.periodStart);
+  if (existing.error) return repositoryError(existing.error);
+  if (existing.data) return apiJson({ existingPlan: serializePlan(existing.data), candidates: [] });
+  const result = await departmentPlanRepository.candidates(guard.actor.id, scope.departmentId, period.periodType, period.periodStart, period.periodEnd);
+  if (result.error) return repositoryError(result.error);
+  const rawCandidates = Array.isArray(result.data) ? result.data as Array<Record<string, unknown>> : [];
+  const normalizedCandidates: Array<Record<string, unknown> & { taskId: string | null; title: string; status: string | null; dueDate: string | null; assigneeId: string | null }> = rawCandidates.map((candidate) => ({
+    ...candidate,
+    taskId: typeof candidate.taskId === "string" ? candidate.taskId : null,
+    title: typeof candidate.title === "string" ? candidate.title : "",
+    status: typeof candidate.status === "string" ? candidate.status : null,
+    dueDate: typeof candidate.dueDate === "string" ? candidate.dueDate : null,
+    assigneeId: typeof candidate.assigneeId === "string" ? candidate.assigneeId : null,
+  }));
+  const continuationCandidates = normalizedCandidates.filter((candidate) => candidate.periodRelation === "LONG_RUNNING" || candidate.periodRelation === "CARRY_OVER" || Boolean(candidate.previousItemId));
+  const ordinaryCandidates = normalizedCandidates.filter((candidate) => !continuationCandidates.includes(candidate));
+  const sourcePeriodEnd = period.periodType === "weekly"
+    ? period.periodStart
+    : new Date(`${period.periodStart}T00:00:00Z`);
+  const sourceEnd = sourcePeriodEnd instanceof Date
+    ? new Date(sourcePeriodEnd.getTime() - 86400000).toISOString().slice(0, 10)
+    : sourcePeriodEnd;
+  const candidates = [
+    ...ordinaryCandidates,
+    ...prepareDepartmentPlanContinuationCandidates(continuationCandidates, period.periodEnd, [], sourceEnd),
+  ];
+  return apiJson({ candidates });
+}
+
+async function createPlanV2(request: Request) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const body = await readJsonObject(request);
+  const target = parseTargetDepartment(body?.departmentId);
+  const scope = scopeFor(guard.actor, target);
+  if (!scope) return apiError("forbidden", 403);
+  const period = parsePeriod(body?.periodType ?? "weekly", body?.periodStart);
+  if (!period || !Array.isArray(body?.items)) return apiError("invalid_request", 400);
+  const existing = await departmentPlanRepository.getPeriod(scope.departmentId, period.periodType, period.periodStart);
+  if (existing.error) return repositoryError(existing.error);
+  if (existing.data) return apiJson({ plan: serializePlan(existing.data), existingPlan: serializePlan(existing.data), created: false }, 200);
+  const result = await departmentPlanRepository.createPlanV2Result(guard.actor.id, scope.departmentId, period.periodType, period.periodStart, period.periodEnd, body.items);
+  if (result.error) return repositoryError(result.error);
+  if (!result.data) return apiError("operation_failed", 500);
+  return result.data.created
+    ? apiJson({ plan: serializePlan(result.data.plan), created: true }, 201)
+    : apiJson({ plan: serializePlan(result.data.plan), existingPlan: serializePlan(result.data.plan), created: false }, 200);
+}
+
+async function closePlan(request: Request, planId: string) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const id = asUuid(planId);
+  if (!id) return apiError("invalid_request", 400);
+  const plan = await departmentPlanRepository.getPlan(id);
+  if (plan.error) return repositoryError(plan.error);
+  if (!plan.data || !scopeFor(guard.actor, plan.data.department_id)) return apiError("forbidden", 403);
+  const body = await readJsonObject(request);
+  const decisions = Array.isArray(body?.decisions) ? body.decisions : [];
+  const closeNote = body?.closeNote === null || body?.closeNote === undefined ? null : typeof body.closeNote === "string" ? body.closeNote.trim() : null;
+  const result = await departmentPlanRepository.closePlan(guard.actor.id, id, decisions, closeNote);
+  if (result.error) return repositoryError(result.error);
+  return apiJson({ plan: result.data });
+}
+
 async function createPlan(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
@@ -112,15 +187,22 @@ async function createPlan(request: Request) {
   if (!scope) return apiError("forbidden", 403);
   const period = parsePeriod(body?.periodType ?? "weekly", body?.periodStart);
   if (!period) return apiError("invalid_request", 400);
-  const result = await departmentPlanRepository.getOrCreatePlanForMutation(
+  const existing = await departmentPlanRepository.getPeriod(scope.departmentId, period.periodType, period.periodStart);
+  if (existing.error) return repositoryError(existing.error);
+  if (existing.data) return apiJson({ plan: serializePlan(existing.data), existingPlan: serializePlan(existing.data), created: false, items: [] }, 200);
+  const created = await departmentPlanRepository.createPlanV2Result(
+    guard.actor.id,
     scope.departmentId,
     period.periodType,
     period.periodStart,
     period.periodEnd,
-    guard.actor.id,
+    Array.isArray(body?.items) ? body.items : [],
   );
-  if (result.error) return repositoryError(result.error);
-  return apiJson({ plan: serializePlan(result.data), items: [] }, 201);
+  if (created.error) return repositoryError(created.error);
+  if (!created.data) return apiError("operation_failed", 500);
+  return created.data.created
+    ? apiJson({ plan: serializePlan(created.data.plan), created: true, items: [] }, 201)
+    : apiJson({ plan: serializePlan(created.data.plan), existingPlan: serializePlan(created.data.plan), created: false, items: [] }, 200);
 }
 
 async function listItems(request: Request, planId: string) {
@@ -402,4 +484,4 @@ async function deleteItem(_request: Request, itemId: string) {
   return apiJson({ deleted: true });
 }
 
-export const departmentPlanHandlers = { list, report, createPlan, listItems, createItem, createAndAssignItem, getItem, assignTask, quickAssignTask, createTask, updateItem, deleteItem };
+export const departmentPlanHandlers = { list, report, candidates, createPlan, createPlanV2, closePlan, listItems, createItem, createAndAssignItem, getItem, assignTask, quickAssignTask, createTask, updateItem, deleteItem };
