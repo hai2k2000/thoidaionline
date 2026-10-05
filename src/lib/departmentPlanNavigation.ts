@@ -23,8 +23,8 @@ export const formatDepartmentPlanPeriod = (
   locale = "vi-VN",
 ) => {
   if (periodType === "monthly") {
-    const [year, month] = periodStart.split("-");
-    return `Tháng ${month}/${year}`;
+    const formatter = new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+    return `${formatter.format(new Date(`${periodStart}T00:00:00Z`))} - ${formatter.format(new Date(`${periodEnd}T00:00:00Z`))}`;
   }
   const formatter = new Intl.DateTimeFormat(locale, {
     day: "2-digit",

@@ -195,3 +195,9 @@ test("department plan shell names the report tab Tổng kết kỳ", () => {
   assert.doesNotMatch(source, /Báo cáo kỳ này/);
 });
 
+
+test("report page passes the originating historical Plan id back to the report UI", () => {
+  const source = readFileSync(new URL("../app/planning/reports/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /historicalPlanId=\{historicalPlan\?\.id/);
+});
+

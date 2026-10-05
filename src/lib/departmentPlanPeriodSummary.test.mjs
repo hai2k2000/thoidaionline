@@ -34,3 +34,13 @@ test("cancelled work is not outstanding", () => {
   assert.equal(result.outstandingItems.length, 0);
   assert.equal(result.completionRate, 0);
 });
+
+test("monthly summary deduplicates items linked to the same canonical task", () => {
+  const result = summarizeDepartmentPlanPeriod([
+    item({ id: "monthly-item", linked_task_id: "task-1", work_status: "completed", completed_in_period: true }),
+    item({ id: "weekly-copy", linked_task_id: "task-1", work_status: "completed", completed_in_period: true }),
+  ]);
+  assert.equal(result.plannedItems.length, 1);
+  assert.equal(result.completionRate, 100);
+});
+

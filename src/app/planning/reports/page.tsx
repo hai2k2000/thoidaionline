@@ -84,6 +84,7 @@ export default async function DepartmentPlanReportsPage({ searchParams }: Props)
       period={period}
       currentWeeklyPeriod={currentWeeklyPeriod}
       currentMonthlyPeriod={currentMonthlyPeriod}
+      historicalPlanId={historicalPlan?.id ?? null}
       initialReport={{
         period: report.data.period,
         plan: report.data.plan,
