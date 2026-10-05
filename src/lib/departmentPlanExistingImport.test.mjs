@@ -4,6 +4,7 @@ import test from "node:test";
 
 const read = (relative) => readFileSync(new URL(relative, import.meta.url), "utf8");
 const actions = read("../components/DepartmentPlanActions.tsx");
+const importPreview = read("../components/DepartmentPlanImportPreview.tsx");
 const importRoute = read("../app/api/planning/department/import/route.ts");
 const confirmRoute = read("../app/api/planning/department/import/confirm/route.ts");
 const repository = read("./departmentPlanRepository.ts");
@@ -26,10 +27,10 @@ test("existing Plan import uses the selected Plan dates as parser context", () =
   assert.match(importRoute, /const periodEnd = currentPlan\.data\.period_end/);
 });
 
-test("Excel confirmation is the single assignment approval and blocks unresolved rows", () => {
-  assert.match(actions, /Xác nhận và giao việc/);
-  assert.match(actions, /mappingBlocking/);
-  assert.match(actions, /assigneeOverrides/);
+test("Excel confirmation is the single final approval and unresolved rows remain unassigned", () => {
+  assert.match(importPreview, /Xác nhận và import/);
+  assert.match(actions, /mappingConfidence/);
+  assert.match(importPreview, /Chưa phân công/);
   assert.match(actions, /collaboratorIds/);
   assert.match(importRoute, /employeeOptions/);
   assert.match(importRoute, /assignmentDifference/);

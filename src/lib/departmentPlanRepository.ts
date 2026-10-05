@@ -174,15 +174,19 @@ export const departmentPlanRepository = {
       const title = typeof input.title === "string" ? input.title.trim() : "";
       const task = taskId ? tasks.find((candidate) => candidate.id === taskId) : null;
       if (taskId && !task) return { data: null, error: { code: "42501", message: "task outside department" } };
-      const mergeDuplicate = input.mergeDuplicate === true;
-      if (input.duplicateRequiresConfirmation === true && !mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
+      const duplicateDecision = typeof input.duplicateDecision === "string" ? input.duplicateDecision : null;
+      const mergeDuplicate = duplicateDecision === "merge";
+      const keepSeparate = duplicateDecision === "separate";
+      if (input.duplicateRequiresConfirmation === true && !mergeDuplicate && !keepSeparate) return { data: null, error: { code: "22023", message: "duplicate decision required" } };
       if (taskId && existing.some((item) => item.linked_task_id === taskId)) {
-        if (!mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
+        if (!mergeDuplicate && !keepSeparate) return { data: null, error: { code: "22023", message: "duplicate decision required" } };
+        if (keepSeparate) return { data: null, error: { code: "22023", message: "separate duplicate must not reuse task" } };
         skipped.push({ taskId, title: task?.title ?? title, reason: "merged_existing" });
         continue;
       }
-      if (!taskId && (!title || existing.some((item) => normalizedTitle(item.title) === normalizedTitle(title)))) {
-        if (!mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate merge confirmation required" } };
+      if (!taskId && !title) return { data: null, error: { code: "22023", message: "title required" } };
+      if (!taskId && existing.some((item) => normalizedTitle(item.title) === normalizedTitle(title)) && !keepSeparate) {
+        if (!mergeDuplicate) return { data: null, error: { code: "22023", message: "duplicate decision required" } };
         skipped.push({ taskId: null, title, reason: "merged_existing" });
         continue;
       }
