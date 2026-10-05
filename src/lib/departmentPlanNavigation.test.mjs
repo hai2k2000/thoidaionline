@@ -32,6 +32,10 @@ test("weekly navigation uses seven-day period shifts", () => {
 test("period labels and URLs are canonical and shareable", () => {
   assert.match(source, /period: periodType/);
   assert.match(source, /start: periodStart/);
-  assert.match(source, /Tháng \$\{month\}\/\$\{year\}/);
   assert.match(source, /formatter\.format/);
+});
+
+test("monthly summary displays exact calendar boundaries", () => {
+  assert.match(source, /formatter\.format\(new Date\(`\$\{periodStart\}T00:00:00Z`\)/);
+  assert.match(source, /periodEnd/);
 });

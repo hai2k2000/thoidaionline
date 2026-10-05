@@ -2,6 +2,7 @@ export type ApiErrorCode =
   | "invalid_origin"
   | "unauthenticated"
   | "forbidden"
+  | "department_plan_cancel_forbidden"
   | "invalid_request"
   | "not_found"
   | "conflict"

@@ -59,7 +59,7 @@ export default async function TaskDetailPage({ params, searchParams }: Props) {
     && detailResult.data.journalism?.publication_report?.reported_by !== user.id
     && await authorizeJournalismPermission(user, accessResult.data, "journalism.publication.verify");
   const structureOptions = journalismAllowed && detailResult.data.journalism ? await loadJournalismTaskStructureOptions(user, accessResult.data, actor) : { topics: [], series: [], canAssign: false };
-  return <TaskDetailShell returnTo={returnTo} task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} journalismStructureOptions={structureOptions} capabilities={{
+  return <TaskDetailShell returnTo={returnTo} departmentPlanLinked={Boolean(accessResult.data.departmentPlanLinked)} task={task} userLabel={user.full_name} journalismWorkKinds={workKindsResult?.ok ? workKindsResult.data : []} journalismWorkKindsLoadFailed={Boolean(detailResult.data.journalism && !workKindsResult?.ok)} journalismStructureOptions={structureOptions} capabilities={{
     report: action("report"),
     completeAssigned: action("complete_assigned"),
     review: action("review"),

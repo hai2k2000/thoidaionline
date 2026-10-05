@@ -42,6 +42,7 @@ export async function responseErrorMessage(response: Response, fallback: string)
     operation_failed: "Thao tác thất bại.",
     service_unavailable: "Dịch vụ tạm thời chưa sẵn sàng.",
     forbidden: "Bạn không có quyền thực hiện thao tác này.",
+    department_plan_cancel_forbidden: "Công việc đã giao từ kế hoạch phòng ban chỉ Admin mới có quyền huỷ.",
     invalid_request: "Dữ liệu gửi lên không hợp lệ.",
     conflict: "Dữ liệu đang xung đột, hãy tải lại trang.",
     not_found: "Không tìm thấy dữ liệu.",

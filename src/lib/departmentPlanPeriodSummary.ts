@@ -18,26 +18,28 @@ const isSpontaneous = (item: DepartmentPlanReportItem) => item.period_relation =
 const isCompleted = (item: DepartmentPlanReportItem) => item.completed_in_period === true || item.work_status === "completed";
 const isUnfinished = (item: DepartmentPlanReportItem) => !isCompleted(item) && item.work_status !== "cancelled";
 
-const uniqueById = (items: DepartmentPlanReportItem[]) => {
+const uniqueByCanonicalTask = (items: DepartmentPlanReportItem[]) => {
   const seen = new Set<string>();
   return items.filter((item) => {
-    if (seen.has(item.id)) return false;
-    seen.add(item.id);
+    const key = item.linked_task_id ? `task:${item.linked_task_id}` : `item:${item.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 };
 
 export function summarizeDepartmentPlanPeriod(items: DepartmentPlanReportItem[]): DepartmentPlanPeriodSummary {
-  const plannedItems = items.filter((item) => !isSpontaneous(item));
-  const spontaneousItems = items.filter(isSpontaneous);
+  const uniqueItems = uniqueByCanonicalTask(items);
+  const plannedItems = uniqueItems.filter((item) => !isSpontaneous(item));
+  const spontaneousItems = uniqueItems.filter(isSpontaneous);
   const completedItems = plannedItems.filter(isCompleted);
   const unfinishedItems = plannedItems.filter(isUnfinished);
-  const outstandingItems = items.filter(isUnfinished);
-  const longRunningItems = items.filter((item) => item.period_relation === "LONG_RUNNING");
-  const carryOverItems = items.filter((item) => item.carry_forward === true);
-  const recurringItems = items.filter((item) => item.period_relation === "RECURRING");
-  const continuationItems = uniqueById([...longRunningItems, ...items.filter((item) => item.period_relation === "CARRY_OVER"), ...carryOverItems]);
-  const nextPeriodItems = uniqueById([...carryOverItems, ...longRunningItems, ...recurringItems]);
+  const outstandingItems = uniqueItems.filter(isUnfinished);
+  const longRunningItems = uniqueItems.filter((item) => item.period_relation === "LONG_RUNNING");
+  const carryOverItems = uniqueItems.filter((item) => item.carry_forward === true);
+  const recurringItems = uniqueItems.filter((item) => item.period_relation === "RECURRING");
+  const continuationItems = uniqueByCanonicalTask([...longRunningItems, ...uniqueItems.filter((item) => item.period_relation === "CARRY_OVER"), ...carryOverItems]);
+  const nextPeriodItems = uniqueByCanonicalTask([...carryOverItems, ...longRunningItems, ...recurringItems]);
 
   return {
     plannedItems,

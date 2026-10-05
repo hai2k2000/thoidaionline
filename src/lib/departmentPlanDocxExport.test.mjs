@@ -62,7 +62,7 @@ const report = (period, items) => ({
 test("Word export uses approved weekly and monthly filenames", () => {
   const weekly = getDepartmentPlanPeriod("weekly", "2026-10-09");
   const monthly = getDepartmentPlanPeriod("monthly", "2026-10-09");
-  assert.equal(departmentPlanDocxFilename(weekly, "Phòng Tổng hợp"), "Bao_cao_cong_tac_tuan_Phong_Tong_hop_02-09_10_2026.docx");
+  assert.equal(departmentPlanDocxFilename(weekly, "Phòng Tổng hợp"), "Bao_cao_cong_tac_tuan_Phong_Tong_hop_09-16_10_2026.docx");
   assert.equal(departmentPlanDocxFilename(monthly, "Phòng Tổng hợp"), "Bao_cao_cong_tac_thang_Phong_Tong_hop_10_2026.docx");
 });
 

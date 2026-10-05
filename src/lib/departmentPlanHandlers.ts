@@ -395,6 +395,7 @@ async function quickAssignTask(request: Request, itemId: string) {
   if (current.error) return repositoryError(current.error);
   if (!current.data) return apiError("not_found", 404);
   const plan = await departmentPlanRepository.getPlan(current.data.department_plan_id);
+
   if (plan.error) return repositoryError(plan.error);
   if (!plan.data) return apiError("not_found", 404);
   if (!scopeFor(guard.actor, plan.data.department_id)) return apiError("forbidden", 403);
@@ -475,6 +476,7 @@ async function deleteItem(_request: Request, itemId: string) {
   const current = await departmentPlanRepository.getItem(id);
   if (current.error) return repositoryError(current.error);
   if (!current.data) return apiError("not_found", 404);
+  if (current.data.linked_task_id) return apiError("invalid_request", 400);
   const plan = await departmentPlanRepository.getPlan(current.data.department_plan_id);
   if (plan.error) return repositoryError(plan.error);
   if (!plan.data) return apiError("not_found", 404);
