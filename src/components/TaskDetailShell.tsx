@@ -45,8 +45,9 @@ const dueText = (task: Pick<TaskDetailDto, "due_date" | "due_time">) =>
     ? dateText(task.due_time ? `${task.due_date}T${task.due_time}+07:00` : task.due_date)
     : "—";
 
-export default function TaskDetailShell({ returnTo, task, capabilities, userLabel, journalismWorkKinds, journalismWorkKindsLoadFailed, journalismStructureOptions }: {
+export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, capabilities, userLabel, journalismWorkKinds, journalismWorkKindsLoadFailed, journalismStructureOptions }: {
   returnTo: string | null;
+  departmentPlanLinked: boolean;
   task: TaskDetailDto; capabilities: Capabilities; userLabel: string;
   journalismWorkKinds: { id: string; name: string; is_active: boolean }[];
   journalismWorkKindsLoadFailed: boolean;
@@ -162,7 +163,7 @@ export default function TaskDetailShell({ returnTo, task, capabilities, userLabe
             </div>
           </div>
         </header>
-        {message ? <p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p> : null}
+        {message ? <p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p> : null}{departmentPlanLinked && !personal && !capabilities.assignedCancel && task.status !== "cancelled" ? <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Công việc đã giao từ kế hoạch phòng ban. Vui lòng liên hệ Admin nếu cần huỷ.</p> : null}
 
         <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_390px] xl:grid-cols-[minmax(0,1fr)_430px]">
           <div className="min-w-0 space-y-2.5">
