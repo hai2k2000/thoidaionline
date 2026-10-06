@@ -509,3 +509,23 @@ Blockers:
 
 Next:
 - Build/package immutable release, run artifact and smoke checks, then activate production.
+
+## Admin Attendance Note + Weekend Filter
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: separate Admin attendance notes and hide standard weekend rows
+
+Completed:
+- Added the scoped `attendance_admin_notes` table and service-role-only admin upsert RPC with canonical admin authorization and audit history.
+- Added Attendance API/UI support for notes on existing logs and weekday workdays without an attendance log, without modifying attendance punch/status/device fields.
+- Excluded Saturday and Sunday from standard Attendance rows, generated rows, summaries, counts, pagination, and empty states while preserving database records.
+
+Validation:
+- Focused Attendance, Wise Eye, late-work exception, access, merge, and weekend/admin-note tests: 48/48 PASS.
+- Disposable PostgreSQL migration rehearsal, including repeat/idempotency run and privilege checks: PASS.
+- TypeScript, changed-file ESLint, route manifest, and git diff check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Complete the canonical lineage-gated production-like build, then push this feature branch for owner review; do not deploy in this phase.
