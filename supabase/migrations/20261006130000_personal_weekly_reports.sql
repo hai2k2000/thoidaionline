@@ -14,7 +14,7 @@ create table public.personal_weekly_reports (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (employee_id, period_start, period_end),
-  check (period_start < period_end),
+  check (extract(isodow from period_start) = 5 and period_end = period_start + 7),
   check ((status = 'DRAFT' and snapshot_payload is null and completed_at is null)
       or (status = 'COMPLETED' and snapshot_payload is not null and completed_at is not null))
 );
@@ -63,7 +63,9 @@ begin
   if p_actor is distinct from p_employee then
     raise exception 'report ownership mismatch' using errcode = '42501';
   end if;
-  if p_period_start is null or p_period_end is null or p_period_start >= p_period_end then
+  if p_period_start is null or p_period_end is null
+     or extract(isodow from p_period_start) <> 5
+     or p_period_end <> p_period_start + 7 then
     raise exception 'invalid report period' using errcode = '22023';
   end if;
   select department_id into v_department
@@ -122,7 +124,9 @@ begin
   if p_actor is distinct from p_employee then
     raise exception 'report ownership mismatch' using errcode = '42501';
   end if;
-  if p_period_start is null or p_period_end is null or p_period_start >= p_period_end then
+  if p_period_start is null or p_period_end is null
+     or extract(isodow from p_period_start) <> 5
+     or p_period_end <> p_period_start + 7 then
     raise exception 'invalid report period' using errcode = '22023';
   end if;
   select department_id into v_department
@@ -135,18 +139,21 @@ begin
     from public.personal_weekly_reports
    where employee_id = p_employee and period_start = p_period_start and period_end = p_period_end
    for update;
-  if found and v_report.status = 'COMPLETED' then
+  if not found then
+    raise exception 'personal weekly report draft not found' using errcode = 'P0002';
+  end if;
+  if v_report.status = 'COMPLETED' then
     return v_report;
   end if;
 
-  v_snapshot := jsonb_set(coalesce(p_snapshot_payload, '{}'::jsonb), '{difficulties}', to_jsonb(coalesce(p_difficulties, '')), true);
+  v_snapshot := jsonb_set(coalesce(p_snapshot_payload, '{}'::jsonb), '{difficulties}', to_jsonb(v_report.difficulties), true);
   insert into public.personal_weekly_reports (
     employee_id, department_id, period_start, period_end, status,
     draft_payload, snapshot_payload, difficulties, completed_at, updated_at
   ) values (
     p_employee, v_department, p_period_start, p_period_end, 'COMPLETED',
-    coalesce(case when found then v_report.draft_payload else '{}'::jsonb end, '{}'::jsonb),
-    v_snapshot, coalesce(p_difficulties, ''), now(), now()
+    coalesce(v_report.draft_payload, '{}'::jsonb),
+    v_snapshot, v_report.difficulties, now(), now()
   )
   on conflict (employee_id, period_start, period_end) do update
     set status = 'COMPLETED',

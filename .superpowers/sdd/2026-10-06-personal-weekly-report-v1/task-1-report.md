@@ -29,3 +29,10 @@ Commit: `28af78b` (`feat: persist personal weekly report snapshots`).
 ## Concerns
 
 Migration contract tests are static SQL checks; applying the migration against a live database was intentionally not performed per task restrictions.
+
+## Review Fix
+
+- Added focused contract assertions for canonical Friday-to-Friday periods on the table and both RPC validation paths.
+- Completion now requires and locks the existing draft, then copies the locked row's `difficulties` into both `snapshot_payload` and the completed `difficulties` column; `p_difficulties` is not trusted for completion state.
+- `node --test src/lib/personalWeeklyReportMigration.test.mjs`: 3 passed, 0 failed.
+- `git diff --check`: passed with no output.
