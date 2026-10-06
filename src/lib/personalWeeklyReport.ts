@@ -99,12 +99,15 @@ export function validatePersonalWeeklyDraft(payload: unknown): { ok: true; value
   const currentRows = Array.isArray(input.currentRows) ? input.currentRows : [];
   const nextRows = Array.isArray(input.nextRows) ? input.nextRows : [];
   if (currentRows.length > MAX_ROWS || nextRows.length > MAX_ROWS) return { ok: false, message: `Row count exceeds maximum of ${MAX_ROWS}` };
-  const ids = new Set<string>();
-  for (const row of [...currentRows, ...nextRows]) {
-    if (!row || typeof row !== "object" || Array.isArray(row)) return { ok: false, message: "Rows must be objects" };
-    const id = taskIdOf(row as Record<string, unknown>);
-    if (id && ids.has(id)) return { ok: false, message: `Duplicate task ID: ${id}` };
-    if (id) ids.add(id);
+  for (const rows of [currentRows, nextRows]) {
+    const ids = new Set<string>();
+    for (const row of rows) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return { ok: false, message: "Rows must be objects" };
+      const id = taskIdOf(row as Record<string, unknown>);
+      if (!id) return { ok: false, message: "Rows require a task ID" };
+      if (ids.has(id)) return { ok: false, message: `Duplicate task ID: ${id}` };
+      ids.add(id);
+    }
   }
   return {
     ok: true,

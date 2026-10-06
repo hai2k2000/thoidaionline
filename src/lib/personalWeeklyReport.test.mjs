@@ -69,6 +69,37 @@ test("rejects duplicate task IDs in draft rows", () => {
   assert.match(result.message, /duplicate/i);
 });
 
+test("allows a continuation task to appear in both current and next rows", () => {
+  const result = validatePersonalWeeklyDraft({
+    currentRows: [task("carry-over", { periodRelation: "CARRY_OVER" })],
+    nextRows: [task("carry-over", { period: { start: "2026-10-09", end: "2026-10-16" } })],
+  });
+  assert.equal(result.ok, true);
+});
+
+test("rejects duplicate task IDs within next rows", () => {
+  const result = validatePersonalWeeklyDraft({
+    nextRows: [
+      task("same", { period: { start: "2026-10-09", end: "2026-10-16" } }),
+      task("same", { period: { start: "2026-10-09", end: "2026-10-16" } }),
+    ],
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.message, /duplicate/i);
+});
+
+test("rejects current rows without a task ID", () => {
+  const result = validatePersonalWeeklyDraft({ currentRows: [{ title: "Missing ID" }] });
+  assert.equal(result.ok, false);
+  assert.match(result.message, /task.?id|required|invalid/i);
+});
+
+test("rejects next rows without a task ID", () => {
+  const result = validatePersonalWeeklyDraft({ nextRows: [{ title: "Missing ID", period: { start: "2026-10-09", end: "2026-10-16" } }] });
+  assert.equal(result.ok, false);
+  assert.match(result.message, /task.?id|required|invalid/i);
+});
+
 test("rejects oversized draft row arrays", () => {
   const result = validatePersonalWeeklyDraft({ currentRows: Array.from({ length: 201 }, (_, i) => task(`task-${i}`)) });
   assert.equal(result.ok, false);
