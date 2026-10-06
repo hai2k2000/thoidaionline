@@ -46,6 +46,7 @@ test("admin note mutation is canonical-admin-only, audited, and does not touch a
 
 test("attendance reads expose separate admin notes and preserve employee notes", () => {
   assert.match(route, /attendance_admin_notes/);
+  assert.match(route, /staff_users!attendance_admin_notes_user_id_fkey\(full_name\)/);
   assert.match(route, /admin_note/);
   assert.match(page, /Ghi chú Admin/);
   assert.match(page, /Không có dữ liệu chấm công/);
