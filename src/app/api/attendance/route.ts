@@ -168,7 +168,7 @@ export async function GET(request: Request) {
   if (dayResult.error || monthResult.error) return apiError("operation_failed", 500);
   const contextStart = period === "day" ? monthStart : summaryRangeStart;
   const contextEnd = period === "day" ? anchorDate : summaryRangeEnd;
-  const adminNoteFields = "id,user_id,work_date,note,created_at,updated_at,staff_users(full_name)";
+  const adminNoteFields = "id,user_id,work_date,note,created_at,updated_at,staff_users!attendance_admin_notes_user_id_fkey(full_name)";
   let dayAdminNotesQuery = serverSupabase.from("attendance_admin_notes").select(adminNoteFields).gte("work_date", rangeStart).lte("work_date", rangeEnd).limit(500);
   let monthAdminNotesQuery = serverSupabase.from("attendance_admin_notes").select(adminNoteFields).gte("work_date", contextStart).lte("work_date", contextEnd).limit(10000);
   if (!organizationScope) {
