@@ -1,3 +1,22 @@
+# Personal Quick Report Summary
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: self-service REPORT_ONLY summary and Word export
+
+Completed:
+- Added permission-gated personal Quick Report summary with week, month, and custom date filters.
+- Added self-only server query and bounded Word export over canonical tasks.report_work_date data.
+- Preserved existing Quick Report create flow, Attendance entry, and management Work Report.
+
+Validation:
+- Focused Quick Report, authorization, Attendance, Work Report, and summary/export regressions: PASS.
+- TypeScript, changed-file ESLint, route manifest, and git diff --check: PASS.
+- Production-like build: BLOCKED by stale local integration/production ref; no lineage override used.
+
+Production mutation: NONE.
+
+Next:
+- Refresh the clean canonical integration baseline, rerun the production-like build, then owner review; do not deploy automatically.
 
 ## Department Period Report Word Export
 
