@@ -27,6 +27,11 @@ test("aggregates canonical tasks, assignees, department plan links, and report-o
   assert.match(repository, /watcher/);
 });
 
+test("reads recurrence metadata from tasks, not department plan items", () => {
+  assert.match(repository, /id,title,[^\n]*recurrence_rule_id/);
+  assert.doesNotMatch(repository, /department_plan_items[^\n]*recurrence_rule_id/);
+});
+
 test("reuses existing Personal Plan work_schedules proposals without creating tasks", () => {
   assert.match(repository, /workScheduleRepository\.listPersonal/);
   assert.match(repository, /work_schedules|schedule_scope/);

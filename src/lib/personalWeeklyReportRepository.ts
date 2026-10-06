@@ -51,12 +51,12 @@ type Db = typeof serverSupabase;
 export const PERSONAL_WEEKLY_HISTORY_LIMIT = 12;
 
 const taskFields = [
-  "id,title,status,workflow_type,assignment_source,department_id,start_date,due_date,completed_at,description,report_notes,report_work_date,assignee_id,owner_id",
+  "id,title,status,workflow_type,assignment_source,department_id,start_date,due_date,completed_at,description,report_notes,report_work_date,assignee_id,owner_id,recurrence_rule_id",
   "departments(name)",
   "owner:staff_users!tasks_owner_id_fkey(full_name)",
   "assignee:staff_users!tasks_assignee_id_fkey(full_name)",
   "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
-  "department_plan_items!department_plan_items_linked_task_id_fkey(id,period_relation,carry_forward,recurrence_rule_id,department_plan_id,department_plans(name))",
+  "department_plan_items!department_plan_items_linked_task_id_fkey(id,period_relation,carry_forward,department_plan_id,department_plans(name))",
 ].join(",");
 
 const asArray = <T>(value: T | T[] | null | undefined): T[] => value == null ? [] : Array.isArray(value) ? value : [value];
@@ -66,8 +66,9 @@ function errorOrThrow(result: { error?: any | null }) {
 }
 
 function relationFor(task: any, links: any[]): string | null {
-  const link = links.find((item) => item.period_relation || item.carry_forward || item.recurrence_rule_id);
-  return link?.period_relation ?? task.period_relation ?? (link?.carry_forward ? "CARRY_OVER" : null);
+  const link = links.find((item) => item.period_relation || item.carry_forward);
+  return link?.period_relation ?? task.period_relation ?? (link?.carry_forward ? "CARRY_OVER" : null)
+    ?? (task.recurrence_rule_id ? "RECURRING" : null);
 }
 
 function taskDateInPeriod(task: any, period: PersonalWeeklyPeriod): boolean {

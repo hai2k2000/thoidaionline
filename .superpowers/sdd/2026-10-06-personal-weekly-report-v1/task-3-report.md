@@ -30,3 +30,10 @@ Exact commit message: `feat: aggregate personal weekly report data`
 
 - Full TypeScript and ESLint verification requires the repository dependency install and is deferred to the integration task.
 - Route and DOCX consumers are intentionally left for Task 4.
+
+## Review fix
+
+- Removed the nonexistent `department_plan_items.recurrence_rule_id` field from the source query.
+- Added canonical `tasks.recurrence_rule_id` and derive `RECURRING` continuation metadata from the Task row.
+- Added a regression assertion, observed it fail before the change, then reran the focused suite with 23 passing tests.
+- Follow-up commit: `fix: correct weekly report source fields`.
