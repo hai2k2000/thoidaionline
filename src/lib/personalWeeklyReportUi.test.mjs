@@ -51,3 +51,12 @@ test("completed reports keep snapshot rows read-only while drafts retain editabl
   assert.match(component, /disabled=\{completed\}/);
   assert.match(component, /resultText|commentary/);
 });
+
+test("reloaded drafts preserve intentionally empty selections and commentary", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /hasOwnProperty\.call\(savedDraft, ["']currentRows["']\)/);
+  assert.match(component, /hasOwnProperty\.call\(savedDraft, ["']nextRows["']\)/);
+  assert.match(component, /hasOwnProperty\.call\(savedDraft, ["']difficulties["']\)/);
+  assert.doesNotMatch(component, /savedDraft\?\.nextRows\?\.length \?/);
+  assert.doesNotMatch(component, /savedDraft\?\.currentRows\?\.length \?/);
+});

@@ -24,3 +24,10 @@ Implemented the employee self-service weekly report route and navigation entry u
 ## Commit
 
 `feat: add employee weekly report page`
+
+## Follow-up fix
+
+- Draft hydration now distinguishes omitted fields from intentionally empty `currentRows`, `nextRows`, and `difficulties`, so a saved empty next-week selection remains empty after reload.
+- Regression test: `reloaded drafts preserve intentionally empty selections and commentary`.
+- Verification: `node --test src/lib/personalWeeklyReportUi.test.mjs` — 6 passed; changed component ESLint — 0 errors; `git diff --check` — passed.
+- Follow-up commit: `fix: preserve empty weekly draft selections`.

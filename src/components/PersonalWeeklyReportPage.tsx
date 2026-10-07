@@ -40,10 +40,19 @@ const statusLabel = (value: unknown) => ({ done: "Hoàn thành", in_progress: "�
 export default function PersonalWeeklyReportPage({ initial }: { initial: Initial }) {
   const { logout } = useAuth();
   const savedDraft = initial.report?.status === "DRAFT" ? initial.report.draft_payload : null;
-  const [currentRows, setCurrentRows] = useState<Row[]>(() => savedDraft?.currentRows?.length ? savedDraft.currentRows : (initial.currentRows ?? []));
-  const [nextRows] = useState<Row[]>(() => savedDraft?.nextRows?.length ? savedDraft.nextRows : (initial.nextRows ?? []));
-  const [selectedNext, setSelectedNext] = useState<string[]>(() => (savedDraft?.nextRows?.length ? savedDraft.nextRows : (initial.nextRows ?? [])).map((row) => row.taskId));
-  const [difficulties, setDifficulties] = useState(savedDraft?.difficulties ?? initial.difficulties ?? "");
+  const draftCurrentRows = savedDraft && Object.prototype.hasOwnProperty.call(savedDraft, "currentRows") && Array.isArray(savedDraft.currentRows)
+    ? savedDraft.currentRows
+    : (initial.currentRows ?? []);
+  const draftNextRows = savedDraft && Object.prototype.hasOwnProperty.call(savedDraft, "nextRows") && Array.isArray(savedDraft.nextRows)
+    ? savedDraft.nextRows
+    : (initial.nextRows ?? []);
+  const draftDifficulties = savedDraft && Object.prototype.hasOwnProperty.call(savedDraft, "difficulties") && typeof savedDraft.difficulties === "string"
+    ? savedDraft.difficulties
+    : (initial.difficulties ?? "");
+  const [currentRows, setCurrentRows] = useState<Row[]>(() => draftCurrentRows);
+  const [nextRows] = useState<Row[]>(() => draftNextRows);
+  const [selectedNext, setSelectedNext] = useState<string[]>(() => draftNextRows.map((row) => row.taskId));
+  const [difficulties, setDifficulties] = useState(draftDifficulties);
   const [proposals, setProposals] = useState(initial.proposals ?? []);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
