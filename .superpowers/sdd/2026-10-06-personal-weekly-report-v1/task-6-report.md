@@ -1,7 +1,7 @@
 # Task 6 — Final verification gate
 
-Date: 2026-10-07  
-Branch: `feature/personal-weekly-report-v1`  
+Date: 2026-10-07
+Branch: `feature/personal-weekly-report-v1`
 Worktree: `work/personal-weekly-report-v1`
 
 ## Focused Cases A–N
@@ -53,7 +53,7 @@ FOLLOW_UP: refresh the canonical integration worktree/upstream tracking ref, the
 
 ## Final review fix pass
 
-Date: 2026-10-07  
+Date: 2026-10-07
 Commit: `fix: close weekly report review findings`
 
 Implemented the bounded review fixes:
