@@ -65,3 +65,12 @@ test("DOCX has exact Vietnamese sections and the same row counts as the view mod
   assert.match(xml, /Tổng số đề xuất: 1/);
   for (const mojibake of ["Ã", "áº", "á»"]) assert.ok(!xml.includes(mojibake));
 });
+
+test("completed Word metadata comes from the snapshot view model", async () => {
+  const { exportPersonalWeeklyReportDocx } = await import("./personalWeeklyReportDocx.ts");
+  const frozen = { ...report, employee: { full_name: "Tên khi hoàn thành", departments: { name: "Phòng ban cũ" } } };
+  const bytes = await exportPersonalWeeklyReportDocx(frozen);
+  const xml = await (await JSZip.loadAsync(bytes)).file("word/document.xml").async("string");
+  assert.match(xml, /Tên khi hoàn thành/);
+  assert.match(xml, /Phòng ban cũ/);
+});

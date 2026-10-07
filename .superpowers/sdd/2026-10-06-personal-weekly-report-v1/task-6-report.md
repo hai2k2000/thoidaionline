@@ -50,3 +50,37 @@ Production was not contacted or mutated. No migration, deploy, restart, activati
 **Task 6: PASS for source, regression, type, lint, route, diff, and direct production-like build gates. Artifact packaging/verification remain environment-blocked by missing upstream tracking and the intentional lineage guard.**
 
 FOLLOW_UP: refresh the canonical integration worktree/upstream tracking ref, then rerun the normal lineage-gated build and standalone packaging/verification before owner deployment approval.
+
+## Final review fix pass
+
+Date: 2026-10-07  
+Commit: `fix: close weekly report review findings`
+
+Implemented the bounded review fixes:
+
+- Completion RPC now creates a locked DRAFT from submitted payload and difficulties when no row exists, then completes it in the same transaction. Repeated completion remains idempotent and stores canonical draft difficulties in the immutable snapshot.
+- Completed loads and DOCX metadata use the employee name, department id, and department label captured in `snapshot_payload.employee`; completed rows no longer fall back to live staff labels.
+- Canonical task aggregation no longer filters by the actor's current department before participant checks, so cross-department assignments remain eligible while the query remains bounded to 2,000 rows.
+- Recurring continuation requires the existing `task_recurrence_rules` relation to be active, have a scheduled date inside the next Friday-to-Friday period, and satisfy `starts_on`/`ends_on` bounds.
+- Department Plan deduplication makes `Kế hoạch phòng ban` the primary source label whenever that source is present, preserving all source labels.
+
+Regression tests were written first and observed failing for the migration, deduplication, recurrence, department filter, and snapshot metadata findings. The final focused suite passes:
+
+```text
+node --test src/lib/personalWeeklyReportMigration.test.mjs src/lib/personalWeeklyReport.test.mjs src/lib/personalWeeklyReportService.test.mjs src/lib/personalWeeklyReportApi.test.mjs src/lib/personalWeeklyReportUi.test.mjs
+PASS — 38 tests, 38 passed, 0 failed
+npx tsc --noEmit
+PASS — exit 0
+git diff --check
+PASS — no whitespace errors
+```
+
+Migration SHA256 after the fix:
+
+```text
+f9b91323103c693da2a4cae7777dbe550e4d76d22ddba460bf32da1a322986d
+```
+
+Required disposable rehearsal: run `.superpowers/sdd/2026-10-06-personal-weekly-report-v1/task-1-rehearsal-run.sh` in a disposable PostgreSQL 17 container after placing this exact migration at the rehearsal work directory and adding `supabase/tests/personal_weekly_report_first_completion.sql`; the script must report `TASK1_REHEARSAL_PASS` and `FIRST_COMPLETION_PASS`, then remove the container and temporary directory. Do not apply this migration to production until that rehearsal succeeds.
+
+No push, merge, deploy, or production mutation was performed.

@@ -101,7 +101,11 @@ export function buildPersonalWeeklySnapshot(
   const allowedNext = new Set(loaded.nextRows.map((row) => row.taskId));
   const nextRows = draft.nextRows.filter((row) => allowedNext.has(row.taskId));
   return {
-    employee: loaded.employee,
+    employee: loaded.employee ? {
+      full_name: loaded.employee.full_name ?? null,
+      department_id: loaded.employee.department_id ?? null,
+      department_name: (loaded.employee.departments as Record<string, unknown> | null)?.name ?? loaded.employee.department_name ?? null,
+    } : null,
     period: loaded.period.current,
     currentRows,
     nextRows,

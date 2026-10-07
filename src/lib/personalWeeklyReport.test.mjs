@@ -35,7 +35,18 @@ test("C: merges duplicate source links into one canonical task row", () => {
     task("task-1", { source: "department_plan", periodRelation: "RECURRING" }),
   ]);
   assert.equal(rows.length, 1);
-  assert.deepEqual(rows[0].sourceLabels, ["Công việc được giao", "Kế hoạch phòng ban"]);
+  assert.deepEqual(rows[0].sourceLabels, ["Kế hoạch phòng ban", "Công việc được giao"]);
+  assert.equal(rows[0].sourceLabel, "Kế hoạch phòng ban");
+});
+
+
+test("a Department Plan source stays primary regardless of input order", () => {
+  const rows = dedupePersonalWeeklyTasks([
+    task("plan-1", { source: "department_plan" }),
+    task("plan-1", { source: "assigned" }),
+  ]);
+  assert.equal(rows[0].sourceLabel, "Kế hoạch phòng ban");
+  assert.deepEqual(rows[0].sourceLabels, ["Kế hoạch phòng ban", "Công việc được giao"]);
 });
 
 test("D/E: reuses active LONG_RUNNING and CARRY_OVER task IDs", () => {
@@ -51,9 +62,22 @@ test("F/G: excludes done and cancelled continuation tasks", () => {
   const rows = buildNextWeekCandidates([
     task("done", { status: "done", periodRelation: "LONG_RUNNING" }),
     task("cancelled", { status: "cancelled", periodRelation: "CARRY_OVER" }),
-    task("active", { status: "in_progress", periodRelation: "RECURRING" }),
+    task("active", { status: "in_progress", periodRelation: "RECURRING", recurrenceRule: { active: true, starts_on: "2026-10-01", ends_on: null, next_scheduled_for: "2026-10-12" } }),
   ], { start: "2026-10-09", end: "2026-10-16" });
   assert.deepEqual(rows.map((row) => row.taskId), ["active"]);
+});
+
+test("recurrence continues only when an active scheduled rule falls in the next period", () => {
+  const rule = (overrides = {}) => ({ active: true, starts_on: "2026-10-01", ends_on: "2026-10-31", next_scheduled_for: "2026-10-12", ...overrides });
+  const rows = buildNextWeekCandidates([
+    task("valid", { periodRelation: "RECURRING", recurrenceRule: rule() }),
+    task("missing", { periodRelation: "RECURRING" }),
+    task("inactive", { periodRelation: "RECURRING", recurrenceRule: rule({ active: false }) }),
+    task("early", { periodRelation: "RECURRING", recurrenceRule: rule({ starts_on: "2026-10-13" }) }),
+    task("expired", { periodRelation: "RECURRING", recurrenceRule: rule({ ends_on: "2026-10-11" }) }),
+    task("late", { periodRelation: "RECURRING", recurrenceRule: rule({ next_scheduled_for: "2026-10-16" }) }),
+  ], { start: "2026-10-09", end: "2026-10-16" });
+  assert.deepEqual(rows.map((row) => row.taskId), ["valid"]);
 });
 
 test("M: uses exact Friday-to-Friday current and next boundaries", () => {

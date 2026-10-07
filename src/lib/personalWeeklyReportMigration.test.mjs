@@ -51,11 +51,20 @@ test("defines server-only actor-scoped save and completion RPCs", () => {
     assert.match(body, /extract\(\s*isodow\s+from\s+p_period_start\s*\)\s*<>\s*5/i);
     assert.match(body, /p_period_end\s*<>\s*p_period_start\s*\+\s*7/i);
   }
-  assert.match(completionBody, /if not found then[\s\S]*raise exception[^;]*draft/i);
+  assert.match(completionBody, /if not found then[\s\S]*insert into public\.personal_weekly_reports[\s\S]*'DRAFT'[\s\S]*on conflict \(employee_id, period_start, period_end\) do nothing/i);
+  assert.match(completionBody, /select \* into v_report[\s\S]*for update/i);
   assert.match(completionBody, /jsonb_set\([\s\S]*to_jsonb\(v_report\.difficulties\)/i);
   assert.match(completionBody, /coalesce\(v_report\.draft_payload,\s*'\{\}'::jsonb\)/i);
   assert.match(completionBody, /v_snapshot,\s*v_report\.difficulties,\s*now\(\),\s*now\(\)/i);
   assert.doesNotMatch(completionBody, /to_jsonb\(coalesce\(p_difficulties/i);
+});
+
+test("first completion rehearses one atomic draft creation and an immutable idempotent snapshot", () => {
+  const rehearsal = fs.readFileSync(new URL("../../supabase/tests/personal_weekly_report_first_completion.sql", import.meta.url), "utf8");
+  assert.match(rehearsal, /api_complete_personal_weekly_report[\s\S]*status <> 'COMPLETED'/i);
+  assert.match(rehearsal, /snapshot_payload->>'difficulties'/i);
+  assert.match(rehearsal, /count\(\*\)[\s\S]*v_count <> 1/i);
+  assert.match(rehearsal, /snapshot_payload is distinct from v_snapshot/i);
 });
 
 test("uses difficulties as the editable draft field and prevents completed row mutation", () => {

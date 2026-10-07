@@ -140,7 +140,18 @@ begin
    where employee_id = p_employee and period_start = p_period_start and period_end = p_period_end
    for update;
   if not found then
-    raise exception 'personal weekly report draft not found' using errcode = 'P0002';
+    insert into public.personal_weekly_reports (
+      employee_id, department_id, period_start, period_end, status,
+      draft_payload, difficulties, updated_at
+    ) values (
+      p_employee, v_department, p_period_start, p_period_end, 'DRAFT',
+      coalesce(p_snapshot_payload, '{}'::jsonb), coalesce(p_difficulties, ''), now()
+    )
+    on conflict (employee_id, period_start, period_end) do nothing;
+    select * into v_report
+      from public.personal_weekly_reports
+     where employee_id = p_employee and period_start = p_period_start and period_end = p_period_end
+     for update;
   end if;
   if v_report.status = 'COMPLETED' then
     return v_report;

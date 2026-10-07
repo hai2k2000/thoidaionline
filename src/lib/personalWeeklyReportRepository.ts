@@ -56,6 +56,7 @@ const taskFields = [
   "owner:staff_users!tasks_owner_id_fkey(full_name)",
   "assignee:staff_users!tasks_assignee_id_fkey(full_name)",
   "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
+  "recurrence_rule:task_recurrence_rules(active,starts_on,ends_on,next_scheduled_for)",
   "department_plan_items!department_plan_items_linked_task_id_fkey(id,period_relation,carry_forward,department_plan_id,department_plans(name))",
 ].join(",");
 
@@ -108,6 +109,7 @@ function taskRows(tasks: any[], actorId: string, period: PersonalWeeklyPeriod): 
       assigneeId: task.assignee_id,
       assigneeName: task.assignee?.full_name ?? null,
       ownerId: task.owner_id,
+      recurrenceRule: task.recurrence_rule ?? null,
       source: task.workflow_type === "REPORT_ONLY" ? "report_only" : "assigned",
       periodRelation: relationFor(task, links),
     };
@@ -144,12 +146,11 @@ async function getHistory(db: Db, actorId: string) {
   return ((result.data ?? []) as PersonalWeeklyReportRow[]);
 }
 
-async function getCanonicalRows(db: Db, actorId: string, departmentId: string | null, period: PersonalWeeklyPeriod) {
+async function getCanonicalRows(db: Db, actorId: string, period: PersonalWeeklyPeriod) {
   let query = db.from("tasks").select(taskFields)
     .or(`start_date.lt.${period.end},report_work_date.lt.${period.end}`)
     .or(`due_date.gte.${period.start},report_work_date.gte.${period.start}`)
     .neq("status", "cancelled").limit(2000);
-  if (departmentId) query = query.eq("department_id", departmentId);
   const result = await query;
   errorOrThrow(result);
   return dedupePersonalWeeklyTasks(taskRows((result.data ?? []) as any[], actorId, period));
@@ -169,6 +170,7 @@ function snapshotRows(report: PersonalWeeklyReportRow) {
     currentRows: Array.isArray(snapshot.currentRows) ? snapshot.currentRows as PersonalWeeklyCurrentRow[] : [],
     nextRows: Array.isArray(snapshot.nextRows) ? snapshot.nextRows as PersonalWeeklyNextRow[] : [],
     proposals: Array.isArray(snapshot.proposals) ? snapshot.proposals as PersonalWeeklyProposal[] : [],
+    employee: snapshot.employee && typeof snapshot.employee === "object" ? snapshot.employee as Record<string, unknown> : null,
     difficulties: typeof snapshot.difficulties === "string" ? snapshot.difficulties : report.difficulties,
   };
 }
@@ -191,9 +193,9 @@ export async function getPersonalWeeklyReport(
   }
   if (report?.status === "COMPLETED") {
     const frozen = snapshotRows(report);
-    return { period: periods, employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties };
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties };
   }
-  const currentRows = await getCanonicalRows(db, actorId, (employee.department_id as string | null) ?? null, periods.current);
+  const currentRows = await getCanonicalRows(db, actorId, periods.current);
   const nextRows = buildNextWeekCandidates(currentRows, periods.next);
   const proposals = await getProposals(actorId, periods.next);
   return { period: periods, employee, report, currentReport: report, history, currentRows, nextRows, proposals, difficulties: report?.difficulties ?? "" };

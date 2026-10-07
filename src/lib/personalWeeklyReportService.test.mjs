@@ -27,9 +27,16 @@ test("aggregates canonical tasks, assignees, department plan links, and report-o
   assert.match(repository, /watcher/);
 });
 
+test("cross-department participants remain eligible before actor filtering", () => {
+  const query = repository.match(/async function getCanonicalRows\([\s\S]*?\n}\n/)?.[0] ?? "";
+  assert.doesNotMatch(query, /\.eq\(["']department_id["'],\s*departmentId\)/);
+  assert.match(query, /taskRows\([^;]*actorId/);
+});
+
 test("reads recurrence metadata from tasks, not department plan items", () => {
   assert.match(repository, /id,title,[^\n]*recurrence_rule_id/);
   assert.doesNotMatch(repository, /department_plan_items[^\n]*recurrence_rule_id/);
+  assert.match(repository, /task_recurrence_rules\(active,starts_on,ends_on,next_scheduled_for\)/);
 });
 
 test("reuses existing Personal Plan work_schedules proposals without creating tasks", () => {
@@ -59,6 +66,8 @@ test("completed reports read snapshot data and remain idempotent", () => {
   assert.match(service, /COMPLETED/);
   assert.match(service, /snapshot/);
   assert.match(repository, /if \(report\?\.status === "COMPLETED"\)/);
+  assert.match(repository, /employee:\s*frozen\.employee/);
+  assert.match(service, /employee:\s*loaded\.employee \? \{[\s\S]*?full_name:/);
 });
 
 test("maps repository and RPC failures through consistent safe responses", () => {

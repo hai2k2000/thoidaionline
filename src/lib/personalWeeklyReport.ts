@@ -81,8 +81,11 @@ export function dedupePersonalWeeklyTasks(rows: readonly Record<string, unknown>
     if (!existing.sourceLabels.includes(label)) existing.sourceLabels.push(label);
     // Merge non-empty relation/display fields without changing canonical task data.
     for (const [key, item] of Object.entries(input)) if (value(existing, key) === undefined && item !== undefined && item !== null && item !== "") existing[key] = item;
-    existing.sourceLabel = existing.sourceLabels[0];
-    if (existing.source !== "department_plan" && source === "department_plan") existing.source = source;
+    if (source === "department_plan" && existing.source !== "department_plan") {
+      existing.source = source;
+      existing.sourceLabels = [label, ...existing.sourceLabels.filter((item) => item !== label)];
+    }
+    existing.sourceLabel = existing.source === "department_plan" ? sourceNames.department_plan : existing.sourceLabels[0];
     if (!existing.periodRelation) existing.periodRelation = relationOf(input) ?? null;
   }
   return result;
@@ -90,7 +93,16 @@ export function dedupePersonalWeeklyTasks(rows: readonly Record<string, unknown>
 
 export function buildNextWeekCandidates(rows: readonly Record<string, unknown>[], nextPeriod: PersonalWeeklyPeriod): PersonalWeeklyNextRow[] {
   return dedupePersonalWeeklyTasks(rows)
-    .filter((row) => continuationRelations.has(row.periodRelation ?? "") && !terminalStatuses.has(String(row.status ?? "").toLowerCase()))
+    .filter((row) => {
+      if (!continuationRelations.has(row.periodRelation ?? "") || terminalStatuses.has(String(row.status ?? "").toLowerCase())) return false;
+      if (row.periodRelation !== "RECURRING") return true;
+      const rule = (row.recurrenceRule ?? row.recurrence_rule) as Record<string, unknown> | null | undefined;
+      if (!rule || rule.active !== true || typeof rule.next_scheduled_for !== "string") return false;
+      const scheduled = rule.next_scheduled_for;
+      return scheduled >= nextPeriod.start && scheduled < nextPeriod.end
+        && typeof rule.starts_on === "string" && rule.starts_on <= scheduled
+        && (typeof rule.ends_on !== "string" || rule.ends_on >= scheduled);
+    })
     .map((row) => ({ ...row, period: { ...nextPeriod }, sourceLabels: [...row.sourceLabels] }));
 }
 
