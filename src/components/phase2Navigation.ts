@@ -14,7 +14,7 @@
 
 export type Phase2NavigationItem = {
   id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "work-report" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
+    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "work-report" | "weekly-report" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
   href: string;
 };
 
@@ -54,6 +54,7 @@ export function getPhase2Navigation(
       { id: "work-schedule", href: "/work-schedule" },
       ...(canViewAllSchedules ? [{ id: "work-schedule-leader", href: "/work-schedule/leadership" } as const] : []),
       { id: "work-schedule-staff", href: "/work-schedule/staff" },
+      { id: "weekly-report", href: "/reports/weekly" },
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
     ],
