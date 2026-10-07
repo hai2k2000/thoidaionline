@@ -147,7 +147,7 @@ async function getHistory(db: Db, actorId: string) {
 }
 
 async function getCanonicalRows(db: Db, actorId: string, period: PersonalWeeklyPeriod) {
-  let query = db.from("tasks").select(taskFields)
+  const query = db.from("tasks").select(taskFields)
     .or(`start_date.lt.${period.end},report_work_date.lt.${period.end}`)
     .or(`due_date.gte.${period.start},report_work_date.gte.${period.start}`)
     .neq("status", "cancelled").limit(2000);
