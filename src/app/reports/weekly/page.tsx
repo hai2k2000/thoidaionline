@@ -15,7 +15,8 @@ export default async function PersonalWeeklyReportRoute({
   if (!user) redirect("/login");
   const params = await searchParams;
   const periodStart = typeof params.periodStart === "string" ? params.periodStart : "";
-  const query = periodStart ? `?periodStart=${encodeURIComponent(periodStart)}` : "";
+  const report = typeof params.report === "string" ? params.report : "";
+  const query = report ? `?report=${encodeURIComponent(report)}` : periodStart ? `?periodStart=${encodeURIComponent(periodStart)}` : "";
   const result = await loadPersonalWeeklyReport(new Request(`https://internal/reports/weekly${query}`));
   if (!result.ok) return <WeeklyReportLoadError />;
   return <PersonalWeeklyReportPage initial={result.data} />;

@@ -44,6 +44,7 @@ export type PersonalWeeklyReportLoad = {
   nextRows: PersonalWeeklyNextRow[];
   proposals: PersonalWeeklyProposal[];
   difficulties: string;
+  historical: boolean;
 };
 
 type Db = typeof serverSupabase;
@@ -123,7 +124,7 @@ function taskRows(tasks: any[], actorId: string, period: PersonalWeeklyPeriod): 
 
 async function getEmployee(db: Db, actorId: string) {
   const result = await db.from("staff_users")
-    .select("id,full_name,department_id,departments!staff_users_department_id_fkey(name)")
+    .select("id,full_name,department_id,job_title_id,job_titles(name),departments!staff_users_department_id_fkey(name)")
     .eq("id", actorId).eq("active", true).maybeSingle();
   errorOrThrow(result);
   return result.data as Record<string, unknown> | null;
@@ -134,6 +135,14 @@ async function getCurrentReport(db: Db, actorId: string, period: PersonalWeeklyP
     .eq("employee_id", actorId).eq("period_start", period.start).eq("period_end", period.end).maybeSingle();
   errorOrThrow(result);
   return result.data as PersonalWeeklyReportRow | null;
+}
+
+async function getHistoricalReport(db: Db, actorId: string, reportId: string) {
+  const result = await db.from("personal_weekly_reports").select("*")
+    .eq("id", reportId).eq("employee_id", actorId).eq("status", "COMPLETED").maybeSingle();
+  errorOrThrow(result);
+  if (!result.data) throw Object.assign(new Error("weekly report not found"), { code: "P0002" });
+  return result.data as PersonalWeeklyReportRow;
 }
 
 async function getHistory(db: Db, actorId: string) {
@@ -178,9 +187,16 @@ function snapshotRows(report: PersonalWeeklyReportRow) {
 export async function getPersonalWeeklyReport(
   actorId: string,
   period: { current: PersonalWeeklyPeriod; next: PersonalWeeklyPeriod } | PersonalWeeklyPeriod,
-  dependencies: { db?: Db } = {},
+  dependencies: { db?: Db; reportId?: string } = {},
 ): Promise<PersonalWeeklyReportLoad> {
   const db = dependencies.db ?? serverSupabase;
+  if (dependencies.reportId) {
+    const report = await getHistoricalReport(db, actorId, dependencies.reportId);
+    const frozen = snapshotRows(report);
+    const reportPeriod = { start: report.period_start, end: report.period_end };
+    const periods = { current: reportPeriod, next: personalWeeklyPeriod(report.period_start).next };
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history: await getHistory(db, actorId), currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: true };
+  }
   const periods = "current" in period ? period : personalWeeklyPeriod(period.start);
   const [employee, report, history] = await Promise.all([
     getEmployee(db, actorId),
@@ -193,12 +209,12 @@ export async function getPersonalWeeklyReport(
   }
   if (report?.status === "COMPLETED") {
     const frozen = snapshotRows(report);
-    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties };
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: false };
   }
   const currentRows = await getCanonicalRows(db, actorId, periods.current);
   const nextRows = buildNextWeekCandidates(currentRows, periods.next);
   const proposals = await getProposals(actorId, periods.next);
-  return { period: periods, employee, report, currentReport: report, history, currentRows, nextRows, proposals, difficulties: report?.difficulties ?? "" };
+  return { period: periods, employee, report, currentReport: report, history, currentRows, nextRows, proposals, difficulties: report?.difficulties ?? "", historical: false };
 }
 
 export type PersonalWeeklyMutationInput = {

@@ -16,6 +16,15 @@ export type PersonalWeeklyCurrentRow = {
   [key: string]: unknown;
 };
 
+export type PersonalWeeklySnapshot = {
+  employee?: Record<string, unknown> | null;
+  period?: PersonalWeeklyPeriod;
+  currentRows?: PersonalWeeklyCurrentRow[];
+  nextRows?: PersonalWeeklyNextRow[];
+  proposals?: Record<string, unknown>[];
+  difficulties?: string;
+};
+
 export type PersonalWeeklyNextRow = PersonalWeeklyCurrentRow & {
   period: PersonalWeeklyPeriod;
 };

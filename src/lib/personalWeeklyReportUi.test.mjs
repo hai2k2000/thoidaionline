@@ -30,7 +30,7 @@ test("weekly task hydration does not request a nonexistent Department Plan name 
 
 test("weekly report page renders the three employee sections and empty state", () => {
   const component = source("../components/PersonalWeeklyReportPage.tsx");
-  for (const heading of ["Kết quả công việc trong tuần", "Kế hoạch tuần tới", "Khó khăn, kiến nghị"]) {
+  for (const heading of ["Kết quả công tác", "Kế hoạch công tác", "Kiến nghị\/Đề xuất"]) {
     assert.match(component, new RegExp(heading));
   }
   assert.match(component, /Chưa có công việc trong kỳ này/);
@@ -47,15 +47,18 @@ test("draft, completion, history, Word export, and Personal Plan proposal flow a
   assert.match(component, /\/api\/reports\/weekly/);
   assert.match(component, /\/api\/reports\/weekly\/complete/);
   assert.match(component, /\/api\/work-schedule\/personal/);
-  assert.match(component, /Lịch sử báo cáo/);
+  assert.match(component, /Báo cáo các tuần trước/);
   assert.match(component, /proposal|đề xuất/i);
 });
 
 test("completed reports keep snapshot rows read-only while drafts retain editable commentary", () => {
   const component = source("../components/PersonalWeeklyReportPage.tsx");
   assert.match(component, /status\s*===\s*["']COMPLETED["']/);
-  assert.match(component, /disabled=\{completed\}/);
+  assert.match(component, /disabled=\{completed \|\| historical\}/);
   assert.match(component, /resultText|commentary/);
+  assert.match(component, /historical/);
+  assert.match(component, /Xem báo cáo/);
+  assert.match(component, /report=/);
 });
 
 test("reloaded drafts preserve intentionally empty selections and commentary", () => {
