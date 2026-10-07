@@ -123,7 +123,7 @@ function taskRows(tasks: any[], actorId: string, period: PersonalWeeklyPeriod): 
 
 async function getEmployee(db: Db, actorId: string) {
   const result = await db.from("staff_users")
-    .select("id,full_name,department_id,departments(name)")
+    .select("id,full_name,department_id,departments!staff_users_department_id_fkey(name)")
     .eq("id", actorId).eq("active", true).maybeSingle();
   errorOrThrow(result);
   return result.data as Record<string, unknown> | null;

@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 test("weekly report route loads the authenticated employee view model", () => {
-  const page = source("../app/reports/weekly/page.tsx");
+  const page = source("../app/reports/weekly/page.tsx") + source("../components/WeeklyReportLoadError.tsx");
   assert.match(page, /getSessionUser/);
   assert.match(page, /loadPersonalWeeklyReport/);
   assert.match(page, /PersonalWeeklyReportPage/);
@@ -65,4 +65,16 @@ test("reloaded drafts preserve intentionally empty selections and commentary", (
   assert.match(component, /hasOwnProperty\.call\(savedDraft, ["']difficulties["']\)/);
   assert.doesNotMatch(component, /savedDraft\?\.nextRows\?\.length \?/);
   assert.doesNotMatch(component, /savedDraft\?\.currentRows\?\.length \?/);
+});
+
+test("weekly employee lookup disambiguates the Department relation", () => {
+  const repository = source("./personalWeeklyReportRepository.ts");
+  assert.match(repository, /departments!staff_users_department_id_fkey\(name\)/);
+  assert.doesNotMatch(repository, /select\("id,full_name,department_id,departments\(name\)"\)/);
+});
+
+test("weekly report data failures render an error state instead of redirecting to Task Center", () => {
+  const page = source("../app/reports/weekly/page.tsx") + source("../components/WeeklyReportLoadError.tsx");
+  assert.doesNotMatch(page, /if \(!result\.ok\) redirect\("\/tasks"\)/);
+  assert.match(page, /Không thể tải Báo cáo tuần\. Vui lòng thử lại\./);
 });
