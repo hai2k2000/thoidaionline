@@ -1,3 +1,4 @@
+// @ts-expect-error Node contract tests execute this TypeScript module directly and need the explicit extension.
 import { getDepartmentPlanPeriod } from "./departmentPlanPeriod.ts";
 
 export type PersonalWeeklySource = "assigned" | "department_plan" | "report_only" | string;
