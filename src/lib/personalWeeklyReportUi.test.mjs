@@ -22,6 +22,12 @@ test("employee navigation exposes the Báo cáo tuần entry without a new permi
   assert.doesNotMatch(navigation, /canAccessWeeklyReport/);
 });
 
+test("weekly task hydration does not request a nonexistent Department Plan name column", () => {
+  const repository = source("./personalWeeklyReportRepository.ts");
+  assert.match(repository, /department_plan_items!department_plan_items_linked_task_id_fkey/);
+  assert.doesNotMatch(repository, /department_plans\(name\)/);
+});
+
 test("weekly report page renders the three employee sections and empty state", () => {
   const component = source("../components/PersonalWeeklyReportPage.tsx");
   for (const heading of ["Kết quả công việc trong tuần", "Kế hoạch tuần tới", "Khó khăn, kiến nghị"]) {

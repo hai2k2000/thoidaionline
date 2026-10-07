@@ -57,7 +57,7 @@ const taskFields = [
   "assignee:staff_users!tasks_assignee_id_fkey(full_name)",
   "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
   "recurrence_rule:task_recurrence_rules(active,starts_on,ends_on,next_scheduled_for)",
-  "department_plan_items!department_plan_items_linked_task_id_fkey(id,period_relation,carry_forward,department_plan_id,department_plans(name))",
+  "department_plan_items!department_plan_items_linked_task_id_fkey(id,period_relation,carry_forward,department_plan_id)",
 ].join(",");
 
 const asArray = <T>(value: T | T[] | null | undefined): T[] => value == null ? [] : Array.isArray(value) ? value : [value];
