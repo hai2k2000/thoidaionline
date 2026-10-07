@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/serverSession";
 import { loadPersonalWeeklyReport } from "@/lib/personalWeeklyReportService";
 import PersonalWeeklyReportPage from "@/components/PersonalWeeklyReportPage";
+import WeeklyReportLoadError from "@/components/WeeklyReportLoadError";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,6 @@ export default async function PersonalWeeklyReportRoute({
   const periodStart = typeof params.periodStart === "string" ? params.periodStart : "";
   const query = periodStart ? `?periodStart=${encodeURIComponent(periodStart)}` : "";
   const result = await loadPersonalWeeklyReport(new Request(`https://internal/reports/weekly${query}`));
-  if (!result.ok) redirect("/tasks");
+  if (!result.ok) return <WeeklyReportLoadError />;
   return <PersonalWeeklyReportPage initial={result.data} />;
 }
