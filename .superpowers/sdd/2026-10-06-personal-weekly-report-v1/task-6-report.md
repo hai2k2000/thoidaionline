@@ -78,7 +78,7 @@ PASS — no whitespace errors
 Migration SHA256 after the fix:
 
 ```text
-f9b91323103c693da2a4cae7777dbe550e4d76d22ddba460bf32da1a322986d
+f9b91323103c693daa2e4cae7777dbe550e4d76d22ddba460bf32da1a322986d
 ```
 
 Required disposable rehearsal: run `.superpowers/sdd/2026-10-06-personal-weekly-report-v1/task-1-rehearsal-run.sh` in a disposable PostgreSQL 17 container after placing this exact migration at the rehearsal work directory and adding `supabase/tests/personal_weekly_report_first_completion.sql`; the script must report `TASK1_REHEARSAL_PASS` and `FIRST_COMPLETION_PASS`, then remove the container and temporary directory. Do not apply this migration to production until that rehearsal succeeds.

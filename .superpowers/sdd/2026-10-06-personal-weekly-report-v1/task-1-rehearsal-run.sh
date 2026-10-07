@@ -3,7 +3,7 @@ set -euo pipefail
 
 container="thoidai-disposable-weekly-report-20261006-edcd608"
 work_dir="/tmp/thoidai-weekly-report-rehearsal-edcd608"
-expected_sha="f9b91323103c693da2a4cae7777dbe550e4d76d22ddba460bf32da1a322986d"
+expected_sha="f9b91323103c693daa2e4cae7777dbe550e4d76d22ddba460bf32da1a322986d"
 
 cleanup() {
   code=$?
