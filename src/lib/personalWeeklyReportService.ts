@@ -32,6 +32,7 @@ type Input = {
   currentRows?: PersonalWeeklyCurrentRow[];
   nextRows?: PersonalWeeklyNextRow[];
   difficulties?: string;
+  reportId?: string;
 };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -105,6 +106,7 @@ export function buildPersonalWeeklySnapshot(
       full_name: loaded.employee.full_name ?? null,
       department_id: loaded.employee.department_id ?? null,
       department_name: (loaded.employee.departments as Record<string, unknown> | null)?.name ?? loaded.employee.department_name ?? null,
+      job_title_name: (loaded.employee.job_titles as Record<string, unknown> | null)?.name ?? loaded.employee.job_title_name ?? null,
     } : null,
     period: loaded.period.current,
     currentRows,
@@ -142,8 +144,9 @@ export async function loadPersonalWeeklyReport(request: Request): Promise<{ ok: 
   if (!guard.ok) return guard;
   try {
     const params = new URL(request.url).searchParams;
+    const reportId = params.get("report")?.trim() || undefined;
     const period = periodFromInput({ periodStart: params.get("periodStart") ?? params.get("period") ?? undefined });
-    const data = await getPersonalWeeklyReport(guard.actor.id, period);
+    const data = await getPersonalWeeklyReport(guard.actor.id, period, { reportId });
     return { ok: true, data };
   } catch (error) {
     const mapped = reportError(error);

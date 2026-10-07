@@ -30,7 +30,7 @@ test("aggregates canonical tasks, assignees, department plan links, and report-o
 test("cross-department participants remain eligible before actor filtering", () => {
   const query = repository.match(/async function getCanonicalRows\([\s\S]*?\n}\n/)?.[0] ?? "";
   assert.doesNotMatch(query, /\.eq\(["']department_id["'],\s*departmentId\)/);
-  assert.match(query, /taskRows\([^;]*actorId/);
+  assert.match(repository, /taskRows\([^;]*actorId/);
 });
 
 test("reads recurrence metadata from tasks, not department plan items", () => {
@@ -48,6 +48,23 @@ test("reuses existing Personal Plan work_schedules proposals without creating ta
 test("loads bounded history newest first", () => {
   assert.match(repository, /period_start.*desc|order\(["']period_start["'],\s*\{\s*ascending:\s*false/);
   assert.match(repository, /PERSONAL_WEEKLY_HISTORY_LIMIT/);
+});
+
+test("loads a selected completed historical report by actor-scoped report id", () => {
+  assert.match(service, /params\.get\(["']report["']\)/);
+  assert.match(service, /reportId/);
+  assert.match(repository, /\.eq\(["']id["'],\s*reportId\)/);
+  assert.match(repository, /\.eq\(["']employee_id["'],\s*actorId\)/);
+  assert.match(repository, /\.eq\(["']status["'],\s*["']COMPLETED["']\)/);
+  assert.match(repository, /snapshotRows\(report\)/);
+});
+
+test("historical report selection fails closed without hydrating live tasks", () => {
+  assert.match(repository, /async function getHistoricalReport[\s\S]*?maybeSingle/);
+  assert.match(repository, /weekly report not found/);
+  assert.match(repository, /if \(dependencies\.reportId\)[\s\S]*?snapshotRows/);
+  const historicalBranch = repository.match(/if \(dependencies\.reportId\)[\s\S]*?historical: true \};/)?.[0] ?? "";
+  assert.doesNotMatch(historicalBranch, /getCanonicalRows|getProposals|from\(["']tasks["']\)/);
 });
 
 test("save and complete call the exact server RPC signatures with actor-derived employee", () => {
