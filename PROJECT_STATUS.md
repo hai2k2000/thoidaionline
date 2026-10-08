@@ -555,3 +555,4 @@ Next:
 - Task 3 UI add/remove controls committed as 9b3e47a.
 - Task 4 Version 2/DOCX/Personal Plan coverage added; full regression set currently 118/118 PASS.
 - No migration added; production unchanged.
+- Final source gates pass; canonical `npm run build` is blocked by the repository lineage guard on the feature branch, and standalone packaging is blocked by Windows symlink permissions in this local environment.
