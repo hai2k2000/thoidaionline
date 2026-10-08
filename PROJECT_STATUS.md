@@ -551,3 +551,7 @@ Blockers:
 
 Next:
 - Add draft-only UI controls for existing Task selection, sudden work, and removal.
+
+- Task 3 UI add/remove controls committed as 9b3e47a.
+- Task 4 Version 2/DOCX/Personal Plan coverage added; full regression set currently 118/118 PASS.
+- No migration added; production unchanged.

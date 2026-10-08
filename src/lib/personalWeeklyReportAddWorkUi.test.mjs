@@ -22,6 +22,9 @@ test("E/F: sudden-work mode is permission-gated and uses the REPORT_ONLY add-wor
   assert.match(component, /Thêm việc phát sinh/);
   assert.match(component, /\/api\/reports\/weekly\/add-work/);
   assert.match(component, /REPORT_ONLY|Việc phát sinh/);
+  assert.match(component, /response\.json/);
+  assert.match(component, /setCurrentRows/);
+  assert.doesNotMatch(component, /Đã thêm việc phát sinh[^\n]+window\.location\.reload/);
 });
 
 test("G: removing work changes only draft selection and does not call task mutation APIs", () => {
@@ -34,4 +37,3 @@ test("completed and historical report rows remain read-only without add-work con
   assert.match(component, /disabled=\{completed \|\| historical\}/);
   assert.match(component, /!completed && !historical/);
 });
-

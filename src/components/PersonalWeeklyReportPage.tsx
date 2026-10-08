@@ -85,8 +85,11 @@ export default function PersonalWeeklyReportPage({ initial }: { initial: Initial
     try {
       const requestId = globalThis.crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const response = await fetch("/api/reports/weekly/add-work", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId, period: initial.period.current, rows: [{ title: quickTitle, category: quickCategory, startDate: quickStartDate, completionDate: quickStatus === "done" ? quickCompletionDate : null, status: quickStatus, notes: quickNotes }] }) });
+      const result = await response.json().catch(() => null) as { tasks?: Array<Record<string, unknown>> } | null;
       if (!response.ok) throw new Error("Không thể thêm việc phát sinh.");
-      setAddWorkOpen(false); setQuickTitle(""); setQuickNotes(""); setMessage("Đã thêm việc phát sinh vào báo cáo."); window.location.reload();
+      const createdRows = (result?.tasks ?? []).map((task) => ({ taskId: String(task.id ?? ""), title: String(task.title ?? quickTitle), status: String(task.status ?? quickStatus), workflowType: "REPORT_ONLY", source: "report_only", sourceLabel: "Việc phát sinh", sourceLabels: ["Việc phát sinh"], startDate: quickStartDate, reportWorkDate: quickStartDate, resultText: quickNotes, commentary: quickNotes })).filter((row) => row.taskId);
+      setCurrentRows((rows) => [...rows, ...createdRows.filter((row) => !rows.some((existing) => existing.taskId === row.taskId))]);
+      setAddWorkOpen(false); setQuickTitle(""); setQuickNotes(""); setMessage("Đã thêm việc phát sinh vào báo cáo.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể thêm việc phát sinh."); }
     finally { setAddWorkBusy(false); }
   };
