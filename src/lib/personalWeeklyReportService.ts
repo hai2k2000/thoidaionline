@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   apiError,
+  asUuid,
   requireMutationActor,
   requireReadActor,
   rpcFailure,
@@ -159,10 +160,12 @@ export async function reopenPersonalWeeklyReportRequest(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard;
   const input = await request.json().catch(() => null) as Input | null;
-  if (!input || typeof input !== "object" || typeof input.reportId !== "string" || typeof input.reason !== "string") {
+  const keys = input && typeof input === "object" ? Object.keys(input) : [];
+  const reportId = input && typeof input === "object" ? asUuid(input.reportId) : null;
+  if (!input || typeof input !== "object" || keys.length !== 2 || !keys.every((key) => key === "reportId" || key === "reason") || !reportId || typeof input.reason !== "string") {
     return { ok: false as const, response: apiError("invalid_request", 400) };
   }
-  const result = await reopenPersonalWeeklyReport(guard.actor.id, input.reportId, input.reason);
+  const result = await reopenPersonalWeeklyReport(guard.actor.id, reportId, input.reason);
   return result.ok ? { ok: true as const, data: result.data } : { ok: false as const, response: rpcFailure(result.error) };
 }
 

@@ -10,6 +10,7 @@ import {
   type PersonalWeeklyNextRow,
   type PersonalWeeklyPeriod,
   type PersonalWeeklyReportVersion,
+  type PersonalWeeklyReopenEligibility,
   boundPersonalWeeklyVersions,
   buildPersonalWeeklyReopenRpcArgs,
   personalWeeklyReopenEligibility,
