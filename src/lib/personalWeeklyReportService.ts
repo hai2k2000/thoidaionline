@@ -8,6 +8,7 @@ import {
 } from "@/lib/serverApi";
 import {
   completePersonalWeeklyReport as completeRepository,
+  reopenPersonalWeeklyReport as reopenRepository,
   getPersonalWeeklyReport,
   savePersonalWeeklyDraft as saveRepository,
   type PersonalWeeklyMutationInput,
@@ -33,6 +34,7 @@ type Input = {
   nextRows?: PersonalWeeklyNextRow[];
   difficulties?: string;
   reportId?: string;
+  reason?: string;
 };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -139,6 +141,30 @@ export async function completePersonalWeeklyReport(actorId: string, input: Input
   }
 }
 
+export async function reopenPersonalWeeklyReport(actorId: string, reportId: string, reason: string): Promise<PersonalWeeklyResult<PersonalWeeklyReportRow>> {
+  try {
+    const trimmed = typeof reason === "string" ? reason.trim() : "";
+    if (trimmed.length < 5 || trimmed.length > 500) {
+      return { ok: false, error: { code: "22023", message: "Reopen reason must be 5-500 characters" } };
+    }
+    const result = await reopenRepository(actorId, reportId, trimmed);
+    return result.ok ? result : { ok: false, error: reportError(result.error) };
+  } catch (error) {
+    return { ok: false, error: reportError(error) };
+  }
+}
+
+export async function reopenPersonalWeeklyReportRequest(request: Request) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard;
+  const input = await request.json().catch(() => null) as Input | null;
+  if (!input || typeof input !== "object" || typeof input.reportId !== "string" || typeof input.reason !== "string") {
+    return { ok: false as const, response: apiError("invalid_request", 400) };
+  }
+  const result = await reopenPersonalWeeklyReport(guard.actor.id, input.reportId, input.reason);
+  return result.ok ? { ok: true as const, data: result.data } : { ok: false as const, response: rpcFailure(result.error) };
+}
+
 export async function loadPersonalWeeklyReport(request: Request): Promise<{ ok: true; data: PersonalWeeklyReportLoad } | { ok: false; response: Response }> {
   const guard = await requireReadActor();
   if (!guard.ok) return guard;
@@ -146,7 +172,7 @@ export async function loadPersonalWeeklyReport(request: Request): Promise<{ ok: 
     const params = new URL(request.url).searchParams;
     const reportId = params.get("report")?.trim() || undefined;
     const period = periodFromInput({ periodStart: params.get("periodStart") ?? params.get("period") ?? undefined });
-    const data = await getPersonalWeeklyReport(guard.actor.id, period, { reportId });
+    const data = await getPersonalWeeklyReport(guard.actor.id, period, { reportId, isAdmin: guard.actor.role_code === "admin" });
     return { ok: true, data };
   } catch (error) {
     const mapped = reportError(error);
