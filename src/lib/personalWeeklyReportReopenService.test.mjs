@@ -4,8 +4,9 @@ import {
   boundPersonalWeeklyVersions,
   buildPersonalWeeklyReopenRpcArgs,
   normalizePersonalWeeklyReopenReason,
-  personalWeeklyReopenEligibility,
+  normalizePersonalWeeklyEligibility,
 } from "./personalWeeklyReport.ts";
+import { readFileSync } from "node:fs";
 
 test("reopen RPC args contain only actor, report and reason", () => {
   assert.deepEqual(buildPersonalWeeklyReopenRpcArgs("actor-1", "report-1", "fixed reason"), {
@@ -25,11 +26,27 @@ test("version history is newest-first and bounded", () => {
   assert.deepEqual(versions.map((version) => version.version_no), [4, 3, 2]);
 });
 
-test("completed employee eligibility remains unknown until database authorization evaluates the 24h window", () => {
-  assert.deepEqual(personalWeeklyReopenEligibility({ status: "COMPLETED", employee_id: "owner" }, "owner", false), {
-    eligible: null, reason: "unknown", isAdmin: false,
+test("database eligibility result maps employee and admin decisions, failing closed on malformed data", () => {
+  assert.deepEqual(normalizePersonalWeeklyEligibility({ eligible: true, reason: "available", is_admin: false }), {
+    eligible: true, reason: "available", isAdmin: false,
   });
-  assert.deepEqual(personalWeeklyReopenEligibility({ status: "COMPLETED", employee_id: "owner" }, "admin", true), {
+  assert.deepEqual(normalizePersonalWeeklyEligibility({ eligible: false, reason: "expired", is_admin: false }), {
+    eligible: false, reason: "expired", isAdmin: false,
+  });
+  assert.deepEqual(normalizePersonalWeeklyEligibility({ eligible: true, reason: "available", is_admin: true }), {
     eligible: true, reason: "available", isAdmin: true,
   });
+  assert.deepEqual(normalizePersonalWeeklyEligibility(null), {
+    eligible: false, reason: "unknown", isAdmin: false,
+  });
+  assert.deepEqual(normalizePersonalWeeklyEligibility({ eligible: true, reason: "invalid", is_admin: true }), {
+    eligible: false, reason: "unknown", isAdmin: true,
+  });
+});
+
+test("report loads pass only the server actor and report id to eligibility RPC", () => {
+  const repository = readFileSync(new URL("./personalWeeklyReportRepository.ts", import.meta.url), "utf8");
+  assert.match(repository, /db\.rpc\("api_personal_weekly_reopen_eligibility",\s*\{\s*p_actor:\s*actorId,\s*p_report_id:\s*report\.id\s*\}\)/);
+  assert.doesNotMatch(repository, /personalWeeklyReopenEligibility\(/);
+  assert.doesNotMatch(repository, /Date\.now\(|new Date\(\)/);
 });

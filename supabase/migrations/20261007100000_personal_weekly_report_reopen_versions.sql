@@ -126,11 +126,46 @@ begin
 end;
 $$;
 
+create or replace function public.api_personal_weekly_reopen_eligibility(p_actor uuid, p_report_id uuid)
+returns table(eligible boolean, reason text, is_admin boolean)
+language plpgsql security definer set search_path=public,pg_temp as $$
+declare
+  v_report public.personal_weekly_reports;
+  v_is_admin boolean := public.phase7_is_admin(p_actor);
+begin
+  select * into v_report from public.personal_weekly_reports where id=p_report_id;
+  if not found then
+    return query select false, 'unknown'::text, v_is_admin;
+    return;
+  end if;
+  if v_report.status <> 'COMPLETED' then
+    return query select false, case when v_report.status='DRAFT' then 'already_draft' else 'not_completed' end::text, v_is_admin;
+    return;
+  end if;
+  if v_is_admin then
+    return query select true, 'available'::text, true;
+    return;
+  end if;
+  if v_report.employee_id is distinct from p_actor then
+    return query select false, 'forbidden'::text, false;
+    return;
+  end if;
+  if v_report.completed_at is not null and now() <= v_report.completed_at + interval '24 hours' then
+    return query select true, 'available'::text, false;
+    return;
+  end if;
+  return query select false, 'expired'::text, false;
+end;
+$$;
+
 alter function public.api_complete_personal_weekly_report(uuid,uuid,date,date,jsonb,text) owner to postgres;
 alter function public.api_reopen_personal_weekly_report(uuid,uuid,text) owner to postgres;
+alter function public.api_personal_weekly_reopen_eligibility(uuid,uuid) owner to postgres;
 revoke all on function public.api_complete_personal_weekly_report(uuid,uuid,date,date,jsonb,text) from public,anon,authenticated;
 revoke all on function public.api_reopen_personal_weekly_report(uuid,uuid,text) from public,anon,authenticated;
+revoke all on function public.api_personal_weekly_reopen_eligibility(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.api_complete_personal_weekly_report(uuid,uuid,date,date,jsonb,text) to service_role;
 grant execute on function public.api_reopen_personal_weekly_report(uuid,uuid,text) to service_role;
+grant execute on function public.api_personal_weekly_reopen_eligibility(uuid,uuid) to service_role;
 
 commit;

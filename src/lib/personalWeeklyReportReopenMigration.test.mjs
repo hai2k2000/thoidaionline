@@ -46,6 +46,21 @@ test("completion and reopen RPCs are server-only and encode authorization rules"
   assert.match(sql, /grant execute on function public\.api_complete_personal_weekly_report[^;]*service_role/i);
 });
 
+test("eligibility RPC uses database time, ownership and canonical admin rights without client grants", () => {
+  const sql = readFileSync(migrationPath, "utf8");
+  const rpc = sql.match(/create or replace function public\.api_personal_weekly_reopen_eligibility\([\s\S]*?\$\$;/i)?.[0];
+  assert.ok(rpc, "server eligibility RPC missing");
+  assert.match(rpc, /p_actor uuid\s*,\s*p_report_id uuid/i);
+  assert.match(rpc, /returns table\s*\(\s*eligible boolean\s*,\s*reason text\s*,\s*is_admin boolean/i);
+  assert.match(rpc, /security definer/i);
+  assert.match(rpc, /public\.phase7_is_admin\(p_actor\)/i);
+  assert.match(rpc, /employee_id\s+is\s+distinct\s+from\s+p_actor/i);
+  assert.match(rpc, /now\(\)\s*(?:<=|>)\s*[^;]*interval\s*'24 hours'/i);
+  assert.doesNotMatch(rpc, /Date\.now|clock_timestamp|p_is_admin|p_role/i);
+  assert.match(sql, /revoke all on function public\.api_personal_weekly_reopen_eligibility\(uuid,uuid\) from public,anon,authenticated/i);
+  assert.match(sql, /grant execute on function public\.api_personal_weekly_reopen_eligibility\(uuid,uuid\) to service_role/i);
+});
+
 test("rehearsal uses valid actor roles and exact transaction-time 24-hour boundaries", () => {
   const sql = readFileSync(new URL("../../supabase/tests/personal_weekly_report_reopen_versions.sql", import.meta.url), "utf8");
   assert.match(sql, /v_employee_role uuid/i);

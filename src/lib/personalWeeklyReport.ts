@@ -46,6 +46,19 @@ export type PersonalWeeklyReopenEligibility = {
   isAdmin: boolean;
 };
 
+export function normalizePersonalWeeklyEligibility(value: unknown): PersonalWeeklyReopenEligibility {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { eligible: false, reason: "unknown", isAdmin: false };
+  const row = value as Record<string, unknown>;
+  const allowed = new Set<PersonalWeeklyReopenEligibility["reason"]>(["available", "already_draft", "expired", "forbidden", "not_completed", "unknown"]);
+  const reason = typeof row.reason === "string" && allowed.has(row.reason as PersonalWeeklyReopenEligibility["reason"])
+    ? row.reason as PersonalWeeklyReopenEligibility["reason"] : "unknown";
+  return {
+    eligible: row.eligible === true && reason === "available",
+    reason,
+    isAdmin: row.is_admin === true,
+  };
+}
+
 export function normalizePersonalWeeklyReopenReason(reason: unknown): { ok: true; value: string } | { ok: false; code: "22023" } {
   const value = typeof reason === "string" ? reason.trim() : "";
   return value.length >= 5 && value.length <= 500 ? { ok: true, value } : { ok: false, code: "22023" };
@@ -57,13 +70,6 @@ export function buildPersonalWeeklyReopenRpcArgs(actorId: string, reportId: stri
 
 export function boundPersonalWeeklyVersions<T extends { version_no: number }>(versions: readonly T[], limit = 12): T[] {
   return [...versions].sort((a, b) => b.version_no - a.version_no).slice(0, limit);
-}
-
-export function personalWeeklyReopenEligibility(report: { status: string; employee_id: string } | null, actorId: string, isAdmin: boolean): PersonalWeeklyReopenEligibility {
-  if (!report || report.status !== "COMPLETED") return { eligible: false, reason: "not_completed", isAdmin };
-  if (isAdmin) return { eligible: true, reason: "available", isAdmin: true };
-  if (report.employee_id !== actorId) return { eligible: false, reason: "forbidden", isAdmin: false };
-  return { eligible: null, reason: "unknown", isAdmin: false };
 }
 
 export type PersonalWeeklyNextRow = PersonalWeeklyCurrentRow & {

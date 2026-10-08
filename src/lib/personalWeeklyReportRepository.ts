@@ -13,7 +13,7 @@ import {
   type PersonalWeeklyReopenEligibility,
   boundPersonalWeeklyVersions,
   buildPersonalWeeklyReopenRpcArgs,
-  personalWeeklyReopenEligibility,
+  normalizePersonalWeeklyEligibility,
 } from "@/lib/personalWeeklyReport";
 import { workScheduleRepository } from "@/lib/workScheduleRepository";
 
@@ -189,6 +189,13 @@ async function getVersions(db: Db, actorId: string, reportId: string): Promise<P
   return boundPersonalWeeklyVersions((result.data ?? []) as PersonalWeeklyReportVersion[], PERSONAL_WEEKLY_HISTORY_LIMIT);
 }
 
+async function getReopenEligibility(db: Db, actorId: string, report: PersonalWeeklyReportRow) {
+  const result = await db.rpc("api_personal_weekly_reopen_eligibility", { p_actor: actorId, p_report_id: report.id });
+  errorOrThrow(result);
+  const row = Array.isArray(result.data) ? result.data[0] : result.data;
+  return normalizePersonalWeeklyEligibility(row);
+}
+
 async function getCanonicalRows(db: Db, actorId: string, period: PersonalWeeklyPeriod) {
   const query = db.from("tasks").select(taskFields)
     .or(`start_date.lt.${period.end},report_work_date.lt.${period.end}`)
@@ -230,8 +237,8 @@ export async function getPersonalWeeklyReport(
     const reportPeriod = { start: report.period_start, end: report.period_end };
     const periods = { current: reportPeriod, next: personalWeeklyPeriod(report.period_start).next };
     const versions = await getVersions(db, actorId, report.id);
-    const isAdmin = await verifiedAdmin(db, actorId);
-    return { period: periods, employee: frozen.employee, report, currentReport: report, history: await getHistory(db, actorId), currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: true, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: personalWeeklyReopenEligibility(report, actorId, isAdmin) };
+    const reopenEligibility = await getReopenEligibility(db, actorId, report);
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history: await getHistory(db, actorId), currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: true, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
   }
   const periods = "current" in period ? period : personalWeeklyPeriod(period.start);
   const [employee, report, history] = await Promise.all([
@@ -246,15 +253,15 @@ export async function getPersonalWeeklyReport(
   if (report?.status === "COMPLETED") {
     const frozen = snapshotRows(report);
     const versions = await getVersions(db, actorId, report.id);
-    const isAdmin = await verifiedAdmin(db, actorId);
-    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: personalWeeklyReopenEligibility(report, actorId, isAdmin) };
+    const reopenEligibility = await getReopenEligibility(db, actorId, report);
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
   }
   const currentRows = await getCanonicalRows(db, actorId, periods.current);
   const nextRows = buildNextWeekCandidates(currentRows, periods.next);
   const proposals = await getProposals(actorId, periods.next);
   const versions = report ? await getVersions(db, actorId, report.id) : [];
-  const isAdmin = report ? await verifiedAdmin(db, actorId) : false;
-  return { period: periods, employee, report, currentReport: report, history, currentRows, nextRows, proposals, difficulties: report?.difficulties ?? "", historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: personalWeeklyReopenEligibility(report, actorId, isAdmin) };
+  const reopenEligibility = report ? await getReopenEligibility(db, actorId, report) : { eligible: false, reason: "not_completed" as const, isAdmin: false };
+  return { period: periods, employee, report, currentReport: report, history, currentRows, nextRows, proposals, difficulties: report?.difficulties ?? "", historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
 }
 
 export type PersonalWeeklyMutationInput = {
