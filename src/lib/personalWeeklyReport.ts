@@ -138,6 +138,44 @@ export function dedupePersonalWeeklyTasks(rows: readonly Record<string, unknown>
   return result;
 }
 
+export type PersonalWeeklyAddableRow = PersonalWeeklyCurrentRow & {
+  selectableForWeeklyReport?: boolean;
+};
+
+const reportCommentaryKeys = ["resultText", "commentary", "notes", "periodCommentary", "resultNote", "additionalNote"] as const;
+
+export function filterPersonalWeeklyAddableRows(
+  rows: readonly Record<string, unknown>[],
+  selectedTaskIds: readonly string[] = [],
+): PersonalWeeklyAddableRow[] {
+  const selected = new Set(selectedTaskIds);
+  return dedupePersonalWeeklyTasks(rows)
+    .filter((row) => row.status !== "cancelled" && row.selectableForWeeklyReport !== false && !selected.has(row.taskId)) as PersonalWeeklyAddableRow[];
+}
+
+export function validatePersonalWeeklyCurrentRows(
+  rows: readonly Record<string, unknown>[],
+  allowedRows: readonly Record<string, unknown>[],
+): { ok: true; value: PersonalWeeklyCurrentRow[] } | { ok: false; message: string } {
+  const allowed = new Map(filterPersonalWeeklyAddableRows(allowedRows).map((row) => [row.taskId, row]));
+  const seen = new Set<string>();
+  const value: PersonalWeeklyCurrentRow[] = [];
+  for (const input of rows) {
+    const taskId = taskIdOf(input);
+    if (!taskId) return { ok: false, message: "Rows require a task ID" };
+    if (seen.has(taskId)) return { ok: false, message: `Duplicate task ID: ${taskId}` };
+    seen.add(taskId);
+    const canonical = allowed.get(taskId);
+    if (!canonical) return { ok: false, message: `Task is not eligible for this report: ${taskId}` };
+    const row = { ...canonical } as PersonalWeeklyCurrentRow & Record<string, unknown>;
+    for (const key of reportCommentaryKeys) {
+      if (typeof input[key] === "string") row[key] = input[key];
+    }
+    value.push(row);
+  }
+  return { ok: true, value };
+}
+
 export function buildNextWeekCandidates(rows: readonly Record<string, unknown>[], nextPeriod: PersonalWeeklyPeriod): PersonalWeeklyNextRow[] {
   return dedupePersonalWeeklyTasks(rows)
     .filter((row) => {
