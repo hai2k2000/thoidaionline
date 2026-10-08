@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
+import { buildReopenRequest, projectVersionSnapshot, validateReopenReason } from "./personalWeeklyReportUi.mjs";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
@@ -92,13 +93,11 @@ test("completed own reports expose server-verified reopen action and exact modal
   assert.match(component, /Huỷ/);
 });
 
-test("reopen modal validates reason, cancels without fetch, and posts only reportId and reason", () => {
-  const component = source("../components/PersonalWeeklyReportPage.tsx");
-  assert.match(component, /reason\.trim\(\)\.length\s*<\s*5/);
-  assert.match(component, /\/api\/reports\/weekly\/reopen/);
-  assert.match(component, /JSON\.stringify\(\{\s*reportId/);
-  assert.match(component, /setReopenOpen\(false\)/);
-  assert.match(component, /Đang gửi|Đang xử lý/);
+test("invalid reopen input cannot produce a network request body", () => {
+  assert.equal(buildReopenRequest("report-7", " "), null);
+  assert.equal(buildReopenRequest("report-7", "abcd"), null);
+  assert.equal(buildReopenRequest("", "Valid reason"), null);
+  assert.deepEqual(Object.keys(buildReopenRequest("report-7", "  Valid reason  ")), ["reportId", "reason"]);
 });
 
 test("reopened drafts are editable and show completion controls while completed history stays read-only", () => {
@@ -123,4 +122,20 @@ test("reopened older-week drafts remain reachable from report history", () => {
   const component = source("../components/PersonalWeeklyReportPage.tsx");
   assert.match(component, /\/reports\/weekly\?periodStart=\$\{encodeURIComponent\(start\)\}/);
   assert.match(component, /Chỉnh sửa bản nháp/);
+});
+
+test("reopen reason validation and payload builder enforce the client boundary", () => {
+  assert.equal(validateReopenReason("   ").ok, false);
+  assert.equal(validateReopenReason("four").ok, false);
+  assert.equal(validateReopenReason("  Sửa số liệu  ").value, "Sửa số liệu");
+  assert.deepEqual(buildReopenRequest("report-7", "  Sửa số liệu  "), { reportId: "report-7", reason: "Sửa số liệu" });
+  assert.equal(buildReopenRequest("report-7", "four"), null);
+});
+
+test("version snapshot projection exposes report content without internal IDs or edit affordances", () => {
+  const projected = projectVersionSnapshot({ version_no: 1, snapshot_payload: { currentRows: [{ taskId: "task-1", title: "Viết bài", resultText: "Đã xong" }], nextRows: [{ taskId: "task-2", title: "Biên tập" }], difficulties: "Thiếu dữ liệu" } });
+  assert.deepEqual(projected.currentRows, [{ title: "Viết bài", text: "Đã xong" }]);
+  assert.deepEqual(projected.nextRows, [{ title: "Biên tập" }]);
+  assert.equal(projected.difficulties, "Thiếu dữ liệu");
+  assert.equal("taskId" in projected.currentRows[0], false);
 });
