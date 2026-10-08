@@ -9,6 +9,7 @@ declare
   v_other uuid := '20000000-0000-0000-0000-000000000072';
   v_admin uuid := '20000000-0000-0000-0000-000000000073';
   v_admin_role uuid;
+  v_employee_role uuid;
   v_report public.personal_weekly_reports;
   v_version public.personal_weekly_report_versions;
   v_count integer;
@@ -17,9 +18,12 @@ declare
 begin
   select id into v_admin_role from public.roles where code='admin' and active;
   if v_admin_role is null then raise exception 'active admin role missing from rehearsal'; end if;
+  select id into v_employee_role from public.roles where code <> 'admin' and active order by code limit 1;
+  if v_employee_role is null then raise exception 'active employee role missing from rehearsal'; end if;
   insert into public.departments(id,code,name) values(v_department,'weekly-reopen-rehearsal','Weekly Reopen Rehearsal');
-  insert into public.staff_users(id,full_name,department_id) values(v_employee,'Reopen Employee',v_department),(v_other,'Other Employee',v_department);
+  insert into public.staff_users(id,full_name,department_id,role_id) values(v_employee,'Reopen Employee',v_department,v_employee_role),(v_other,'Other Employee',v_department,v_employee_role);
   insert into public.staff_users(id,full_name,department_id,role_id) values(v_admin,'Reopen Admin',v_department,v_admin_role);
+  if not public.phase7_is_admin(v_admin) then raise exception 'fixture admin lacks canonical authorization'; end if;
 
   v_report := public.api_complete_personal_weekly_report(v_employee,v_employee,'2026-10-02','2026-10-09','{"currentRows":[]}'::jsonb,'First difficulty');
   if v_report.status <> 'COMPLETED' then raise exception 'first completion failed'; end if;
@@ -65,14 +69,14 @@ begin
   -- Rebuild only this rolled-back fixture at the exact boundary.
   perform set_config('app.personal_weekly_report_reopen_id',v_report.id::text,true);
   update public.personal_weekly_reports set status='DRAFT',snapshot_payload=null,completed_at=null where id=v_report.id;
-  update public.personal_weekly_reports set status='COMPLETED',snapshot_payload=v_report.snapshot_payload,completed_at=now()-interval '24 hours' + interval '1 second' where id=v_report.id;
+  update public.personal_weekly_reports set status='COMPLETED',snapshot_payload=v_report.snapshot_payload,completed_at=now()-interval '24 hours' where id=v_report.id;
   perform set_config('app.personal_weekly_report_reopen_id','',true);
-  -- The one-second allowance keeps the 24:00 boundary deterministic while the RPC uses server time.
+  -- now() is transaction-stable, matching the RPC's clock at the exact 24:00 boundary.
   perform public.api_reopen_personal_weekly_report(v_employee,v_report.id,'Exact boundary reason');
   v_report := public.api_complete_personal_weekly_report(v_employee,v_employee,'2026-10-02','2026-10-09','{"currentRows":[3]}'::jsonb,'Third difficulty');
   perform set_config('app.personal_weekly_report_reopen_id',v_report.id::text,true);
   update public.personal_weekly_reports set status='DRAFT',snapshot_payload=null,completed_at=null where id=v_report.id;
-  update public.personal_weekly_reports set status='COMPLETED',snapshot_payload=v_report.snapshot_payload,completed_at=now()-interval '24 hours 1 second' where id=v_report.id;
+  update public.personal_weekly_reports set status='COMPLETED',snapshot_payload=v_report.snapshot_payload,completed_at=now()-interval '24 hours' - interval '1 microsecond' where id=v_report.id;
   perform set_config('app.personal_weekly_report_reopen_id','',true);
   v_failed:=false;
   begin perform public.api_reopen_personal_weekly_report(v_employee,v_report.id,'Expired reason'); exception when sqlstate '42501' then v_failed:=true; end;
@@ -82,9 +86,9 @@ begin
   -- Legacy snapshot is seeded only when a completed legacy row is reopened.
   v_report := public.api_complete_personal_weekly_report(v_employee,v_employee,'2026-10-09','2026-10-16','{"currentRows":[]}'::jsonb,'Legacy difficulty');
   -- The immutable version is removed only in this rolled-back rehearsal fixture by disabling its guard locally.
-  alter table public.personal_weekly_report_versions disable trigger personal_weekly_report_versions_immutable;
+  execute 'alter table public.personal_weekly_report_versions disable trigger personal_weekly_report_versions_immutable';
   delete from public.personal_weekly_report_versions where report_id=v_report.id;
-  alter table public.personal_weekly_report_versions enable trigger personal_weekly_report_versions_immutable;
+  execute 'alter table public.personal_weekly_report_versions enable trigger personal_weekly_report_versions_immutable';
   perform public.api_reopen_personal_weekly_report(v_employee,v_report.id,'Legacy correction');
   if (select count(*) from public.personal_weekly_report_versions where report_id=v_report.id and version_no=1) <> 1 then raise exception 'legacy version seed missing'; end if;
 end;

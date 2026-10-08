@@ -106,7 +106,7 @@ declare
   v_reason text:=btrim(coalesce(p_reason,''));
 begin
   if p_reason is null or length(btrim(p_reason)) not between 5 and 500 then raise exception 'reopen reason must be 5-500 characters' using errcode='22023'; end if;
-  select exists(select 1 from public.staff_users u join public.roles r on r.id=u.role_id where u.id=p_actor and u.active and r.active and r.code='admin') into v_is_admin;
+  v_is_admin:=public.phase7_is_admin(p_actor);
   select * into v_report from public.personal_weekly_reports where id=p_report_id for update;
   if not found or v_report.status<>'COMPLETED' then raise exception 'completed report not found' using errcode='P0002'; end if;
   if not v_is_admin and v_report.employee_id is distinct from p_actor then raise exception 'report ownership mismatch' using errcode='42501'; end if;

@@ -32,3 +32,11 @@ Implemented the bounded migration contract and disposable SQL rehearsal for immu
 ## Concerns
 - The SQL rehearsal's exact-time fixture adjustments require the disposable superuser runner; they are intentionally inside a transaction that rolls back.
 - No production database, service, ledger, or `/opt/thoidai-work` target was touched.
+
+## Fix round 1 evidence
+- Added valid active non-admin role fixtures for employee and cross-user actors; the admin fixture is checked through `public.phase7_is_admin`.
+- Replaced direct `roles.code='admin'` authorization in the reopen RPC with canonical `public.phase7_is_admin(p_actor)`.
+- Reworked the boundary fixture to use PostgreSQL transaction-stable `now()` exactly at `completed_at = now() - interval '24 hours'` (allowed), plus `now() - interval '24 hours' - interval '1 microsecond'` (denied).
+- Updated the contract tests to require canonical admin authorization and these rehearsal invariants.
+- Focused verification: `node --test src/lib/personalWeeklyReportMigration.test.mjs src/lib/personalWeeklyReportReopenMigration.test.mjs scripts/schema-contracts.test.mjs` — 10 passed, 0 failed.
+- Disposable rehearsal executed on `vps-aylaspa` in a fresh `postgres:17` container with `--network none` and tmpfs-only data; seeded schema prerequisites were copied from an existing disposable database, then migration and rehearsal returned `PERSONAL_WEEKLY_REPORT_REOPEN_VERSIONS_PASS`. Production service health was inspected and remained active; no production DB/service or `/opt/thoidai-work` path was modified.
