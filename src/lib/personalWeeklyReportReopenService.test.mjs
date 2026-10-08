@@ -50,3 +50,9 @@ test("report loads pass only the server actor and report id to eligibility RPC",
   assert.doesNotMatch(repository, /personalWeeklyReopenEligibility\(/);
   assert.doesNotMatch(repository, /Date\.now\(|new Date\(\)/);
 });
+
+test("version history sent to the page is a narrow id-free snapshot DTO", () => {
+  const repository = readFileSync(new URL("./personalWeeklyReportRepository.ts", import.meta.url), "utf8");
+  assert.match(repository, /personal_weekly_report_versions"\)\.select\("version_no,snapshot_payload,completed_at"\)/);
+  assert.doesNotMatch(repository, /personal_weekly_report_versions"\)\.select\("\*"\)/);
+});

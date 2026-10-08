@@ -26,18 +26,9 @@ export type PersonalWeeklySnapshot = {
 };
 
 export type PersonalWeeklyReportVersion = {
-  id: string;
-  report_id: string;
   version_no: number;
-  employee_id: string;
-  department_id: string;
-  period_start: string;
-  period_end: string;
   snapshot_payload: Record<string, unknown>;
-  difficulties: string;
-  completed_by: string;
   completed_at: string;
-  created_at: string;
 };
 
 export type PersonalWeeklyReopenEligibility = {

@@ -56,13 +56,14 @@ export default function PersonalWeeklyReportPage({ initial }: { initial: Initial
   useEffect(() => {
     if (!reopenOpen) return;
     const dialog = reopenDialogRef.current;
+    dialog?.setAttribute("tabindex", "-1");
     const focusable = dialog ? Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]), textarea:not([disabled])")) : [];
-    focusable[0]?.focus();
+    if (focusable.length) focusable[0].focus(); else dialog?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") { if (!reopenBusy) setReopenOpen(false); return; }
       if (event.key !== "Tab" || !dialog) return;
       const current = Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]), textarea:not([disabled])"));
-      if (!current.length) return;
+      if (!current.length) { event.preventDefault(); dialog.focus(); return; }
       const first = current[0]; const last = current[current.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }

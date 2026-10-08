@@ -139,3 +139,9 @@ test("version snapshot projection exposes report content without internal IDs or
   assert.equal(projected.difficulties, "Thiếu dữ liệu");
   assert.equal("taskId" in projected.currentRows[0], false);
 });
+
+test("reopen dialog keeps a stable focus target while the request is busy", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /setAttribute\("tabindex", "-1"\)/);
+  assert.match(component, /if \(!current\.length\) \{ event\.preventDefault\(\); dialog\.focus\(\); return; \}/);
+});

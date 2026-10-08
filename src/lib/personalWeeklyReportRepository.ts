@@ -183,7 +183,7 @@ async function getVersions(db: Db, actorId: string, reportId: string): Promise<P
   const parent = await parentQuery.maybeSingle();
   errorOrThrow(parent);
   if (!parent.data) throw Object.assign(new Error("weekly report not found"), { code: "P0002" });
-  const result = await db.from("personal_weekly_report_versions").select("*")
+  const result = await db.from("personal_weekly_report_versions").select("version_no,snapshot_payload,completed_at")
     .eq("report_id", reportId).order("version_no", { ascending: false }).limit(PERSONAL_WEEKLY_HISTORY_LIMIT);
   errorOrThrow(result);
   return boundPersonalWeeklyVersions((result.data ?? []) as PersonalWeeklyReportVersion[], PERSONAL_WEEKLY_HISTORY_LIMIT);
