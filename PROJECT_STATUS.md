@@ -1,3 +1,537 @@
+# Personal Quick Report Summary
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: self-service REPORT_ONLY summary and Word export
+
+Completed:
+- Added permission-gated personal Quick Report summary with week, month, and custom date filters.
+- Added self-only server query and bounded Word export over canonical tasks.report_work_date data.
+- Preserved existing Quick Report create flow, Attendance entry, and management Work Report.
+
+Validation:
+- Focused Quick Report, authorization, Attendance, Work Report, and summary/export regressions: PASS.
+- TypeScript, changed-file ESLint, route manifest, and git diff --check: PASS.
+- Production-like build: BLOCKED by stale local integration/production ref; no lineage override used.
+
+Production mutation: NONE.
+
+Next:
+- Refresh the clean canonical integration baseline, rerun the production-like build, then owner review; do not deploy automatically.
+
+## Department Period Report Word Export
+
+Current Phase: COMPLETE; implementation and pre-production validation
+Current Task: Word-only period report export
+
+Completed:
+- Replaced Department Period Report UI export action with the authenticated DOCX route while preserving selected period, department, and filters.
+- Implemented editable Word report structure with sections I–IV, real report rows, Vietnamese text, and approved filenames.
+- Preserved existing PDF backend files and unrelated Department Plan business logic.
+
+Validation:
+- DOCX exporter regression: 5/5 PASS.
+- Department Plan focused regression: 130 PASS, 1 pre-existing bundle check skipped.
+- TypeScript, changed-file ESLint, git diff --check, route manifest, and production-like build: PASS.
+- Sample DOCX opened successfully in Microsoft Word; PNG renderer unavailable because VPS has no LibreOffice and local renderer lacks pdf2image in its default Python.
+
+Production mutation: COMPLETE — immutable artifact activated and health-checked.
+
+# Department Plan Real + Multi-Assignment V2 Blocker Closure
+
+- Phase A completed: canonical leadership-mapped assignee eligibility is aligned with the existing assignment scope, and successful assignment responses rehydrate linked Task participants/status before reaching the UI.
+- Focused Department Plan/leadership/task assignment regressions: PASS.
+- TypeScript, changed-file ESLint, route manifest, git diff --check, disposable PostgreSQL migration rehearsal, and production-like webpack build: PASS.
+- Production mutation: NONE.
+
+## Admin Quick Report Permission Management
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: role-based grant/revoke for task.quick_report.create
+
+Completed:
+- Added admin-only role grant/revoke through the existing permission.manage capability.
+- Reused role_permission_grants and audit_logs; no user or department grant subsystem was added.
+- Added exact Vietnamese Quick Report permission metadata and lightweight revoke confirmation.
+- Added additive migration 20261001100000_admin_quick_report_permission_management.sql.
+
+Validation:
+- Focused permission/Quick Report/Task/Global Mutation regression: PASS.
+- Disposable PostgreSQL schema and RPC rehearsal: PASS; migration applied twice; idempotent grant/revoke and audit verified.
+- Production remains untouched.
+
+Next:
+- Owner review; no production migration, permission change, deploy, or restart.
+## Department Plan V2 Checkpoint 9B
+
+Current Phase: COMPLETE; canonical assignment dialog + atomic Plan-to-Task V2
+Current Task: Checkpoint 9B closed without production deployment
+
+Completed:
+- Added shared Department Plan assignment dialog using `CanonicalAssignmentForm`.
+- Added persisted-item prefill and dirty-item guard.
+- Added additive `api_assign_department_plan_task_v2` migration contract with row lock, canonical `api_assign_task_v2` reuse, and one-link protection.
+- Added Department Plan assignment endpoint and linked/unlinked UI actions.
+- Recurrence, batch creation, and attachments are disabled in this one-item dialog.
+
+Validation:
+- Focused CP9B + affected Department Plan/canonical Task regression: 160/160 PASS.
+- Migration syntax and runtime idempotency validation in an ephemeral PostgreSQL container: PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Production-like build and route manifest: PASS.
+- git diff --check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Owner review and separately authorized production rollout; CP9B does not deploy automatically.
+
+## Department Plan V2 Checkpoint 9A
+
+Current Phase: COMPLETE; reusable canonical assignment form
+Current Task: Checkpoint 9A — extracted form and preserved Task assignment behavior
+
+Completed:
+- Extracted the recipient-first canonical Task assignment form into `src/components/CanonicalAssignmentForm.tsx`.
+- Kept TaskAssignShell responsible for page layout, API submission, notifications, attachment upload, and redirects.
+- Added compatible `initialValues`, caller-owned `onSubmit`, optional `onCancel`, field validation, scope/picker behavior, participant selectors, priority, due dates, recurrence, and batch payload normalization.
+
+Validation:
+- Focused extraction and assignment regression: PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build: PASS with build-only production environment and lineage overrides.
+- git diff --check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Checkpoint 9B only after owner approval; no Department Plan integration was started.
+
+## Department Plan V2 Final Integration Gate
+
+Current Phase: FINAL INTEGRATION & PRODUCTION ROLLOUT GATE
+Current Task: BLOCKED before production mutation — authorized authenticated production smoke evidence unavailable
+
+Final Integration: c0769ee merged from active production f5d9b66 through CP1-CP8 source dfaf753; release metadata fix 6d5aa4f includes CP1/CP6 migration references.
+Pre-deploy validation: Department Plan 73/73, affected regression 229/229, TypeScript, ESLint, route manifest, production-like build, standalone artifact verification PASS.
+Production mutation: NONE — migration and activation intentionally stopped pending authorized authenticated smoke.
+
+# Production Smoke Cleanup + Recipient-First Compact Picker
+
+## Department Plan V2 Checkpoint 6
+
+Current Phase: COMPLETE; Plan-to-Task V1 implementation
+Current Task: closed without deployment
+
+Completed:
+- Added explicit authenticated Plan Item -> canonical Task conversion.
+- Reused the canonical api_assign_task_v2 RPC; no parallel Task creation path.
+- Added transactional item lock, one-to-one link protection, idempotent retry behavior, audit origin, and non-destructive Task delete semantics.
+- Added linked Task state and the "Mở công việc" action to the item detail dialog; unsaved edits block conversion.
+
+Validation:
+- CP1–CP6 focused tests: 40/40 PASS.
+- CP6 focused tests: 19/19 PASS.
+- Required Task/Plan/Approval/Event Assignment/Journalism/Personal Plan/Attendance subset: 232/232 PASS after excluding one pre-existing unrelated Task Center UX assertion.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- Migration validation: PASS in a rolled-back development DB transaction; post-rollback schema unchanged.
+- git diff --check: PASS.
+
+Mapping:
+- Title, description, requirements, department, assignee, and due date map from persisted item data.
+- assigned is supported; unassigned and department_wide are rejected because canonical Task creation requires an assignee.
+- Canonical Task default status/priority remain authoritative; no background synchronization.
+
+Blockers:
+- No CP6 implementation blocker.
+- Full repository suite still contains pre-existing unrelated UX assertions on this older CP1 branch; no CP6 files cause those failures.
+
+Next:
+- Owner approval for Checkpoint 7; production remains untouched.
+
+Current Phase: COMPLETE; pre-production validation
+Current Task: closed without deployment
+
+Completed:
+- Audited the four 2026-09-25 smoke staff accounts, their foreign-key references, smoke-only tasks, batch idempotency row, and credential usage.
+- Created and checksum-verified /opt/thoidai-work/backups/smoke-cleanup-20260926T041807Z before cleanup.
+- Deleted three smoke staff rows, deactivated the smoke manager while preserving one historical work-schedule approver reference, reassigned Phòng Nội dung to the active real manager, and deleted four disposable smoke tasks plus their smoke-only dependencies.
+- Securely removed the unused /root/.secrets/thoidai-work/journalism-smoke-accounts.json credential file after confirming no runtime references.
+- Replaced the permanent recipient card grid on /tasks/assign with an interaction-only searchable combobox, inline scope, collapsed selected state, and preserved task-card state.
+
+Validation:
+- Targeted recipient, batch, approval, Journalism, Event Assignment, Personal Plan, Attendance, and Task Summary regressions: 123/123 PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Production build with lineage environment override for the isolated feature branch: PASS; required route manifest PASS.
+- Production service remained on commit 36e0f47ba0c402d73741ef865f446b38424bf65a; no deployment or restart performed.
+- Source committed and pushed as a39f75c4026ded4ce4e3894efcad9b2ff976ebf5 on codex/compact-recipient-picker.
+- Unauthenticated browser check: /tasks/assign redirects to /login; authenticated browser smoke was not run because no authorized live test session/credentials remained after cleanup.
+
+Blockers:
+- No implementation or data-integrity blocker.
+- Authenticated browser smoke remains owner-verification follow-up before any deployment.
+
+Next:
+- Separately authorize any deployment and authenticated browser verification.
+
+# Journalism J6G Status
+
+Current Phase: J6G implementation complete; pre-production validation
+Current Task: Manual Publication Reconciliation, focused tests, and immutable artifact without activation
+
+Completed:
+- Added scoped reconciliation route/RPC with mandatory reason and optimistic report version.
+- Preserved report identity, original reporter, and append-only J6E verification history.
+- Added dedicated audit action and Journalism Task detail action; MasterCMS and unrelated modules remain disconnected.
+
+Validation:
+- J6G + J6D/J6E/J6F/task-detail focused regression: 31/31 PASS.
+- TypeScript: PASS.
+- ESLint: PASS.
+- Production build: PASS (existing HR upload tracing warnings only).
+
+Blockers:
+- No implementation blocker; production migration/deploy intentionally not performed.
++
+## Department Plan V2 Checkpoint 7
+
+Current Phase: COMPLETE; Department Plan V2 Reports
+Current Task: Checkpoint 7 — read-only reports
+
+Completed:
+- Added canonical weekly/monthly Department Plan report page at /planning/reports.
+- Added server-authorized read-only API at /api/planning/department/reports.
+- Added server-side employee, work-status, and assignment-state filters with the existing Department Plan scope.
+- Added authoritative metrics for total, completed, in progress, planned, overdue, unassigned, and department-wide items.
+- Preserved lazy plan reads; report requests never create plan containers or Tasks.
+
+Validation:
+- CP7 focused tests: 21/21 PASS.
+- Department Plan CP1–CP7 tests: 68/68 PASS.
+- Affected regression: 354/358 PASS; four known pre-existing failures remain in J5C/J5D and leave/attendance tests.
+- Full source suite: 686/712 PASS; 26 known pre-existing failures remain on this older CP1 branch.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- git diff --check: PASS.
+
+Status mapping:
+- planned -> planned metric.
+- in_progress -> in-progress metric.
+- completed -> completed metric and never overdue.
+- cancelled -> final state, excluded from overdue.
+- unassigned and department_wide remain separate assignment metrics.
+
+Blockers:
+- No CP7 implementation blocker.
+- Production remains untouched; PDF export is intentionally deferred to Checkpoint 8.
+
+Next:
+- Owner approval for Checkpoint 8 — PDF Export. Do not begin Checkpoint 8 automatically.
+
+
+Next:
+- Owner review and separately authorized production deployment.
+
+# Event Assignment v1 Status
+
+Current Phase: Implementation complete; pre-production review
+Current Task: Event Assignment v1 implementation, tests, and immutable artifact prepared without activation
+
+Completed:
+- Read repository AGENTS.md and RuleCodex.
+- Inspected live schema read-only and selected additive work_schedules plus normalized assignment architecture.
+- Created and pushed branch feature/event-assignment-v1.
+- Created design spec and implementation plan.
+- Implemented validator, additive migration/RPCs, dedicated API, repository reads/writes, leadership UI, reporter calendar projection, and audit actions.
+
+Validation:
+- Event Assignment and existing focused regressions: 63/63 PASS.
+- TypeScript: PASS.
+- Scoped ESLint: PASS.
+- Production build: PASS.
+- Migration reviewed statically; production schema verified reverted to pre-feature state after an earlier transient smoke-test mutation.
+
+Artifact:
+- Created `/opt/releases/thoidai-work/3e84274-event-assignment-v1-20260921T150918Z`.
+- BUILD_ID, package.json, node_modules, runtime environment links, and release metadata validated.
+- Artifact activation and migration application are explicitly out of scope.
+
+Blockers:
+- No implementation blocker.
+- Production deployment requires separate owner authorization and migration review.
+
+Next:
+- Owner review of migration and artifact before a separately authorized production deployment.
+
+# Work Assignment Print Redesign Status
+
+Current Phase: bounded print-layout redesign complete; pre-production validation
+Current Task: artifact verification and owner review
+
+Completed:
+- Redesigned `/tasks/[id]/print` as an A4 portrait, grayscale-friendly assignment form.
+- Preserved server-side authorization and `TaskDetailDto` as the only data source.
+- Updated owner/assignee mapping and excluded watchers from collaborators.
+- Removed code, priority, watcher, and old footer fields; kept required signatures and print controls.
+
+Validation:
+- Print, Journalism print, Task Summary, and authorization regressions: 23/23 PASS.
+- TypeScript: PASS.
+- Canonical baseline guard: PASS.
+- Required-route guard: PASS.
+- Production build: PASS.
+- Standalone artifact verification: PASS.
+
+Blockers:
+- None. Production deployment intentionally not performed.
+
+Next:
+- Owner review and separately authorized production deployment.
+
+# Task Assignment Semantics Status
+
+Current Phase: implementation complete; pre-production validation
+Current Task: structured assignment origin, semantic display, and non-deployed artifact
+
+Completed:
+- Added additive `assignment_source` with controlled values `leadership_assigned`, `self_registered`, and `legacy_unknown`.
+- Added approval actor fields populated from existing task status events; creator data remains unchanged.
+- Updated Task Summary, Task Detail, approval queues, and Work Assignment Print to distinguish self-registered work and leadership assignment.
+- Added source filter and blocked employee completion actions while `pending_review`.
+- Added migration, focused tests, and artifact metadata references without applying production changes.
+
+Validation:
+- Targeted task/approval/print/filter tests: PASS.
+- Journalism, Event Assignment, Personal Plan, Online Work, Attendance regressions: PASS.
+- TypeScript, canonical baseline, route manifest, and production-like build: PASS.
+- Touched-file lint: 0 errors; existing Task Detail warnings remain.
+
+Blockers:
+- No implementation blocker; production migration/deploy intentionally not performed.
+
+Next:
+- Commit/push source and create the non-deployed standalone artifact for owner review.
+
+# Release Regression Hardening
+
+Current Phase: implementation complete; integration validation
+Current Task: merge onto integration/production, build and artifact verification
+
+Completed:
+- Added production ancestry and integration-branch guard.
+- Added authenticated API contract inventory/shape validation.
+- Added read-only schema, migration-state, and PostgREST checks.
+- Added artifact provenance fields and verification requirements.
+- Added cache permission guard, disk/deploy lock, atomic activation, and application rollback helpers.
+- Added authenticated GET contracts for Journalism topics and series list APIs.
+
+Validation:
+- Hardening focused tests: 17/17 PASS.
+- npm exec tsc --noEmit: PASS.
+- Production unchanged: YES.
+
+Blockers:
+- Feature branch intentionally fails release guard until merged into integration/production.
+- Authenticated contract smoke and live schema checks require secure runtime credentials/config; no credentials were created or exposed.
+- Existing production cache path is root-owned; guard will fail until release activation provisions service-owned cache.
+
+Next:
+- Commit/push implementation branch, merge into integration/production, run baseline/route/lint/build and package verification.
+
+# Release Regression Hardening Result
+
+Current Phase: COMPLETE; no production deployment requested
+Current Task: closed
+
+Implemented:
+- Dynamic current-production ancestry guard and mandatory `integration/production` release source.
+- Authenticated API contract inventory with valid empty-list response-shape checks.
+- Read-only database schema, migration-state, and PostgREST visibility guards.
+- Artifact provenance equality fields and standalone verification.
+- Disk guard, deploy lock, atomic activation, cache ownership guard, and application-only rollback helper.
+- Journalism topics/series authenticated GET list routes using the existing repository and scope checks.
+
+Validation:
+- Hardening focused tests: 17/17 PASS.
+- TypeScript: PASS.
+- ESLint: PASS.
+- Required-route manifest: PASS.
+- Production build with production env: PASS.
+- Standalone artifact verification: PASS; `/opt/build/thoidai-work/release-regression-hardening-final2` (~81MB).
+- Canary `/login`: HTTP 200; unauthenticated protected APIs correctly return 401.
+
+Evidence:
+- Current production commit: `e72e4969a0fd20f176bb906f4f2203d58f30a74e`.
+- Canonical integration branch: `integration/production` at `77b08a0`.
+- Confirmed current runtime issue: `.next/cache` is `root:root`, causing service-user EACCES on image cache writes; activation guard now fails closed and provisions service ownership for new releases.
+
+Blockers:
+- No smoke account credentials were created or exposed, so authenticated live contract smoke remains not-run.
+- Production unchanged.
+
+Follow Up:
+- Owner may separately authorize a controlled deployment and service-cache ownership normalization.
+
+## Department Plan Quick Assign V1
+
+Feature branch: `feature/department-plan-quick-assign-v1`
+Migration: `20261001120000_department_plan_quick_assign_v1.sql`
+
+Implemented:
+- Added an atomic, service-role-only Department Plan quick-assign RPC.
+- Reused `department_plan_items.linked_task_id` and canonical `api_assign_task_v2`.
+- Added compact assignee/due date/due time/priority/note UI and linked Task status projection.
+- Preserved normal `STANDARD` Task workflow, Task Approval, and Global Mutation Policy semantics.
+
+Validation:
+- Quick Assign focused tests: 6/6 PASS.
+- Department Plan checkpoint/navigation/report/PDF regressions: PASS.
+- Task Assignment, Task Approval, creator mutation, admin edit, and Global Mutation Policy regressions: PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- Required-route manifest: PASS.
+- `git diff --check`: PASS.
+- Disposable production-compatible PostgreSQL rehearsal: PASS; valid assignment, duplicate rejection, cross-department rejection, and unauthorized actor rejection verified.
+
+Safety:
+- Production unchanged: NONE.
+- Migration not applied to production.
+- Feature branch intentionally fails the release lineage guard until merged into `integration/production`.
+
+## Department Plan V2 Checkpoint 8
+
+Current Phase: COMPLETE; Department Plan PDF export
+Current Task: Checkpoint 8 — server-side PDF export, pre-production validation
+
+Completed:
+- Added an authenticated, read-only `GET /api/planning/department/reports/pdf` endpoint backed by the shared CP7 authorization and report repository.
+- Added A4 landscape PDF output with embedded DejaVu Sans Unicode fonts, Vietnamese text support, weekly/monthly period labels, active filters, CP7 metrics, detail rows, empty state, repeated headers, page numbers, and safe filenames.
+- Added a client-only `Xuất PDF` action that preserves current period, department, employee, status, and assignment filters without mutating report state or creating records.
+- Added the DejaVu font license alongside bundled font assets.
+
+Validation:
+- CP8 focused tests: 5/5 PASS; CP1–CP8 Department Plan tests: 73/73 PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS.
+- Required-route manifest: PASS.
+- Production-like build with lineage and production env overrides: PASS.
+- Representative weekly, monthly, filtered, empty, Vietnamese-heavy, and 45-row multipage PDFs generated in `/tmp`; all had valid `%PDF-` signatures and multipage output reached 4 pages.
+- `git diff --check`: PASS.
+
+Safety:
+- Report/PDF path is GET-only and read-only; no DB migration, Task mutation, export storage, scheduler, email, or production activation was performed.
+- Production remains untouched; no restart or deployment performed.
+
+Next:
+- Owner review and separately authorized integration/deployment checkpoint.
+## Quick Report UX V2
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: unified date-only Quick Report form
+
+Completed:
+- Replaced the single/batch tabs with one unified form containing one row by default, add/remove row controls, and one atomic submit path.
+- Replaced user-entered HH:mm fields with start/completion dates; same-day completion is valid, completion before start is rejected, and in-progress rows may omit completion date.
+- Preserved REPORT_ONLY workflow, self-report authorization, user/role permission checks, max 50 rows, idempotency, reporting visibility, and approval isolation.
+- Added a minimal additive RPC replacement migration to validate date-only rows and retain existing task storage.
+
+Validation:
+- Focused Quick Report/date/UI/server/reporting tests: 17/17 PASS.
+- RBAC, mutation, approval, and Task Center regressions: 31/31 PASS.
+- TypeScript, changed-file ESLint, route manifest, and git diff check: PASS.
+- Direct production-like Next build with production environment: PASS.
+- Disposable PostgreSQL function rehearsal: PASS; no production mutation.
+
+Blockers:
+- The normal build preflight cannot pass in this worktree because its local `integration/production` branch is stale at `4ca39fd`; canonical `origin/integration/production` and this branch base are `b56d0df`.
+
+Production mutation: NONE.
+
+Next:
+- Refresh the local integration ref in a clean integration worktree, rerun the normal lineage-gated build, then owner review.
+
+
+# Department Period Plan V2 — 2026-10-03
+
+Current Phase: COMPLETE — implemented and deployed
+Current Task: Department Period Plan V2
+
+Completed:
+- Added additive period metadata, close snapshots, carry-forward fields, and Task × Plan-period unique index.
+- Added bounded candidate scan, preview/confirm creation, manual/import preview, user/task matching signals, auto-link hooks, close RPC, and DOCX export.
+- Applied migration 20261003100000_department_period_plan_v2 after production backup; rehearsal and invariant validation passed.
+- Deployed immutable release department-period-plan-v2-a323414 with rollback pointers preserved.
+
+Validation:
+- Department Period Plan V2 targeted tests: PASS (3/3).
+- Department Plan/Work Report/Quick Report/task approval regression set: 126/127 PASS; one pre-existing stale Quick Report UI contract assertion remains unrelated.
+- TypeScript: PASS; changed-file ESLint: PASS; production-like build: PASS; standalone artifact: PASS.
+- Production service active, NRestarts=0, /login=200, protected routes return 401/307, cache ownership PASS.
+- Authenticated live smoke: NOT VERIFIED (no authenticated session supplied).
+
+Blockers:
+- none for deployment.
+
+Follow Up:
+- Expand the DOCX parser for additional department-specific Word layouts and add an authenticated end-to-end browser smoke when a session is available.
+
+Next:
+- Monitor release and rollback pointers; keep current/previous/rollback-2 retention.
+
+
+## Department Plan Canonical Saturday-Friday Week
+
+Current Phase: implementation and production validation
+Current Task: fix Department Plan weekly boundary from Monday-Sunday to Saturday-Friday
+
+Completed:
+- Confirmed live source and database constraints were both Monday-based.
+- Changed the shared Department Plan helper and Excel fixtures to Saturday-Friday.
+- Added explicit `plan_id` loading so historical plans keep their stored dates and remain scoped.
+- Added additive migration 20261004100000_department_plan_saturday_friday.sql; no historical rows are rewritten.
+
+Validation:
+- Focused Department Plan regression: 33/33 PASS.
+- Migration rehearsal on restored disposable PostgreSQL database: PASS.
+- Production backup created before migration: /opt/thoidai-work/backups/department-plan-saturday-friday-pre-20261004T020238Z.dump.
+- Production migration applied and schema/history checks: PASS.
+
+Blockers:
+- none
+
+Next:
+- Build/package immutable release, run artifact and smoke checks, then activate production.
+
+## Admin Attendance Note + Weekend Filter
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: separate Admin attendance notes and hide standard weekend rows
+
+Completed:
+- Added the scoped `attendance_admin_notes` table and service-role-only admin upsert RPC with canonical admin authorization and audit history.
+- Added Attendance API/UI support for notes on existing logs and weekday workdays without an attendance log, without modifying attendance punch/status/device fields.
+- Excluded Saturday and Sunday from standard Attendance rows, generated rows, summaries, counts, pagination, and empty states while preserving database records.
+
+Validation:
+- Focused Attendance, Wise Eye, late-work exception, access, merge, and weekend/admin-note tests: 48/48 PASS.
+- Disposable PostgreSQL migration rehearsal, including repeat/idempotency run and privilege checks: PASS.
+- TypeScript, changed-file ESLint, route manifest, and git diff check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Complete the canonical lineage-gated production-like build, then push this feature branch for owner review; do not deploy in this phase.
+
+## Weekly Report Add Work
+
 Current Phase: implementation
 Current Task: Task 2 - repository/service and Quick Report boundary
 
@@ -6,18 +540,12 @@ Completed:
 - Created isolated branch from weekly-report reopen/versioning commit 8a94e2b.
 - Added pure addable-row filtering and server allow-list model contracts.
 
-In Progress:
-- Hydrate server-scoped candidates and enforce the allow-list before draft mutation.
-
 Validation:
-- Baseline worktree clean.
-- Dependencies installed with `npm install --ignore-scripts`.
+- Task 1 focused model tests: 19/19 PASS.
+- Production unchanged.
 
 Blockers:
 - None.
 
-Follow Up:
-- Check build disk gate before production-like build.
-
 Next:
-- Complete Task 2 focused server tests, then draft UI integration.
+- Hydrate server-scoped candidates and enforce the allow-list before draft mutation.
