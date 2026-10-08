@@ -81,3 +81,46 @@ test("weekly report data failures render an error state instead of redirecting t
   assert.doesNotMatch(page, /if \(!result\.ok\) redirect\("\/tasks"\)/);
   assert.match(page, /Không thể tải Báo cáo tuần\. Vui lòng thử lại\./);
 });
+
+test("completed own reports expose server-verified reopen action and exact modal copy", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /reopenEligibility/);
+  assert.match(component, /eligible\s*===\s*true/);
+  assert.match(component, /Mở lại báo cáo/);
+  assert.match(component, /Lịch sử phiên bản|hoàn thành vẫn được lưu trong lịch sử/);
+  assert.match(component, /Lý do mở lại \*/);
+  assert.match(component, /Huỷ/);
+});
+
+test("reopen modal validates reason, cancels without fetch, and posts only reportId and reason", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /reason\.trim\(\)\.length\s*<\s*5/);
+  assert.match(component, /\/api\/reports\/weekly\/reopen/);
+  assert.match(component, /JSON\.stringify\(\{\s*reportId/);
+  assert.match(component, /setReopenOpen\(false\)/);
+  assert.match(component, /Đang gửi|Đang xử lý/);
+});
+
+test("reopened drafts are editable and show completion controls while completed history stays read-only", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /Đang chỉnh sửa lại/);
+  assert.match(component, /const reopened\s*=\s*!completed\s*&&\s*!historical/);
+  assert.match(component, /disabled=\{completed \|\| historical\}/);
+  assert.match(component, /Hoàn thành báo cáo/);
+});
+
+test("version history labels current and replaced versions without edit controls or internal IDs", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /Lịch sử phiên bản/);
+  assert.match(component, /Phiên bản hiện tại|Đang dùng/);
+  assert.match(component, /Đã thay thế|Phiên bản cũ/);
+  assert.match(component, /version_no/);
+  assert.match(component, /completed_at/);
+  assert.doesNotMatch(component, /version\.id.*textarea|version\.id.*button/);
+});
+
+test("reopened older-week drafts remain reachable from report history", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /\/reports\/weekly\?periodStart=\$\{encodeURIComponent\(start\)\}/);
+  assert.match(component, /Chỉnh sửa bản nháp/);
+});
