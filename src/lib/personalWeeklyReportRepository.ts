@@ -5,6 +5,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import {
   buildNextWeekCandidates,
   dedupePersonalWeeklyTasks,
+  filterPersonalWeeklyAddableRows,
   personalWeeklyPeriod,
   type PersonalWeeklyCurrentRow,
   type PersonalWeeklyNextRow,
@@ -14,6 +15,7 @@ import {
   boundPersonalWeeklyVersions,
   buildPersonalWeeklyReopenRpcArgs,
   normalizePersonalWeeklyEligibility,
+  type PersonalWeeklyAddableRow,
 } from "@/lib/personalWeeklyReport";
 import { workScheduleRepository } from "@/lib/workScheduleRepository";
 
@@ -46,6 +48,9 @@ export type PersonalWeeklyReportLoad = {
   currentReport: PersonalWeeklyReportRow | null;
   history: PersonalWeeklyReportRow[];
   currentRows: PersonalWeeklyCurrentRow[];
+  eligibleCurrentRows: PersonalWeeklyCurrentRow[];
+  addableCurrentRows: PersonalWeeklyAddableRow[];
+  canCreateQuickReport: boolean;
   nextRows: PersonalWeeklyNextRow[];
   proposals: PersonalWeeklyProposal[];
   difficulties: string;
@@ -228,7 +233,7 @@ function snapshotRows(report: PersonalWeeklyReportRow) {
 export async function getPersonalWeeklyReport(
   actorId: string,
   period: { current: PersonalWeeklyPeriod; next: PersonalWeeklyPeriod } | PersonalWeeklyPeriod,
-  dependencies: { db?: Db; reportId?: string } = {},
+  dependencies: { db?: Db; reportId?: string; canCreateQuickReport?: boolean } = {},
 ): Promise<PersonalWeeklyReportLoad> {
   const db = dependencies.db ?? serverSupabase;
   if (dependencies.reportId) {
@@ -238,7 +243,7 @@ export async function getPersonalWeeklyReport(
     const periods = { current: reportPeriod, next: personalWeeklyPeriod(report.period_start).next };
     const versions = await getVersions(db, actorId, report.id);
     const reopenEligibility = await getReopenEligibility(db, actorId, report);
-    return { period: periods, employee: frozen.employee, report, currentReport: report, history: await getHistory(db, actorId), currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: true, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history: await getHistory(db, actorId), currentRows: frozen.currentRows, eligibleCurrentRows: frozen.currentRows, addableCurrentRows: [], canCreateQuickReport: false, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: true, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
   }
   const periods = "current" in period ? period : personalWeeklyPeriod(period.start);
   const [employee, report, history] = await Promise.all([
@@ -254,14 +259,25 @@ export async function getPersonalWeeklyReport(
     const frozen = snapshotRows(report);
     const versions = await getVersions(db, actorId, report.id);
     const reopenEligibility = await getReopenEligibility(db, actorId, report);
-    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, eligibleCurrentRows: frozen.currentRows, addableCurrentRows: [], canCreateQuickReport: false, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
   }
   const currentRows = await getCanonicalRows(db, actorId, periods.current);
+  const savedDraft = report?.status === "DRAFT" && report.draft_payload && typeof report.draft_payload === "object" ? report.draft_payload : null;
+  const draftRows = savedDraft && Array.isArray(savedDraft.currentRows) ? dedupePersonalWeeklyTasks(savedDraft.currentRows as Record<string, unknown>[]) : currentRows;
+  const selectedTaskIds = draftRows.map((row) => row.taskId);
+  const excludedTaskIds = new Set(
+    savedDraft && Array.isArray(savedDraft.excludedTaskIds)
+      ? savedDraft.excludedTaskIds.filter((id): id is string => typeof id === "string")
+      : [],
+  );
+  const addableCurrentRows = report?.status === "DRAFT"
+    ? filterPersonalWeeklyAddableRows(currentRows, selectedTaskIds).filter((row) => !excludedTaskIds.has(row.taskId))
+    : [];
   const nextRows = buildNextWeekCandidates(currentRows, periods.next);
   const proposals = await getProposals(actorId, periods.next);
   const versions = report ? await getVersions(db, actorId, report.id) : [];
   const reopenEligibility = report ? await getReopenEligibility(db, actorId, report) : { eligible: false, reason: "not_completed" as const, isAdmin: false };
-  return { period: periods, employee, report, currentReport: report, history, currentRows, nextRows, proposals, difficulties: report?.difficulties ?? "", historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
+  return { period: periods, employee, report, currentReport: report, history, currentRows: draftRows, eligibleCurrentRows: currentRows, addableCurrentRows, canCreateQuickReport: dependencies.canCreateQuickReport === true, nextRows, proposals, difficulties: report?.difficulties ?? "", historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility };
 }
 
 export type PersonalWeeklyMutationInput = {

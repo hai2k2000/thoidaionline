@@ -19,6 +19,7 @@ import {
 import {
   personalWeeklyPeriod,
   normalizePersonalWeeklyReopenReason,
+  validatePersonalWeeklyCurrentRows,
   validatePersonalWeeklyDraft,
   type PersonalWeeklyCurrentRow,
   type PersonalWeeklyNextRow,
@@ -78,19 +79,6 @@ function mutationInput(input: Input): PersonalWeeklyMutationInput {
   };
 }
 
-function mergePeriodCommentary(canonical: PersonalWeeklyCurrentRow[], draft: PersonalWeeklyCurrentRow[]) {
-  const byId = new Map(draft.map((row) => [row.taskId, row]));
-  return canonical.map((row) => {
-    const commentary = byId.get(row.taskId);
-    if (!commentary) return row;
-    const result = { ...row } as PersonalWeeklyCurrentRow & Record<string, unknown>;
-    for (const key of ["commentary", "resultText", "notes", "periodCommentary"]) {
-      if (typeof commentary[key] === "string") result[key] = commentary[key];
-    }
-    return result;
-  });
-}
-
 export function buildPersonalWeeklySnapshot(
   loaded: PersonalWeeklyReportLoad,
   draftPayload: Record<string, unknown>,
@@ -99,10 +87,10 @@ export function buildPersonalWeeklySnapshot(
   const validation = validatePersonalWeeklyDraft(draftPayload);
   if (!validation.ok) throw Object.assign(new Error(validation.message), { code: "22023" });
   const draft = validation.value;
-  const currentRows = mergePeriodCommentary(
-    loaded.currentRows,
-    draft.currentRows,
-  );
+  const allowedRows = loaded.eligibleCurrentRows;
+  const current = validatePersonalWeeklyCurrentRows(draft.currentRows, allowedRows);
+  if (!current.ok) throw Object.assign(new Error(current.message), { code: "42501" });
+  const currentRows = current.value;
   const allowedNext = new Set(loaded.nextRows.map((row) => row.taskId));
   const nextRows = draft.nextRows.filter((row) => allowedNext.has(row.taskId));
   return {
@@ -123,7 +111,14 @@ export function buildPersonalWeeklySnapshot(
 
 export async function savePersonalWeeklyDraft(actorId: string, input: Input): Promise<PersonalWeeklyResult<PersonalWeeklyReportRow>> {
   try {
-    const saved = await saveRepository(actorId, mutationInput(input));
+    const mutation = mutationInput(input);
+    const loaded = await getPersonalWeeklyReport(actorId, personalWeeklyPeriod(mutation.period.start));
+    const current = validatePersonalWeeklyCurrentRows(
+      (mutation.draftPayload.currentRows ?? []) as PersonalWeeklyCurrentRow[],
+      loaded.eligibleCurrentRows,
+    );
+    if (!current.ok) throw Object.assign(new Error(current.message), { code: "42501" });
+    const saved = await saveRepository(actorId, { ...mutation, draftPayload: { ...mutation.draftPayload, currentRows: current.value } });
     return saved.ok ? saved : { ok: false, error: reportError(saved.error) };
   } catch (error) {
     return { ok: false, error: reportError(error) };
@@ -176,7 +171,7 @@ export async function loadPersonalWeeklyReport(request: Request): Promise<{ ok: 
     const params = new URL(request.url).searchParams;
     const reportId = params.get("report")?.trim() || undefined;
     const period = periodFromInput({ periodStart: params.get("periodStart") ?? params.get("period") ?? undefined });
-    const data = await getPersonalWeeklyReport(guard.actor.id, period, { reportId });
+    const data = await getPersonalWeeklyReport(guard.actor.id, period, { reportId, canCreateQuickReport: guard.actor.rbacPermissions.includes("task.quick_report.create") });
     return { ok: true, data };
   } catch (error) {
     const mapped = reportError(error);
