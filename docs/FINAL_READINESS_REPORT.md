@@ -57,7 +57,7 @@ Do not run `supabase db push` or `supabase db reset` while the four legacy migra
 
 `20260909121500`, `20260909143000`, `20260911083000`, `20260911190000`.
 
-Future Phase 1A migrations must use explicit, reviewed per-file execution after the runner policy is updated. No legacy migration was modified or replayed.
+Future production migrations must use `scripts/production/safe-apply-migration.sh` with one explicit file and named DB URL environment variable. No legacy migration was modified or replayed.
 
 ## H. Test data and cleanup
 

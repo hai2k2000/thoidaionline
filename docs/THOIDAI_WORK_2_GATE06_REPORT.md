@@ -22,9 +22,9 @@ Evidence reviewed:
 - No `.github` CI workflow exists.
 - `deploy/systemd` contains app/evaluation/recurrence/port-guard units only; no migration unit or startup hook.
 - `supabase/config.toml` has `[db.migrations] enabled=true`, so Supabase CLI `db push/reset` would consider ordered files in `supabase/migrations`.
-- Production has no `supabase` CLI/systemd migration runner; prior changes are documented as manual `psql`/per-file operations.
+- Production has no automatic migration hook; prior changes were manual `psql`/per-file operations. The canonical repository runner is now `scripts/production/safe-apply-migration.sh` and must be invoked explicitly before a release.
 
-Conclusion: the application does not automatically run unregistered migrations. A future `supabase db push` or `db reset` would be unsafe while four legacy files are unresolved because the CLI could replay them. Operational rule: do not run bulk Supabase migration commands until the legacy files are quarantined/baselined or explicitly reconciled.
+Conclusion: the application does not automatically run unregistered migrations. A future `supabase db push` or `db reset` would be unsafe while four legacy files are unresolved because the CLI could replay them. Operational rule: use the per-file runner; never run bulk Supabase migration commands or replay legacy files.
 
 ## C. Ledger before/after
 
