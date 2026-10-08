@@ -10,7 +10,9 @@ import {
   type PersonalWeeklyNextRow,
   type PersonalWeeklyPeriod,
   type PersonalWeeklyReportVersion,
-  type PersonalWeeklyReopenEligibility,
+  boundPersonalWeeklyVersions,
+  buildPersonalWeeklyReopenRpcArgs,
+  personalWeeklyReopenEligibility,
 } from "@/lib/personalWeeklyReport";
 import { workScheduleRepository } from "@/lib/workScheduleRepository";
 
@@ -142,7 +144,19 @@ async function getCurrentReport(db: Db, actorId: string, period: PersonalWeeklyP
   return result.data as PersonalWeeklyReportRow | null;
 }
 
-async function getHistoricalReport(db: Db, actorId: string, reportId: string, isAdmin = false) {
+async function verifiedAdmin(db: Db, actorId: string): Promise<boolean> {
+  const result = await db.from("staff_users")
+    .select("roles(code,role_permissions(can_manage_rubrics))")
+    .eq("id", actorId).eq("active", true).maybeSingle();
+  errorOrThrow(result);
+  const roles = result.data?.roles as any;
+  const permission = roles?.role_permissions;
+  const permissions = Array.isArray(permission) ? permission : permission ? [permission] : [];
+  return roles?.code === "admin" && permissions.some((item: any) => item?.can_manage_rubrics === true);
+}
+
+async function getHistoricalReport(db: Db, actorId: string, reportId: string) {
+  const isAdmin = await verifiedAdmin(db, actorId);
   let query = db.from("personal_weekly_reports").select("*").eq("id", reportId).eq("status", "COMPLETED");
   if (!isAdmin) query = query.eq("employee_id", actorId);
   const result = await query.maybeSingle();
@@ -161,7 +175,8 @@ async function getHistory(db: Db, actorId: string) {
   return ((result.data ?? []) as PersonalWeeklyReportRow[]);
 }
 
-async function getVersions(db: Db, actorId: string, reportId: string, isAdmin = false): Promise<PersonalWeeklyReportVersion[]> {
+async function getVersions(db: Db, actorId: string, reportId: string): Promise<PersonalWeeklyReportVersion[]> {
+  const isAdmin = await verifiedAdmin(db, actorId);
   let parentQuery = db.from("personal_weekly_reports").select("id").eq("id", reportId);
   if (!isAdmin) parentQuery = parentQuery.eq("employee_id", actorId);
   const parent = await parentQuery.maybeSingle();
@@ -170,14 +185,7 @@ async function getVersions(db: Db, actorId: string, reportId: string, isAdmin = 
   const result = await db.from("personal_weekly_report_versions").select("*")
     .eq("report_id", reportId).order("version_no", { ascending: false }).limit(PERSONAL_WEEKLY_HISTORY_LIMIT);
   errorOrThrow(result);
-  return (result.data ?? []) as PersonalWeeklyReportVersion[];
-}
-
-function eligibility(report: PersonalWeeklyReportRow | null, actorId: string, isAdmin = false): PersonalWeeklyReopenEligibility {
-  if (!report || report.status !== "COMPLETED") return { eligible: false, reason: "not_completed", isAdmin };
-  const completedAt = report.completed_at ? Date.parse(report.completed_at) : NaN;
-  const eligible = isAdmin || (report.employee_id === actorId && Number.isFinite(completedAt) && Date.now() <= completedAt + 24 * 60 * 60 * 1000);
-  return { eligible, reason: eligible ? "available" : report.employee_id === actorId ? "expired" : "forbidden", isAdmin };
+  return boundPersonalWeeklyVersions((result.data ?? []) as PersonalWeeklyReportVersion[], PERSONAL_WEEKLY_HISTORY_LIMIT);
 }
 
 async function getCanonicalRows(db: Db, actorId: string, period: PersonalWeeklyPeriod) {
@@ -212,16 +220,17 @@ function snapshotRows(report: PersonalWeeklyReportRow) {
 export async function getPersonalWeeklyReport(
   actorId: string,
   period: { current: PersonalWeeklyPeriod; next: PersonalWeeklyPeriod } | PersonalWeeklyPeriod,
-  dependencies: { db?: Db; reportId?: string; isAdmin?: boolean } = {},
+  dependencies: { db?: Db; reportId?: string } = {},
 ): Promise<PersonalWeeklyReportLoad> {
   const db = dependencies.db ?? serverSupabase;
   if (dependencies.reportId) {
-    const report = await getHistoricalReport(db, actorId, dependencies.reportId, dependencies.isAdmin === true);
+    const report = await getHistoricalReport(db, actorId, dependencies.reportId);
     const frozen = snapshotRows(report);
     const reportPeriod = { start: report.period_start, end: report.period_end };
     const periods = { current: reportPeriod, next: personalWeeklyPeriod(report.period_start).next };
-    const versions = await getVersions(db, actorId, report.id, dependencies.isAdmin === true);
-    return { period: periods, employee: frozen.employee, report, currentReport: report, history: await getHistory(db, actorId), currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: true, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: eligibility(report, actorId, dependencies.isAdmin === true) };
+    const versions = await getVersions(db, actorId, report.id);
+    const isAdmin = await verifiedAdmin(db, actorId);
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history: await getHistory(db, actorId), currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: true, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: personalWeeklyReopenEligibility(report, actorId, isAdmin) };
   }
   const periods = "current" in period ? period : personalWeeklyPeriod(period.start);
   const [employee, report, history] = await Promise.all([
@@ -235,14 +244,16 @@ export async function getPersonalWeeklyReport(
   }
   if (report?.status === "COMPLETED") {
     const frozen = snapshotRows(report);
-    const versions = await getVersions(db, actorId, report.id, dependencies.isAdmin === true);
-    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: eligibility(report, actorId, dependencies.isAdmin === true) };
+    const versions = await getVersions(db, actorId, report.id);
+    const isAdmin = await verifiedAdmin(db, actorId);
+    return { period: periods, employee: frozen.employee, report, currentReport: report, history, currentRows: frozen.currentRows, nextRows: frozen.nextRows, proposals: frozen.proposals, difficulties: frozen.difficulties, historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: personalWeeklyReopenEligibility(report, actorId, isAdmin) };
   }
   const currentRows = await getCanonicalRows(db, actorId, periods.current);
   const nextRows = buildNextWeekCandidates(currentRows, periods.next);
   const proposals = await getProposals(actorId, periods.next);
-  const versions = report ? await getVersions(db, actorId, report.id, dependencies.isAdmin === true) : [];
-  return { period: periods, employee, report, currentReport: report, history, currentRows, nextRows, proposals, difficulties: report?.difficulties ?? "", historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: eligibility(report, actorId, dependencies.isAdmin === true) };
+  const versions = report ? await getVersions(db, actorId, report.id) : [];
+  const isAdmin = report ? await verifiedAdmin(db, actorId) : false;
+  return { period: periods, employee, report, currentReport: report, history, currentRows, nextRows, proposals, difficulties: report?.difficulties ?? "", historical: false, versions, currentVersionNo: versions[0]?.version_no ?? null, reopenEligibility: personalWeeklyReopenEligibility(report, actorId, isAdmin) };
 }
 
 export type PersonalWeeklyMutationInput = {
@@ -279,14 +290,10 @@ export async function completePersonalWeeklyReport(actorId: string, input: Perso
 
 export async function reopenPersonalWeeklyReport(actorId: string, reportId: string, reason: string, dependencies: { db?: Db } = {}) {
   const db = dependencies.db ?? serverSupabase;
-  const result = await db.rpc("api_reopen_personal_weekly_report", {
-    p_actor: actorId,
-    p_report_id: reportId,
-    p_reason: reason,
-  });
+  const result = await db.rpc("api_reopen_personal_weekly_report", buildPersonalWeeklyReopenRpcArgs(actorId, reportId, reason));
   return result.error ? { ok: false as const, error: result.error } : { ok: true as const, data: result.data as PersonalWeeklyReportRow };
 }
 
-export async function listPersonalWeeklyReportVersions(actorId: string, reportId: string, dependencies: { db?: Db; isAdmin?: boolean } = {}) {
-  return getVersions(dependencies.db ?? serverSupabase, actorId, reportId, dependencies.isAdmin === true);
+export async function listPersonalWeeklyReportVersions(actorId: string, reportId: string, dependencies: { db?: Db } = {}) {
+  return getVersions(dependencies.db ?? serverSupabase, actorId, reportId);
 }

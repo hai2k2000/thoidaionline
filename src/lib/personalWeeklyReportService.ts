@@ -17,6 +17,7 @@ import {
 } from "@/lib/personalWeeklyReportRepository";
 import {
   personalWeeklyPeriod,
+  normalizePersonalWeeklyReopenReason,
   validatePersonalWeeklyDraft,
   type PersonalWeeklyCurrentRow,
   type PersonalWeeklyNextRow,
@@ -143,11 +144,11 @@ export async function completePersonalWeeklyReport(actorId: string, input: Input
 
 export async function reopenPersonalWeeklyReport(actorId: string, reportId: string, reason: string): Promise<PersonalWeeklyResult<PersonalWeeklyReportRow>> {
   try {
-    const trimmed = typeof reason === "string" ? reason.trim() : "";
-    if (trimmed.length < 5 || trimmed.length > 500) {
+    const normalized = normalizePersonalWeeklyReopenReason(reason);
+    if (!normalized.ok) {
       return { ok: false, error: { code: "22023", message: "Reopen reason must be 5-500 characters" } };
     }
-    const result = await reopenRepository(actorId, reportId, trimmed);
+    const result = await reopenRepository(actorId, reportId, normalized.value);
     return result.ok ? result : { ok: false, error: reportError(result.error) };
   } catch (error) {
     return { ok: false, error: reportError(error) };
@@ -172,7 +173,7 @@ export async function loadPersonalWeeklyReport(request: Request): Promise<{ ok: 
     const params = new URL(request.url).searchParams;
     const reportId = params.get("report")?.trim() || undefined;
     const period = periodFromInput({ periodStart: params.get("periodStart") ?? params.get("period") ?? undefined });
-    const data = await getPersonalWeeklyReport(guard.actor.id, period, { reportId, isAdmin: guard.actor.role_code === "admin" });
+    const data = await getPersonalWeeklyReport(guard.actor.id, period, { reportId });
     return { ok: true, data };
   } catch (error) {
     const mapped = reportError(error);

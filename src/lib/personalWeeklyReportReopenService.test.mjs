@@ -1,31 +1,35 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import {
+  boundPersonalWeeklyVersions,
+  buildPersonalWeeklyReopenRpcArgs,
+  normalizePersonalWeeklyReopenReason,
+  personalWeeklyReopenEligibility,
+} from "./personalWeeklyReport.ts";
 
-const repository = readFileSync(new URL("./personalWeeklyReportRepository.ts", import.meta.url), "utf8");
-const service = readFileSync(new URL("./personalWeeklyReportService.ts", import.meta.url), "utf8");
-const model = readFileSync(new URL("./personalWeeklyReport.ts", import.meta.url), "utf8");
-
-test("reopen repository maps only actor, report and reason to the RPC", () => {
-  assert.match(repository, /api_reopen_personal_weekly_report/);
-  assert.match(repository, /p_actor:\s*actorId/);
-  assert.match(repository, /p_report_id:\s*reportId/);
-  assert.match(repository, /p_reason:\s*reason/);
-  const reopen = repository.match(/api_reopen_personal_weekly_report[\s\S]*?\n}\n/)?.[0] ?? "";
-  assert.doesNotMatch(reopen, /p_employee|employeeId|userId/);
+test("reopen RPC args contain only actor, report and reason", () => {
+  assert.deepEqual(buildPersonalWeeklyReopenRpcArgs("actor-1", "report-1", "fixed reason"), {
+    p_actor: "actor-1", p_report_id: "report-1", p_reason: "fixed reason",
+  });
 });
 
-test("reopen service trims and validates reason before calling repository", () => {
-  assert.match(service, /reason\.trim\(\)/);
-  assert.match(service, /5.*500|500.*5/);
-  assert.match(service, /requireMutationActor\(\)/);
+test("reopen reason trims and rejects empty, short and long values", () => {
+  assert.deepEqual(normalizePersonalWeeklyReopenReason("  valid reason  "), { ok: true, value: "valid reason" });
+  assert.equal(normalizePersonalWeeklyReopenReason("   ").ok, false);
+  assert.equal(normalizePersonalWeeklyReopenReason("no").ok, false);
+  assert.equal(normalizePersonalWeeklyReopenReason("x".repeat(501)).ok, false);
 });
 
-test("version model and load expose bounded, snapshot-only history", () => {
-  for (const field of ["id", "report_id", "version_no", "employee_id", "department_id", "period_start", "period_end", "snapshot_payload", "difficulties", "completed_by", "completed_at", "created_at"]) {
-    assert.match(model + repository, new RegExp(field));
-  }
-  assert.match(repository, /versionHistory|versions/);
-  assert.match(repository, /limit\(PERSONAL_WEEKLY_HISTORY_LIMIT\)/);
-  assert.match(repository, /snapshotRows/);
+test("version history is newest-first and bounded", () => {
+  const versions = boundPersonalWeeklyVersions([{ version_no: 1 }, { version_no: 4 }, { version_no: 2 }, { version_no: 3 }], 3);
+  assert.deepEqual(versions.map((version) => version.version_no), [4, 3, 2]);
+});
+
+test("completed employee eligibility remains unknown until database authorization evaluates the 24h window", () => {
+  assert.deepEqual(personalWeeklyReopenEligibility({ status: "COMPLETED", employee_id: "owner" }, "owner", false), {
+    eligible: null, reason: "unknown", isAdmin: false,
+  });
+  assert.deepEqual(personalWeeklyReopenEligibility({ status: "COMPLETED", employee_id: "owner" }, "admin", true), {
+    eligible: true, reason: "available", isAdmin: true,
+  });
 });

@@ -41,10 +41,30 @@ export type PersonalWeeklyReportVersion = {
 };
 
 export type PersonalWeeklyReopenEligibility = {
-  eligible: boolean;
-  reason: "available" | "already_draft" | "expired" | "forbidden" | "not_completed";
+  eligible: boolean | null;
+  reason: "available" | "already_draft" | "expired" | "forbidden" | "not_completed" | "unknown";
   isAdmin: boolean;
 };
+
+export function normalizePersonalWeeklyReopenReason(reason: unknown): { ok: true; value: string } | { ok: false; code: "22023" } {
+  const value = typeof reason === "string" ? reason.trim() : "";
+  return value.length >= 5 && value.length <= 500 ? { ok: true, value } : { ok: false, code: "22023" };
+}
+
+export function buildPersonalWeeklyReopenRpcArgs(actorId: string, reportId: string, reason: string) {
+  return { p_actor: actorId, p_report_id: reportId, p_reason: reason };
+}
+
+export function boundPersonalWeeklyVersions<T extends { version_no: number }>(versions: readonly T[], limit = 12): T[] {
+  return [...versions].sort((a, b) => b.version_no - a.version_no).slice(0, limit);
+}
+
+export function personalWeeklyReopenEligibility(report: { status: string; employee_id: string } | null, actorId: string, isAdmin: boolean): PersonalWeeklyReopenEligibility {
+  if (!report || report.status !== "COMPLETED") return { eligible: false, reason: "not_completed", isAdmin };
+  if (isAdmin) return { eligible: true, reason: "available", isAdmin: true };
+  if (report.employee_id !== actorId) return { eligible: false, reason: "forbidden", isAdmin: false };
+  return { eligible: null, reason: "unknown", isAdmin: false };
+}
 
 export type PersonalWeeklyNextRow = PersonalWeeklyCurrentRow & {
   period: PersonalWeeklyPeriod;
