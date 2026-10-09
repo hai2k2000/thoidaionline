@@ -57,6 +57,17 @@ export type AssetLifecycleInput = {
   actorId?: string;
 };
 
+export type AssetCreateInput = {
+  asset_code?: string | null;
+  asset_name: string;
+  category: string;
+  serial_number?: string | null;
+  status?: string | null;
+  note?: string | null;
+};
+
+export type AssetUpdateInput = Partial<AssetCreateInput>;
+
 type QueryResult<T> = { data: T[] | null; error: { message?: string } | null };
 
 const errorText = (error: { message?: string } | null, fallback: string) => error?.message || fallback;
@@ -87,6 +98,30 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     return asset ? ok(asset) : fail("asset_not_found");
   }
 
+  async function createAssetForActor(actor: AssetRepositoryActor, input: AssetCreateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
+    if (!canManageAssets(actor)) return fail("forbidden");
+    const query = database.from("assets") as any;
+    const result = await query.insert({
+      asset_code: input.asset_code || undefined,
+      asset_name: input.asset_name.trim(),
+      category: input.category.trim(),
+      serial_number: input.serial_number || null,
+      status: input.status || "available",
+      note: input.note || null,
+    }).select("*").single();
+    if (result.error) return fail(errorText(result.error, "asset_create_failed"));
+    return ok({ ...result.data, currentAssignment: null });
+  }
+
+  async function updateAssetForActor(actor: AssetRepositoryActor, assetId: string, input: AssetUpdateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
+    if (!canManageAssets(actor)) return fail("forbidden");
+    const query = database.from("assets") as any;
+    const result = await query.update({ ...input, updated_at: new Date().toISOString() }).eq("id", assetId).select("*").maybeSingle();
+    if (result.error) return fail(errorText(result.error, "asset_update_failed"));
+    if (!result.data) return fail("asset_not_found");
+    return ok({ ...result.data, currentAssignment: null });
+  }
+
   async function lifecycle(
     actor: AssetRepositoryActor,
     input: AssetLifecycleInput,
@@ -102,6 +137,8 @@ export function createAssetRepository(database: AssetRepositoryDb) {
   return {
     listAssetsForActor,
     getAssetForActor,
+    createAssetForActor,
+    updateAssetForActor,
     assignAssetForActor: (actor: AssetRepositoryActor, input: AssetLifecycleInput) => lifecycle(actor, input, "api_asset_assign", {
       p_asset_id: input.asset_id,
       p_department_id: input.department_id,
