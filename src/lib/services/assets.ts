@@ -12,13 +12,15 @@ export type Asset = {
   assigned_department_id?: string | null;
   note?: string | null;
   assigned_to_label?: string;
+  currentAssignment?: AssetAssignment | null;
+  assignmentHistory?: AssetAssignment[];
 };
 
 export type AssetAssignment = {
   id?: string;
   asset_id: string;
   assignee_id?: string | null;
-  department_id?: string | null;
+  department_id: string | null;
   expected_return_at?: string | null;
   returned_at?: string | null;
   status?: "active" | "returned" | "lost" | "damaged";

@@ -19,5 +19,9 @@ test("asset screens remain server API clients and expose lifecycle concepts", ()
     assert.match(source, /\/api\/assets|listAssets|createAsset|assignAsset/);
   }
   const detail = readFileSync(new URL("../app/assets/[id]/page.tsx", import.meta.url), "utf8");
-  assert.match(detail, /transfer|return|history|assignment/i);
+  assert.match(detail, /action === "transfer"/);
+  assert.match(detail, /action === "return"/);
+  assert.match(detail, /assignmentHistory|history/i);
+  assert.match(detail, /departmentId/);
+  assert.match(detail, /assigneeId/);
 });

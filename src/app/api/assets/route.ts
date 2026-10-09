@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   if (new URL(request.url).searchParams.get("options") === "1") {
     if (!canManageAssets(actor)) return json({ error: "forbidden" }, { status: 403 });
     const [users, departments] = await Promise.all([
-      serverSupabase.from("staff_users").select("id,full_name,username,active").eq("active", true).order("full_name"),
+      serverSupabase.from("staff_users").select("id,full_name,username,department_id,active").eq("active", true).order("full_name"),
       serverSupabase.from("departments").select("id,name,active").eq("active", true).order("name"),
     ]);
     if (users.error || departments.error) return json({ error: "asset_options_failed" }, { status: 500 });

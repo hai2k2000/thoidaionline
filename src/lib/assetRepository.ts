@@ -27,6 +27,7 @@ export type AssetRepositoryAsset = {
   assigned_department_id?: string | null;
   note?: string | null;
   currentAssignment: AssetRepositoryAssignment | null;
+  assignmentHistory?: AssetRepositoryAssignment[];
 };
 
 export type AssetRepositoryAssignment = {
@@ -85,7 +86,7 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     if (assetResult.error || assignmentResult.error) return fail(errorText(assetResult.error || assignmentResult.error, "asset_read_failed"));
     const assignments = assignmentResult.data ?? [];
     const assets = (assetResult.data ?? [])
-      .map((asset) => ({ ...asset, currentAssignment: currentAssignment(assignments, asset.id) }))
+      .map((asset) => ({ ...asset, currentAssignment: currentAssignment(assignments, asset.id), assignmentHistory: assignments.filter((row) => row.asset_id === asset.id) }))
       .filter((asset) => canViewAsset(actor, asset.currentAssignment));
     const visibleIds = new Set(assets.map((asset) => asset.id));
     return ok({ assets, assignments: assignments.filter((row) => visibleIds.has(row.asset_id)) });
