@@ -52,8 +52,9 @@ test("Department Plan navigation follows its existing authorization scope", () =
 
 test("Department Plan navigation keeps existing primary order and routes", () => {
   const navigation = getPhase2Navigation({ ...employee, roleCode: "admin", departmentCode: "business" });
-  assert.deepEqual(navigation.primary.slice(0, 3), [
+  assert.deepEqual(navigation.primary.slice(0, 4), [
     { id: "tasks", href: "/tasks" },
+    { id: "work-report", href: "/reports/work" },
     { id: "department-plan", href: "/planning/department" },
     { id: "attendance", href: "/my-attendance" },
   ]);

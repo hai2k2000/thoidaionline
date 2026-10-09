@@ -19,7 +19,7 @@ const assetStatusLabel: Record<string, string> = {
 
 export default function AssetsPage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, hasPermission } = useAuth();
 
   const [rows, setRows] = useState<AssetRow[]>([]);
   const [message, setMessage] = useState("Đang tải...");
@@ -38,12 +38,12 @@ export default function AssetsPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
-    if (!canAccessModule("assets")) return void router.push("/");
+    if (!hasPermission("asset.view") && !hasPermission("asset.manage")) return void router.push("/");
     const t = setTimeout(() => {
       void loadData();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router, hasPermission]);
+  }, [authLoading, user, router, hasPermission]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {

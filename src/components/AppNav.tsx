@@ -34,6 +34,7 @@ const labels = {
   users: "Qu\u1ea3n l\u00fd nh\u00e2n vi\u00ean",
   departments: "Ph\u00f2ng ban",
   permissions: "Ph\u00e2n quy\u1ec1n",
+  assets: "Quản lý tài sản",
   "evaluation-rubrics": "Bộ tiêu chí đánh giá",
   "evaluation-cycles": "Quản trị kỳ đánh giá",
   "work-schedule": "Lịch làm việc",
@@ -214,6 +215,8 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     canManageUsers: hasPermission("can_manage_users"),
     canManagePermissions: hasPermission("can_manage_permissions"),
     canManageJournalismStructures: hasPermission("journalism.structure.manage"),
+    canViewAssets: hasPermission("asset.view"),
+    canManageAssets: hasPermission("asset.manage"),
   });
 
   const restoreMenuFocus = useCallback(() => {

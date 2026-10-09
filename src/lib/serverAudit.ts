@@ -4,7 +4,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 
 export type ServerAuditInput = {
   actorId: string;
-  module: "admin" | "task" | "performance";
+  module: "admin" | "task" | "performance" | "assets";
   entityType: string;
   entityId?: string | null;
   action: string;

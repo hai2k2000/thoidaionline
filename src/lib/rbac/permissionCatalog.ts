@@ -17,6 +17,8 @@ export const RBAC_PERMISSION_CODES = [
   "attendance.view_all",
   "leave.view_self",
   "schedule.view_self",
+  "asset.view",
+  "asset.manage",
   "journalism.metadata.update",
   "journalism.publication.manage",
   "journalism.publication.verify",

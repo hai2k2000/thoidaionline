@@ -8,13 +8,13 @@ import { assignAsset, createAsset } from "@/lib/services";
 import { errorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
-type StaffUser = { id: string; full_name: string; username?: string | null; active?: boolean };
+type StaffUser = { id: string; full_name: string; username?: string | null; department_id?: string | null; active?: boolean };
 type Department = { id: string; name: string; active?: boolean };
 type AssetStatus = "available" | "in_use" | "maintenance" | "broken" | "liquidated";
 
 export default function AssetCreatePage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { loading: authLoading, user, logout, hasPermission } = useAuth();
   const { notify } = useActionFeedback();
   const [busy, setBusy] = useState(false);
 
@@ -33,7 +33,7 @@ export default function AssetCreatePage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
-    if (!canAccessModule("assets")) return void router.push("/");
+    if (!hasPermission("asset.manage")) return void router.push("/");
 
     const t = setTimeout(async () => {
       const response = await fetch("/api/assets?options=1", { cache: "no-store" });
@@ -47,10 +47,16 @@ export default function AssetCreatePage() {
     }, 0);
 
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router]);
+  }, [authLoading, user, hasPermission, router]);
 
   const onCreate = async () => {
     if (busy) return;
+    if (assigneeId && !departmentId) {
+      const text = "Cần chọn phòng ban chịu trách nhiệm khi giao cho nhân viên.";
+      notify("error", text);
+      setMessage(`❌ ${text}`);
+      return;
+    }
     setBusy(true);
     try { const result = await createAsset(
       {
@@ -123,7 +129,7 @@ export default function AssetCreatePage() {
 
               <label className="grid gap-1.5 text-sm font-semibold">Giao cho nhân viên<select aria-label="Giao tài sản cho nhân viên" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
                 <option value="">Giao cho ai (không bắt buộc)</option>
-                {users.map((u) => (
+                {users.filter((u) => !departmentId || u.department_id === departmentId).map((u) => (
                   <option key={u.id} value={u.id}>{u.full_name}{u.username ? ` (${u.username})` : ""}</option>
                 ))}
               </select></label>
