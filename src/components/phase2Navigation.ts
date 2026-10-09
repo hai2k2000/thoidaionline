@@ -7,10 +7,11 @@ export type Phase2NavigationAccess = {
   canManageRubrics: boolean;
   canManageUsers: boolean;
   canManagePermissions: boolean;
+  canViewAssets: boolean;
 };
 
 export type Phase2NavigationItem = {
-  id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
+  id: "assign" | "assets" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
     | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin";
   href: string;
 };
@@ -28,6 +29,7 @@ export function getPhase2Navigation(
   const canViewAllSchedules = access.isDepartmentManager === true || ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode);
   return {
     primary: [
+      ...(access.canViewAssets ? [{ id: "assets", href: "/assets" } as const] : []),
       ...(access.canAssignTask || ["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
         ? [
             { id: "assign", href: "/tasks/assign" } as const,

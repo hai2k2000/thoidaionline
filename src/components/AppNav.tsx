@@ -30,11 +30,12 @@ const labels = {
   users: "Qu\u1ea3n l\u00fd nh\u00e2n vi\u00ean",
   departments: "Ph\u00f2ng ban",
   permissions: "Ph\u00e2n quy\u1ec1n",
+  assets: "Qu\u1ea3n l\u00fd t\u00e0i s\u1ea3n",
   "evaluation-rubrics": "Bộ tiêu chí đánh giá",
   "evaluation-cycles": "Quản trị kỳ đánh giá",
   "work-schedule": "Lịch làm việc",
   "work-schedule-leader": "Lịch công tác lãnh đạo",
-  "work-schedule-staff": "Kế hoạch nhân viên",
+  "work-schedule-staff": "Kế hoạch cá nhân",
   "work-schedule-admin": "Quản trị lịch công tác",
 } as const;
 
@@ -190,6 +191,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     canManageRubrics: hasPermission("can_manage_rubrics"),
     canManageUsers: hasPermission("can_manage_users"),
     canManagePermissions: hasPermission("can_manage_permissions"),
+    canViewAssets: hasPermission("can_view_assets"),
   });
 
   const restoreMenuFocus = useCallback(() => {

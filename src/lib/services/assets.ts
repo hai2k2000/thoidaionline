@@ -1,5 +1,6 @@
 import { fail, ok, ServiceResult, withError } from "./common";
 
+export type AssetTrackingMode = "individual" | "lot";
 export type AssetStatus = "available" | "in_use" | "maintenance" | "broken" | "liquidated";
 
 export type Asset = {
@@ -10,6 +11,8 @@ export type Asset = {
   serial_number?: string | null;
   status?: AssetStatus;
   assigned_department_id?: string | null;
+  tracking_mode?: AssetTrackingMode;
+  quantity?: number;
   note?: string | null;
   assigned_to_label?: string;
 };
@@ -32,6 +35,14 @@ const parse = async <T>(response: Response, fallback: string): Promise<ServiceRe
   return ok(body as T);
 };
 
+export function validateTrackingQuantity(trackingMode: unknown, quantity: unknown): string | null {
+  if (trackingMode !== "individual" && trackingMode !== "lot") return "Loại theo dõi không hợp lệ.";
+  if (!Number.isInteger(quantity)) return "Số lượng phải là số nguyên.";
+  if ((quantity as number) < 1) return "Số lượng phải lớn hơn 0.";
+  if (trackingMode === "individual" && quantity !== 1) return "Tài sản cá thể phải có số lượng bằng 1.";
+  return null;
+}
+
 export async function listAssets(): Promise<ServiceResult<Asset[]>> {
   try {
     const response = await fetch("/api/assets", { cache: "no-store" });
@@ -43,12 +54,13 @@ export async function listAssets(): Promise<ServiceResult<Asset[]>> {
 }
 
 export async function createAsset(input: Asset, actorId?: string): Promise<ServiceResult<Asset>> {
-  if (!input.asset_name?.trim() || !input.category?.trim()) {
-    return fail("Thiếu asset_name hoặc category.");
-  }
-
+  if (!input.asset_name?.trim() || !input.category?.trim()) return fail("Thiếu asset_name hoặc category.");
+  const trackingMode = input.tracking_mode ?? "individual";
+  const quantity = input.quantity ?? 1;
+  const validation = validateTrackingQuantity(trackingMode, quantity);
+  if (validation) return fail(validation);
   try {
-    const response = await fetch("/api/assets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, actorId }) });
+    const response = await fetch("/api/assets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, tracking_mode: trackingMode, quantity, actorId }) });
     const result = await parse<{ asset?: Asset }>(response, "Không tạo được tài sản.");
     return result.ok && result.data.asset ? ok(result.data.asset) : result.ok ? fail("Không tạo được tài sản.") : result;
   } catch (error) {
@@ -59,7 +71,6 @@ export async function createAsset(input: Asset, actorId?: string): Promise<Servi
 export async function assignAsset(input: AssetAssignment, actorId?: string): Promise<ServiceResult<AssetAssignment>> {
   if (!input.asset_id) return fail("Thiếu asset_id.");
   if (!input.assignee_id && !input.department_id) return fail("Cần assignee_id hoặc department_id.");
-
   try {
     const response = await fetch("/api/assets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "assign", ...input, actorId }) });
     const result = await parse<{ assignment?: AssetAssignment }>(response, "Không cấp phát được tài sản.");

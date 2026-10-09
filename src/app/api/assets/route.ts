@@ -8,15 +8,13 @@ export const revalidate = 0;
 
 const NO_STORE = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
 const json = (body: unknown, init?: ResponseInit) => NextResponse.json(body, { ...init, headers: NO_STORE });
-const canManage = (actor: { role_code: string; permissions: { can_edit_all_tasks: boolean } }) =>
-  actor.role_code !== "tbt_read_only" && actor.role_code !== "tong_bien_tap"
-    && (actor.role_code === "admin" || actor.permissions.can_edit_all_tasks);
-const canAccess = (roleCode: string) => roleCode !== "tbt_read_only" && roleCode !== "tong_bien_tap";
+const canManage = (actor: { role_code: string; permissions: { can_manage_assets: boolean } }) => actor.permissions.can_manage_assets === true;
+const canAccess = (actor: { role_code: string; permissions: { can_view_assets: boolean } }) => actor.permissions.can_view_assets === true;
 
 export async function GET(request: Request) {
   const actor = await getSessionUser();
   if (!actor) return json({ error: "unauthenticated" }, { status: 401 });
-  if (!canAccess(actor.role_code)) return json({ error: "forbidden" }, { status: 403 });
+  if (!canAccess(actor)) return json({ error: "forbidden" }, { status: 403 });
   const options = new URL(request.url).searchParams.get("options") === "1";
   const [assets, assignments, users, departments] = await Promise.all([
     serverSupabase.from("assets").select("*").order("created_at", { ascending: false }),
@@ -29,13 +27,13 @@ export async function GET(request: Request) {
   let assetRows = assets.data ?? [];
   const activeAssignments = (assignments.data ?? []).filter((row) => row.status === "active" && !row.returned_at);
   if (!canManage(actor)) {
-    const ownIds = new Set(activeAssignments.filter((row) => row.assignee_id === actor.id).map((row) => row.asset_id));
+    const ownIds = new Set(activeAssignments.filter((row) => row.assignee_id === actor.id || row.department_id === actor.department_id).map((row) => row.asset_id));
     assetRows = assetRows.filter((row) => ownIds.has(row.id));
   }
 
   const userMap = new Map((users.data ?? []).map((row) => [row.id, row.full_name]));
   const departmentMap = new Map((departments.data ?? []).map((row) => [row.id, row.name]));
-  const assignmentsForResponse = canManage(actor) ? assignments.data ?? [] : activeAssignments.filter((row) => row.assignee_id === actor.id);
+  const assignmentsForResponse = canManage(actor) ? assignments.data ?? [] : activeAssignments.filter((row) => row.assignee_id === actor.id || row.department_id === actor.department_id);
   const labels = new Map<string, string>();
   assignmentsForResponse.filter((row) => row.status === "active" && !row.returned_at).forEach((row) => {
     labels.set(row.asset_id, row.assignee_id ? userMap.get(row.assignee_id) ?? "-" : row.department_id ? `Phòng ban: ${departmentMap.get(row.department_id) ?? "-"}` : "-");
@@ -65,9 +63,14 @@ export async function POST(request: Request) {
     const assetId = typeof body?.asset_id === "string" ? body.asset_id.trim() : "";
     const assigneeId = typeof body?.assignee_id === "string" ? body.assignee_id.trim() : "";
     const departmentId = typeof body?.department_id === "string" ? body.department_id.trim() : "";
-    if (!assetId || (!assigneeId && !departmentId) || (assigneeId && departmentId)) return json({ error: "invalid_request" }, { status: 400 });
+    if (!assetId || !departmentId) return json({ error: "invalid_request" }, { status: 400 });
+    const [{ data: department, error: departmentError }, { data: assignee, error: assigneeError }] = await Promise.all([
+      serverSupabase.from("departments").select("id,active").eq("id", departmentId).maybeSingle(),
+      assigneeId ? serverSupabase.from("staff_users").select("id,active,department_id").eq("id", assigneeId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    ]);
+    if (departmentError || assigneeError || !department?.active || (assigneeId && (!assignee?.active || assignee.department_id !== departmentId))) return json({ error: "invalid_assignment_scope" }, { status: 400 });
     const { data, error } = await serverSupabase.from("asset_assignments").insert({
-      asset_id: assetId, assignee_id: assigneeId || null, department_id: departmentId || null, status: "active", created_by: actor.id,
+      asset_id: assetId, assignee_id: assigneeId || null, department_id: departmentId, status: "active", created_by: actor.id,
     }).select("*").single();
     if (error) return json({ error: "Không thể cấp phát tài sản." }, { status: 400 });
     const { error: assetError } = await serverSupabase.from("assets").update({ status: "in_use", updated_at: new Date().toISOString() }).eq("id", assetId);
@@ -80,6 +83,9 @@ export async function POST(request: Request) {
   if (!assetName || assetName.length > 200 || !category || category.length > 120) return json({ error: "invalid_request" }, { status: 400 });
   const status = typeof body?.status === "string" ? body.status : "available";
   if (!["available", "in_use", "maintenance", "broken", "liquidated"].includes(status)) return json({ error: "invalid_request" }, { status: 400 });
+  const trackingMode = body?.tracking_mode === "lot" ? "lot" : body?.tracking_mode === "individual" || body?.tracking_mode === undefined ? "individual" : "invalid";
+  const quantity = typeof body?.quantity === "number" ? body.quantity : body?.quantity === undefined ? 1 : Number.NaN;
+  if (trackingMode === "invalid" || !Number.isInteger(quantity) || quantity < 1 || (trackingMode === "individual" && quantity !== 1)) return json({ error: "invalid_tracking_quantity" }, { status: 400 });
   const year = new Date().getFullYear();
   const prefix = `TS-${year}-`;
   const { data: latest } = await serverSupabase.from("assets").select("asset_code").ilike("asset_code", `${prefix}%`).order("asset_code", { ascending: false }).limit(1).maybeSingle();
@@ -88,7 +94,7 @@ export async function POST(request: Request) {
   const nextCode = `${prefix}${String(Number((current.split("-")[2] ?? "0").replace(/\D/g, "")) + 1).padStart(4, "0")}`;
   const { data, error } = await serverSupabase.from("assets").insert({
     asset_code: requestedCode || nextCode, asset_name: assetName, category, serial_number: typeof body?.serial_number === "string" ? body.serial_number.trim() || null : null,
-    status, note: typeof body?.note === "string" ? body.note.trim() || null : null,
+    status, tracking_mode: trackingMode, quantity, note: typeof body?.note === "string" ? body.note.trim() || null : null,
   }).select("*").single();
   if (error) return json({ error: "Không thể tạo tài sản." }, { status: 400 });
   await logServerAudit({ actorId: actor.id, module: "admin", entityType: "assets", entityId: data.id, action: "create", newData: data });

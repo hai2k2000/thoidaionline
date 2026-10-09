@@ -92,6 +92,8 @@ export default function AssetsPage() {
               <tr>
                 <th scope="col" className="px-3 py-2">Tên</th>
                 <th scope="col" className="px-3 py-2">Nhóm</th>
+                <th scope="col" className="px-3 py-2">Loại theo dõi</th>
+                <th scope="col" className="px-3 py-2">Số lượng</th>
                 <th scope="col" className="px-3 py-2">Đã cấp phát cho ai</th>
                 <th scope="col" className="px-3 py-2">Tình trạng</th>
                 <th scope="col" className="min-w-64 px-3 py-2">Ghi chú</th>
@@ -105,6 +107,8 @@ export default function AssetsPage() {
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{r.asset_name}</span>
                   </td>
                   <td className="px-3 py-2">{r.category}</td>
+                  <td className="px-3 py-2">{r.tracking_mode === "lot" ? "Theo lô" : "Cá thể"}</td>
+                  <td className="px-3 py-2">{r.quantity ?? 1}</td>
                   <td className="px-3 py-2">{r.assigned_to_label ?? "-"}</td>
                   <td className="px-3 py-2"><span className={`table-status ${r.status === "available" ? "table-status-success" : r.status === "broken" ? "table-status-danger" : r.status === "maintenance" ? "table-status-warning" : "table-status-neutral"}`}>{assetStatusLabel[r.status ?? "available"] ?? (r.status ?? "-")}</span></td>
                   <td className="min-w-64 px-3 py-2">{r.note ?? "-"}</td>

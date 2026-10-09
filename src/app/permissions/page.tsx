@@ -7,7 +7,7 @@ import AppNav from "@/components/AppNav";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
-type PermissionKey = "can_manage_users" | "can_manage_permissions" | "can_create_task" | "can_edit_all_tasks" | "can_comment";
+type PermissionKey = "can_manage_users" | "can_manage_permissions" | "can_create_task" | "can_edit_all_tasks" | "can_comment" | "can_view_assets" | "can_manage_assets";
 type PermissionRow = {
   role_id: string;
   can_manage_users: boolean;
@@ -15,6 +15,8 @@ type PermissionRow = {
   can_create_task: boolean;
   can_edit_all_tasks: boolean;
   can_comment: boolean;
+  can_view_assets: boolean;
+  can_manage_assets: boolean;
   roles?: { id: string; code: string; name: string; level: number; active: boolean } | null;
 };
 
@@ -24,6 +26,8 @@ const columns: Array<{ key: PermissionKey; label: string }> = [
   { key: "can_create_task", label: "Tạo công việc" },
   { key: "can_edit_all_tasks", label: "Sửa mọi công việc" },
   { key: "can_comment", label: "Bình luận" },
+  { key: "can_view_assets", label: "Xem tài sản" },
+  { key: "can_manage_assets", label: "Quản lý tài sản" },
 ];
 
 export default function PermissionsPage() {

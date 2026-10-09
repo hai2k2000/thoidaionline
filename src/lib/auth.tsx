@@ -43,6 +43,7 @@ const PHASE2_PERMISSION_KEYS = new Set<PermissionKey>([
   "can_evaluate_step2",
   "can_manage_rubrics",
 ]);
+const ASSET_PERMISSION_KEYS = new Set<PermissionKey>(["can_view_assets", "can_manage_assets"]);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -106,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasPermission = (key: PermissionKey) => {
     if (!user) return false;
+    if (ASSET_PERMISSION_KEYS.has(key)) return user.permissions[key] === true;
     if (PHASE2_PERMISSION_KEYS.has(key)) {
       return user.permissions[key] === true;
     }
@@ -143,7 +145,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       "phu_trach_phong_phong_vien",
     ]);
     if (leadership.has(user.role_code)) return true;
-    if (module === "hr" || module === "assets") return true;
+    if (module === "hr") return true;
+    if (module === "assets") return user.permissions.can_view_assets === true;
     if (module === "documents") {
       return operations.has(user.role_code) || managers.has(user.role_code);
     }

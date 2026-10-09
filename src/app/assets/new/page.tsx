@@ -23,6 +23,8 @@ export default function AssetCreatePage() {
   const [category, setCategory] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [status, setStatus] = useState<AssetStatus>("in_use");
+  const [trackingMode, setTrackingMode] = useState<"individual" | "lot">("individual");
+  const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -59,6 +61,8 @@ export default function AssetCreatePage() {
         category,
         serial_number: serialNumber || undefined,
         status,
+        tracking_mode: trackingMode,
+        quantity,
         note: note || undefined,
       },
       user?.id,
@@ -86,6 +90,8 @@ export default function AssetCreatePage() {
     setCategory("");
     setSerialNumber("");
     setStatus("in_use");
+    setTrackingMode("individual");
+    setQuantity(1);
     setNote("");
     setAssigneeId("");
     setDepartmentId("");
@@ -119,6 +125,11 @@ export default function AssetCreatePage() {
                 <option value="broken">Hỏng</option>
                 <option value="liquidated">Thanh lý</option>
               </select></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Loại theo dõi<select aria-label="Loại theo dõi" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={trackingMode} onChange={(e) => { const next = e.target.value as "individual" | "lot"; setTrackingMode(next); if (next === "individual") setQuantity(1); }}>
+                <option value="individual">Tài sản cá thể</option>
+                <option value="lot">Tài sản theo lô</option>
+              </select></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Số lượng<input aria-label="Số lượng tài sản" type="number" min={1} step={1} readOnly={trackingMode === "individual"} className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} /></label>
               <label className="grid gap-1.5 text-sm font-semibold">Ghi chú<input aria-label="Ghi chú tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={note} onChange={(e) => setNote(e.target.value)} /></label>
 
               <label className="grid gap-1.5 text-sm font-semibold">Giao cho nhân viên<select aria-label="Giao tài sản cho nhân viên" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>

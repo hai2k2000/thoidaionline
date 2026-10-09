@@ -1,5 +1,5 @@
 Current Phase: Attendance bridge operations
-Current Task: COMPLETE — leave requests and attendance notes
+Current Task: COMPLETE — public personal work plans and separated leave requests
 
 Current Task Update: COMPLETE — employee leave history month/status filters
 
@@ -25,6 +25,8 @@ Latest Attendance Workflow Update: COMPLETE — business-trip requests are clear
 
 Latest Work Schedule Privacy: COMPLETE — regular employees can only view their own plans
 
+Latest Personal Plan Update: COMPLETE — shared personal plans with work/business/event types, date ranges, creator controls, and separate leave submission UI
+
 Completed:
 - Attendance total-summary rows now open a detail popup for the selected employee using the active day/week/month range.
 - Employee leave history now has independent month/all-time and status filters, scoped to the authenticated user's own requests.
@@ -40,6 +42,9 @@ Completed:
 - Replaced the four-position duty roster with exactly three positions: Xuất bản, Biên tập, Phóng viên.
 - Added authenticated leave requests with leadership approval, conflict checks, cancellation, and audit history.
 - Attendance notes now derive from approved leave and active online-work schedules; no matching context leaves the note blank.
+- Personal plan page is shared by authenticated users, supports filtering by active staff, and lets each creator create, edit, or delete only their own work, business-trip, or event plans.
+- Work plans support inclusive start/end dates and optional start/end times; business trips and events remain visible in the shared plan calendar.
+- Attendance leave submission is now explicitly leave-only; business trips are recorded through the personal plan flow.
 - Added `/api/leave-requests` for authenticated employee submissions, leadership approvals/rejections, pending cancellation, conflict prevention, and audit history.
 - Attendance pages now include an employee leave form, personal request history, and a leadership approval queue.
 - Merged legacy Biên tập bước 1/2 rows into one Biên tập row, retaining the step 2 assignee when both existed and recording cancellation events for redundant rows.
@@ -145,3 +150,31 @@ Next:
 - Existing dev-tooling audit findings, stale UI contract test, and non-root service follow-up remain separate tasks.
 
 Security milestone 2026-09-14: Supabase Kong, Mailpit, and PostgreSQL bindings restricted to 127.0.0.1. Rollback containers and inspect snapshots retained. Database readiness, schema dump, service health, and production login smoke checks passed. Dependency remediation passed npm audit with zero vulnerabilities; security tests 21/21.
+
+## Asset Management V2.1 foundation (2026-10-10)
+
+Current Phase: Asset Management V2.1 foundation
+Current Task: COMPLETE — quantity and preview/import foundation; Q3 data remains locked
+
+Completed:
+- Added assets tracking_mode/quantity constraints and preserved current asset assignment custody/history.
+- Added asset import batches/records, source lineage, deterministic code generation, preview → approve → import gate, idempotent RPC, and source-hash fail-closed behavior.
+- Added independent can_view_assets/can_manage_assets permissions and minimal quantity-aware Asset UI/API validation.
+- Added one-active-assignment database invariant and active assignment department validation.
+
+Validation:
+- Focused Asset V2.1 and authorization tests: 14/14 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- Production-like build: PASS; only pre-existing HR upload tracing warnings.
+- Isolated PostgreSQL rehearsal: pending → apply once → schema verification → ledger count 1 → second run ALREADY_APPLIED.
+- Production service remained active; `/login` returned HTTP 200.
+
+Blockers:
+- None for foundation implementation.
+
+Follow Up:
+- Owner review and explicit mapping approval are required before any Q3 import.
+
+Next:
+- Owner deployment approval; production migration, production asset/assignment changes, and Q3 import remain NO.

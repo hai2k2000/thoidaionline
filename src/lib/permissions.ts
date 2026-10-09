@@ -9,6 +9,8 @@ export const PERMISSION_KEYS = [
   "can_evaluate_step1",
   "can_evaluate_step2",
   "can_manage_rubrics",
+  "can_view_assets",
+  "can_manage_assets",
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
