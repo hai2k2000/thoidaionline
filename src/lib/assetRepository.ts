@@ -1,4 +1,4 @@
-import { canManageAssets, canViewAsset, type AssetVisibilityActor } from "./assetAuthorization.ts";
+import { canManageAssets, canViewAsset, type AssetVisibilityActor } from "./assetAuthorization";
 
 export type ServiceResult<T> = { ok: true; data: T } | { ok: false; error: string };
 const ok = <T>(data: T): ServiceResult<T> => ({ ok: true, data });
@@ -10,7 +10,7 @@ export type AssetRepositoryDb = {
     insert?(values: unknown): unknown;
     update?(values: unknown): unknown;
   };
-  rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: { message?: string } | null }>;
 };
 
 export type AssetRepositoryActor = AssetVisibilityActor & {
@@ -87,7 +87,7 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     const assignments = assignmentResult.data ?? [];
     const assets = (assetResult.data ?? [])
       .map((asset) => ({ ...asset, currentAssignment: currentAssignment(assignments, asset.id), assignmentHistory: assignments.filter((row) => row.asset_id === asset.id) }))
-      .filter((asset) => canViewAsset(actor, asset.currentAssignment));
+      .filter((asset) => canViewAsset(actor, asset.currentAssignment ? { departmentId: asset.currentAssignment.department_id, assigneeId: asset.currentAssignment.assignee_id } : null));
     const visibleIds = new Set(assets.map((asset) => asset.id));
     return ok({ assets, assignments: assignments.filter((row) => visibleIds.has(row.asset_id)) });
   }

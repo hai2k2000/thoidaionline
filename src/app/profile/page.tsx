@@ -80,13 +80,11 @@ export default function ProfilePage() {
         .select("id,title,status,progress_percent,due_date,owner_id,assignee_id,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),assignee:staff_users!tasks_assignee_id_fkey(full_name),task_assignees(user_id,assignment_role,staff_users(full_name))")
         .order("created_at", { ascending: false })
         .limit(500),
-      supabase
-        .from("asset_assignments")
-        .select("id,asset_id,assignee_id,status,assigned_at,returned_at,assets(asset_name,category,status)")
-        .eq("assignee_id", user.id)
-        .eq("status", "active")
-        .is("returned_at", null)
-        .order("assigned_at", { ascending: false }),
+      fetch("/api/profile/assets", { cache: "no-store" }).then(async (response) => {
+        const payload = await response.json().catch(() => null) as { error?: string; assets?: Array<{ id: string; asset_name: string | null; category: string | null; status: string | null; currentAssignment?: { id: string; asset_id: string; assignee_id: string | null; assigned_at: string | null; returned_at: string | null; status: string | null } | null }> } | null;
+        if (!response.ok) return { data: null, error: { message: payload?.error || "Không tải được tài sản." } };
+        return { data: (payload?.assets ?? []).filter((asset) => asset.currentAssignment?.assignee_id === user.id).map((asset) => ({ ...asset.currentAssignment, assets: { asset_name: asset.asset_name, category: asset.category, status: asset.status } })), error: null };
+      }),
     ]);
 
     if (taskRes.error || assetRes.error) {
