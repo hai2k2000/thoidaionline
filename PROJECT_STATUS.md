@@ -1,3 +1,41 @@
+# Personal Quick Report Summary
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: self-service REPORT_ONLY summary and Word export
+
+Completed:
+- Added permission-gated personal Quick Report summary with week, month, and custom date filters.
+- Added self-only server query and bounded Word export over canonical tasks.report_work_date data.
+- Preserved existing Quick Report create flow, Attendance entry, and management Work Report.
+
+Validation:
+- Focused Quick Report, authorization, Attendance, Work Report, and summary/export regressions: PASS.
+- TypeScript, changed-file ESLint, route manifest, and git diff --check: PASS.
+- Production-like build: BLOCKED by stale local integration/production ref; no lineage override used.
+
+Production mutation: NONE.
+
+Next:
+- Refresh the clean canonical integration baseline, rerun the production-like build, then owner review; do not deploy automatically.
+
+## Department Period Report Word Export
+
+Current Phase: COMPLETE; implementation and pre-production validation
+Current Task: Word-only period report export
+
+Completed:
+- Replaced Department Period Report UI export action with the authenticated DOCX route while preserving selected period, department, and filters.
+- Implemented editable Word report structure with sections I–IV, real report rows, Vietnamese text, and approved filenames.
+- Preserved existing PDF backend files and unrelated Department Plan business logic.
+
+Validation:
+- DOCX exporter regression: 5/5 PASS.
+- Department Plan focused regression: 130 PASS, 1 pre-existing bundle check skipped.
+- TypeScript, changed-file ESLint, git diff --check, route manifest, and production-like build: PASS.
+- Sample DOCX opened successfully in Microsoft Word; PNG renderer unavailable because VPS has no LibreOffice and local renderer lacks pdf2image in its default Python.
+
+Production mutation: COMPLETE — immutable artifact activated and health-checked.
+
 # Department Plan Real + Multi-Assignment V2 Blocker Closure
 
 - Phase A completed: canonical leadership-mapped assignee eligibility is aligned with the existing assignment scope, and successful assignment responses rehydrate linked Task participants/status before reaching the UI.
@@ -419,3 +457,102 @@ Production mutation: NONE.
 
 Next:
 - Refresh the local integration ref in a clean integration worktree, rerun the normal lineage-gated build, then owner review.
+
+
+# Department Period Plan V2 — 2026-10-03
+
+Current Phase: COMPLETE — implemented and deployed
+Current Task: Department Period Plan V2
+
+Completed:
+- Added additive period metadata, close snapshots, carry-forward fields, and Task × Plan-period unique index.
+- Added bounded candidate scan, preview/confirm creation, manual/import preview, user/task matching signals, auto-link hooks, close RPC, and DOCX export.
+- Applied migration 20261003100000_department_period_plan_v2 after production backup; rehearsal and invariant validation passed.
+- Deployed immutable release department-period-plan-v2-a323414 with rollback pointers preserved.
+
+Validation:
+- Department Period Plan V2 targeted tests: PASS (3/3).
+- Department Plan/Work Report/Quick Report/task approval regression set: 126/127 PASS; one pre-existing stale Quick Report UI contract assertion remains unrelated.
+- TypeScript: PASS; changed-file ESLint: PASS; production-like build: PASS; standalone artifact: PASS.
+- Production service active, NRestarts=0, /login=200, protected routes return 401/307, cache ownership PASS.
+- Authenticated live smoke: NOT VERIFIED (no authenticated session supplied).
+
+Blockers:
+- none for deployment.
+
+Follow Up:
+- Expand the DOCX parser for additional department-specific Word layouts and add an authenticated end-to-end browser smoke when a session is available.
+
+Next:
+- Monitor release and rollback pointers; keep current/previous/rollback-2 retention.
+
+
+## Department Plan Canonical Saturday-Friday Week
+
+Current Phase: implementation and production validation
+Current Task: fix Department Plan weekly boundary from Monday-Sunday to Saturday-Friday
+
+Completed:
+- Confirmed live source and database constraints were both Monday-based.
+- Changed the shared Department Plan helper and Excel fixtures to Saturday-Friday.
+- Added explicit `plan_id` loading so historical plans keep their stored dates and remain scoped.
+- Added additive migration 20261004100000_department_plan_saturday_friday.sql; no historical rows are rewritten.
+
+Validation:
+- Focused Department Plan regression: 33/33 PASS.
+- Migration rehearsal on restored disposable PostgreSQL database: PASS.
+- Production backup created before migration: /opt/thoidai-work/backups/department-plan-saturday-friday-pre-20261004T020238Z.dump.
+- Production migration applied and schema/history checks: PASS.
+
+Blockers:
+- none
+
+Next:
+- Build/package immutable release, run artifact and smoke checks, then activate production.
+
+## Admin Attendance Note + Weekend Filter
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: separate Admin attendance notes and hide standard weekend rows
+
+Completed:
+- Added the scoped `attendance_admin_notes` table and service-role-only admin upsert RPC with canonical admin authorization and audit history.
+- Added Attendance API/UI support for notes on existing logs and weekday workdays without an attendance log, without modifying attendance punch/status/device fields.
+- Excluded Saturday and Sunday from standard Attendance rows, generated rows, summaries, counts, pagination, and empty states while preserving database records.
+
+Validation:
+- Focused Attendance, Wise Eye, late-work exception, access, merge, and weekend/admin-note tests: 48/48 PASS.
+- Disposable PostgreSQL migration rehearsal, including repeat/idempotency run and privilege checks: PASS.
+- TypeScript, changed-file ESLint, route manifest, and git diff check: PASS.
+
+Production mutation: NONE.
+
+Next:
+- Complete the canonical lineage-gated production-like build, then push this feature branch for owner review; do not deploy in this phase.
+
+## Weekly Report Add Work
+
+Current Phase: implementation
+Current Task: Task 3 - draft UI add/remove flow
+
+Completed:
+- Approved bounded design and implementation plan.
+- Created isolated branch from weekly-report reopen/versioning commit 8a94e2b.
+- Added pure addable-row filtering and server allow-list model contracts.
+- Added server-scoped addable rows, draft allow-list validation, and a bounded REPORT_ONLY add-work route.
+
+Validation:
+- Task 1 focused model tests: 19/19 PASS.
+- Task 2 focused server + weekly report regressions: 48/48 PASS.
+- Production unchanged.
+
+Blockers:
+- None.
+
+Next:
+- Add draft-only UI controls for existing Task selection, sudden work, and removal.
+
+- Task 3 UI add/remove controls committed as 9b3e47a.
+- Task 4 Version 2/DOCX/Personal Plan coverage added; full regression set currently 118/118 PASS.
+- No migration added; production unchanged.
+- Final source gates pass; canonical `npm run build` is blocked by the repository lineage guard on the feature branch, and standalone packaging is blocked by Windows symlink permissions in this local environment.

@@ -244,6 +244,7 @@ type TaskAccessRow = {
     user_id: string;
     assignment_role: TaskParticipant["assignmentRole"];
   }[] | null;
+  department_plan_items: { id: string; department_plan_id: string }[] | null;
 };
 
 type TaskStatusEventRow = {
@@ -437,6 +438,7 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
     : (row.task_status_events ?? []).some((event) => event.from_status === "waiting" && event.to_status === "in_progress")
       ? "approved"
       : row.status === "rejected" ? "rejected" : ["in_progress", "blocked", "pending_review", "done"].includes(row.status) ? "approved" : "pending",
+  departmentPlanLinked: (row.department_plan_items ?? []).length > 0,
   participants: (row.task_assignees ?? []).map((participant) => ({
     userId: participant.user_id,
     assignmentRole: participant.assignment_role,
@@ -638,7 +640,7 @@ export const taskRepository: TaskRepository = {
       .from("tasks")
       .select(
         "id,department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id)," +
-        "self_claimable,task_type,status,approval_required,task_status_events(from_status,to_status),task_assignees(user_id,assignment_role)",
+        "self_claimable,task_type,status,approval_required,task_status_events(from_status,to_status),task_assignees(user_id,assignment_role),department_plan_items!department_plan_items_linked_task_id_fkey(id,department_plan_id)",
       )
       .eq("id", taskId)
       .maybeSingle();
@@ -883,8 +885,9 @@ export const taskRepository: TaskRepository = {
       p_rows: input.rows.map((row) => ({
         title: row.title,
         category: row.category,
-        start_date: row.startDate,
-        completion_date: row.completionDate,
+        work_date: row.startDate,
+        started_time: "00:00",
+        completed_time: row.status === "done" ? "00:00" : null,
         status: row.status,
         notes: row.notes,
       })),

@@ -3,6 +3,7 @@ import "server-only";
 import {
   departmentPlanRepository,
   type DepartmentPlanItemRow,
+  type DepartmentPlanRow,
 } from "@/lib/departmentPlanRepository";
 import type { DepartmentPlanPeriod } from "@/lib/departmentPlanPeriod";
 import {
@@ -27,12 +28,15 @@ export const departmentPlanReportRepository = {
     period: DepartmentPlanPeriod,
     filters: DepartmentPlanReportFilters,
     effectiveNow = new Date(),
+    planOverride?: DepartmentPlanRow | null,
   ): Promise<
     | { data: DepartmentPlanReportResult; error: null }
     | { data: null; error: { code?: string | null; message?: string | null } }
   > {
     const [planResult, employeesResult] = await Promise.all([
-      departmentPlanRepository.getPeriod(departmentId, period.periodType, period.periodStart),
+      planOverride === undefined
+        ? departmentPlanRepository.getPeriod(departmentId, period.periodType, period.periodStart)
+        : Promise.resolve({ data: planOverride, error: null }),
       departmentPlanRepository.listActiveEmployees(departmentId),
     ]);
     if (planResult.error) return { data: null, error: planResult.error };

@@ -1,4 +1,4 @@
-export type Phase2NavigationAccess = {
+﻿export type Phase2NavigationAccess = {
   roleCode: string;
   departmentCode?: string | null;
   canAccessJournalism?: boolean;
@@ -14,7 +14,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "evaluations" | "account" | "users" | "departments"
-    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
+    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "work-report" | "weekly-report" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
   href: string;
 };
 
@@ -42,6 +42,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
+      ...(access.isDepartmentManager || ["admin", "tong_bien_tap", "tbt_read_only"].includes(access.roleCode) ? [{ id: "work-report", href: "/reports/work" } as const] : []),
       ...(canAccessDepartmentPlan ? [{ id: "department-plan", href: "/planning/department" } as const] : []),
       { id: "attendance", href: "/my-attendance" },
       ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
@@ -53,6 +54,7 @@ export function getPhase2Navigation(
       { id: "work-schedule", href: "/work-schedule" },
       ...(canViewAllSchedules ? [{ id: "work-schedule-leader", href: "/work-schedule/leadership" } as const] : []),
       { id: "work-schedule-staff", href: "/work-schedule/staff" },
+      { id: "weekly-report", href: "/reports/weekly" },
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
     ],
@@ -154,3 +156,4 @@ export function isNavigationActive(currentPath: string, href: string): boolean {
   if (href === "/tasks") return (pathname === href || pathname.startsWith("/tasks/")) && pathname !== "/tasks/assign" && !journalismTask;
   return pathname === href || pathname.startsWith(href + "/");
 }
+

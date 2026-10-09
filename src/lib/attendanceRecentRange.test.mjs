@@ -4,17 +4,17 @@ import test from "node:test";
 
 import { recentAttendanceDates, clampAttendanceEndDate } from "./attendanceRecentRange.mjs";
 
-test("default attendance range contains exactly the latest ten Vietnam dates", () => {
+test("default attendance range contains exactly the latest ten business dates", () => {
   assert.deepEqual(recentAttendanceDates("2026-09-30", 0, 10), [
-    "2026-09-30", "2026-09-29", "2026-09-28", "2026-09-27", "2026-09-26",
-    "2026-09-25", "2026-09-24", "2026-09-23", "2026-09-22", "2026-09-21",
+    "2026-09-30", "2026-09-29", "2026-09-28", "2026-09-25", "2026-09-24",
+    "2026-09-23", "2026-09-22", "2026-09-21", "2026-09-18", "2026-09-17",
   ]);
 });
 
 test("load more extends older dates without including a future date", () => {
   const dates = recentAttendanceDates("2026-01-02", 10, 10);
-  assert.equal(dates[0], "2025-12-23");
-  assert.equal(dates.at(-1), "2025-12-14");
+  assert.equal(dates[0], "2025-12-19");
+  assert.equal(dates.at(-1), "2025-12-08");
   assert.ok(dates.every((date) => date <= "2026-01-02"));
 });
 

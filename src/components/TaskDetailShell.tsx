@@ -45,7 +45,9 @@ const dueText = (task: Pick<TaskDetailDto, "due_date" | "due_time">) =>
     ? dateText(task.due_time ? `${task.due_date}T${task.due_time}+07:00` : task.due_date)
     : "—";
 
-export default function TaskDetailShell({ task, capabilities, userLabel, journalismWorkKinds, journalismWorkKindsLoadFailed, journalismStructureOptions }: {
+export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, capabilities, userLabel, journalismWorkKinds, journalismWorkKindsLoadFailed, journalismStructureOptions }: {
+  returnTo: string | null;
+  departmentPlanLinked: boolean;
   task: TaskDetailDto; capabilities: Capabilities; userLabel: string;
   journalismWorkKinds: { id: string; name: string; is_active: boolean }[];
   journalismWorkKindsLoadFailed: boolean;
@@ -144,7 +146,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel, journal
       <AppNav currentPath={task.journalism ? `/tasks/${task.id}?journalism=only` : `/tasks/${task.id}`} userLabel={userLabel} onLogout={logout} />
       <main className="min-w-0 flex-1 space-y-2.5">
         <header className="sticky top-3 z-30 rounded-2xl bg-white/95 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
-          <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="mb-2 flex items-center justify-between gap-3">{returnTo ? <Link href={returnTo} className="inline-flex rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-900">← Quay lại Báo cáo công việc</Link> : <span />}</div><div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0"><h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span><span>{deadlineState}</span></div></div>
             <div className="flex max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto pb-1 sm:justify-end">
               <Link href={`/tasks/${task.id}/print`} className="shrink-0 whitespace-nowrap rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-50">Xuất phiếu giao việc</Link>
@@ -161,7 +163,7 @@ export default function TaskDetailShell({ task, capabilities, userLabel, journal
             </div>
           </div>
         </header>
-        {message ? <p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p> : null}
+        {message ? <p role="status" className="rounded-lg border bg-white p-3 text-sm">{message}</p> : null}{departmentPlanLinked && !personal && !capabilities.assignedCancel && task.status !== "cancelled" ? <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Công việc đã giao từ kế hoạch phòng ban. Vui lòng liên hệ Admin nếu cần huỷ.</p> : null}
 
         <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_390px] xl:grid-cols-[minmax(0,1fr)_430px]">
           <div className="min-w-0 space-y-2.5">

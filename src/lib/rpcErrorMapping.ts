@@ -12,6 +12,9 @@ export type RpcErrorMapping = {
 };
 
 export function mapRpcError(error: RpcError): RpcErrorMapping {
+  if (error.message === "Công việc đã giao từ kế hoạch phòng ban chỉ Admin mới có quyền huỷ.") {
+    return { code: "department_plan_cancel_forbidden", status: 403 };
+  }
   if (error.message === "Publication state conflict.") {
     return { code: "publication_state_conflict", status: 409 };
   }

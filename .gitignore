@@ -20,6 +20,9 @@
 # production
 /build
 /storage/
+/artifacts/personal-weekly-report-docx/*.docx
+/artifacts/personal-weekly-report-docx/*.pdf
+/artifacts/personal-weekly-report-docx/*-render/
 
 # misc
 .DS_Store

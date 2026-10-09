@@ -31,6 +31,7 @@ export type TaskAccessSnapshot = {
   status: string;
   approvalRequired?: boolean;
   assignmentApprovalState?: "not_required" | "pending" | "approved" | "rejected";
+  departmentPlanLinked?: boolean;
   participants: TaskParticipant[];
 };
 
@@ -169,6 +170,7 @@ export function canTaskAction(
     case "update":
       return canEditTask(actor, task);
     case "assigned_cancel":
+      if (task.departmentPlanLinked === true && actor.roleCode !== "admin") return false;
       return canCancelTask(actor, task);
     case "admin_edit":
       return actor.roleCode === "admin"
