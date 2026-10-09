@@ -66,6 +66,8 @@ export async function POST(request: Request) {
     serial_number: typeof body?.serial_number === "string" ? body.serial_number : null,
     status: typeof body?.status === "string" ? body.status : "available",
     note: typeof body?.note === "string" ? body.note : null,
+    tracking_mode: body?.tracking_mode === "lot" ? "lot" : "individual",
+    quantity: typeof body?.quantity === "number" ? body.quantity : 1,
   });
   if (!result.ok) return json({ error: result.error }, { status: result.error === "forbidden" ? 403 : 400 });
   const asset = result.data as { id?: string };

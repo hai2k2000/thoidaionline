@@ -24,6 +24,8 @@ export default function AssetCreatePage() {
   const [serialNumber, setSerialNumber] = useState("");
   const [status, setStatus] = useState<AssetStatus>("in_use");
   const [note, setNote] = useState("");
+  const [trackingMode, setTrackingMode] = useState<"individual" | "lot">("individual");
+  const [quantity, setQuantity] = useState(1);
   const [assigneeId, setAssigneeId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [message, setMessage] = useState("");
@@ -66,6 +68,8 @@ export default function AssetCreatePage() {
         serial_number: serialNumber || undefined,
         status,
         note: note || undefined,
+        tracking_mode: trackingMode,
+        quantity,
       },
       user?.id,
     );
@@ -93,6 +97,8 @@ export default function AssetCreatePage() {
     setSerialNumber("");
     setStatus("in_use");
     setNote("");
+    setTrackingMode("individual");
+    setQuantity(1);
     setAssigneeId("");
     setDepartmentId("");
     } catch (error) { const text = errorMessage(error, "Không thể thêm tài sản."); notify("error", text); setMessage(`❌ ${text}`); }
@@ -126,6 +132,8 @@ export default function AssetCreatePage() {
                 <option value="liquidated">Thanh lý</option>
               </select></label>
               <label className="grid gap-1.5 text-sm font-semibold">Ghi chú<input aria-label="Ghi chú tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={note} onChange={(e) => setNote(e.target.value)} /></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Kiểu theo dõi<select aria-label="Kiểu theo dõi tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={trackingMode} onChange={(e) => { const next = e.target.value as "individual" | "lot"; setTrackingMode(next); if (next === "individual") setQuantity(1); }}><option value="individual">Cá thể</option><option value="lot">Lô</option></select></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Số lượng<input aria-label="Số lượng tài sản" type="number" min={1} step={1} disabled={trackingMode === "individual"} className="min-h-11 rounded-lg border px-3 py-2 font-normal disabled:bg-slate-100" value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} /></label>
 
               <label className="grid gap-1.5 text-sm font-semibold">Giao cho nhân viên<select aria-label="Giao tài sản cho nhân viên" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
                 <option value="">Giao cho ai (không bắt buộc)</option>

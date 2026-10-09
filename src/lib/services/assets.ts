@@ -1,6 +1,7 @@
 import { fail, ok, ServiceResult, withError } from "./common";
 
 export type AssetStatus = "available" | "in_use" | "maintenance" | "broken" | "liquidated";
+export type AssetTrackingMode = "individual" | "lot";
 
 export type Asset = {
   id?: string;
@@ -11,6 +12,8 @@ export type Asset = {
   status?: AssetStatus;
   assigned_department_id?: string | null;
   note?: string | null;
+  tracking_mode?: AssetTrackingMode;
+  quantity?: number;
   assigned_to_label?: string;
   currentAssignment?: AssetAssignment | null;
   assignmentHistory?: AssetAssignment[];

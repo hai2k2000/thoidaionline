@@ -36,6 +36,8 @@ export type AssetRepositoryAsset = {
   status?: string | null;
   assigned_department_id?: string | null;
   note?: string | null;
+  tracking_mode?: AssetTrackingMode;
+  quantity?: number;
   currentAssignment: AssetRepositoryAssignment | null;
   assignmentHistory?: AssetRepositoryAssignment[];
 };
@@ -75,9 +77,20 @@ export type AssetCreateInput = {
   serial_number?: string | null;
   status?: string | null;
   note?: string | null;
+  tracking_mode?: AssetTrackingMode;
+  quantity?: number;
 };
 
 export type AssetUpdateInput = Partial<AssetCreateInput>;
+
+export type AssetTrackingMode = "individual" | "lot";
+
+export function validateAssetQuantity(trackingMode: unknown, quantity: unknown): string | null {
+  if (trackingMode !== "individual" && trackingMode !== "lot") return "invalid_tracking_mode";
+  if (!Number.isInteger(quantity) || (quantity as number) < 1) return "invalid_quantity";
+  if (trackingMode === "individual" && quantity !== 1) return "individual_quantity_must_be_one";
+  return null;
+}
 
 type QueryResult<T> = { data: T[] | null; error: { message?: string } | null };
 
@@ -113,6 +126,10 @@ export function createAssetRepository(database: AssetRepositoryDb) {
 
   async function createAssetForActor(actor: AssetRepositoryActor, input: AssetCreateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
     if (!canManageAssets(actor)) return fail("forbidden");
+    const trackingMode = input.tracking_mode ?? "individual";
+    const quantity = input.quantity ?? 1;
+    const quantityError = validateAssetQuantity(trackingMode, quantity);
+    if (quantityError) return fail(quantityError);
     const query = table<AssetRepositoryAsset>("assets");
     const result = await query.insert({
       asset_code: input.asset_code || undefined,
@@ -121,6 +138,8 @@ export function createAssetRepository(database: AssetRepositoryDb) {
       serial_number: input.serial_number || null,
       status: input.status || "available",
       note: input.note || null,
+      tracking_mode: trackingMode,
+      quantity,
     }).select("*").single();
     if (result.error) return fail(errorText(result.error, "asset_create_failed"));
     if (!result.data) return fail("asset_create_failed");
@@ -129,6 +148,12 @@ export function createAssetRepository(database: AssetRepositoryDb) {
 
   async function updateAssetForActor(actor: AssetRepositoryActor, assetId: string, input: AssetUpdateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
     if (!canManageAssets(actor)) return fail("forbidden");
+    if (input.tracking_mode !== undefined || input.quantity !== undefined) {
+      const quantityError = input.tracking_mode === undefined && input.quantity !== undefined
+        ? (Number.isInteger(input.quantity) && input.quantity >= 1 ? null : "invalid_quantity")
+        : validateAssetQuantity(input.tracking_mode ?? "individual", input.quantity ?? 1);
+      if (quantityError) return fail(quantityError);
+    }
     const query = table<AssetRepositoryAsset>("assets");
     const result = await query.update({ ...input, updated_at: new Date().toISOString() }).eq("id", assetId).select("*").maybeSingle();
     if (result.error) return fail(errorText(result.error, "asset_update_failed"));
