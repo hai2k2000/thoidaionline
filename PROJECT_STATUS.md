@@ -529,3 +529,30 @@ Production mutation: NONE.
 
 Next:
 - Complete the canonical lineage-gated production-like build, then push this feature branch for owner review; do not deploy in this phase.
+
+## Weekly Report Add Work
+
+Current Phase: implementation
+Current Task: Task 3 - draft UI add/remove flow
+
+Completed:
+- Approved bounded design and implementation plan.
+- Created isolated branch from weekly-report reopen/versioning commit 8a94e2b.
+- Added pure addable-row filtering and server allow-list model contracts.
+- Added server-scoped addable rows, draft allow-list validation, and a bounded REPORT_ONLY add-work route.
+
+Validation:
+- Task 1 focused model tests: 19/19 PASS.
+- Task 2 focused server + weekly report regressions: 48/48 PASS.
+- Production unchanged.
+
+Blockers:
+- None.
+
+Next:
+- Add draft-only UI controls for existing Task selection, sudden work, and removal.
+
+- Task 3 UI add/remove controls committed as 9b3e47a.
+- Task 4 Version 2/DOCX/Personal Plan coverage added; full regression set currently 118/118 PASS.
+- No migration added; production unchanged.
+- Final source gates pass; canonical `npm run build` is blocked by the repository lineage guard on the feature branch, and standalone packaging is blocked by Windows symlink permissions in this local environment.

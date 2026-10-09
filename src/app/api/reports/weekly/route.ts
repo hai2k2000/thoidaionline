@@ -18,6 +18,7 @@ function draftOnly(body: Record<string, unknown>) {
     periodStart: body.periodStart,
     currentRows: Array.isArray(body.currentRows) ? body.currentRows : draftPayload.currentRows,
     nextRows: Array.isArray(body.nextRows) ? body.nextRows : draftPayload.nextRows,
+    excludedTaskIds: Array.isArray(body.excludedTaskIds) ? body.excludedTaskIds : draftPayload.excludedTaskIds,
     difficulties: typeof body.difficulties === "string" ? body.difficulties : draftPayload.difficulties,
   };
 }
@@ -30,6 +31,6 @@ export async function POST(request: Request) {
   const input = draftOnly(body);
   const validated = validatePersonalWeeklyDraft({ currentRows: input.currentRows, nextRows: input.nextRows });
   if (!validated.ok || (input.difficulties !== undefined && typeof input.difficulties !== "string")) return apiError("invalid_request", 400);
-  const result = await savePersonalWeeklyDraft(guard.actor.id, { period: input.period as { start: string; end: string }, periodStart: input.periodStart as string, draftPayload: { currentRows: validated.value.currentRows, nextRows: validated.value.nextRows }, difficulties: input.difficulties as string });
+  const result = await savePersonalWeeklyDraft(guard.actor.id, { period: input.period as { start: string; end: string }, periodStart: input.periodStart as string, draftPayload: { currentRows: validated.value.currentRows, nextRows: validated.value.nextRows, excludedTaskIds: Array.isArray(input.excludedTaskIds) ? input.excludedTaskIds.filter((id): id is string => typeof id === "string") : [] }, difficulties: input.difficulties as string });
   return result.ok ? apiJson({ row: result.data }) : rpcFailure(result.error);
 }

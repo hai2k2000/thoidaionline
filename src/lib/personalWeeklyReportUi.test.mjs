@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
+import { buildReopenRequest, projectVersionSnapshot, validateReopenReason } from "./personalWeeklyReportUi.mjs";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
@@ -80,4 +81,67 @@ test("weekly report data failures render an error state instead of redirecting t
   const page = source("../app/reports/weekly/page.tsx") + source("../components/WeeklyReportLoadError.tsx");
   assert.doesNotMatch(page, /if \(!result\.ok\) redirect\("\/tasks"\)/);
   assert.match(page, /Không thể tải Báo cáo tuần\. Vui lòng thử lại\./);
+});
+
+test("completed own reports expose server-verified reopen action and exact modal copy", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /reopenEligibility/);
+  assert.match(component, /eligible\s*===\s*true/);
+  assert.match(component, /Mở lại báo cáo/);
+  assert.match(component, /Lịch sử phiên bản|hoàn thành vẫn được lưu trong lịch sử/);
+  assert.match(component, /Lý do mở lại \*/);
+  assert.match(component, /Huỷ/);
+});
+
+test("invalid reopen input cannot produce a network request body", () => {
+  assert.equal(buildReopenRequest("report-7", " "), null);
+  assert.equal(buildReopenRequest("report-7", "abcd"), null);
+  assert.equal(buildReopenRequest("", "Valid reason"), null);
+  assert.deepEqual(Object.keys(buildReopenRequest("report-7", "  Valid reason  ")), ["reportId", "reason"]);
+});
+
+test("reopened drafts are editable and show completion controls while completed history stays read-only", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /Đang chỉnh sửa lại/);
+  assert.match(component, /const reopened\s*=\s*!completed\s*&&\s*!historical/);
+  assert.match(component, /disabled=\{completed \|\| historical\}/);
+  assert.match(component, /Hoàn thành báo cáo/);
+});
+
+test("version history labels current and replaced versions without edit controls or internal IDs", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /Lịch sử phiên bản/);
+  assert.match(component, /Phiên bản hiện tại|Đang dùng/);
+  assert.match(component, /Đã thay thế|Phiên bản cũ/);
+  assert.match(component, /version_no/);
+  assert.match(component, /completed_at/);
+  assert.doesNotMatch(component, /version\.id.*textarea|version\.id.*button/);
+});
+
+test("reopened older-week drafts remain reachable from report history", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /\/reports\/weekly\?periodStart=\$\{encodeURIComponent\(start\)\}/);
+  assert.match(component, /Chỉnh sửa bản nháp/);
+});
+
+test("reopen reason validation and payload builder enforce the client boundary", () => {
+  assert.equal(validateReopenReason("   ").ok, false);
+  assert.equal(validateReopenReason("four").ok, false);
+  assert.equal(validateReopenReason("  Sửa số liệu  ").value, "Sửa số liệu");
+  assert.deepEqual(buildReopenRequest("report-7", "  Sửa số liệu  "), { reportId: "report-7", reason: "Sửa số liệu" });
+  assert.equal(buildReopenRequest("report-7", "four"), null);
+});
+
+test("version snapshot projection exposes report content without internal IDs or edit affordances", () => {
+  const projected = projectVersionSnapshot({ version_no: 1, snapshot_payload: { currentRows: [{ taskId: "task-1", title: "Viết bài", resultText: "Đã xong" }], nextRows: [{ taskId: "task-2", title: "Biên tập" }], difficulties: "Thiếu dữ liệu" } });
+  assert.deepEqual(projected.currentRows, [{ title: "Viết bài", text: "Đã xong" }]);
+  assert.deepEqual(projected.nextRows, [{ title: "Biên tập" }]);
+  assert.equal(projected.difficulties, "Thiếu dữ liệu");
+  assert.equal("taskId" in projected.currentRows[0], false);
+});
+
+test("reopen dialog keeps a stable focus target while the request is busy", () => {
+  const component = source("../components/PersonalWeeklyReportPage.tsx");
+  assert.match(component, /setAttribute\("tabindex", "-1"\)/);
+  assert.match(component, /if \(!current\.length\) \{ event\.preventDefault\(\); dialog\.focus\(\); return; \}/);
 });

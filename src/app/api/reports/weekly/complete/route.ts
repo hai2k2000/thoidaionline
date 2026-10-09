@@ -17,10 +17,11 @@ export async function POST(request: Request) {
     periodStart: body.periodStart,
     currentRows: Array.isArray(body.currentRows) ? body.currentRows : draftPayload.currentRows,
     nextRows: Array.isArray(body.nextRows) ? body.nextRows : draftPayload.nextRows,
+    excludedTaskIds: Array.isArray(body.excludedTaskIds) ? body.excludedTaskIds : draftPayload.excludedTaskIds,
     difficulties: typeof body.difficulties === "string" ? body.difficulties : draftPayload.difficulties,
   };
   const validated = validatePersonalWeeklyDraft({ currentRows: safe.currentRows, nextRows: safe.nextRows });
   if (!validated.ok || (safe.difficulties !== undefined && typeof safe.difficulties !== "string")) return apiError("invalid_request", 400);
-  const result = await completePersonalWeeklyReport(guard.actor.id, { period: safe.period as { start: string; end: string }, periodStart: safe.periodStart as string, draftPayload: { currentRows: validated.value.currentRows, nextRows: validated.value.nextRows }, difficulties: safe.difficulties as string });
+  const result = await completePersonalWeeklyReport(guard.actor.id, { period: safe.period as { start: string; end: string }, periodStart: safe.periodStart as string, draftPayload: { currentRows: validated.value.currentRows, nextRows: validated.value.nextRows, excludedTaskIds: Array.isArray(safe.excludedTaskIds) ? safe.excludedTaskIds.filter((id): id is string => typeof id === "string") : [] }, difficulties: safe.difficulties as string });
   return result.ok ? apiJson({ row: result.data }) : rpcFailure(result.error);
 }

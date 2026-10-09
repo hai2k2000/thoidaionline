@@ -25,6 +25,44 @@ export type PersonalWeeklySnapshot = {
   difficulties?: string;
 };
 
+export type PersonalWeeklyReportVersion = {
+  version_no: number;
+  snapshot_payload: Record<string, unknown>;
+  completed_at: string;
+};
+
+export type PersonalWeeklyReopenEligibility = {
+  eligible: boolean | null;
+  reason: "available" | "already_draft" | "expired" | "forbidden" | "not_completed" | "unknown";
+  isAdmin: boolean;
+};
+
+export function normalizePersonalWeeklyEligibility(value: unknown): PersonalWeeklyReopenEligibility {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { eligible: false, reason: "unknown", isAdmin: false };
+  const row = value as Record<string, unknown>;
+  const allowed = new Set<PersonalWeeklyReopenEligibility["reason"]>(["available", "already_draft", "expired", "forbidden", "not_completed", "unknown"]);
+  const reason = typeof row.reason === "string" && allowed.has(row.reason as PersonalWeeklyReopenEligibility["reason"])
+    ? row.reason as PersonalWeeklyReopenEligibility["reason"] : "unknown";
+  return {
+    eligible: row.eligible === true && reason === "available",
+    reason,
+    isAdmin: row.is_admin === true,
+  };
+}
+
+export function normalizePersonalWeeklyReopenReason(reason: unknown): { ok: true; value: string } | { ok: false; code: "22023" } {
+  const value = typeof reason === "string" ? reason.trim() : "";
+  return value.length >= 5 && value.length <= 500 ? { ok: true, value } : { ok: false, code: "22023" };
+}
+
+export function buildPersonalWeeklyReopenRpcArgs(actorId: string, reportId: string, reason: string) {
+  return { p_actor: actorId, p_report_id: reportId, p_reason: reason };
+}
+
+export function boundPersonalWeeklyVersions<T extends { version_no: number }>(versions: readonly T[], limit = 12): T[] {
+  return [...versions].sort((a, b) => b.version_no - a.version_no).slice(0, limit);
+}
+
 export type PersonalWeeklyNextRow = PersonalWeeklyCurrentRow & {
   period: PersonalWeeklyPeriod;
 };
@@ -98,6 +136,44 @@ export function dedupePersonalWeeklyTasks(rows: readonly Record<string, unknown>
     if (!existing.periodRelation) existing.periodRelation = relationOf(input) ?? null;
   }
   return result;
+}
+
+export type PersonalWeeklyAddableRow = PersonalWeeklyCurrentRow & {
+  selectableForWeeklyReport?: boolean;
+};
+
+const reportCommentaryKeys = ["resultText", "commentary", "notes", "periodCommentary", "resultNote", "additionalNote"] as const;
+
+export function filterPersonalWeeklyAddableRows(
+  rows: readonly Record<string, unknown>[],
+  selectedTaskIds: readonly string[] = [],
+): PersonalWeeklyAddableRow[] {
+  const selected = new Set(selectedTaskIds);
+  return dedupePersonalWeeklyTasks(rows)
+    .filter((row) => row.status !== "cancelled" && row.selectableForWeeklyReport !== false && !selected.has(row.taskId)) as PersonalWeeklyAddableRow[];
+}
+
+export function validatePersonalWeeklyCurrentRows(
+  rows: readonly Record<string, unknown>[],
+  allowedRows: readonly Record<string, unknown>[],
+): { ok: true; value: PersonalWeeklyCurrentRow[] } | { ok: false; message: string } {
+  const allowed = new Map(filterPersonalWeeklyAddableRows(allowedRows).map((row) => [row.taskId, row]));
+  const seen = new Set<string>();
+  const value: PersonalWeeklyCurrentRow[] = [];
+  for (const input of rows) {
+    const taskId = taskIdOf(input);
+    if (!taskId) return { ok: false, message: "Rows require a task ID" };
+    if (seen.has(taskId)) return { ok: false, message: `Duplicate task ID: ${taskId}` };
+    seen.add(taskId);
+    const canonical = allowed.get(taskId);
+    if (!canonical) return { ok: false, message: `Task is not eligible for this report: ${taskId}` };
+    const row = { ...canonical } as PersonalWeeklyCurrentRow & Record<string, unknown>;
+    for (const key of reportCommentaryKeys) {
+      if (typeof input[key] === "string") row[key] = input[key];
+    }
+    value.push(row);
+  }
+  return { ok: true, value };
 }
 
 export function buildNextWeekCandidates(rows: readonly Record<string, unknown>[], nextPeriod: PersonalWeeklyPeriod): PersonalWeeklyNextRow[] {

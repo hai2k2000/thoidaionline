@@ -34,6 +34,30 @@ test("weekly routes expose guarded service GET, validated draft POST, and idempo
   assert.doesNotMatch(`${weekly}\n${complete}`, /searchParams\.get\(["'](?:userId|employeeId|user_id|employee_id)/);
 });
 
+test("reopen route is a guarded POST accepting only reportId and reason", () => {
+  const route = source("../app/api/reports/weekly/reopen/route.ts");
+  const service = source("./personalWeeklyReportService.ts");
+  assert.match(route, /export async function POST/);
+  assert.match(route, /reopenPersonalWeeklyReportRequest/);
+  assert.doesNotMatch(route, /export async function (GET|PATCH|DELETE)/);
+  assert.match(service, /reopenPersonalWeeklyReportRequest/);
+  assert.match(service, /requireMutationActor/);
+  assert.match(service, /reportId/);
+  assert.match(service, /reason/);
+  assert.match(service, /Object\.keys/);
+  assert.doesNotMatch(`${route}\n${service}`, /(?:body|input)\.(?:userId|employeeId|user_id|employee_id)/);
+});
+
+test("weekly page passes version metadata through the authenticated load", () => {
+  const page = source("../app/reports/weekly/page.tsx");
+  const repository = source("./personalWeeklyReportRepository.ts");
+  assert.match(page, /loadPersonalWeeklyReport/);
+  assert.match(page, /<PersonalWeeklyReportPage initial=\{result\.data\}/);
+  assert.match(repository, /versions: PersonalWeeklyReportVersion\[\]/);
+  assert.match(repository, /currentVersionNo: number \| null/);
+  assert.match(repository, /reopenEligibility: PersonalWeeklyReopenEligibility/);
+});
+
 test("DOCX route exports only the completed shared view model with safe headers", () => {
   const route = source("../app/api/reports/weekly/docx/route.ts");
   assert.match(route, /export async function GET/);
@@ -44,6 +68,17 @@ test("DOCX route exports only the completed shared view model with safe headers"
   assert.match(route, /application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document/);
   assert.match(route, /Cache-Control/);
   assert.doesNotMatch(route, /POST|PATCH|DELETE|from\(["']tasks["']\)/);
+  assert.match(route, /status !== ["']COMPLETED["']/);
+});
+
+test("DOCX route denies reopened DRAFT reports and loads immutable snapshot data", () => {
+  const route = source("../app/api/reports/weekly/docx/route.ts");
+  const repository = source("./personalWeeklyReportRepository.ts");
+  assert.match(route, /result\.data\.report\?\.status !== ["']COMPLETED["']/);
+  assert.match(repository, /if \(report\?\.status === ["']COMPLETED["']\)/);
+  assert.match(repository, /snapshotRows\(report\)/);
+  assert.match(repository, /currentVersionNo/);
+  assert.match(repository, /versions/);
 });
 
 test("historical page and DOCX requests use a report id without accepting an employee override", () => {
