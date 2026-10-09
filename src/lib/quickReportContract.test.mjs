@@ -38,7 +38,7 @@ test("in-progress quick report may omit completion date", () => {
 test("quick report rejects invalid row values and reversed dates", () => {
   assert.throws(() => normalizeQuickReportRow(row({ category: "regular" })), /category/);
   assert.throws(() => normalizeQuickReportRow(row({ status: "done", completionDate: "" })), /completionDate/);
-  assert.throws(() => normalizeQuickReportRow(row({ startDate: "2026-10-02", completionDate: "2026-10-01" })), /completionDate/);
+  assert.throws(() => normalizeQuickReportRow(row({ startDate: "2026-10-02", completionDate: "2026-10-01" })), /kh\u00f4ng \u0111\u01b0\u1ee3c tr\u01b0\u1edbc/);
 });
 
 test("batch validation is bounded at 50 and preserves row indexes", () => {

@@ -3,12 +3,13 @@ import "server-only";
 import { AlignmentType, Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
 import type { PersonalQuickReportBounds, PersonalQuickReportRow } from "@/lib/quickReportPersonalSummary";
 import { personalQuickReportStatusLabel } from "@/lib/quickReportPersonalSummary";
+import { formatDateOnlyVN } from "@/lib/businessDate.mjs";
 
 const FONT = "Times New Roman";
 const text = (value: string, bold = false) => new TextRun({ text: value, font: FONT, size: 20, bold });
 const paragraph = (value: string, bold = false, alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]) => new Paragraph({ alignment, spacing: { after: 90 }, children: [text(value, bold)] });
 const cell = (value: string, bold = false) => new TableCell({ width: { size: 2200, type: WidthType.DXA }, children: [new Paragraph({ children: [text(value || "-", bold)] })] });
-const date = (value: string | null) => value ? value.split("-").reverse().join("/") : "-";
+const date = (value: string | null) => value ? formatDateOnlyVN(value) : "-";
 const rowContent = (row: PersonalQuickReportRow, index: number) => new TableRow({ children: [cell(String(index + 1)), cell(date(row.report_work_date)), cell(row.title), cell(row.description ?? ""), cell(date(row.start_date)), cell(date(row.completion_date)), cell(`${row.report_notes ?? ""}${row.report_notes ? " - " : ""}${personalQuickReportStatusLabel(row.status)}`)] });
 
 export async function exportPersonalQuickReportDocx(rows: PersonalQuickReportRow[], employeeName: string, bounds: PersonalQuickReportBounds) {

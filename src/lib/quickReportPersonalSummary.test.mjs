@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { completionDateFromTaskTimestamp } from "./businessDate.mjs";
 
 import {
   DEFAULT_PERSONAL_QUICK_REPORT_PAGE_SIZE,
@@ -39,4 +40,10 @@ test("summary filters only REPORT_ONLY rows owned by the actor", () => {
 
 test("summary metrics use canonical task statuses", () => {
   assert.deepEqual(personalQuickReportMetrics([row({ status: "done" }), row({ id: "task-2", status: "in_progress" }), row({ id: "task-3", status: "cancelled" })]), { total: 3, completed: 1, inProgress: 1, unfinished: 2 });
+});
+
+
+test("summary completion date uses Vietnam business date from completed timestamp", () => {
+  assert.equal(completionDateFromTaskTimestamp("2026-09-30T17:00:00.000Z"), "2026-10-01");
+  assert.equal(completionDateFromTaskTimestamp(null), null);
 });

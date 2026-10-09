@@ -18,6 +18,7 @@ import {
   type PersonalWeeklyAddableRow,
 } from "@/lib/personalWeeklyReport";
 import { workScheduleRepository } from "@/lib/workScheduleRepository";
+import { businessDateFromTimestamp } from "@/lib/businessDate.mjs";
 
 export type PersonalWeeklyReportRow = {
   id: string;
@@ -116,6 +117,7 @@ function taskRows(tasks: any[], actorId: string, period: PersonalWeeklyPeriod): 
       workflowType: task.workflow_type,
       workflow_type: task.workflow_type,
       startDate: task.start_date,
+      completionDate: task.workflow_type === "REPORT_ONLY" && task.completed_at ? businessDateFromTimestamp(task.completed_at) : null,
       dueDate: task.due_date,
       reportWorkDate: task.report_work_date,
       departmentId: task.department_id,

@@ -28,7 +28,7 @@ export function validateQuickReportDateRange(startDate, completionDate) {
   const parsedStart = new Date(`${startDate}T00:00:00Z`);
   if (parsedStart.toISOString().slice(0, 10) !== startDate) return "startDate";
   if (completionDate !== null && new Date(`${completionDate}T00:00:00Z`).toISOString().slice(0, 10) !== completionDate) return "completionDate";
-  if (completionDate !== null && completionDate < startDate) return "completionDate";
+  if (completionDate !== null && completionDate < startDate) return "Ngày hoàn thành không được trước ngày bắt đầu.";
   return null;
 }
 

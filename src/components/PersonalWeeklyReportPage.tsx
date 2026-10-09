@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { businessDateFromTimestamp, formatDateOnlyVN } from "@/lib/businessDate.mjs";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { buildReopenRequest, projectVersionSnapshot } from "@/lib/personalWeeklyReportUi.mjs";
@@ -12,9 +13,13 @@ type ReopenEligibility = { eligible: boolean | null; reason: string; isAdmin: bo
 type Initial = { period: { current: { start: string; end: string }; next: { start: string; end: string } }; employee: Record<string, unknown> | null; report: Report | null; currentRows: Row[]; eligibleCurrentRows?: Row[]; addableCurrentRows?: Row[]; canCreateQuickReport?: boolean; nextRows: Row[]; proposals: Array<Record<string, unknown>>; difficulties: string; history: Array<Record<string, unknown>>; historical?: boolean; versions: ReportVersion[]; currentVersionNo: number | null; reopenEligibility: ReopenEligibility };
 
 const control = "min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-50";
-const dateLabel = (value: string) => value ? value.slice(0, 10).split("-").reverse().join("/") : "—";
+const dateLabel = (value: string) => {
+  if (!value) return "—";
+  const raw = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? formatDateOnlyVN(raw) : formatDateOnlyVN(businessDateFromTimestamp(value));
+};
 const dateBefore = (value: string) => { const date = new Date(`${value}T00:00:00Z`); date.setUTCDate(date.getUTCDate() - 1); return date.toISOString().slice(0, 10); };
-const dateTimeLabel = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date); };
+const dateTimeLabel = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" }).format(date); };
 const statusLabel = (value: unknown) => ({ done: "Hoàn thành", in_progress: "Đang thực hiện", blocked: "Có vướng mắc", cancelled: "Đã hủy", new: "Mới" }[String(value)] ?? String(value ?? "Chưa cập nhật"));
 
 export default function PersonalWeeklyReportPage({ initial }: { initial: Initial }) {
@@ -87,7 +92,7 @@ export default function PersonalWeeklyReportPage({ initial }: { initial: Initial
       const response = await fetch("/api/reports/weekly/add-work", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId, period: initial.period.current, rows: [{ title: quickTitle, category: quickCategory, startDate: quickStartDate, completionDate: quickStatus === "done" ? quickCompletionDate : null, status: quickStatus, notes: quickNotes }] }) });
       const result = await response.json().catch(() => null) as { tasks?: Array<Record<string, unknown>> } | null;
       if (!response.ok) throw new Error("Không thể thêm việc phát sinh.");
-      const createdRows = (result?.tasks ?? []).map((task) => ({ taskId: String(task.id ?? ""), title: String(task.title ?? quickTitle), status: String(task.status ?? quickStatus), workflowType: "REPORT_ONLY", source: "report_only", sourceLabel: "Việc phát sinh", sourceLabels: ["Việc phát sinh"], startDate: quickStartDate, reportWorkDate: quickStartDate, resultText: quickNotes, commentary: quickNotes })).filter((row) => row.taskId);
+      const createdRows = (result?.tasks ?? []).map((task) => ({ taskId: String(task.id ?? ""), title: String(task.title ?? quickTitle), status: String(task.status ?? quickStatus), workflowType: "REPORT_ONLY", source: "report_only", sourceLabel: "Việc phát sinh", sourceLabels: ["Việc phát sinh"], startDate: quickStartDate, completionDate: quickStatus === "done" ? quickCompletionDate : null, reportWorkDate: quickStartDate, resultText: quickNotes, commentary: quickNotes })).filter((row) => row.taskId);
       setCurrentRows((rows) => [...rows, ...createdRows.filter((row) => !rows.some((existing) => existing.taskId === row.taskId))]);
       setAddWorkOpen(false); setQuickTitle(""); setQuickNotes(""); setMessage("Đã thêm việc phát sinh vào báo cáo.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể thêm việc phát sinh."); }

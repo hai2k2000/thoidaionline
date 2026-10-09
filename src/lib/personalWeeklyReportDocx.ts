@@ -1,12 +1,13 @@
 import { AlignmentType, BorderStyle, Document, Footer, Packer, Paragraph, SimpleField, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
 import type { PersonalWeeklyReportLoad } from "@/lib/personalWeeklyReportRepository";
+import { formatDateOnlyVN } from "@/lib/businessDate.mjs";
 
 const FONT = "Times New Roman";
 const SIZE = 22;
 const empty = (value: unknown) => value === undefined || value === null || String(value).trim() === "" ? "" : String(value);
 const run = (value: unknown, bold = false) => new TextRun({ text: empty(value), font: FONT, size: SIZE, bold });
 const para = (value: unknown = "", options: { bold?: boolean; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; before?: number; after?: number; indent?: number } = {}) => new Paragraph({ alignment: options.align, spacing: { before: options.before ?? 0, after: options.after ?? 100, line: 276 }, indent: options.indent ? { left: options.indent } : undefined, children: [run(value, options.bold)] });
-const date = (value: unknown) => { const raw = empty(value); return raw ? raw.slice(0, 10).split("-").reverse().join("/") : ""; };
+const date = (value: unknown) => { const raw = empty(value); return raw ? formatDateOnlyVN(raw.slice(0, 10)) : ""; };
 const value = (row: Record<string, unknown>, ...keys: string[]) => keys.map((key) => row[key]).find((item) => item !== undefined && item !== null && String(item).trim() !== "");
 const safeFilenamePart = (input: string) => input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/_+/g, "_") || "Nhan_vien";
 

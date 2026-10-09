@@ -1,6 +1,7 @@
 import "server-only";
 
 import { serverSupabase } from "@/lib/serverSupabase";
+import { completionDateFromTaskTimestamp } from "@/lib/businessDate.mjs";
 import {
   DEFAULT_PERSONAL_QUICK_REPORT_PAGE_SIZE,
   MAX_PERSONAL_QUICK_REPORT_ROWS,
@@ -20,7 +21,7 @@ export async function getPersonalQuickReportSummary(actorId: string, bounds: Per
     .order("report_work_date", { ascending: false })
     .limit(MAX_PERSONAL_QUICK_REPORT_ROWS);
   if (result.error) return { error: result.error };
-  const rows = ((result.data ?? []) as unknown as Array<Omit<PersonalQuickReportRow, "completion_date"> & { completed_at: string | null }>).map((row) => ({ ...row, completion_date: row.completed_at ? row.completed_at.slice(0, 10) : null }));
+  const rows = ((result.data ?? []) as unknown as Array<Omit<PersonalQuickReportRow, "completion_date"> & { completed_at: string | null }>).map((row) => ({ ...row, completion_date: completionDateFromTaskTimestamp(row.completed_at) }));
   const filtered = filterPersonalQuickReports(rows, actorId, bounds);
   const start = Math.max(0, (page - 1) * pageSize);
   return {

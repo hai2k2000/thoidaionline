@@ -56,3 +56,13 @@ test("quick report rejects unauthorized actor before repository mutation", async
   assert.equal(response.status, 403);
   assert.equal(h.calls.length, 0);
 });
+
+test("quick report returns friendly date-order validation", async () => {
+  const h = harness();
+  const response = await h.app.quickReport(new Request("https://example.test/api/tasks/quick-report", {
+    method: "POST", body: JSON.stringify({ requestId: uuid("42"), rows: [validRow({ startDate: "2026-10-07", completionDate: "2026-10-06" })] }),
+  }));
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error.message, "Ng\u00e0y ho\u00e0n th\u00e0nh kh\u00f4ng \u0111\u01b0\u1ee3c tr\u01b0\u1edbc ng\u00e0y b\u1eaft \u0111\u1ea7u.");
+  assert.equal(h.calls.length, 0);
+});

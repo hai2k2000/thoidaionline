@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatDateOnlyVN } from "@/lib/businessDate.mjs";
 
 type Period = "week" | "month" | "range";
 type SummaryRow = { id: string; title: string; description: string | null; report_work_date: string | null; start_date: string | null; completion_date: string | null; report_notes: string | null; status: string };
 type Payload = { from: string; to: string; report: { rows: SummaryRow[]; total: number; metrics: { total: number; completed: number; inProgress: number; unfinished: number } } };
 
-const dateLabel = (value: string | null) => value ? value.split("-").reverse().join("/") : "—";
+const dateLabel = (value: string | null) => value ? formatDateOnlyVN(value) : "—";
 const statusLabel = (value: string) => ({ done: "Hoàn thành", in_progress: "Đang thực hiện", cancelled: "Đã hủy" }[value] ?? value);
 
 export default function PersonalQuickReportSummary() {
