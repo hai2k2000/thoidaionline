@@ -1,16 +1,26 @@
-import { canManageAssets, canViewAsset, type AssetVisibilityActor } from "./assetAuthorization";
+// @ts-expect-error Node contract tests execute this TypeScript module directly and need the explicit extension.
+import { canManageAssets, canViewAsset, type AssetVisibilityActor } from "./assetAuthorization.ts";
 
 export type ServiceResult<T> = { ok: true; data: T } | { ok: false; error: string };
 const ok = <T>(data: T): ServiceResult<T> => ({ ok: true, data });
 const fail = <T = never>(error: string): ServiceResult<T> => ({ ok: false, error });
 
 export type AssetRepositoryDb = {
-  from(table: string): {
-    select(columns?: string): unknown;
-    insert?(values: unknown): unknown;
-    update?(values: unknown): unknown;
-  };
-  rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: { message?: string } | null }>;
+  from(table: string): unknown;
+  rpc(name: string, args: Record<string, unknown>): unknown;
+};
+
+type AssetRepositoryQuery<T> = {
+  select(columns?: string): AssetRepositoryQuery<T>;
+  insert(values: unknown): AssetRepositoryQuery<T>;
+  update(values: unknown): AssetRepositoryQuery<T>;
+  eq(field: string, value: unknown): AssetRepositoryQuery<T>;
+  maybeSingle(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
+  single(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
+  then<TResult1 = QueryResult<T>, TResult2 = never>(
+    onfulfilled?: ((value: QueryResult<T>) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2>;
 };
 
 export type AssetRepositoryActor = AssetVisibilityActor & {
@@ -78,10 +88,12 @@ function currentAssignment(assignments: AssetRepositoryAssignment[], assetId: st
 }
 
 export function createAssetRepository(database: AssetRepositoryDb) {
+  const table = <T>(name: string) => database.from(name) as AssetRepositoryQuery<T>;
+
   async function listAssetsForActor(actor: AssetRepositoryActor): Promise<ServiceResult<AssetListPayload>> {
     const [assetResult, assignmentResult] = await Promise.all([
-      database.from("assets").select("*") as Promise<QueryResult<AssetRepositoryAsset>>,
-      database.from("asset_assignments").select("*") as Promise<QueryResult<AssetRepositoryAssignment>>,
+      table<AssetRepositoryAsset>("assets").select("*"),
+      table<AssetRepositoryAssignment>("asset_assignments").select("*"),
     ]);
     if (assetResult.error || assignmentResult.error) return fail(errorText(assetResult.error || assignmentResult.error, "asset_read_failed"));
     const assignments = assignmentResult.data ?? [];
@@ -101,7 +113,7 @@ export function createAssetRepository(database: AssetRepositoryDb) {
 
   async function createAssetForActor(actor: AssetRepositoryActor, input: AssetCreateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
     if (!canManageAssets(actor)) return fail("forbidden");
-    const query = database.from("assets") as any;
+    const query = table<AssetRepositoryAsset>("assets");
     const result = await query.insert({
       asset_code: input.asset_code || undefined,
       asset_name: input.asset_name.trim(),
@@ -111,12 +123,13 @@ export function createAssetRepository(database: AssetRepositoryDb) {
       note: input.note || null,
     }).select("*").single();
     if (result.error) return fail(errorText(result.error, "asset_create_failed"));
+    if (!result.data) return fail("asset_create_failed");
     return ok({ ...result.data, currentAssignment: null });
   }
 
   async function updateAssetForActor(actor: AssetRepositoryActor, assetId: string, input: AssetUpdateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
     if (!canManageAssets(actor)) return fail("forbidden");
-    const query = database.from("assets") as any;
+    const query = table<AssetRepositoryAsset>("assets");
     const result = await query.update({ ...input, updated_at: new Date().toISOString() }).eq("id", assetId).select("*").maybeSingle();
     if (result.error) return fail(errorText(result.error, "asset_update_failed"));
     if (!result.data) return fail("asset_not_found");
@@ -130,7 +143,7 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     args: Record<string, unknown>,
   ): Promise<ServiceResult<unknown>> {
     if (!canManageAssets(actor)) return fail("forbidden");
-    const result = await database.rpc(rpcName, { p_actor_id: actor.id, ...args });
+    const result = await (database.rpc(rpcName, { p_actor_id: actor.id, ...args }) as PromiseLike<{ data: unknown; error: { message?: string } | null }>);
     if (result.error) return fail(errorText(result.error, "asset_lifecycle_failed"));
     return ok(result.data);
   }
