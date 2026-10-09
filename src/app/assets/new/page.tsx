@@ -14,7 +14,7 @@ type AssetStatus = "available" | "in_use" | "maintenance" | "broken" | "liquidat
 
 export default function AssetCreatePage() {
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const { loading: authLoading, user, logout, hasPermission } = useAuth();
   const { notify } = useActionFeedback();
   const [busy, setBusy] = useState(false);
 
@@ -33,7 +33,7 @@ export default function AssetCreatePage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
-    if (!canAccessModule("assets")) return void router.push("/");
+    if (!hasPermission("asset.manage")) return void router.push("/");
 
     const t = setTimeout(async () => {
       const response = await fetch("/api/assets?options=1", { cache: "no-store" });
@@ -47,10 +47,16 @@ export default function AssetCreatePage() {
     }, 0);
 
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router]);
+  }, [authLoading, user, hasPermission, router]);
 
   const onCreate = async () => {
     if (busy) return;
+    if (assigneeId && !departmentId) {
+      const text = "Cần chọn phòng ban chịu trách nhiệm khi giao cho nhân viên.";
+      notify("error", text);
+      setMessage(`❌ ${text}`);
+      return;
+    }
     setBusy(true);
     try { const result = await createAsset(
       {

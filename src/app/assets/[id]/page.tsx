@@ -20,7 +20,7 @@ const assetStatusLabel: Record<string, string> = {
 export default function AssetDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { loading: authLoading, user, logout, canAccessModule, hasPermission } = useAuth();
+  const { loading: authLoading, user, logout, hasPermission } = useAuth();
   const { notify } = useActionFeedback();
 
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -54,11 +54,11 @@ export default function AssetDetailPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
-    if (!canAccessModule("assets")) return void router.push("/");
+    if (!hasPermission("asset.view") && !hasPermission("asset.manage")) return void router.push("/");
     if (!params?.id) return;
     const t = setTimeout(() => void load(params.id), 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, params?.id, router, hasPermission]);
+  }, [authLoading, user, params?.id, router, hasPermission]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
@@ -110,6 +110,11 @@ export default function AssetDetailPage() {
 
           <div className="mt-3">
             <button onClick={saveAsset} disabled={saving} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{saving ? "Đang lưu..." : "Lưu thông tin tài sản"}</button>
+          </div>
+          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+            <h2 className="font-semibold">Vòng đời giao nhận</h2>
+            <p className="mt-1 text-slate-600">Phòng chịu trách nhiệm và người sử dụng được quản lý qua assignment hiện tại; lịch sử transfer/return được giữ nguyên ở máy chủ.</p>
+            {hasPermission("asset.manage") ? <p className="mt-1 font-medium text-orange-700">Có quyền assign, transfer và return tài sản.</p> : null}
           </div>
         </section>
 

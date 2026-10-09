@@ -214,6 +214,8 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     canManageUsers: hasPermission("can_manage_users"),
     canManagePermissions: hasPermission("can_manage_permissions"),
     canManageJournalismStructures: hasPermission("journalism.structure.manage"),
+    canViewAssets: hasPermission("asset.view"),
+    canManageAssets: hasPermission("asset.manage"),
   });
 
   const restoreMenuFocus = useCallback(() => {
