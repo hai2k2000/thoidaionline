@@ -52,15 +52,21 @@ test("asset history receives bounded department and user labels", async () => {
     const rows = table === "assets"
       ? [{ id: "asset-1", asset_name: "Laptop", status: "in_use" }]
       : table === "asset_assignments"
-        ? [{ id: "assignment-1", asset_id: "asset-1", department_id: "dept-a", assignee_id: "user-a", status: "active", returned_at: null, assigned_at: "2026-10-10T09:30:00Z" }]
-        : table === "departments" ? [{ id: "dept-a", name: "Phòng A" }] : [{ id: "user-a", full_name: "Người A" }];
+        ? [
+          { id: "assignment-old", asset_id: "asset-1", department_id: "dept-old", assignee_id: "user-old", status: "returned", returned_at: "2026-10-09T09:30:00Z", assigned_at: "2026-10-08T09:30:00Z" },
+          { id: "assignment-1", asset_id: "asset-1", department_id: "dept-a", assignee_id: "user-a", status: "active", returned_at: null, assigned_at: "2026-10-10T09:30:00Z" },
+        ]
+        : table === "departments" ? [{ id: "dept-a", name: "Phòng A" }, { id: "dept-old", name: "Phòng cũ" }] : [{ id: "user-a", full_name: "Người A" }, { id: "user-old", full_name: "Người cũ" }];
     const builder = { select() { return builder; }, in(_field, ids) { builder.ids = ids; return builder; }, then(resolve) { resolve({ data: rows.filter((row) => !builder.ids || builder.ids.includes(row.id)), error: null }); } };
     return builder;
   };
   const result = await createAssetRepository(fixture.db).listAssetsForActor(actor);
   assert.equal(result.ok, true);
-  assert.equal(result.data.assets[0].assignmentHistory[0].assigned_department_name, "Phòng A");
-  assert.equal(result.data.assets[0].assignmentHistory[0].assignee_name, "Người A");
+  const history = result.data.assets[0].assignmentHistory;
+  assert.equal(history.find((row) => row.id === "assignment-1").assigned_department_name, "Phòng A");
+  assert.equal(history.find((row) => row.id === "assignment-1").assignee_name, "Người A");
+  assert.equal(history.find((row) => row.id === "assignment-old").assigned_department_name, "Phòng cũ");
+  assert.equal(history.find((row) => row.id === "assignment-old").assignee_name, "Người cũ");
 });
 
 test("lifecycle repository passes server actor and allows department plus assignee", async () => {
@@ -77,6 +83,14 @@ test("client actor id is never accepted as a lifecycle authority", async () => {
   const repository = createAssetRepository(fixture.db);
   await repository.returnAssetForActor(actor, { asset_id: "asset-1", actorId: "spoofed" });
   assert.equal(fixture.calls.find((call) => call.type === "rpc").args.p_actor_id, "server-actor");
+});
+
+test("active assignment cannot be manually changed to available", async () => {
+  const fixture = makeDb();
+  const repository = createAssetRepository(fixture.db);
+  const result = await repository.updateAssetForActor(actor, "asset-1", { status: "available" });
+  assert.equal(result.ok, false);
+  assert.equal(result.error, "active_assignment_requires_return");
 });
 
 test("asset.view-only receives labels only for already-visible custody rows", async () => {

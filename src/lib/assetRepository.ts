@@ -15,6 +15,7 @@ type AssetRepositoryQuery<T> = {
   insert(values: unknown): AssetRepositoryQuery<T>;
   update(values: unknown): AssetRepositoryQuery<T>;
   eq(field: string, value: unknown): AssetRepositoryQuery<T>;
+  is(field: string, value: unknown): AssetRepositoryQuery<T>;
   in(field: string, values: unknown[]): AssetRepositoryQuery<T>;
   maybeSingle(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
   single(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
@@ -189,6 +190,11 @@ export function createAssetRepository(database: AssetRepositoryDb) {
 
   async function updateAssetForActor(actor: AssetRepositoryActor, assetId: string, input: AssetUpdateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
     if (!canManageAssets(actor)) return fail("forbidden");
+    if (input.status === "available") {
+      const activeAssignment = await table<AssetRepositoryAssignment>("asset_assignments").select("id").eq("asset_id", assetId).eq("status", "active").is("returned_at", null).maybeSingle();
+      if (activeAssignment.error) return fail(errorText(activeAssignment.error, "asset_assignment_read_failed"));
+      if (activeAssignment.data) return fail("active_assignment_requires_return");
+    }
     if (input.tracking_mode !== undefined || input.quantity !== undefined) {
       const quantityError = input.tracking_mode === undefined && input.quantity !== undefined
         ? (Number.isInteger(input.quantity) && input.quantity >= 1 ? null : "invalid_quantity")

@@ -64,3 +64,23 @@ test("asset detail merges custody into the main form and keeps business labels h
   assert.match(detail, /readOnly=\{!canManage\}/);
   assert.match(detail, /disabled=\{!canManage\}/);
 });
+
+test("asset detail uses assign for unassigned custody and transfer/return only when assigned", () => {
+  const detail = readFileSync(new URL("../app/assets/[id]/page.tsx", import.meta.url), "utf8");
+  assert.match(detail, /currentAssignment \?/);
+  assert.match(detail, />Chuyển giao<\/button>/);
+  assert.match(detail, />Cấp phát<\/button>/);
+  assert.match(detail, /runLifecycle\(currentAssignment \? "transfer" : "assign"\)/);
+  assert.match(detail, /Xác nhận cấp phát/);
+  assert.match(detail, /action: "assign" \| "transfer" \| "return"/);
+  assert.match(detail, /disabled=\{Boolean\(currentAssignment && value === "available"\)\}/);
+});
+
+test("asset detail renders assignment start and end as separate chronological events", () => {
+  const detail = readFileSync(new URL("../app/assets/[id]/page.tsx", import.meta.url), "utf8");
+  assert.match(detail, /assigned_at/);
+  assert.match(detail, /returned_at/);
+  assert.match(detail, /Chuyển giao đến/);
+  assert.match(detail, /Chuyển giao đi/);
+  assert.match(detail, /events\.sort\(\(a, b\) => new Date\(a\.at\)/);
+});
