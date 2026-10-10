@@ -11,7 +11,6 @@ import { listAssets, type Asset } from "@/lib/services";
 type AssetRow = Asset & {
   assigned_department_name?: string | null;
   assignee_name?: string | null;
-  department_name?: string | null;
 };
 type DepartmentOption = { id: string; name: string };
 type UserOption = { id: string; full_name: string; department_id: string | null };
@@ -105,7 +104,7 @@ export default function AssetsPage() {
     const assignment = row.currentAssignment;
     return presentAssetCustody({
       ...row,
-      assigned_department_name: row.assigned_department_name ?? row.department_name ?? (assignment?.department_id ? departmentById.get(assignment.department_id) ?? null : null),
+      assigned_department_name: row.assigned_department_name ?? (assignment?.department_id ? departmentById.get(assignment.department_id) ?? null : null),
       assignee_name: row.assignee_name ?? (assignment?.assignee_id ? userById.get(assignment.assignee_id) ?? null : null),
     });
   };
