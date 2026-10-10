@@ -116,9 +116,14 @@ export async function POST(request: Request) {
 
   if (action === "approve") {
     if (batch.status !== "previewed") return json({ error: "batch_not_previewed" }, { status: 409 });
-    const { data: records, error } = await serverSupabase.from("asset_import_records").select("validation_status,owner_decision_required,proposed_department_id,proposed_quantity,tracking_mode").eq("import_batch_id", batchId);
+    const { data: records, error } = await serverSupabase.from("asset_import_records").select("validation_status,owner_decision_required,proposed_action,proposed_department_id,proposed_assignee_id,proposed_quantity,tracking_mode").eq("import_batch_id", batchId);
     if (error || !records?.length) return json({ error: "batch_records_missing" }, { status: 400 });
-    const unresolved = records.some((record) => record.owner_decision_required || !["valid", "approved"].includes(record.validation_status) || (record.tracking_mode === "individual" && record.proposed_quantity !== 1) || record.proposed_quantity < 1);
+    const unresolved = records.some((record) => {
+      if (record.owner_decision_required || !["valid", "approved"].includes(record.validation_status) || (record.tracking_mode === "individual" && record.proposed_quantity !== 1) || record.proposed_quantity < 1) return true;
+      if (!["IMPORT_ASSIGNED", "IMPORT_UNASSIGNED"].includes(record.proposed_action)) return true;
+      if (record.proposed_action === "IMPORT_UNASSIGNED") return Boolean(record.proposed_department_id || record.proposed_assignee_id);
+      return !record.proposed_department_id;
+    });
     if (unresolved) return json({ error: "owner_decision_required" }, { status: 409 });
     await serverSupabase.from("asset_import_records").update({ validation_status: "approved", updated_at: new Date().toISOString() }).eq("import_batch_id", batchId);
     await serverSupabase.from("asset_import_batches").update({ status: "approved", approved_by: actor.id, approved_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", batchId);

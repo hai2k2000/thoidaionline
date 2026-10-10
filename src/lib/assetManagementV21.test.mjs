@@ -5,6 +5,7 @@ import test from "node:test";
 const importSource = readFileSync(new URL("./assetImport.ts", import.meta.url), "utf8");
 const routeSource = readFileSync(new URL("../app/api/assets/import/route.ts", import.meta.url), "utf8");
 const migrationSource = readFileSync(new URL("../../supabase/migrations/20261010100000_asset_management_v21_quantity_import.sql", import.meta.url), "utf8");
+const migrationV211Source = readFileSync(new URL("../../supabase/migrations/20261011100000_asset_management_v211_unassigned_import.sql", import.meta.url), "utf8");
 const authorizationSource = readFileSync(new URL("./assetAuthorization.ts", import.meta.url), "utf8");
 
 const validateQuantity = (trackingMode, quantity) => {
@@ -51,6 +52,16 @@ test("preview, approval, import and fail-closed gates are source-backed", () => 
   assert.match(migrationSource, /'assets', 'assets'/);
   assert.doesNotMatch(migrationSource, /create unique index.*asset_assignments/i);
   assert.doesNotMatch(migrationSource, /can_manage_assets|can_view_assets/);
+  assert.match(routeSource, /IMPORT_UNASSIGNED/);
+  assert.match(routeSource, /proposed_assignee_id/);
+  assert.match(migrationV211Source, /asset_import_unassigned_destination_forbidden/);
+  assert.match(migrationV211Source, /Chưa thuộc sở hữu phòng nào; cần xác định và bổ sung sau\./);
+  assert.match(migrationV211Source, /import_action/);
+  assert.match(migrationV211Source, /then 'in_use'\s+else 'available'\s+end/);
+  assert.match(migrationV211Source, /proposed_action not in \('IMPORT_ASSIGNED', 'IMPORT_UNASSIGNED'\)/);
+  assert.match(migrationV211Source, /proposed_department_id is not null or v_record\.proposed_assignee_id is not null/);
+  assert.match(migrationV211Source, /perform public\.asset_validate_destination/);
+  assert.match(migrationV211Source, /if v_record\.proposed_action = 'IMPORT_ASSIGNED'/);
 });
 
 test("asset permissions remain canonical and separate from task permissions", () => {

@@ -7,12 +7,15 @@ function makeDb() {
   const rows = {
     assets: [{ id: "asset-1", asset_name: "Laptop", status: "in_use", assigned_department_id: "legacy-dept" }],
     asset_assignments: [{ id: "assignment-1", asset_id: "asset-1", department_id: "dept-a", assignee_id: "user-a", status: "active", returned_at: null }],
+    departments: [{ id: "dept-a", name: "Phòng A" }],
+    staff_users: [{ id: "user-a", full_name: "Người A" }],
   };
   const query = (table) => {
     const state = { table, filters: [], selected: null };
     const builder = {
       select(value) { state.selected = value; return builder; },
       eq(field, value) { state.filters.push([field, value]); return builder; },
+      in(field, values) { state.filters.push([field, values]); return builder; },
       is(field, value) { state.filters.push([field, value]); return builder; },
       order() { return builder; },
       limit() { return builder; },
@@ -57,4 +60,44 @@ test("client actor id is never accepted as a lifecycle authority", async () => {
   const repository = createAssetRepository(fixture.db);
   await repository.returnAssetForActor(actor, { asset_id: "asset-1", actorId: "spoofed" });
   assert.equal(fixture.calls.find((call) => call.type === "rpc").args.p_actor_id, "server-actor");
+});
+
+test("asset.view-only receives labels only for already-visible custody rows", async () => {
+  const rows = {
+    assets: [
+      { id: "asset-visible", asset_name: "Laptop", category: "TSC", status: "in_use" },
+      { id: "asset-hidden", asset_name: "Camera", category: "MMTB", status: "in_use" },
+    ],
+    asset_assignments: [
+      { id: "assignment-visible", asset_id: "asset-visible", department_id: "dept-content", assignee_id: "user-manager", status: "active", returned_at: null },
+      { id: "assignment-hidden", asset_id: "asset-hidden", department_id: "dept-other", assignee_id: "user-other", status: "active", returned_at: null },
+    ],
+    departments: [{ id: "dept-content", name: "Phòng Nội dung" }],
+    staff_users: [{ id: "user-manager", full_name: "Hoàng Văn Mạnh" }],
+  };
+  const calls = [];
+  const query = (table) => {
+    const state = { table, ids: [] };
+    const builder = {
+      select() { return builder; },
+      in(field, values) { state.field = field; state.ids = values; return builder; },
+      then(resolve) {
+        const data = (rows[table] ?? []).filter((row) => !state.ids.length || state.ids.includes(row.id));
+        resolve({ data, error: null });
+      },
+    };
+    calls.push(state);
+    return builder;
+  };
+  const database = { from: query, rpc: async () => ({ data: null, error: null }) };
+  const actor = { id: "manager", department_id: "dept-content", departmentId: "dept-content", isDepartmentManager: true, rbacPermissions: ["asset.view"] };
+  const result = await createAssetRepository(database).listAssetsForActor(actor);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.assets.length, 1);
+  assert.partialDeepStrictEqual(result.data.assets[0], {
+    assigned_department_name: "Phòng Nội dung",
+    assignee_name: "Hoàng Văn Mạnh",
+  });
+  assert.deepEqual(calls.find((call) => call.table === "departments").ids, ["dept-content"]);
+  assert.deepEqual(calls.find((call) => call.table === "staff_users").ids, ["user-manager"]);
 });

@@ -15,6 +15,7 @@ type AssetRepositoryQuery<T> = {
   insert(values: unknown): AssetRepositoryQuery<T>;
   update(values: unknown): AssetRepositoryQuery<T>;
   eq(field: string, value: unknown): AssetRepositoryQuery<T>;
+  in(field: string, values: unknown[]): AssetRepositoryQuery<T>;
   maybeSingle(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
   single(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
   then<TResult1 = QueryResult<T>, TResult2 = never>(
@@ -38,6 +39,8 @@ export type AssetRepositoryAsset = {
   note?: string | null;
   tracking_mode?: AssetTrackingMode;
   quantity?: number;
+  assigned_department_name?: string | null;
+  assignee_name?: string | null;
   currentAssignment: AssetRepositoryAssignment | null;
   assignmentHistory?: AssetRepositoryAssignment[];
 };
@@ -93,11 +96,29 @@ export function validateAssetQuantity(trackingMode: unknown, quantity: unknown):
 }
 
 type QueryResult<T> = { data: T[] | null; error: { message?: string } | null };
+type AssetLabelRow = { id: string; name?: string | null; full_name?: string | null };
 
 const errorText = (error: { message?: string } | null, fallback: string) => error?.message || fallback;
 
 function currentAssignment(assignments: AssetRepositoryAssignment[], assetId: string) {
   return assignments.find((row) => row.asset_id === assetId && row.status === "active" && !row.returned_at) ?? null;
+}
+
+type CustodyLabels = { departmentById: Map<string, string | null>; assigneeById: Map<string, string | null> };
+type CustodyLabelsResult = CustodyLabels | { error: { message?: string } };
+
+async function custodyLabels(database: AssetRepositoryDb, assets: AssetRepositoryAsset[]): Promise<CustodyLabelsResult> {
+  const departmentIds = [...new Set(assets.map((asset) => asset.currentAssignment?.department_id).filter((id): id is string => Boolean(id)))];
+  const assigneeIds = [...new Set(assets.map((asset) => asset.currentAssignment?.assignee_id).filter((id): id is string => Boolean(id)))];
+  const [departments, assignees] = await Promise.all([
+    departmentIds.length ? (database.from("departments") as AssetRepositoryQuery<AssetLabelRow>).select("id,name").in("id", departmentIds) : Promise.resolve({ data: [], error: null }),
+    assigneeIds.length ? (database.from("staff_users") as AssetRepositoryQuery<AssetLabelRow>).select("id,full_name").in("id", assigneeIds) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (departments.error || assignees.error) return { error: departments.error || assignees.error || { message: "asset_labels_read_failed" } };
+  return {
+    departmentById: new Map((departments.data ?? []).map((row) => [row.id, row.name ?? null])),
+    assigneeById: new Map((assignees.data ?? []).map((row) => [row.id, row.full_name ?? null])),
+  };
 }
 
 export function createAssetRepository(database: AssetRepositoryDb) {
@@ -113,8 +134,18 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     const assets = (assetResult.data ?? [])
       .map((asset) => ({ ...asset, currentAssignment: currentAssignment(assignments, asset.id), assignmentHistory: assignments.filter((row) => row.asset_id === asset.id) }))
       .filter((asset) => canViewAsset(actor, asset.currentAssignment ? { departmentId: asset.currentAssignment.department_id, assigneeId: asset.currentAssignment.assignee_id } : null));
-    const visibleIds = new Set(assets.map((asset) => asset.id));
-    return ok({ assets, assignments: assignments.filter((row) => visibleIds.has(row.asset_id)) });
+    const labels = await custodyLabels(database, assets);
+    if ("error" in labels) return fail(errorText(labels.error, "asset_labels_read_failed"));
+    const labeledAssets = assets.map((asset) => {
+      const assignment = asset.currentAssignment;
+      return {
+        ...asset,
+        assigned_department_name: assignment?.department_id ? labels.departmentById.get(assignment.department_id) ?? null : null,
+        assignee_name: assignment?.assignee_id ? labels.assigneeById.get(assignment.assignee_id) ?? null : null,
+      };
+    });
+    const visibleIds = new Set(labeledAssets.map((asset) => asset.id));
+    return ok({ assets: labeledAssets, assignments: assignments.filter((row) => visibleIds.has(row.asset_id)) });
   }
 
   async function getAssetForActor(actor: AssetRepositoryActor, assetId: string): Promise<ServiceResult<AssetRepositoryAsset>> {
