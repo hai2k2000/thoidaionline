@@ -15,6 +15,7 @@ type AssetRepositoryQuery<T> = {
   insert(values: unknown): AssetRepositoryQuery<T>;
   update(values: unknown): AssetRepositoryQuery<T>;
   eq(field: string, value: unknown): AssetRepositoryQuery<T>;
+  is(field: string, value: unknown): AssetRepositoryQuery<T>;
   in(field: string, values: unknown[]): AssetRepositoryQuery<T>;
   maybeSingle(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
   single(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
@@ -50,6 +51,8 @@ export type AssetRepositoryAssignment = {
   asset_id: string;
   assignee_id: string | null;
   department_id: string | null;
+  assigned_department_name?: string | null;
+  assignee_name?: string | null;
   assigned_at?: string | null;
   expected_return_at?: string | null;
   returned_at?: string | null;
@@ -108,8 +111,9 @@ type CustodyLabels = { departmentById: Map<string, string | null>; assigneeById:
 type CustodyLabelsResult = CustodyLabels | { error: { message?: string } };
 
 async function custodyLabels(database: AssetRepositoryDb, assets: AssetRepositoryAsset[]): Promise<CustodyLabelsResult> {
-  const departmentIds = [...new Set(assets.map((asset) => asset.currentAssignment?.department_id).filter((id): id is string => Boolean(id)))];
-  const assigneeIds = [...new Set(assets.map((asset) => asset.currentAssignment?.assignee_id).filter((id): id is string => Boolean(id)))];
+  const assignmentRows = assets.flatMap((asset) => asset.assignmentHistory ?? []);
+  const departmentIds = [...new Set(assignmentRows.map((assignment) => assignment.department_id).filter((id): id is string => Boolean(id)))];
+  const assigneeIds = [...new Set(assignmentRows.map((assignment) => assignment.assignee_id).filter((id): id is string => Boolean(id)))];
   const [departments, assignees] = await Promise.all([
     departmentIds.length ? (database.from("departments") as AssetRepositoryQuery<AssetLabelRow>).select("id,name").in("id", departmentIds) : Promise.resolve({ data: [], error: null }),
     assigneeIds.length ? (database.from("staff_users") as AssetRepositoryQuery<AssetLabelRow>).select("id,full_name").in("id", assigneeIds) : Promise.resolve({ data: [], error: null }),
@@ -144,6 +148,11 @@ export function createAssetRepository(database: AssetRepositoryDb) {
         ...asset,
         assigned_department_name: assignment?.department_id ? labels.departmentById.get(assignment.department_id) ?? null : null,
         assignee_name: assignment?.assignee_id ? labels.assigneeById.get(assignment.assignee_id) ?? null : null,
+        assignmentHistory: (asset.assignmentHistory ?? []).map((history) => ({
+          ...history,
+          assigned_department_name: history.department_id ? labels.departmentById.get(history.department_id) ?? null : null,
+          assignee_name: history.assignee_id ? labels.assigneeById.get(history.assignee_id) ?? null : null,
+        })),
       };
     });
     const visibleIds = new Set(labeledAssets.map((asset) => asset.id));
@@ -181,6 +190,11 @@ export function createAssetRepository(database: AssetRepositoryDb) {
 
   async function updateAssetForActor(actor: AssetRepositoryActor, assetId: string, input: AssetUpdateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
     if (!canManageAssets(actor)) return fail("forbidden");
+    if (input.status === "available") {
+      const activeAssignment = await table<AssetRepositoryAssignment>("asset_assignments").select("id").eq("asset_id", assetId).eq("status", "active").is("returned_at", null).maybeSingle();
+      if (activeAssignment.error) return fail(errorText(activeAssignment.error, "asset_assignment_read_failed"));
+      if (activeAssignment.data) return fail("active_assignment_requires_return");
+    }
     if (input.tracking_mode !== undefined || input.quantity !== undefined) {
       const quantityError = input.tracking_mode === undefined && input.quantity !== undefined
         ? (Number.isInteger(input.quantity) && input.quantity >= 1 ? null : "invalid_quantity")

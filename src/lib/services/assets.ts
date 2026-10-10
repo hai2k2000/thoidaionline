@@ -25,6 +25,9 @@ export type AssetAssignment = {
   asset_id: string;
   assignee_id?: string | null;
   department_id: string | null;
+  assigned_department_name?: string | null;
+  assignee_name?: string | null;
+  assigned_at?: string | null;
   expected_return_at?: string | null;
   returned_at?: string | null;
   status?: "active" | "returned" | "lost" | "damaged";
