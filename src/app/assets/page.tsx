@@ -8,7 +8,11 @@ import { useAuth } from "@/lib/auth";
 import { filterAssetList, isAssetUnassigned, summarizeAssetList, type AssetQuickFilter } from "@/lib/assetListPresentation";
 import { listAssets, type Asset } from "@/lib/services";
 
-type AssetRow = Asset;
+type AssetRow = Asset & {
+  assigned_department_name?: string | null;
+  assignee_name?: string | null;
+  department_name?: string | null;
+};
 type DepartmentOption = { id: string; name: string };
 type UserOption = { id: string; full_name: string; department_id: string | null };
 
@@ -100,8 +104,9 @@ export default function AssetsPage() {
   const custody = (row: AssetRow) => {
     const assignment = row.currentAssignment;
     if (!assignment) return { department: "Chưa xác định phòng", person: "Cần bổ sung sau", unassigned: true };
-    const department = departmentById.get(assignment.department_id ?? "") ?? "Phòng đã phân công";
-    const person = assignment.assignee_id ? userById.get(assignment.assignee_id) ?? "Người sử dụng đã phân công" : "Tài sản dùng chung";
+    const labeledRow = row as AssetRow & { assigned_to_label?: string | null };
+    const department = labeledRow.assigned_department_name ?? labeledRow.department_name ?? departmentById.get(assignment.department_id ?? "") ?? "Phòng đã phân công";
+    const person = labeledRow.assignee_name ?? labeledRow.assigned_to_label ?? (assignment.assignee_id ? userById.get(assignment.assignee_id) ?? "Người sử dụng đã phân công" : "Tài sản dùng chung");
     return { department, person, unassigned: false };
   };
 
