@@ -16,7 +16,8 @@ export async function GET(request: Request) {
   const sessionActor = await getSessionUser();
   if (!sessionActor) return json({ error: "unauthenticated" }, { status: 401 });
   const actor = toAssetRepositoryActor(sessionActor);
-  const result = await repository.listAssetsForActor(actor);
+  const mine = new URL(request.url).searchParams.get("mine") === "1";
+  const result = await repository.listAssetsForActor(actor, mine ? "mine" : "visible");
   if (!result.ok) return json({ error: result.error }, { status: result.error === "forbidden" ? 403 : 500 });
   const response: Record<string, unknown> = result.data;
   if (new URL(request.url).searchParams.get("options") === "1") {

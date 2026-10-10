@@ -5,7 +5,7 @@ export type AssetListPresentationRow = {
   category?: string | null;
   status?: string | null;
   tracking_mode?: string | null;
-  currentAssignment?: unknown | null;
+  currentAssignment?: { assignee_id?: string | null } | null;
   assigned_department_name?: string | null;
   assignee_name?: string | null;
 };
@@ -26,7 +26,7 @@ export function presentAssetCustody(row: AssetListPresentationRow) {
 
 export function filterAssetList<T extends AssetListPresentationRow>(
   rows: T[],
-  filters: { name: string; category: string; status: string; quick: AssetQuickFilter },
+  filters: { name: string; category: string; status: string; quick: AssetQuickFilter; assigneeId?: string },
 ) {
   const name = filters.name.trim().toLocaleLowerCase("vi");
   const category = filters.category.trim().toLocaleLowerCase("vi");
@@ -35,6 +35,9 @@ export function filterAssetList<T extends AssetListPresentationRow>(
     if (name && !(row.asset_name ?? "").toLocaleLowerCase("vi").includes(name)) return false;
     if (category && !(row.category ?? "").toLocaleLowerCase("vi").includes(category)) return false;
     if (filters.status && row.status !== filters.status) return false;
+    if (filters.assigneeId && filters.assigneeId !== "__shared" && filters.assigneeId !== "__unassigned" && (row.currentAssignment?.assignee_id ?? "") !== filters.assigneeId) return false;
+    if (filters.assigneeId === "__shared" && (!row.currentAssignment || row.currentAssignment.assignee_id !== null)) return false;
+    if (filters.assigneeId === "__unassigned" && row.currentAssignment) return false;
     if (filters.quick === "in_use" && row.status !== "in_use") return false;
     if (filters.quick === "unassigned" && !isAssetUnassigned(row)) return false;
     if (filters.quick === "lot" && row.tracking_mode !== "lot") return false;

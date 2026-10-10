@@ -556,3 +556,29 @@ Next:
 - Task 4 Version 2/DOCX/Personal Plan coverage added; full regression set currently 118/118 PASS.
 - No migration added; production unchanged.
 - Final source gates pass; canonical `npm run build` is blocked by the repository lineage guard on the feature branch, and standalone packaging is blocked by Windows symlink permissions in this local environment.
+
+## Asset Management V2.2 — Phase 1
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: user filter, my-assets scope, and bounded status-change approval workflow
+
+Completed:
+- Added additive `asset_status_change_requests` schema with bounded statuses, one pending request per asset, expected assignment/status snapshots, service-role RPCs, transactional approval re-check, and asset audit actions.
+- Added server-session APIs for `/api/my-assets` and `/api/assets/status-requests`; employees cannot directly mutate `assets.status`, and requests are restricted to their active direct assignment.
+- Added `/my-assets`, admin `/assets/status-requests`, current assignee/shared/unassigned filters, and permission-driven navigation labels.
+- Q3 data and production database were not changed.
+
+Validation:
+- Focused asset/API/repository/navigation/V2.1 regression: 20/20 PASS.
+- V2.2 source-contract tests: 2/2 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- Production-like build with lineage environment override: PASS; route manifest includes all new routes.
+
+Production mutation: NONE. Migration rehearsal against disposable PostgreSQL remains the final pre-owner gate; no production migration, deploy, restart, or Q3 re-import was performed.
+
+Blockers:
+- No implementation CRITICAL/HIGH blocker.
+
+Next:
+- Owner review; separately authorize disposable migration rehearsal/production rollout only after approval.

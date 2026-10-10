@@ -4,3 +4,4 @@ export * from "./hrProfiles";
 export * from "./assets";
 export * from "./documents";
 export * from "./performance";
+export * from "./assetStatusRequests";
