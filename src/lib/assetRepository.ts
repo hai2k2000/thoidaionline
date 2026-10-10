@@ -124,7 +124,7 @@ async function custodyLabels(database: AssetRepositoryDb, assets: AssetRepositor
 export function createAssetRepository(database: AssetRepositoryDb) {
   const table = <T>(name: string) => database.from(name) as AssetRepositoryQuery<T>;
 
-  async function listAssetsForActor(actor: AssetRepositoryActor): Promise<ServiceResult<AssetListPayload>> {
+  async function listAssetsForActor(actor: AssetRepositoryActor, scope: "visible" | "mine" = "visible"): Promise<ServiceResult<AssetListPayload>> {
     const [assetResult, assignmentResult] = await Promise.all([
       table<AssetRepositoryAsset>("assets").select("*"),
       table<AssetRepositoryAssignment>("asset_assignments").select("*"),
@@ -133,7 +133,9 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     const assignments = assignmentResult.data ?? [];
     const assets = (assetResult.data ?? [])
       .map((asset) => ({ ...asset, currentAssignment: currentAssignment(assignments, asset.id), assignmentHistory: assignments.filter((row) => row.asset_id === asset.id) }))
-      .filter((asset) => canViewAsset(actor, asset.currentAssignment ? { departmentId: asset.currentAssignment.department_id, assigneeId: asset.currentAssignment.assignee_id } : null));
+      .filter((asset) => scope === "mine"
+        ? asset.currentAssignment?.assignee_id === actor.id
+        : canViewAsset(actor, asset.currentAssignment ? { departmentId: asset.currentAssignment.department_id, assigneeId: asset.currentAssignment.assignee_id } : null));
     const labels = await custodyLabels(database, assets);
     if ("error" in labels) return fail(errorText(labels.error, "asset_labels_read_failed"));
     const labeledAssets = assets.map((asset) => {

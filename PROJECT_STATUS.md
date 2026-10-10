@@ -556,3 +556,54 @@ Next:
 - Task 4 Version 2/DOCX/Personal Plan coverage added; full regression set currently 118/118 PASS.
 - No migration added; production unchanged.
 - Final source gates pass; canonical `npm run build` is blocked by the repository lineage guard on the feature branch, and standalone packaging is blocked by Windows symlink permissions in this local environment.
+
+## Asset Management V2.2 — Phase 1
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: user filter, my-assets scope, and bounded status-change approval workflow
+
+Completed:
+- Added additive `asset_status_change_requests` schema with bounded statuses, one pending request per asset, expected assignment/status snapshots, service-role RPCs, transactional approval re-check, and asset audit actions.
+- Added server-session APIs for `/api/my-assets` and `/api/assets/status-requests`; employees cannot directly mutate `assets.status`, and requests are restricted to their active direct assignment.
+- Added `/my-assets`, admin `/assets/status-requests`, current assignee/shared/unassigned filters, and permission-driven navigation labels.
+- Q3 data and production database were not changed.
+
+Validation:
+- Focused asset/API/repository/navigation/V2.1 regression: 20/20 PASS.
+- V2.2 source-contract tests: 2/2 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- Production-like build with lineage environment override: PASS; route manifest includes all new routes.
+
+Production mutation: NONE. Migration rehearsal against disposable PostgreSQL remains the final pre-owner gate; no production migration, deploy, restart, or Q3 re-import was performed.
+
+Blockers:
+- No implementation CRITICAL/HIGH blocker.
+
+Next:
+- Owner review; separately authorize disposable migration rehearsal/production rollout only after approval.
+
+## Asset Management V2.2 — Owner Review Fixes
+
+Current Phase: owner-review fixes complete; pre-production deployment review
+Current Task: close bounded review findings before production
+
+Completed:
+- Self-service `/my-assets`, `/api/my-assets`, and request creation now require only an authenticated active session and remain server-scoped to the actor's current direct assignments.
+- Navigation exposes `Tài sản của tôi` to every authenticated active user; organization-wide asset management links remain permission-gated.
+- Admin pending requests are enriched with limited asset/requester/assignment labels; no staff directory is returned.
+- Pending requests show Vietnamese status labels and disable duplicate proposal actions.
+- Review rejection has an explicit note dialog; DB RPC is the single canonical audit writer with materially correct old/new snapshots and stale assignment/status fail-closed checks.
+
+Validation:
+- Focused V2.2 + asset regression: 23/23 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- `git diff --check`: PASS.
+- Disposable PostgreSQL migration rehearsal: PASS.
+- Production-like build and route manifest: PASS.
+
+Production mutation: NONE. Database/Q3 data unchanged; no production migration, deploy, restart, or re-import.
+
+Next:
+- Owner approval for production deployment review.

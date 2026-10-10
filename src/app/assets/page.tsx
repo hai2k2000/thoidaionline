@@ -62,6 +62,7 @@ export default function AssetsPage() {
   const [qCategory, setQCategory] = useState("");
   const [qStatus, setQStatus] = useState("");
   const [quickFilter, setQuickFilter] = useState<AssetQuickFilter>("all");
+  const [qAssignee, setQAssignee] = useState("");
 
   const loadData = useCallback(async () => {
     const assetsRes = await listAssets();
@@ -93,8 +94,8 @@ export default function AssetsPage() {
   }, [authLoading, user, router, hasPermission, loadData]);
 
   const filteredRows = useMemo(
-    () => filterAssetList(rows, { name: qName, category: qCategory, status: qStatus, quick: quickFilter }),
-    [rows, qName, qCategory, qStatus, quickFilter],
+    () => filterAssetList(rows, { name: qName, category: qCategory, status: qStatus, quick: quickFilter, assigneeId: qAssignee }),
+    [rows, qName, qCategory, qStatus, quickFilter, qAssignee],
   );
   const summary = useMemo(() => summarizeAssetList(rows), [rows]);
   const departmentById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments]);
@@ -114,6 +115,7 @@ export default function AssetsPage() {
     setQCategory("");
     setQStatus("");
     setQuickFilter("all");
+    setQAssignee("");
   };
 
   return (
@@ -137,6 +139,7 @@ export default function AssetsPage() {
               <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Tên tài sản</span><input className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200" placeholder="Tìm tên tài sản..." value={qName} onChange={(event) => setQName(event.target.value)} /></label>
               <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Nhóm</span><input className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200" placeholder="CCDC, TSC, MMTB..." value={qCategory} onChange={(event) => setQCategory(event.target.value)} /></label>
               <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Tình trạng</span><select className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200" value={qStatus} onChange={(event) => setQStatus(event.target.value)}><option value="">Tất cả tình trạng</option><option value="in_use">{assetStatusLabel.in_use}</option><option value="available">Chưa phân công / Sẵn sàng</option><option value="maintenance">{assetStatusLabel.maintenance}</option><option value="broken">{assetStatusLabel.broken}</option><option value="liquidated">{assetStatusLabel.liquidated}</option></select></label>
+              <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Người sử dụng</span><select className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal" value={qAssignee} onChange={(event) => setQAssignee(event.target.value)}><option value="">Tất cả người sử dụng</option><option value="__shared">Tài sản dùng chung</option><option value="__unassigned">Chưa phân công</option>{users.map((person) => <option key={person.id} value={person.id}>{person.full_name}</option>)}</select></label>
               <button type="button" onClick={clearFilters} className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-300">Xóa lọc</button>
             </div>
             <div className="mt-4 flex flex-wrap gap-2" aria-label="Bộ lọc nhanh">

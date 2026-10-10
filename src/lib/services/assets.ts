@@ -48,6 +48,14 @@ export async function listAssets(): Promise<ServiceResult<Asset[]>> {
   }
 }
 
+export async function listMyAssets(): Promise<ServiceResult<Asset[]>> {
+  try {
+    const response = await fetch("/api/my-assets", { cache: "no-store" });
+    const result = await parse<{ assets?: Asset[] }>(response, "Không tải được tài sản của tôi.");
+    return result.ok ? ok(result.data.assets ?? []) : result;
+  } catch (error) { return fail(withError(error, "Không tải được tài sản của tôi.")); }
+}
+
 export async function createAsset(input: Asset, actorId?: string): Promise<ServiceResult<Asset>> {
   if (!input.asset_name?.trim() || !input.category?.trim()) {
     return fail("Thiếu asset_name hoặc category.");

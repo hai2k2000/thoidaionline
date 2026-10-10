@@ -35,6 +35,8 @@ const labels = {
   departments: "Ph\u00f2ng ban",
   permissions: "Ph\u00e2n quy\u1ec1n",
   assets: "Quản lý tài sản",
+  "my-assets": "Tài sản của tôi",
+  "asset-status-requests": "Duyệt tình trạng tài sản",
   "evaluation-rubrics": "Bộ tiêu chí đánh giá",
   "evaluation-cycles": "Quản trị kỳ đánh giá",
   "work-schedule": "Lịch làm việc",
