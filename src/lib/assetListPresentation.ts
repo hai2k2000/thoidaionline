@@ -6,10 +6,22 @@ export type AssetListPresentationRow = {
   status?: string | null;
   tracking_mode?: string | null;
   currentAssignment?: unknown | null;
+  assigned_department_name?: string | null;
+  assignee_name?: string | null;
 };
 
 export function isAssetUnassigned(row: AssetListPresentationRow) {
-  return !row.currentAssignment;
+  return row.status === "available" && !row.currentAssignment;
+}
+
+export function presentAssetCustody(row: AssetListPresentationRow) {
+  if (isAssetUnassigned(row)) return { department: "Chưa xác định phòng", person: "Cần bổ sung sau", unassigned: true };
+  if (!row.currentAssignment) return { department: "Không áp dụng", person: "Không áp dụng", unassigned: false };
+  return {
+    department: row.assigned_department_name ?? "Phòng đã phân công",
+    person: row.assignee_name ?? "Tài sản dùng chung",
+    unassigned: false,
+  };
 }
 
 export function filterAssetList<T extends AssetListPresentationRow>(

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { filterAssetList, isAssetUnassigned, summarizeAssetList } from "./assetListPresentation.ts";
+import { filterAssetList, isAssetUnassigned, presentAssetCustody, summarizeAssetList } from "./assetListPresentation.ts";
 
 const rows = Array.from({ length: 97 }, (_, index) => ({
   asset_name: index === 0 ? "Bộ bàn ghế sồi Nga dùng tại phòng họp tầng hai" : `Tài sản ${index + 1}`,
@@ -28,4 +28,25 @@ test("department-only custody is assigned while an absent active assignment is u
   assert.equal(isAssetUnassigned(rows[0]), false);
   assert.equal(rows[0].currentAssignment.assignee_id, null);
   assert.equal(isAssetUnassigned(rows[76]), true);
+});
+
+test("only available assets without custody are unassigned", () => {
+  assert.equal(isAssetUnassigned({ status: "maintenance", currentAssignment: null }), false);
+  assert.equal(isAssetUnassigned({ status: "broken", currentAssignment: null }), false);
+  assert.equal(isAssetUnassigned({ status: "available", currentAssignment: null }), true);
+});
+
+test("custody presentation keeps view-only labels and shared/unassigned semantics", () => {
+  assert.deepEqual(presentAssetCustody({
+    status: "in_use",
+    currentAssignment: { department_id: "dept-content", assignee_id: "user-manager" },
+    assigned_department_name: "Phòng Nội dung",
+    assignee_name: "Hoàng Văn Mạnh",
+  }), { department: "Phòng Nội dung", person: "Hoàng Văn Mạnh", unassigned: false });
+  assert.deepEqual(presentAssetCustody({
+    status: "in_use",
+    currentAssignment: { department_id: "dept-content", assignee_id: null },
+    assigned_department_name: "Phòng Nội dung",
+  }), { department: "Phòng Nội dung", person: "Tài sản dùng chung", unassigned: false });
+  assert.deepEqual(presentAssetCustody({ status: "available", currentAssignment: null }), { department: "Chưa xác định phòng", person: "Cần bổ sung sau", unassigned: true });
 });

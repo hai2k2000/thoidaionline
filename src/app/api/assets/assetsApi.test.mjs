@@ -34,3 +34,10 @@ test("asset options are limited to active departments", () => {
   assert.match(route, /departments/);
   assert.match(route, /active/);
 });
+
+test("ordinary asset list enriches visible custody without exposing options directory", () => {
+  const route = read("./route.ts");
+  assert.match(route, /listAssetsForActor/);
+  assert.match(route, /options.*1/);
+  assert.match(route, /canManageAssets/);
+});

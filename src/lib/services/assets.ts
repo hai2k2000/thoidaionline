@@ -14,7 +14,8 @@ export type Asset = {
   note?: string | null;
   tracking_mode?: AssetTrackingMode;
   quantity?: number;
-  assigned_to_label?: string;
+  assigned_department_name?: string | null;
+  assignee_name?: string | null;
   currentAssignment?: AssetAssignment | null;
   assignmentHistory?: AssetAssignment[];
 };

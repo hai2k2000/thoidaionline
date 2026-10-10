@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { filterAssetList, isAssetUnassigned, summarizeAssetList, type AssetQuickFilter } from "@/lib/assetListPresentation";
+import { filterAssetList, isAssetUnassigned, presentAssetCustody, summarizeAssetList, type AssetQuickFilter } from "@/lib/assetListPresentation";
 import { listAssets, type Asset } from "@/lib/services";
 
 type AssetRow = Asset & {
@@ -103,11 +103,11 @@ export default function AssetsPage() {
 
   const custody = (row: AssetRow) => {
     const assignment = row.currentAssignment;
-    if (!assignment) return { department: "Chưa xác định phòng", person: "Cần bổ sung sau", unassigned: true };
-    const labeledRow = row as AssetRow & { assigned_to_label?: string | null };
-    const department = labeledRow.assigned_department_name ?? labeledRow.department_name ?? departmentById.get(assignment.department_id ?? "") ?? "Phòng đã phân công";
-    const person = labeledRow.assignee_name ?? labeledRow.assigned_to_label ?? (assignment.assignee_id ? userById.get(assignment.assignee_id) ?? "Người sử dụng đã phân công" : "Tài sản dùng chung");
-    return { department, person, unassigned: false };
+    return presentAssetCustody({
+      ...row,
+      assigned_department_name: row.assigned_department_name ?? row.department_name ?? (assignment?.department_id ? departmentById.get(assignment.department_id) ?? null : null),
+      assignee_name: row.assignee_name ?? (assignment?.assignee_id ? userById.get(assignment.assignee_id) ?? null : null),
+    });
   };
 
   const clearFilters = () => {
