@@ -151,39 +151,42 @@ export default function AssetsPage() {
           <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-800">{filteredRows.length === summary.total ? `${summary.total} tài sản` : `Hiển thị ${filteredRows.length} / ${summary.total} tài sản`}</p>
-              <p className="hidden text-xs text-slate-500 md:block">Cuộn ngang để xem đầy đủ các cột</p>
             </div>
 
             <div className="hidden md:block">
-              <div className="table-scroll max-h-[72vh] rounded-xl border border-slate-200" tabIndex={0} aria-label="Danh sách tài sản, cuộn ngang để xem thêm">
-                <table className="data-table min-w-[1220px] text-left text-sm">
+              <div className="table-scroll max-h-[72vh] rounded-xl border border-slate-200" tabIndex={0} aria-label="Danh sách tài sản; có thể cuộn ngang trên màn hình hẹp">
+                <table className="data-table table-fixed min-w-[900px] text-left text-sm">
+                  <colgroup>
+                    <col className="w-[29%]" />
+                    <col className="w-20" />
+                    <col className="w-[136px]" />
+                    <col className="w-[23%]" />
+                    <col />
+                    <col className="w-24" />
+                  </colgroup>
                   <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
                     <tr>
-                      <th scope="col" className="min-w-[260px] whitespace-nowrap border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide">Tài sản</th>
-                      <th scope="col" className="min-w-[100px] whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Nhóm</th>
-                      <th scope="col" className="min-w-[110px] whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Theo dõi</th>
-                      <th scope="col" className="min-w-[80px] whitespace-nowrap border-b border-slate-200 px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide">Số lượng</th>
-                      <th scope="col" className="min-w-[130px] whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Tình trạng</th>
-                      <th scope="col" className="min-w-[240px] whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Phòng / Người sử dụng</th>
-                      <th scope="col" className="min-w-[220px] whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Ghi chú</th>
-                      <th scope="col" className="min-w-[110px] whitespace-nowrap border-b border-slate-200 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide">Hành động</th>
+                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide">Tài sản</th>
+                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide">Số lượng</th>
+                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Tình trạng</th>
+                      <th scope="col" className="border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Phòng / Người sử dụng</th>
+                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Ghi chú</th>
+                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide">Hành động</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredRows.map((row) => {
                       const owner = custody(row);
                       return <tr key={row.id ?? row.asset_code} className="h-[72px] transition-colors hover:bg-slate-50/90">
-                        <td className="min-w-[260px] px-4 py-3"><p className="line-clamp-2 font-semibold leading-5 text-slate-950" title={row.asset_name}>{row.asset_name}</p>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</td>
-                        <td className="min-w-[100px] px-3 py-3"><MetadataBadge>{row.category || "Chưa rõ"}</MetadataBadge></td>
-                        <td className="min-w-[110px] px-3 py-3"><MetadataBadge tone={row.tracking_mode === "lot" ? "sky" : "slate"}>{row.tracking_mode === "lot" ? "Theo lô" : "Cá thể"}</MetadataBadge></td>
-                        <td className="min-w-[80px] px-3 py-3 text-center text-base font-bold tabular-nums text-slate-900">{row.quantity ?? 1}</td>
-                        <td className="min-w-[130px] px-3 py-3"><StatusBadge row={row} /></td>
-                        <td className="min-w-[240px] px-3 py-3"><p className={`font-medium ${owner.unassigned ? "text-amber-900" : "text-slate-900"}`}>{owner.department}</p><p className={`mt-1 text-xs ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-500"}`}>{owner.person}</p></td>
-                        <td className="min-w-[220px] px-3 py-3"><p className="line-clamp-2 leading-5 text-slate-600" title={row.note ?? undefined}>{row.note || "—"}</p></td>
-                        <td className="min-w-[110px] px-4 py-3 text-right"><Link href={`/assets/${row.id}`} className="inline-flex min-h-10 items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-orange-300 hover:text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-300">Chi tiết <span aria-hidden="true" className="ml-1">→</span></Link></td>
+                        <td className="px-4 py-3"><p className="line-clamp-2 break-words font-semibold leading-5 text-slate-950" title={row.asset_name}>{row.asset_name}</p>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</td>
+                        <td className="px-2 py-3 text-center text-base font-bold tabular-nums text-slate-900">{row.quantity ?? 1}</td>
+                        <td className="px-3 py-3"><StatusBadge row={row} /></td>
+                        <td className="px-3 py-3"><p className={`break-words font-medium leading-5 ${owner.unassigned ? "text-amber-900" : "text-slate-900"}`}>{owner.department}</p><p className={`mt-1 break-words text-xs leading-4 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-500"}`}>{owner.person}</p></td>
+                        <td className="px-3 py-3"><p className="line-clamp-2 break-words leading-5 text-slate-600" title={row.note ?? undefined}>{row.note || "—"}</p></td>
+                        <td className="px-3 py-3 text-right"><Link href={`/assets/${row.id}`} className="inline-flex min-h-10 items-center whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-orange-300 hover:text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-300">Chi tiết <span aria-hidden="true" className="ml-1">→</span></Link></td>
                       </tr>;
                     })}
-                    {loaded && !message && filteredRows.length === 0 ? <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</td></tr> : null}
+                    {loaded && !message && filteredRows.length === 0 ? <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</td></tr> : null}
                   </tbody>
                 </table>
               </div>
