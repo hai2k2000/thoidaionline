@@ -582,3 +582,28 @@ Blockers:
 
 Next:
 - Owner review; separately authorize disposable migration rehearsal/production rollout only after approval.
+
+## Asset Management V2.2 — Owner Review Fixes
+
+Current Phase: owner-review fixes complete; pre-production deployment review
+Current Task: close bounded review findings before production
+
+Completed:
+- Self-service `/my-assets`, `/api/my-assets`, and request creation now require only an authenticated active session and remain server-scoped to the actor's current direct assignments.
+- Navigation exposes `Tài sản của tôi` to every authenticated active user; organization-wide asset management links remain permission-gated.
+- Admin pending requests are enriched with limited asset/requester/assignment labels; no staff directory is returned.
+- Pending requests show Vietnamese status labels and disable duplicate proposal actions.
+- Review rejection has an explicit note dialog; DB RPC is the single canonical audit writer with materially correct old/new snapshots and stale assignment/status fail-closed checks.
+
+Validation:
+- Focused V2.2 + asset regression: 23/23 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- `git diff --check`: PASS.
+- Disposable PostgreSQL migration rehearsal: PASS.
+- Production-like build and route manifest: PASS.
+
+Production mutation: NONE. Database/Q3 data unchanged; no production migration, deploy, restart, or re-import.
+
+Next:
+- Owner approval for production deployment review.

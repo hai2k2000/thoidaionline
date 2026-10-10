@@ -59,7 +59,8 @@ export function getPhase2Navigation(
       { id: "weekly-report", href: "/reports/weekly" },
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
-      ...((access.canViewAssets || access.canManageAssets) ? [{ id: "assets", href: "/assets" } as const, { id: "my-assets", href: "/my-assets" } as const] : []),
+      { id: "my-assets", href: "/my-assets" },
+      ...((access.canViewAssets || access.canManageAssets) ? [{ id: "assets", href: "/assets" } as const] : []),
       ...(access.canManageAssets ? [{ id: "asset-status-requests", href: "/assets/status-requests" } as const] : []),
     ],
     journalism: canAccessJournalism ? [

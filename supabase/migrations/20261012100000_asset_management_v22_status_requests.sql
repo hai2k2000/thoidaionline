@@ -72,18 +72,22 @@ language plpgsql security definer set search_path = public, pg_temp
 as $function$
 declare
   v_request public.asset_status_change_requests%rowtype;
+  v_old_request public.asset_status_change_requests%rowtype;
   v_asset public.assets%rowtype;
   v_assignment public.asset_assignments%rowtype;
+  v_old_asset_status text;
 begin
   if not public.asset_actor_can_manage(p_actor_id) then raise exception 'forbidden' using errcode = '42501'; end if;
   if p_decision not in ('approve', 'reject') then raise exception 'invalid_decision' using errcode = '22023'; end if;
   select * into v_request from public.asset_status_change_requests where id = p_request_id for update;
   if not found then raise exception 'request_not_found' using errcode = 'P0002'; end if;
   if v_request.status <> 'pending' then raise exception 'request_already_reviewed' using errcode = 'P0001'; end if;
+  v_old_request := v_request;
   if p_decision = 'approve' then
     select * into v_asset from public.assets where id = v_request.asset_id for update;
-    select * into v_assignment from public.asset_assignments where id = v_request.expected_assignment_id and status = 'active' and returned_at is null for update;
-    if not found or v_asset.status <> v_request.expected_current_status then raise exception 'asset_status_or_assignment_conflict' using errcode = '40001'; end if;
+    v_old_asset_status := v_asset.status;
+    select * into v_assignment from public.asset_assignments where id = v_request.expected_assignment_id and asset_id = v_request.asset_id and assignee_id = v_request.requester_id and status = 'active' and returned_at is null for update;
+    if not found or v_asset.id is distinct from v_request.asset_id or v_asset.status <> v_request.expected_current_status then raise exception 'asset_status_or_assignment_conflict' using errcode = '40001'; end if;
     update public.assets set status = v_request.requested_status, updated_at = now() where id = v_asset.id returning * into v_asset;
   end if;
   update public.asset_status_change_requests
@@ -93,8 +97,8 @@ begin
   insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, old_data, new_data)
   values (p_actor_id, 'assets', 'asset_status_change_requests', v_request.id,
     case when p_decision = 'approve' then 'status_change_approved' else 'status_change_rejected' end,
-    jsonb_build_object('request', to_jsonb(v_request)),
-    jsonb_build_object('request', to_jsonb(v_request), 'asset_status', case when p_decision = 'approve' then v_request.requested_status else null end));
+    jsonb_build_object('request', to_jsonb(v_old_request), 'asset_status', v_old_asset_status, 'expected_assignment_id', v_old_request.expected_assignment_id),
+    jsonb_build_object('request', to_jsonb(v_request), 'asset_status', case when p_decision = 'approve' then v_request.requested_status else v_old_asset_status end, 'reviewer', p_actor_id, 'reviewed_at', v_request.reviewed_at));
   return jsonb_build_object('request', to_jsonb(v_request), 'asset', case when p_decision = 'approve' then to_jsonb(v_asset) else null end);
 end;
 $function$;

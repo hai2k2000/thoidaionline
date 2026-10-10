@@ -10,6 +10,12 @@ export type AssetStatusChangeRequest = {
   created_at?: string;
   reviewed_at?: string | null;
   review_note?: string | null;
+  asset_name?: string | null;
+  asset_code?: string | null;
+  current_status?: string | null;
+  requester_name?: string | null;
+  assigned_department_name?: string | null;
+  assignee_name?: string | null;
 };
 
 async function parse<T>(response: Response): Promise<ServiceResult<T>> {

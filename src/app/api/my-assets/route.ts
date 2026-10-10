@@ -11,7 +11,6 @@ export async function GET() {
   const session = await getSessionUser();
   if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   const actor = toAssetRepositoryActor(session);
-  if (!actor.rbacPermissions.includes("asset.view") && !actor.rbacPermissions.includes("asset.manage")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const result = await repository.listAssetsForActor(actor, "mine");
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
   return NextResponse.json(result.data, { headers: { "Cache-Control": "private, no-store" } });
