@@ -50,6 +50,8 @@ export type AssetRepositoryAssignment = {
   asset_id: string;
   assignee_id: string | null;
   department_id: string | null;
+  assigned_department_name?: string | null;
+  assignee_name?: string | null;
   assigned_at?: string | null;
   expected_return_at?: string | null;
   returned_at?: string | null;
@@ -108,8 +110,9 @@ type CustodyLabels = { departmentById: Map<string, string | null>; assigneeById:
 type CustodyLabelsResult = CustodyLabels | { error: { message?: string } };
 
 async function custodyLabels(database: AssetRepositoryDb, assets: AssetRepositoryAsset[]): Promise<CustodyLabelsResult> {
-  const departmentIds = [...new Set(assets.map((asset) => asset.currentAssignment?.department_id).filter((id): id is string => Boolean(id)))];
-  const assigneeIds = [...new Set(assets.map((asset) => asset.currentAssignment?.assignee_id).filter((id): id is string => Boolean(id)))];
+  const assignmentRows = assets.flatMap((asset) => asset.assignmentHistory ?? []);
+  const departmentIds = [...new Set(assignmentRows.map((assignment) => assignment.department_id).filter((id): id is string => Boolean(id)))];
+  const assigneeIds = [...new Set(assignmentRows.map((assignment) => assignment.assignee_id).filter((id): id is string => Boolean(id)))];
   const [departments, assignees] = await Promise.all([
     departmentIds.length ? (database.from("departments") as AssetRepositoryQuery<AssetLabelRow>).select("id,name").in("id", departmentIds) : Promise.resolve({ data: [], error: null }),
     assigneeIds.length ? (database.from("staff_users") as AssetRepositoryQuery<AssetLabelRow>).select("id,full_name").in("id", assigneeIds) : Promise.resolve({ data: [], error: null }),
@@ -144,6 +147,11 @@ export function createAssetRepository(database: AssetRepositoryDb) {
         ...asset,
         assigned_department_name: assignment?.department_id ? labels.departmentById.get(assignment.department_id) ?? null : null,
         assignee_name: assignment?.assignee_id ? labels.assigneeById.get(assignment.assignee_id) ?? null : null,
+        assignmentHistory: (asset.assignmentHistory ?? []).map((history) => ({
+          ...history,
+          assigned_department_name: history.department_id ? labels.departmentById.get(history.department_id) ?? null : null,
+          assignee_name: history.assignee_id ? labels.assigneeById.get(history.assignee_id) ?? null : null,
+        })),
       };
     });
     const visibleIds = new Set(labeledAssets.map((asset) => asset.id));

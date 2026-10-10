@@ -44,3 +44,23 @@ test("asset desktop table keeps six responsive columns without category or track
   assert.match(desktopTable, /<colgroup>/);
   assert.match(globals, /\.table-scroll\s*\{[^}]*overflow-x:\s*auto;/s);
 });
+
+test("asset detail merges custody into the main form and keeps business labels human-readable", () => {
+  const detail = readFileSync(new URL("../app/assets/[id]/page.tsx", import.meta.url), "utf8");
+  assert.match(detail, /Thông tin tài sản/);
+  assert.match(detail, /Phòng đang quản lý/);
+  assert.match(detail, /Người đang sử dụng/);
+  assert.match(detail, /Ngày cấp phát/);
+  assert.match(detail, /Mã tài sản/);
+  assert.match(detail, /Kiểu theo dõi/);
+  assert.match(detail, /Số lượng/);
+  assert.match(detail, /Chuyển giao/);
+  assert.match(detail, /Thu hồi/);
+  assert.match(detail, /Xác nhận chuyển giao/);
+  assert.match(detail, /Xem lịch sử giao nhận/);
+  assert.doesNotMatch(detail, />Transfer<|>Return</);
+  assert.doesNotMatch(detail, /row\.department_id \?\? "-"/);
+  assert.doesNotMatch(detail, /row\.assignee_id \?\? "Phòng ban"/);
+  assert.match(detail, /readOnly=\{!canManage\}/);
+  assert.match(detail, /disabled=\{!canManage\}/);
+});
