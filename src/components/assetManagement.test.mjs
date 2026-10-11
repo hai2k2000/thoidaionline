@@ -51,12 +51,12 @@ test("asset filters use a balanced responsive grid and separate quick-filter chi
   const tableStart = list.indexOf('<section className="mt-4 rounded-2xl', filterStart);
   const filters = list.slice(filterStart, tableStart);
 
-  assert.match(filters, /grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 xl:grid-cols-5/);
+  assert.match(filters, /grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 xl:grid-cols-5 items-start/);
   assert.match(filters, /aria-label="Bộ lọc nhanh"/);
   assert.match(filters, /aria-pressed={quickFilter === filter.value}/);
   assert.match(filters, /border-t border-slate-100 pt-3/);
   assert.match(filters, /Tài sản dùng chung của phòng/);
-  assert.match(filters, /min-h-7 self-start/);
+  assert.match(filters, /mt-0.5 leading-4/);
   assert.match(filters, /disabled:cursor-not-allowed disabled:bg-slate-100/);
   assert.doesNotMatch(filters, /<span>Lọc nhanh<\/span><select/);
 });
