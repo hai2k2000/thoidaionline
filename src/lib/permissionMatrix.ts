@@ -62,6 +62,18 @@ export type PermissionUser = {
 
 export type QuickReportUserPermission = PermissionUser;
 
+export function getEffectivePermissionSourceLabel(
+  entry: Pick<PermissionUser, "active" | "roleActive" | "roleGranted" | "directGranted">,
+): string {
+  const directEffective = entry.active && entry.directGranted;
+  const roleEffective = entry.active && entry.roleActive && entry.roleGranted;
+  if (directEffective && roleEffective) return "Có · vai trò + trực tiếp";
+  if (roleEffective) return "Có · qua vai trò";
+  if (directEffective) return "Có · trực tiếp";
+  if (entry.directGranted || entry.roleGranted) return "Không hiệu lực";
+  return "—";
+}
+
 export function buildPermissionMatrix(
   roles: readonly PermissionMatrixRoleRow[],
   permissions: readonly PermissionMatrixPermissionRow[],

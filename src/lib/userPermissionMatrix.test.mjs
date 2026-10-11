@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { buildPermissionUsers, buildQuickReportUserPermissions } = await import("./permissionMatrix.ts");
+const { buildPermissionUsers, buildQuickReportUserPermissions, getEffectivePermissionSourceLabel } = await import("./permissionMatrix.ts");
 
 const permission = { id: "quick", code: "task.quick_report.create", name: "Quick Report", module: "task", description: null };
 const users = [
@@ -85,6 +85,15 @@ test("inactive users keep persisted grant sources visible but are never effectiv
     directGranted: true,
     effective: false,
   });
+});
+
+test("effective source label excludes an inactive role when direct access remains active", () => {
+  assert.equal(getEffectivePermissionSourceLabel({
+    active: true,
+    roleActive: false,
+    roleGranted: true,
+    directGranted: true,
+  }), "Có · trực tiếp");
 });
 
 test("inactive role disables inherited access but does not hide a direct grant", () => {
