@@ -1,6 +1,8 @@
 export type AssetQuickFilter = "all" | "in_use" | "unassigned" | "lot" | "needs_maintenance" | "broken";
 export type AssetUsageState = "assigned" | "unassigned" | "liquidated";
 
+export type EmployeeFilterState = { assigneeId: string; search: string; activeIndex: number; open: boolean };
+
 export type AssetListPresentationRow = {
   asset_name?: string | null;
   category?: string | null;
@@ -12,13 +14,21 @@ export type AssetListPresentationRow = {
   assignee_name?: string | null;
 };
 
-export function isAssetUnassigned(row: AssetListPresentationRow) {
-  return row.status === "available" && !row.currentAssignment;
-}
-
 export function assetUsageState(row: AssetListPresentationRow): AssetUsageState {
   if (row.status === "liquidated") return "liquidated";
   return row.currentAssignment ? "assigned" : "unassigned";
+}
+
+export function isAssetUnassigned(row: AssetListPresentationRow) {
+  return assetUsageState(row) === "unassigned";
+}
+
+export function resetEmployeeFilterState(state: EmployeeFilterState): EmployeeFilterState {
+  return { ...state, assigneeId: "", search: "", activeIndex: 0, open: false };
+}
+
+export function closeEmployeeFilterState(state: EmployeeFilterState): EmployeeFilterState {
+  return { ...state, open: false };
 }
 
 export function normalizeVietnamese(value: string) {
@@ -52,7 +62,7 @@ export function filterAssetList<T extends AssetListPresentationRow>(
     if (filters.assigneeId && filters.assigneeId !== "__shared" && filters.assigneeId !== "__unassigned" && (row.currentAssignment?.assignee_id ?? "") !== filters.assigneeId) return false;
     if (filters.assigneeId === "__shared" && (!row.currentAssignment || row.currentAssignment.assignee_id !== null || (filters.departmentId && row.currentAssignment.department_id !== filters.departmentId))) return false;
     if (filters.assigneeId === "__unassigned" && row.currentAssignment) return false;
-    if (filters.quick === "in_use" && !row.currentAssignment) return false;
+    if (filters.quick === "in_use" && assetUsageState(row) !== "assigned") return false;
     if (filters.quick === "unassigned" && !isAssetUnassigned(row)) return false;
     if (filters.quick === "needs_maintenance" && row.condition_status !== "needs_maintenance") return false;
     if (filters.quick === "broken" && row.condition_status !== "broken") return false;
@@ -62,6 +72,8 @@ export function filterAssetList<T extends AssetListPresentationRow>(
 }
 
 export function summarizeAssetList(rows: AssetListPresentationRow[]) {
-  const unassigned = rows.filter(isAssetUnassigned).length;
-  return { total: rows.length, assigned: rows.length - unassigned, unassigned };
+  const assigned = rows.filter((row) => assetUsageState(row) === "assigned").length;
+  const unassigned = rows.filter((row) => assetUsageState(row) === "unassigned").length;
+  const liquidated = rows.filter((row) => assetUsageState(row) === "liquidated").length;
+  return { total: rows.length, assigned, unassigned, liquidated };
 }
