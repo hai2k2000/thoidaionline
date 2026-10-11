@@ -39,7 +39,7 @@ export type PermissionMatrixUserRow = {
   full_name: string;
   active: boolean;
   role_id: string;
-  roles: { code: string; name: string } | { code: string; name: string }[] | null;
+  roles: { code: string; name: string; active: boolean } | { code: string; name: string; active: boolean }[] | null;
 };
 
 export type UserPermissionGrantRow = {
@@ -47,17 +47,32 @@ export type UserPermissionGrantRow = {
   permission_id: string;
 };
 
-export type QuickReportUserPermission = {
+export type PermissionUser = {
   id: string;
   username: string | null;
   fullName: string;
   active: boolean;
   roleCode: string;
   roleName: string;
+  roleActive: boolean;
   roleGranted: boolean;
   directGranted: boolean;
   effective: boolean;
 };
+
+export type QuickReportUserPermission = PermissionUser;
+
+export function getEffectivePermissionSourceLabel(
+  entry: Pick<PermissionUser, "active" | "roleActive" | "roleGranted" | "directGranted">,
+): string {
+  const directEffective = entry.active && entry.directGranted;
+  const roleEffective = entry.active && entry.roleActive && entry.roleGranted;
+  if (directEffective && roleEffective) return "Có · vai trò + trực tiếp";
+  if (roleEffective) return "Có · qua vai trò";
+  if (directEffective) return "Có · trực tiếp";
+  if (entry.directGranted || entry.roleGranted) return "Không hiệu lực";
+  return "—";
+}
 
 export function buildPermissionMatrix(
   roles: readonly PermissionMatrixRoleRow[],
@@ -87,13 +102,14 @@ export function buildPermissionMatrix(
   }));
 }
 
-export function buildQuickReportUserPermissions(
+export function buildPermissionUsers(
   users: readonly PermissionMatrixUserRow[],
   permissions: readonly PermissionMatrixPermissionRow[],
   roleGrants: readonly PermissionMatrixGrantRow[],
   userGrants: readonly UserPermissionGrantRow[],
-): QuickReportUserPermission[] {
-  const permissionId = permissions.find((permission) => permission.code === "task.quick_report.create")?.id;
+  permissionCode: string,
+): PermissionUser[] {
+  const permissionId = permissions.find((permission) => permission.code === permissionCode)?.id;
   const roleIds = new Set(
     roleGrants
       .filter((grant) => grant.permission_id === permissionId)
@@ -106,6 +122,7 @@ export function buildQuickReportUserPermissions(
   );
   return users.map((user) => {
     const role = Array.isArray(user.roles) ? user.roles[0] : user.roles;
+    const roleActive = role?.active === true;
     const roleGranted = roleIds.has(user.role_id);
     const directGranted = userIds.has(user.id);
     return {
@@ -115,9 +132,19 @@ export function buildQuickReportUserPermissions(
       active: user.active,
       roleCode: role?.code ?? "",
       roleName: role?.name ?? "",
+      roleActive,
       roleGranted,
       directGranted,
-      effective: roleGranted || directGranted,
+      effective: user.active && (directGranted || (roleActive && roleGranted)),
     };
   });
+}
+
+export function buildQuickReportUserPermissions(
+  users: readonly PermissionMatrixUserRow[],
+  permissions: readonly PermissionMatrixPermissionRow[],
+  roleGrants: readonly PermissionMatrixGrantRow[],
+  userGrants: readonly UserPermissionGrantRow[],
+): QuickReportUserPermission[] {
+  return buildPermissionUsers(users, permissions, roleGrants, userGrants, "task.quick_report.create");
 }

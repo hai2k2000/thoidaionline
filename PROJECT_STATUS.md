@@ -1,3 +1,36 @@
+# Thoidai Work3 PR #6 Final Review & Fix
+
+Current Phase: COMPLETE; owner merge review
+Current Task: Asset UI permission management final review
+
+Completed:
+- Corrected effective permission semantics: active user plus active role inheritance or direct grant; persisted grant sources remain separately visible.
+- Added inactive-user UI state and blocked new grants while preserving safe direct-grant revoke cleanup.
+- Kept inactive roles non-actionable in UI and server RPC; asset.view remains read-only.
+- Added behavioral coverage for inactive users/roles, direct and role grants, combined sources, and revoke-source semantics.
+- Migration remains additive/idempotent, service-role-only, audit-backed, and does not auto-grant permissions. Timestamp 20261014100000 follows the existing 20261013 V2.3 migration ordering.
+
+Validation:
+- Focused Asset/RBAC/UI: 41/41 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS (migration SQL ignored by ESLint configuration).
+- git diff --check: PASS.
+- Route manifest: PASS.
+- Safe migration tests: 24/24 PASS.
+- Disposable PostgreSQL full-chain rehearsal: PASS.
+- Production-like build: PASS with canonical lineage 07a96b6a9bd62f4367bac905656b8b4293279864.
+- Full legacy suite: 1179 PASS / 31 FAIL / 1 skipped; failures match the recorded pre-existing baseline and are outside this PR.
+
+Production safety:
+- Production changed: NO.
+- Database/grants changed: NO.
+- Migration applied: NO.
+- Production deployed/restarted: NO.
+- Disk free during build gate: 21 GiB; hard floor 20 GiB respected.
+
+Next:
+- Commit and push the final review fixes, update PR #6, then stop for owner merge review. Do not merge, migrate, deploy, restart, or alter production grants.
+
 # Personal Quick Report Summary
 
 Current Phase: implementation complete; pre-production owner review
@@ -607,3 +640,32 @@ Production mutation: NONE. Database/Q3 data unchanged; no production migration, 
 
 Next:
 - Owner approval for production deployment review.
+
+## Asset UI + Permission Management Phase 1
+
+Current Phase: COMPLETE; pre-production owner review
+Current Task: UI polish and dynamic asset.manage grant/revoke
+
+Completed:
+- Polished asset filters, responsive table widths, note header, compact detail action, and mobile cards without changing V2.3 asset semantics.
+- Reused canonical asset.view and asset.manage permissions; exposed asset.view as read-only and asset.manage as the mutable permission selector.
+- Added generic role and user grant/revoke RPCs for asset.manage using permission.manage authorization, audit_logs, and service-role-only execution.
+- No named-user whitelist or automatic grants.
+
+Validation:
+- Focused asset/RBAC/UI tests: 47/47 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- git diff --check: PASS.
+- Route manifest: PASS.
+- Safe migration tests: 24/24 PASS.
+- Disposable PostgreSQL migration rehearsal: PASS.
+- Production-like build: PASS with runtime env loaded from /opt/thoidai-work/.env.production in-process only.
+
+Migration:
+- Added supabase/migrations/20261014100000_asset_manage_permission_management.sql; not applied to production.
+
+Production mutation: NONE.
+
+Next:
+- Owner review only; do not migrate, deploy, restart, or change production grants without separate authorization.

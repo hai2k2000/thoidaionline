@@ -5,15 +5,23 @@ import { useRouter } from "next/navigation";
 
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import type { PermissionMatrixRole, QuickReportUserPermission } from "@/lib/permissionMatrix";
+import { getEffectivePermissionSourceLabel, type PermissionMatrixRole, type QuickReportUserPermission } from "@/lib/permissionMatrix";
 
 const scopeLabels: Record<string, string> = { self: "Cá nhân", assigned: "Được giao / liên quan", department: "Phòng ban", all: "Toàn cơ quan" };
 const QUICK_REPORT_CODE = "task.quick_report.create";
 const QUICK_REPORT_NAME = "Tạo/Báo cáo công việc phát sinh";
 const QUICK_REPORT_DESCRIPTION = "Cho phép tạo công việc phát sinh không cần phê duyệt, bao gồm tạo một việc hoặc nhiều việc cùng lúc.";
 const QUICK_REPORT_REVOKE_CONFIRMATION = "Thu hồi quyền Tạo/Báo cáo công việc phát sinh?";
+const ASSET_VIEW_CODE = "asset.view";
+const ASSET_VIEW_NAME = "Xem tài sản";
+const ASSET_VIEW_DESCRIPTION = "Quyền chỉ đọc danh sách và thông tin tài sản theo phạm vi được cấp.";
+const ASSET_MANAGE_CODE: PermissionCode = "asset.manage";
+const ASSET_MANAGE_NAME = "Quản lý tài sản";
+const ASSET_MANAGE_DESCRIPTION = "Cho phép xem và thực hiện các thao tác quản lý vòng đời tài sản theo phạm vi toàn cơ quan.";
+const ASSET_MANAGE_REVOKE_CONFIRMATION = "Thu hồi quyền Quản lý tài sản?";
 const USERS_PER_PAGE = 25;
-type PermissionPayload = { roles?: PermissionMatrixRole[]; users?: QuickReportUserPermission[] };
+type PermissionCode = "asset.manage" | "task.quick_report.create";
+type PermissionPayload = { roles?: PermissionMatrixRole[]; users?: QuickReportUserPermission[]; assetUsers?: QuickReportUserPermission[] };
 type UserFilter = "effective" | "none" | "direct" | "role" | "all";
 type Tab = "users" | "roles";
 
@@ -26,6 +34,8 @@ export default function PermissionsPage() {
   const { loading: authLoading, user, logout } = useAuth();
   const [roles, setRoles] = useState<PermissionMatrixRole[]>([]);
   const [users, setUsers] = useState<QuickReportUserPermission[]>([]);
+  const [assetUsers, setAssetUsers] = useState<QuickReportUserPermission[]>([]);
+  const [selectedPermissionCode, setSelectedPermissionCode] = useState<PermissionCode>(ASSET_MANAGE_CODE);
   const [activeTab, setActiveTab] = useState<Tab>("users");
   const [effectiveOnly, setEffectiveOnly] = useState(true);
   const [userFilter, setUserFilter] = useState<UserFilter>("effective");
@@ -47,17 +57,19 @@ export default function PermissionsPage() {
     }
     setRoles(payload.roles ?? []);
     setUsers(payload.users ?? []);
+    setAssetUsers(payload.assetUsers ?? []);
     setMessage("Có thể quản lý quyền theo vai trò hoặc trực tiếp theo người dùng.");
   }, [router]);
 
-  const setQuickReportPermission = useCallback(async (id: string, kind: "role" | "user", granted: boolean) => {
-    if (!granted && !window.confirm(QUICK_REPORT_REVOKE_CONFIRMATION)) return;
+  const setPermission = useCallback(async (id: string, kind: "role" | "user", granted: boolean, remainsEffective = false) => {
+    const revokeConfirmation = selectedPermissionCode === ASSET_MANAGE_CODE ? ASSET_MANAGE_REVOKE_CONFIRMATION : QUICK_REPORT_REVOKE_CONFIRMATION;
+    if (!granted && !window.confirm(revokeConfirmation)) return;
     setPendingId(id);
     const response = await fetch("/api/permissions", {
       method: "POST",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(kind === "role" ? { roleId: id, action: granted ? "grant" : "revoke" } : { userId: id, action: granted ? "grant" : "revoke" }),
+      body: JSON.stringify(kind === "role" ? { roleId: id, permissionCode: selectedPermissionCode, action: granted ? "grant" : "revoke" } : { userId: id, permissionCode: selectedPermissionCode, action: granted ? "grant" : "revoke" }),
     });
     if (!response.ok) {
       setMessage(response.status === 403 ? "Bạn không có quyền thay đổi phân quyền." : "Không thể cập nhật quyền.");
@@ -65,8 +77,9 @@ export default function PermissionsPage() {
       return;
     }
     await load();
+    if (!granted && remainsEffective) setMessage("Đã thu hồi quyền trực tiếp; người dùng vẫn còn quyền hiệu lực qua vai trò.");
     setPendingId(null);
-  }, [load]);
+  }, [load, selectedPermissionCode]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -75,16 +88,19 @@ export default function PermissionsPage() {
     return () => clearTimeout(timer);
   }, [authLoading, load, router, user]);
 
-  const selectedPermission = useMemo(() => ({ code: QUICK_REPORT_CODE, name: QUICK_REPORT_NAME, module: "Công việc", description: QUICK_REPORT_DESCRIPTION }), []);
+  const selectedPermission = useMemo(() => selectedPermissionCode === ASSET_MANAGE_CODE
+    ? ({ code: ASSET_MANAGE_CODE, name: ASSET_MANAGE_NAME, module: "Tài sản", description: ASSET_MANAGE_DESCRIPTION })
+    : ({ code: QUICK_REPORT_CODE, name: QUICK_REPORT_NAME, module: "Công việc", description: QUICK_REPORT_DESCRIPTION }), [selectedPermissionCode]);
+  const permissionUsers = selectedPermissionCode === ASSET_MANAGE_CODE ? assetUsers : users;
   const summary = useMemo(() => ({
-    effective: users.filter((entry) => entry.effective).length,
-    direct: users.filter((entry) => entry.directGranted).length,
-    role: users.filter((entry) => entry.roleGranted).length,
-  }), [users]);
+    effective: permissionUsers.filter((entry) => entry.effective).length,
+    direct: permissionUsers.filter((entry) => entry.directGranted).length,
+    role: permissionUsers.filter((entry) => entry.roleGranted).length,
+  }), [permissionUsers]);
 
   const filteredUsers = useMemo(() => {
     const needle = userQuery.normalize("NFC").trim().toLocaleLowerCase("vi");
-    return users.filter((entry) => {
+    return permissionUsers.filter((entry) => {
       const matchesSearch = !needle || [entry.fullName, entry.username ?? "", entry.roleCode, entry.roleName].some((value) => value.toLocaleLowerCase("vi").includes(needle));
       if (!matchesSearch || (effectiveOnly && !entry.effective)) return false;
       if (userFilter === "effective" && !entry.effective) return false;
@@ -93,7 +109,7 @@ export default function PermissionsPage() {
       if (userFilter === "role" && !entry.roleGranted) return false;
       return true;
     });
-  }, [effectiveOnly, userFilter, userQuery, users]);
+  }, [effectiveOnly, userFilter, userQuery, permissionUsers]);
 
   const userPageCount = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
   const safeUserPage = Math.min(currentUserPage, userPageCount);
@@ -102,8 +118,8 @@ export default function PermissionsPage() {
 
   const roleRows = useMemo(() => roles.map((role) => {
     const permission = role.modules.flatMap((module) => module.permissions).find((entry) => entry.code === selectedPermission.code);
-    return { ...role, granted: permission?.scopes.includes("all") ?? false, scope: permission?.scopes[0] ?? null, userCount: users.filter((entry) => entry.roleCode === role.code).length };
-  }), [roles, selectedPermission.code, users]);
+    return { ...role, granted: permission?.scopes.includes("all") ?? false, scope: permission?.scopes[0] ?? null, userCount: permissionUsers.filter((entry) => entry.roleCode === role.code).length };
+  }), [roles, selectedPermission.code, permissionUsers]);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#fff7ed,_#f8fafc_38%)] p-4 text-slate-900 sm:p-6">
@@ -123,6 +139,7 @@ export default function PermissionsPage() {
               <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-700">{selectedPermission.module}</p><h2 className="mt-1 text-xl font-bold">{selectedPermission.name}</h2><p className="font-mono text-xs text-slate-500">{selectedPermission.code}</p></div>
               <div className="grid grid-cols-3 gap-2 text-center text-xs"><div className="rounded-xl bg-emerald-50 px-3 py-2"><b className="block text-lg text-emerald-700">{summary.effective}</b>Có quyền</div><div className="rounded-xl bg-orange-50 px-3 py-2"><b className="block text-lg text-orange-700">{summary.direct}</b>Cấp trực tiếp</div><div className="rounded-xl bg-blue-50 px-3 py-2"><b className="block text-lg text-blue-700">{summary.role}</b>Qua vai trò</div></div>
             </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3" role="tablist" aria-label="Chọn quyền cần quản lý"><div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left"><p className="text-sm font-bold text-slate-700">{ASSET_VIEW_NAME}</p><p className="mt-0.5 font-mono text-xs text-slate-500">{ASSET_VIEW_CODE}</p><p className="mt-1 text-xs text-slate-500">{ASSET_VIEW_DESCRIPTION}</p><span className="mt-2 inline-flex rounded-full bg-slate-200 px-2 py-1 text-[11px] font-bold text-slate-600">Chỉ đọc</span></div><button type="button" role="tab" aria-selected={selectedPermissionCode === ASSET_MANAGE_CODE} onClick={() => { setSelectedPermissionCode(ASSET_MANAGE_CODE); setUserFilter("effective"); setEffectiveOnly(true); setCurrentUserPage(1); }} className={selectedPermissionCode === ASSET_MANAGE_CODE ? "rounded-xl border border-orange-300 bg-orange-50 px-3 py-2 text-left text-sm font-bold text-orange-950" : "rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-bold text-slate-600 hover:border-orange-200"}>Quản lý tài sản<span className="mt-0.5 block text-xs font-normal text-slate-500">asset.manage · quản lý vòng đời</span></button><button type="button" role="tab" aria-selected={selectedPermissionCode === QUICK_REPORT_CODE} onClick={() => { setSelectedPermissionCode(QUICK_REPORT_CODE); setUserFilter("effective"); setEffectiveOnly(true); setCurrentUserPage(1); }} className={selectedPermissionCode === QUICK_REPORT_CODE ? "rounded-xl border border-orange-300 bg-orange-50 px-3 py-2 text-left text-sm font-bold text-orange-950" : "rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-bold text-slate-600 hover:border-orange-200"}>Tạo/Báo cáo công việc phát sinh<span className="mt-0.5 block text-xs font-normal text-slate-500">task.quick_report.create · Quick Report</span></button></div>
             {showDetails ? <p className="mt-3 max-w-3xl text-sm text-slate-600">{selectedPermission.description}</p> : null}
             <button type="button" onClick={() => setShowDetails((value) => !value)} className="mt-3 text-xs font-bold text-orange-700 hover:text-orange-800">{showDetails ? "Ẩn chi tiết quyền" : "Chi tiết quyền"}</button>
           </section>
@@ -144,14 +161,14 @@ export default function PermissionsPage() {
               <table className="w-full min-w-[680px] text-left text-sm">
                 <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3 font-bold sm:px-5">Người dùng</th><th className="px-4 py-3 font-bold">Vai trò</th><th className="px-4 py-3 font-bold">Trực tiếp</th><th className="px-4 py-3 font-bold">Hiệu lực</th><th className="px-4 py-3 font-bold">Thao tác</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pagedUsers.map((entry) => <tr key={entry.id} className="hover:bg-orange-50/40"><td className="px-4 py-2.5 sm:px-5"><p className="font-semibold">{entry.fullName}</p><p className="font-mono text-xs text-slate-500">{entry.username ?? "—"}</p></td><td className="px-4 py-2.5">{entry.roleName || entry.roleCode || "Chưa có vai trò"}</td><td className="px-4 py-2.5"><SourceMark active={entry.directGranted} label={entry.directGranted ? "Có" : "—"} /></td><td className="px-4 py-2.5"><SourceMark active={entry.effective} label={entry.effective ? "Có" : "—"} /></td><td className="px-4 py-2.5"><button type="button" disabled={pendingId === entry.id} onClick={() => void setQuickReportPermission(entry.id, "user", !entry.directGranted)} className={entry.directGranted ? "rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-60" : "rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"}>{entry.directGranted ? "Thu hồi trực tiếp" : "Cấp trực tiếp"}</button></td></tr>)}
+                  {pagedUsers.map((entry) => <tr key={entry.id} className={entry.active ? "hover:bg-orange-50/40" : "bg-slate-50 text-slate-500"}><td className="px-4 py-2.5 sm:px-5"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{entry.fullName}</p>{!entry.active ? <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-600">Không hoạt động</span> : null}</div><p className="font-mono text-xs text-slate-500">{entry.username ?? "—"}</p></td><td className="px-4 py-2.5"><p>{entry.roleName || entry.roleCode || "Chưa có vai trò"}</p>{!entry.roleActive ? <p className="mt-1 text-xs font-semibold text-amber-700">Vai trò không hoạt động</p> : null}</td><td className="px-4 py-2.5"><SourceMark active={entry.directGranted} label={entry.directGranted ? "Đã lưu" : "—"} /></td><td className="px-4 py-2.5"><SourceMark active={entry.effective} label={getEffectivePermissionSourceLabel(entry)} /></td><td className="px-4 py-2.5">{!entry.active && !entry.directGranted ? <span className="text-xs font-semibold text-slate-400">Không thể cấp</span> : <button type="button" disabled={pendingId === entry.id} onClick={() => void setPermission(entry.id, "user", !entry.directGranted, entry.directGranted && entry.active && entry.roleActive && entry.roleGranted)} className={entry.directGranted ? "rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-60" : "rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"}>{entry.directGranted ? "Thu hồi trực tiếp" : "Cấp trực tiếp"}</button>}</td></tr>)}
                 </tbody>
               </table>
             </div>
             {pagedUsers.length === 0 ? <p className="px-5 py-8 text-center text-sm text-slate-500">Không có người dùng phù hợp.</p> : null}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-xs text-slate-500 sm:px-5"><span>Hiển thị {filteredUsers.length === 0 ? 0 : (safeUserPage - 1) * USERS_PER_PAGE + 1}–{Math.min(safeUserPage * USERS_PER_PAGE, filteredUsers.length)} / {filteredUsers.length}</span><div className="flex items-center gap-2"><button type="button" disabled={safeUserPage <= 1} onClick={() => setCurrentUserPage((page) => Math.max(1, page - 1))} className="rounded-lg border border-slate-300 px-3 py-1.5 font-bold disabled:opacity-40">Trước</button><span>Trang {safeUserPage}/{userPageCount}</span><button type="button" disabled={safeUserPage >= userPageCount} onClick={() => setCurrentUserPage((page) => Math.min(userPageCount, page + 1))} className="rounded-lg border border-slate-300 px-3 py-1.5 font-bold disabled:opacity-40">Sau</button></div></div>
           </section> : <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3 font-bold sm:px-5">Vai trò</th><th className="px-4 py-3 font-bold">Được cấp</th><th className="px-4 py-3 font-bold">Số người dùng</th><th className="px-4 py-3 font-bold">Thao tác</th></tr></thead><tbody className="divide-y divide-slate-100">{roleRows.map((role) => <tr key={role.id} className="hover:bg-orange-50/40"><td className="px-4 py-2.5 sm:px-5"><p className="font-semibold">{role.name}</p><p className="font-mono text-xs text-slate-500">{role.code}</p></td><td className="px-4 py-2.5">{role.granted ? <span className="font-bold text-emerald-700">Có{role.scope ? " · " + (scopeLabels[role.scope] ?? role.scope) : ""}</span> : <span className="text-slate-400">—</span>}</td><td className="px-4 py-2.5">{role.userCount}</td><td className="px-4 py-2.5">{role.active ? <button type="button" disabled={pendingId === role.id} onClick={() => void setQuickReportPermission(role.id, "role", !role.granted)} className={role.granted ? "rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-60" : "rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"}>{role.granted ? "Thu hồi" : "Cấp quyền"}</button> : <span className="text-xs text-slate-400">Không hoạt động</span>}</td></tr>)}</tbody></table></div>
+            <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3 font-bold sm:px-5">Vai trò</th><th className="px-4 py-3 font-bold">Được cấp</th><th className="px-4 py-3 font-bold">Số người dùng</th><th className="px-4 py-3 font-bold">Thao tác</th></tr></thead><tbody className="divide-y divide-slate-100">{roleRows.map((role) => <tr key={role.id} className="hover:bg-orange-50/40"><td className="px-4 py-2.5 sm:px-5"><p className="font-semibold">{role.name}</p><p className="font-mono text-xs text-slate-500">{role.code}</p></td><td className="px-4 py-2.5">{role.granted ? <span className="font-bold text-emerald-700">Có{role.scope ? " · " + (scopeLabels[role.scope] ?? role.scope) : ""}</span> : <span className="text-slate-400">—</span>}</td><td className="px-4 py-2.5">{role.userCount}</td><td className="px-4 py-2.5">{role.active ? <button type="button" disabled={pendingId === role.id} onClick={() => void setPermission(role.id, "role", !role.granted)} className={role.granted ? "rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-60" : "rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"}>{role.granted ? "Thu hồi" : "Cấp quyền"}</button> : <span className="text-xs text-slate-400">Không hoạt động</span>}</td></tr>)}</tbody></table></div>
             {roleRows.length === 0 ? <p className="px-5 py-8 text-center text-sm text-slate-500">Không có vai trò.</p> : null}
           </section>}
         </div>

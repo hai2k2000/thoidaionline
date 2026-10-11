@@ -26,7 +26,7 @@ test("asset screens remain server API clients and expose lifecycle concepts", ()
   assert.match(detail, /assigneeId/);
 });
 
-test("asset desktop table keeps six responsive columns without category or tracking metadata", () => {
+test("asset desktop table keeps the canonical responsive columns without category or tracking metadata", () => {
   const list = readFileSync(new URL("../app/assets/page.tsx", import.meta.url), "utf8");
   const desktopStart = list.indexOf('<div className="hidden md:block">');
   const mobileStart = list.indexOf('<div className="grid gap-3 md:hidden">');
@@ -40,7 +40,7 @@ test("asset desktop table keeps six responsive columns without category or track
   assert.doesNotMatch(desktopTable, /row\.tracking_mode/);
   assert.match(desktopTable, /data-table table-fixed min-w-\[900px\]/);
   assert.doesNotMatch(desktopTable, /min-w-\[1220px\]/);
-  assert.match(desktopTable, /colSpan=\{6\}/);
+  assert.match(desktopTable, /colSpan=\{7\}/);
   assert.match(desktopTable, /<colgroup>/);
   assert.match(globals, /\.table-scroll\s*\{[^}]*overflow-x:\s*auto;/s);
 });
@@ -73,7 +73,7 @@ test("asset detail uses assign for unassigned custody and transfer/return only w
   assert.match(detail, /runLifecycle\(currentAssignment \? "transfer" : "assign"\)/);
   assert.match(detail, /Xác nhận cấp phát/);
   assert.match(detail, /action: "assign" \| "transfer" \| "return"/);
-  assert.match(detail, /disabled=\{Boolean\(currentAssignment && value === "available"\)\}/);
+  assert.match(detail, /currentAssignment && asset\.status === "available"/);
 });
 
 test("asset detail renders assignment start and end as separate chronological events", () => {
