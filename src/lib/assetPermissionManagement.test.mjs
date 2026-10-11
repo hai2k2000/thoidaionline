@@ -25,6 +25,18 @@ test("asset.manage mutations are generic and server-authorized", () => {
   assert.doesNotMatch(page, /Tùng Dương|Thu Hương|Quỳnh Trang/);
 });
 
+test("asset.view is read-only and cannot be selected for mutation", () => {
+  assert.match(page, /asset\.view/);
+  assert.match(route, /permissionCode !== "task\.quick_report\.create" && permissionCode !== "asset\.manage"/);
+  assert.doesNotMatch(route, /api_set_asset_view/);
+});
+
+test("inactive users can be revoked for cleanup but cannot receive a new grant", () => {
+  assert.match(migration, /if not exists \(select 1 from public\.staff_users where id = p_user_id\)/i);
+  assert.match(migration, /if p_granted and not exists \(select 1 from public\.staff_users where id = p_user_id and active = true\)/i);
+  assert.match(migration, /Inactive user cannot receive permission/i);
+});
+
 test("asset.manage role and user RPCs are idempotent, auditable, and service-role-only", () => {
   assert.match(migration, /api_set_asset_manage_permission/);
   assert.match(migration, /api_set_asset_manage_user_permission/);

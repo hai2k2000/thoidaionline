@@ -39,7 +39,8 @@ begin
     union all
     select 1 from public.staff_users u join public.user_permission_grants g on g.user_id = u.id join public.permissions p on p.id = g.permission_id and p.code = 'permission.manage' where u.id = p_actor_id and u.active = true
   ) then raise exception 'Forbidden.' using errcode = '42501'; end if;
-  if not exists (select 1 from public.staff_users where id = p_user_id and active = true) then raise exception 'User not found.' using errcode = 'P0002'; end if;
+  if not exists (select 1 from public.staff_users where id = p_user_id) then raise exception 'User not found.' using errcode = 'P0002'; end if;
+  if p_granted and not exists (select 1 from public.staff_users where id = p_user_id and active = true) then raise exception 'Inactive user cannot receive permission.' using errcode = '22023'; end if;
   select id into v_permission_id from public.permissions where code = 'asset.manage';
   if v_permission_id is null then raise exception 'Permission not found.' using errcode = 'P0002'; end if;
   if p_granted then

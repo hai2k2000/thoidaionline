@@ -1,3 +1,36 @@
+# Thoidai Work3 PR #6 Final Review & Fix
+
+Current Phase: COMPLETE; owner merge review
+Current Task: Asset UI permission management final review
+
+Completed:
+- Corrected effective permission semantics: active user plus active role inheritance or direct grant; persisted grant sources remain separately visible.
+- Added inactive-user UI state and blocked new grants while preserving safe direct-grant revoke cleanup.
+- Kept inactive roles non-actionable in UI and server RPC; asset.view remains read-only.
+- Added behavioral coverage for inactive users/roles, direct and role grants, combined sources, and revoke-source semantics.
+- Migration remains additive/idempotent, service-role-only, audit-backed, and does not auto-grant permissions. Timestamp 20261014100000 follows the existing 20261013 V2.3 migration ordering.
+
+Validation:
+- Focused Asset/RBAC/UI: 41/41 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS (migration SQL ignored by ESLint configuration).
+- git diff --check: PASS.
+- Route manifest: PASS.
+- Safe migration tests: 24/24 PASS.
+- Disposable PostgreSQL full-chain rehearsal: PASS.
+- Production-like build: PASS with canonical lineage 07a96b6a9bd62f4367bac905656b8b4293279864.
+- Full legacy suite: 1179 PASS / 31 FAIL / 1 skipped; failures match the recorded pre-existing baseline and are outside this PR.
+
+Production safety:
+- Production changed: NO.
+- Database/grants changed: NO.
+- Migration applied: NO.
+- Production deployed/restarted: NO.
+- Disk free during build gate: 21 GiB; hard floor 20 GiB respected.
+
+Next:
+- Commit and push the final review fixes, update PR #6, then stop for owner merge review. Do not merge, migrate, deploy, restart, or alter production grants.
+
 # Personal Quick Report Summary
 
 Current Phase: implementation complete; pre-production owner review

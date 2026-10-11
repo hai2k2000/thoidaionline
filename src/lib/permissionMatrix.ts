@@ -39,7 +39,7 @@ export type PermissionMatrixUserRow = {
   full_name: string;
   active: boolean;
   role_id: string;
-  roles: { code: string; name: string } | { code: string; name: string }[] | null;
+  roles: { code: string; name: string; active: boolean } | { code: string; name: string; active: boolean }[] | null;
 };
 
 export type UserPermissionGrantRow = {
@@ -54,6 +54,7 @@ export type PermissionUser = {
   active: boolean;
   roleCode: string;
   roleName: string;
+  roleActive: boolean;
   roleGranted: boolean;
   directGranted: boolean;
   effective: boolean;
@@ -109,6 +110,7 @@ export function buildPermissionUsers(
   );
   return users.map((user) => {
     const role = Array.isArray(user.roles) ? user.roles[0] : user.roles;
+    const roleActive = role?.active === true;
     const roleGranted = roleIds.has(user.role_id);
     const directGranted = userIds.has(user.id);
     return {
@@ -118,9 +120,10 @@ export function buildPermissionUsers(
       active: user.active,
       roleCode: role?.code ?? "",
       roleName: role?.name ?? "",
+      roleActive,
       roleGranted,
       directGranted,
-      effective: roleGranted || directGranted,
+      effective: user.active && (directGranted || (roleActive && roleGranted)),
     };
   });
 }

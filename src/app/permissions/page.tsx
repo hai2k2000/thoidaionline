@@ -61,7 +61,7 @@ export default function PermissionsPage() {
     setMessage("Có thể quản lý quyền theo vai trò hoặc trực tiếp theo người dùng.");
   }, [router]);
 
-  const setPermission = useCallback(async (id: string, kind: "role" | "user", granted: boolean) => {
+  const setPermission = useCallback(async (id: string, kind: "role" | "user", granted: boolean, remainsEffective = false) => {
     const revokeConfirmation = selectedPermissionCode === ASSET_MANAGE_CODE ? ASSET_MANAGE_REVOKE_CONFIRMATION : QUICK_REPORT_REVOKE_CONFIRMATION;
     if (!granted && !window.confirm(revokeConfirmation)) return;
     setPendingId(id);
@@ -77,6 +77,7 @@ export default function PermissionsPage() {
       return;
     }
     await load();
+    if (!granted && remainsEffective) setMessage("Đã thu hồi quyền trực tiếp; người dùng vẫn còn quyền hiệu lực qua vai trò.");
     setPendingId(null);
   }, [load, selectedPermissionCode]);
 
@@ -160,7 +161,7 @@ export default function PermissionsPage() {
               <table className="w-full min-w-[680px] text-left text-sm">
                 <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3 font-bold sm:px-5">Người dùng</th><th className="px-4 py-3 font-bold">Vai trò</th><th className="px-4 py-3 font-bold">Trực tiếp</th><th className="px-4 py-3 font-bold">Hiệu lực</th><th className="px-4 py-3 font-bold">Thao tác</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pagedUsers.map((entry) => <tr key={entry.id} className="hover:bg-orange-50/40"><td className="px-4 py-2.5 sm:px-5"><p className="font-semibold">{entry.fullName}</p><p className="font-mono text-xs text-slate-500">{entry.username ?? "—"}</p></td><td className="px-4 py-2.5">{entry.roleName || entry.roleCode || "Chưa có vai trò"}</td><td className="px-4 py-2.5"><SourceMark active={entry.directGranted} label={entry.directGranted ? "Có" : "—"} /></td><td className="px-4 py-2.5"><SourceMark active={entry.effective} label={entry.effective ? "Có" : "—"} /></td><td className="px-4 py-2.5"><button type="button" disabled={pendingId === entry.id} onClick={() => void setPermission(entry.id, "user", !entry.directGranted)} className={entry.directGranted ? "rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-60" : "rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"}>{entry.directGranted ? "Thu hồi trực tiếp" : "Cấp trực tiếp"}</button></td></tr>)}
+                  {pagedUsers.map((entry) => <tr key={entry.id} className={entry.active ? "hover:bg-orange-50/40" : "bg-slate-50 text-slate-500"}><td className="px-4 py-2.5 sm:px-5"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{entry.fullName}</p>{!entry.active ? <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-600">Không hoạt động</span> : null}</div><p className="font-mono text-xs text-slate-500">{entry.username ?? "—"}</p></td><td className="px-4 py-2.5"><p>{entry.roleName || entry.roleCode || "Chưa có vai trò"}</p>{!entry.roleActive ? <p className="mt-1 text-xs font-semibold text-amber-700">Vai trò không hoạt động</p> : null}</td><td className="px-4 py-2.5"><SourceMark active={entry.directGranted} label={entry.directGranted ? "Đã lưu" : "—"} /></td><td className="px-4 py-2.5"><SourceMark active={entry.effective} label={entry.effective ? (entry.roleGranted && entry.directGranted ? "Có · vai trò + trực tiếp" : entry.roleGranted ? "Có · qua vai trò" : "Có · trực tiếp") : entry.directGranted || entry.roleGranted ? "Không hiệu lực" : "—"} /></td><td className="px-4 py-2.5">{!entry.active && !entry.directGranted ? <span className="text-xs font-semibold text-slate-400">Không thể cấp</span> : <button type="button" disabled={pendingId === entry.id} onClick={() => void setPermission(entry.id, "user", !entry.directGranted, entry.directGranted && entry.active && entry.roleActive && entry.roleGranted)} className={entry.directGranted ? "rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-60" : "rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"}>{entry.directGranted ? "Thu hồi trực tiếp" : "Cấp trực tiếp"}</button>}</td></tr>)}
                 </tbody>
               </table>
             </div>
