@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const assetIds = [...new Set(requests.map((row) => row.asset_id))];
   const requesterIds = [...new Set(requests.map((row) => row.requester_id))];
   const [assetsResult, assignmentsResult, requestersResult] = await Promise.all([
-    serverSupabase.from("assets").select("id,asset_name,asset_code,status").in("id", assetIds),
+    serverSupabase.from("assets").select("id,asset_name,asset_code,status,condition_status").in("id", assetIds),
     serverSupabase.from("asset_assignments").select("id,asset_id,assignee_id,department_id,status,returned_at").in("asset_id", assetIds).eq("status", "active"),
     serverSupabase.from("staff_users").select("id,full_name").in("id", requesterIds),
   ]);
@@ -50,6 +50,7 @@ export async function GET(request: Request) {
       asset_name: asset?.asset_name ?? "Tài sản không xác định",
       asset_code: asset?.asset_code ?? null,
       current_status: asset?.status ?? null,
+      current_condition_status: asset?.condition_status ?? null,
       requester_name: requesters.get(row.requester_id) ?? "Người dùng không xác định",
       assigned_department_name: assignment?.department_id ? departments.get(assignment.department_id) ?? null : null,
       assignee_name: assignment?.assignee_id ? assignees.get(assignment.assignee_id) ?? null : null,

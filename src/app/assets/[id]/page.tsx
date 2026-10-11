@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { type Asset, type AssetAssignment } from "@/lib/services";
+import { type Asset, type AssetAssignment, type AssetConditionStatus } from "@/lib/services";
 import { errorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
-const assetStatusLabel: Record<string, string> = { available: "Chưa phân công / Sẵn sàng", in_use: "Đang sử dụng", maintenance: "Bảo trì", broken: "Hỏng", liquidated: "Thanh lý" };
+const conditionLabel: Record<AssetConditionStatus, string> = { normal: "Bình thường", needs_maintenance: "Cần bảo trì", under_service: "Đang sửa chữa", broken: "Hỏng" };
 const trackingModeLabel: Record<string, string> = { individual: "Cá thể", lot: "Theo lô" };
 type DepartmentOption = { id: string; name: string };
 type UserOption = { id: string; full_name: string; department_id: string | null };
@@ -67,7 +67,7 @@ export default function AssetDetailPage() {
     }
     setSaving(true);
     try {
-      const response = await fetch(`/api/assets/${encodeURIComponent(asset.id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ asset_name: asset.asset_name, category: asset.category, serial_number: asset.serial_number ?? null, status: asset.status ?? "available", note: asset.note ?? null }) });
+      const response = await fetch(`/api/assets/${encodeURIComponent(asset.id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ asset_name: asset.asset_name, category: asset.category, serial_number: asset.serial_number ?? null, status: asset.status ?? "available", condition_status: asset.condition_status ?? "normal", note: asset.note ?? null }) });
       const payload = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) throw new Error(payload?.error || "Không thể cập nhật tài sản.");
       notify("success", "Đã cập nhật thông tin tài sản."); setMessage("✅ Đã cập nhật thông tin tài sản.");
@@ -118,7 +118,8 @@ export default function AssetDetailPage() {
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Số sê-ri<input readOnly={!canManage} className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal read-only:bg-slate-50" value={asset?.serial_number ?? ""} onChange={(event) => setAssetField({ serial_number: event.target.value || null })} /></label>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Kiểu theo dõi</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{trackingModeLabel[asset?.tracking_mode ?? "individual"] ?? "—"}</p></div>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Số lượng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal tabular-nums">{asset?.quantity ?? 1}</p></div>
-            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Tình trạng<select disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.status ?? "available"} onChange={(event) => setAssetField({ status: event.target.value as Asset["status"] })}>{Object.entries(assetStatusLabel).map(([value, label]) => <option key={value} value={value} disabled={Boolean(currentAssignment && value === "available")}>{label}</option>)}</select></label>
+            <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Trạng thái sử dụng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{currentAssignment ? "Đang sử dụng" : "Chưa phân công"}</p></div>
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Tình trạng tài sản<select disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.condition_status ?? "normal"} onChange={(event) => setAssetField({ condition_status: event.target.value as AssetConditionStatus })}>{Object.entries(conditionLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Phòng đang quản lý<input readOnly className="min-h-11 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-normal" value={currentDepartment} /></label>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Người đang sử dụng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{currentPerson}</p></div>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Ngày cấp phát</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{formatDateTime(currentAssignment?.assigned_at)}</p></div>

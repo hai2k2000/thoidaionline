@@ -7,6 +7,17 @@ export const assetStatusLabels = {
   rejected: "Đã từ chối",
 } as const;
 
+export const assetConditionLabels = {
+  normal: "Bình thường",
+  needs_maintenance: "Cần bảo trì",
+  under_service: "Đang sửa chữa",
+  broken: "Hỏng",
+} as const;
+
+export function presentAssetCondition(status: string | null | undefined) {
+  return status ? assetConditionLabels[status as keyof typeof assetConditionLabels] ?? status : "Bình thường";
+}
+
 export function presentAssetStatus(status: string | null | undefined) {
   return status ? assetStatusLabels[status as keyof typeof assetStatusLabels] ?? status : "-";
 }

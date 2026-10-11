@@ -1,6 +1,9 @@
 import { fail, ok, ServiceResult, withError } from "./common";
 
 export type AssetStatus = "available" | "in_use" | "maintenance" | "broken" | "liquidated";
+export type AssetConditionStatus = "normal" | "needs_maintenance" | "under_service" | "broken";
+export type AssetServiceType = "maintenance" | "repair" | "replacement";
+export type AssetServiceStatus = "planned" | "in_progress" | "completed" | "cancelled";
 export type AssetTrackingMode = "individual" | "lot";
 
 export type Asset = {
@@ -10,6 +13,7 @@ export type Asset = {
   category: string;
   serial_number?: string | null;
   status?: AssetStatus;
+  condition_status?: AssetConditionStatus;
   assigned_department_id?: string | null;
   note?: string | null;
   tracking_mode?: AssetTrackingMode;
@@ -18,6 +22,24 @@ export type Asset = {
   assignee_name?: string | null;
   currentAssignment?: AssetAssignment | null;
   assignmentHistory?: AssetAssignment[];
+  serviceRecords?: AssetServiceRecord[];
+};
+
+export type AssetServiceRecord = {
+  id: string;
+  asset_id: string;
+  service_type: AssetServiceType;
+  service_status: AssetServiceStatus;
+  description: string;
+  service_provider?: string | null;
+  cost?: number | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  condition_before?: AssetConditionStatus | null;
+  condition_after?: AssetConditionStatus | null;
+  result_note?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 export type AssetAssignment = {
