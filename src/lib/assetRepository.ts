@@ -17,6 +17,7 @@ type AssetRepositoryQuery<T> = {
   eq(field: string, value: unknown): AssetRepositoryQuery<T>;
   is(field: string, value: unknown): AssetRepositoryQuery<T>;
   in(field: string, values: unknown[]): AssetRepositoryQuery<T>;
+  order(field: string, options?: { ascending?: boolean }): AssetRepositoryQuery<T>;
   maybeSingle(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
   single(): PromiseLike<{ data: T | null; error: { message?: string } | null }>;
   then<TResult1 = QueryResult<T>, TResult2 = never>(
@@ -36,6 +37,7 @@ export type AssetRepositoryAsset = {
   category: string;
   serial_number?: string | null;
   status?: string | null;
+  condition_status?: string | null;
   assigned_department_id?: string | null;
   note?: string | null;
   tracking_mode?: AssetTrackingMode;
@@ -44,6 +46,7 @@ export type AssetRepositoryAsset = {
   assignee_name?: string | null;
   currentAssignment: AssetRepositoryAssignment | null;
   assignmentHistory?: AssetRepositoryAssignment[];
+  serviceRecords?: AssetServiceRecord[];
 };
 
 export type AssetRepositoryAssignment = {
@@ -82,6 +85,7 @@ export type AssetCreateInput = {
   category: string;
   serial_number?: string | null;
   status?: string | null;
+  condition_status?: string | null;
   note?: string | null;
   tracking_mode?: AssetTrackingMode;
   quantity?: number;
@@ -90,6 +94,16 @@ export type AssetCreateInput = {
 export type AssetUpdateInput = Partial<AssetCreateInput>;
 
 export type AssetTrackingMode = "individual" | "lot";
+export type AssetServiceRecord = {
+  id: string; asset_id: string;
+  service_type: "maintenance" | "repair" | "replacement";
+  service_status: "planned" | "in_progress" | "completed" | "cancelled";
+  description: string; service_provider?: string | null; cost?: number | null;
+  started_at?: string | null; completed_at?: string | null;
+  condition_before?: string | null; condition_after?: string | null;
+  result_note?: string | null; created_at?: string | null; updated_at?: string | null;
+};
+export type AssetServiceRecordInput = Omit<AssetServiceRecord, "id" | "asset_id" | "created_at" | "updated_at"> & { asset_id: string };
 
 export function validateAssetQuantity(trackingMode: unknown, quantity: unknown): string | null {
   if (trackingMode !== "individual" && trackingMode !== "lot") return "invalid_tracking_mode";
@@ -163,7 +177,10 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     const result = await listAssetsForActor(actor);
     if (!result.ok) return result;
     const asset = result.data.assets.find((row) => row.id === assetId);
-    return asset ? ok(asset) : fail("asset_not_found");
+    if (!asset) return fail("asset_not_found");
+    const serviceResult = await table<AssetServiceRecord>("asset_service_records").select("*").eq("asset_id", assetId).order("created_at", { ascending: false });
+    if (serviceResult.error) return fail(errorText(serviceResult.error, "asset_service_read_failed"));
+    return ok({ ...asset, serviceRecords: serviceResult.data ?? [] });
   }
 
   async function createAssetForActor(actor: AssetRepositoryActor, input: AssetCreateInput): Promise<ServiceResult<AssetRepositoryAsset>> {
@@ -179,6 +196,7 @@ export function createAssetRepository(database: AssetRepositoryDb) {
       category: input.category.trim(),
       serial_number: input.serial_number || null,
       status: input.status || "available",
+      condition_status: input.condition_status || "normal",
       note: input.note || null,
       tracking_mode: trackingMode,
       quantity,
@@ -208,6 +226,32 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     return ok({ ...result.data, currentAssignment: null });
   }
 
+  async function createServiceRecordForActor(actor: AssetRepositoryActor, input: AssetServiceRecordInput): Promise<ServiceResult<AssetServiceRecord>> {
+    if (!canManageAssets(actor)) return fail("forbidden");
+    const result = await (database.rpc("api_asset_service_record_create", {
+      p_actor_id: actor.id, p_asset_id: input.asset_id, p_service_type: input.service_type,
+      p_service_status: input.service_status, p_description: input.description,
+      p_service_provider: input.service_provider ?? null, p_cost: input.cost ?? null,
+      p_started_at: input.started_at ?? null, p_completed_at: input.completed_at ?? null,
+      p_condition_after: input.condition_after ?? null, p_result_note: input.result_note ?? null,
+    }) as PromiseLike<{ data: { record?: AssetServiceRecord } | null; error: { message?: string } | null }>);
+    if (result.error || !result.data?.record) return fail(errorText(result.error, "asset_service_create_failed"));
+    return ok(result.data.record);
+  }
+
+  async function updateServiceRecordForActor(actor: AssetRepositoryActor, recordId: string, input: Omit<AssetServiceRecordInput, "asset_id"> & { asset_id?: string }): Promise<ServiceResult<AssetServiceRecord>> {
+    if (!canManageAssets(actor)) return fail("forbidden");
+    const result = await (database.rpc("api_asset_service_record_update", {
+      p_actor_id: actor.id, p_record_id: recordId, p_asset_id: input.asset_id, p_service_type: input.service_type,
+      p_service_status: input.service_status, p_description: input.description,
+      p_service_provider: input.service_provider ?? null, p_cost: input.cost ?? null,
+      p_started_at: input.started_at ?? null, p_completed_at: input.completed_at ?? null,
+      p_condition_after: input.condition_after ?? null, p_result_note: input.result_note ?? null,
+    }) as PromiseLike<{ data: { record?: AssetServiceRecord } | null; error: { message?: string } | null }>);
+    if (result.error || !result.data?.record) return fail(errorText(result.error, "asset_service_update_failed"));
+    return ok(result.data.record);
+  }
+
   async function lifecycle(
     actor: AssetRepositoryActor,
     input: AssetLifecycleInput,
@@ -225,6 +269,8 @@ export function createAssetRepository(database: AssetRepositoryDb) {
     getAssetForActor,
     createAssetForActor,
     updateAssetForActor,
+    createServiceRecordForActor,
+    updateServiceRecordForActor,
     assignAssetForActor: (actor: AssetRepositoryActor, input: AssetLifecycleInput) => lifecycle(actor, input, "api_asset_assign", {
       p_asset_id: input.asset_id,
       p_department_id: input.department_id,

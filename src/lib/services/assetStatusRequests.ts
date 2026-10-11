@@ -5,6 +5,7 @@ export type AssetStatusChangeRequest = {
   asset_id: string;
   requester_id: string;
   requested_status: "maintenance" | "broken";
+  expected_condition_status?: "normal" | "needs_maintenance" | "under_service" | "broken";
   reason: string;
   status: "pending" | "approved" | "rejected";
   created_at?: string;
@@ -13,10 +14,13 @@ export type AssetStatusChangeRequest = {
   asset_name?: string | null;
   asset_code?: string | null;
   current_status?: string | null;
+  current_condition_status?: string | null;
   requester_name?: string | null;
   assigned_department_name?: string | null;
   assignee_name?: string | null;
 };
+
+export const conditionRequestTarget = (status: "maintenance" | "broken") => status === "maintenance" ? "needs_maintenance" : "broken";
 
 async function parse<T>(response: Response): Promise<ServiceResult<T>> {
   const body = await response.json().catch(() => null) as { error?: string } & T;

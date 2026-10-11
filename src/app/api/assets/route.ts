@@ -66,6 +66,7 @@ export async function POST(request: Request) {
     category: typeof body?.category === "string" ? body.category : "",
     serial_number: typeof body?.serial_number === "string" ? body.serial_number : null,
     status: typeof body?.status === "string" ? body.status : "available",
+    condition_status: body?.condition_status === "normal" || body?.condition_status === "needs_maintenance" || body?.condition_status === "under_service" || body?.condition_status === "broken" ? body.condition_status : "normal",
     note: typeof body?.note === "string" ? body.note : null,
     tracking_mode: body?.tracking_mode === "lot" ? "lot" : "individual",
     quantity: typeof body?.quantity === "number" ? body.quantity : 1,
