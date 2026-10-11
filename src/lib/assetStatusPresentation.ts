@@ -21,3 +21,8 @@ export function presentAssetCondition(status: string | null | undefined) {
 export function presentAssetStatus(status: string | null | undefined) {
   return status ? assetStatusLabels[status as keyof typeof assetStatusLabels] ?? status : "-";
 }
+
+export function presentAssetUsage(currentAssignment: { id?: string } | null | undefined, status?: string | null) {
+  if (status === "liquidated") return "Đã thanh lý";
+  return currentAssignment ? "Đang sử dụng" : "Chưa phân công";
+}

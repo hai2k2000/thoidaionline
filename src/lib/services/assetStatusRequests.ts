@@ -20,6 +20,8 @@ export type AssetStatusChangeRequest = {
   assignee_name?: string | null;
 };
 
+export const conditionRequestTarget = (status: "maintenance" | "broken") => status === "maintenance" ? "needs_maintenance" : "broken";
+
 async function parse<T>(response: Response): Promise<ServiceResult<T>> {
   const body = await response.json().catch(() => null) as { error?: string } & T;
   return response.ok ? ok(body) : fail(body?.error || "status_request_failed");

@@ -16,7 +16,8 @@ end $$;
 create index if not exists assets_condition_status_idx on public.assets(condition_status);
 
 alter table public.asset_status_change_requests add column if not exists expected_condition_status text not null default 'normal';
-update public.asset_status_change_requests set expected_condition_status = case requested_status when 'maintenance' then 'needs_maintenance' when 'broken' then 'broken' else 'normal' end where expected_condition_status = 'normal' and requested_status in ('maintenance', 'broken');
+-- Historical requests are already terminal in the current production characterization;
+-- keep the compatibility default for old rows without pretending it was their pre-request state.
 
 create table if not exists public.asset_service_records (
   id uuid primary key default gen_random_uuid(), asset_id uuid not null references public.assets(id) on delete restrict,
@@ -46,6 +47,7 @@ begin
   if not found then raise exception 'asset_not_found' using errcode = 'P0002'; end if;
   select * into v_assignment from public.asset_assignments where asset_id = p_asset_id and status = 'active' and returned_at is null for update;
   if not found or v_assignment.assignee_id is distinct from p_actor_id then raise exception 'asset_not_owned' using errcode = '42501'; end if;
+  if v_asset.condition_status is not distinct from case p_requested_status when 'maintenance' then 'needs_maintenance' else 'broken' end then raise exception 'condition_noop' using errcode = '22023'; end if;
   insert into public.asset_status_change_requests(asset_id, requester_id, requested_status, reason, expected_assignment_id, expected_current_status, expected_condition_status)
   values (p_asset_id, p_actor_id, p_requested_status, btrim(p_reason), v_assignment.id, v_asset.status, v_asset.condition_status) returning * into v_request;
   insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, new_data) values (p_actor_id, 'assets', 'asset_status_change_requests', v_request.id, 'condition_change_request', to_jsonb(v_request));
@@ -56,22 +58,24 @@ $function$;
 
 create or replace function public.api_asset_status_request_review(p_actor_id uuid, p_request_id uuid, p_decision text, p_review_note text default null)
 returns jsonb language plpgsql security definer set search_path = public, pg_temp as $function$
-declare v_request public.asset_status_change_requests%rowtype; v_asset public.assets%rowtype; v_assignment public.asset_assignments%rowtype; v_new_condition text;
+declare v_request public.asset_status_change_requests%rowtype; v_old_request jsonb; v_asset public.assets%rowtype; v_assignment public.asset_assignments%rowtype; v_new_condition text; v_old_condition text;
 begin
   if not public.asset_actor_can_manage(p_actor_id) then raise exception 'forbidden' using errcode = '42501'; end if;
   if p_decision not in ('approve', 'reject') then raise exception 'invalid_decision' using errcode = '22023'; end if;
   select * into v_request from public.asset_status_change_requests where id = p_request_id for update;
   if not found then raise exception 'request_not_found' using errcode = 'P0002'; end if;
   if v_request.status <> 'pending' then raise exception 'request_already_reviewed' using errcode = 'P0001'; end if;
+  v_old_request := to_jsonb(v_request);
   if p_decision = 'approve' then
     select * into v_asset from public.assets where id = v_request.asset_id for update;
     select * into v_assignment from public.asset_assignments where id = v_request.expected_assignment_id and asset_id = v_request.asset_id and assignee_id = v_request.requester_id and status = 'active' and returned_at is null for update;
     if not found or v_asset.status is distinct from v_request.expected_current_status or v_asset.condition_status is distinct from v_request.expected_condition_status then raise exception 'asset_condition_or_assignment_conflict' using errcode = '40001'; end if;
+    v_old_condition := v_asset.condition_status;
     v_new_condition := case v_request.requested_status when 'maintenance' then 'needs_maintenance' else 'broken' end;
     update public.assets set condition_status = v_new_condition, updated_at = now() where id = v_asset.id returning * into v_asset;
   end if;
   update public.asset_status_change_requests set status = case when p_decision = 'approve' then 'approved' else 'rejected' end, reviewed_by = p_actor_id, reviewed_at = now(), review_note = nullif(btrim(p_review_note), ''), updated_at = now() where id = v_request.id returning * into v_request;
-  insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, new_data) values (p_actor_id, 'assets', 'asset_status_change_requests', v_request.id, case when p_decision = 'approve' then 'condition_change_approved' else 'condition_change_rejected' end, jsonb_build_object('request', to_jsonb(v_request), 'condition_status', v_new_condition));
+  insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, old_data, new_data) values (p_actor_id, 'assets', 'asset_status_change_requests', v_request.id, case when p_decision = 'approve' then 'condition_change_approved' else 'condition_change_rejected' end, jsonb_build_object('request', v_old_request, 'condition_status', v_old_condition, 'expected_assignment_id', v_request.expected_assignment_id), jsonb_build_object('request', to_jsonb(v_request), 'condition_status', v_new_condition, 'reviewer', p_actor_id, 'reviewed_at', v_request.reviewed_at));
   return jsonb_build_object('request', to_jsonb(v_request), 'asset', case when p_decision = 'approve' then to_jsonb(v_asset) else null end);
 end;
 $function$;
@@ -83,9 +87,14 @@ begin
   if not public.asset_actor_can_manage(p_actor_id) then raise exception 'forbidden' using errcode = '42501'; end if;
   select * into v_asset from public.assets where id = p_asset_id for update;
   if not found then raise exception 'asset_not_found' using errcode = 'P0002'; end if;
+  if p_service_type not in ('maintenance', 'repair', 'replacement') or p_service_status not in ('planned', 'in_progress', 'completed', 'cancelled') or char_length(btrim(coalesce(p_description, ''))) < 3 then raise exception 'invalid_service_record' using errcode = '22023'; end if;
+  if p_cost is not null and p_cost < 0 then raise exception 'invalid_service_cost' using errcode = '22023'; end if;
+  if p_service_status = 'completed' and p_completed_at is null then p_completed_at := now(); end if;
+  if p_completed_at is not null and p_started_at is not null and p_completed_at < p_started_at then raise exception 'invalid_service_dates' using errcode = '22023'; end if;
   insert into public.asset_service_records(asset_id, service_type, service_status, description, service_provider, cost, started_at, completed_at, condition_before, condition_after, result_note, created_by)
   values (p_asset_id, p_service_type, p_service_status, btrim(p_description), nullif(btrim(p_service_provider), ''), p_cost, p_started_at, p_completed_at, v_asset.condition_status, p_condition_after, nullif(btrim(p_result_note), ''), p_actor_id) returning * into v_record;
   if p_service_status = 'completed' and p_condition_after is not null then update public.assets set condition_status = p_condition_after, updated_at = now() where id = p_asset_id; end if;
+  insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, old_data, new_data) values (p_actor_id, 'assets', 'asset_service_records', v_record.id, 'service_record_create', null, to_jsonb(v_record));
   return jsonb_build_object('record', to_jsonb(v_record));
 end;
 $function$;
@@ -93,29 +102,33 @@ $function$;
 revoke all on function public.api_asset_service_record_create(uuid,uuid,text,text,text,text,numeric,timestamptz,timestamptz,text,text) from public, anon, authenticated;
 grant execute on function public.api_asset_service_record_create(uuid,uuid,text,text,text,text,numeric,timestamptz,timestamptz,text,text) to service_role;
 
-create or replace function public.api_asset_service_record_update(p_actor_id uuid, p_record_id uuid, p_service_type text, p_service_status text, p_description text, p_service_provider text default null, p_cost numeric default null, p_started_at timestamptz default null, p_completed_at timestamptz default null, p_condition_after text default null, p_result_note text default null)
+create or replace function public.api_asset_service_record_update(p_actor_id uuid, p_record_id uuid, p_asset_id uuid, p_service_type text, p_service_status text, p_description text, p_service_provider text default null, p_cost numeric default null, p_started_at timestamptz default null, p_completed_at timestamptz default null, p_condition_after text default null, p_result_note text default null)
 returns jsonb language plpgsql security definer set search_path = public, pg_temp as $function$
-declare v_record public.asset_service_records%rowtype; v_asset public.assets%rowtype;
+declare v_record public.asset_service_records%rowtype; v_asset public.assets%rowtype; v_old jsonb;
 begin
   if not public.asset_actor_can_manage(p_actor_id) then raise exception 'forbidden' using errcode = '42501'; end if;
-  select * into v_record from public.asset_service_records where id = p_record_id for update;
+  select * into v_record from public.asset_service_records where id = p_record_id and asset_id = p_asset_id for update;
   if not found then raise exception 'service_record_not_found' using errcode = 'P0002'; end if;
   select * into v_asset from public.assets where id = v_record.asset_id for update;
+  v_old := to_jsonb(v_record);
+  if p_service_type not in ('maintenance', 'repair', 'replacement') or p_service_status not in ('planned', 'in_progress', 'completed', 'cancelled') or char_length(btrim(coalesce(p_description, ''))) < 3 then raise exception 'invalid_service_record' using errcode = '22023'; end if;
+  if p_completed_at is not null and p_started_at is not null and p_completed_at < p_started_at then raise exception 'invalid_service_dates' using errcode = '22023'; end if;
+  if p_service_status = 'completed' and v_record.service_status <> 'completed' and p_completed_at is null then p_completed_at := now(); end if;
   update public.asset_service_records
   set service_type = p_service_type, service_status = p_service_status, description = btrim(p_description),
       service_provider = nullif(btrim(p_service_provider), ''), cost = p_cost, started_at = p_started_at,
       completed_at = p_completed_at, condition_after = p_condition_after,
       result_note = nullif(btrim(p_result_note), ''), updated_at = now()
   where id = p_record_id returning * into v_record;
-  if p_service_status = 'completed' and p_condition_after is not null then
+  if p_service_status = 'completed' and v_record.service_status <> 'completed' and p_condition_after is not null then
     update public.assets set condition_status = p_condition_after, updated_at = now() where id = v_asset.id;
   end if;
   insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, new_data)
-  values (p_actor_id, 'assets', 'asset_service_records', p_record_id, 'service_record_update', to_jsonb(v_record));
+  values (p_actor_id, 'assets', 'asset_service_records', p_record_id, 'service_record_update', v_old, to_jsonb(v_record));
   return jsonb_build_object('record', to_jsonb(v_record));
 end;
 $function$;
-revoke all on function public.api_asset_service_record_update(uuid,uuid,text,text,text,text,numeric,timestamptz,timestamptz,text,text) from public, anon, authenticated;
-grant execute on function public.api_asset_service_record_update(uuid,uuid,text,text,text,text,numeric,timestamptz,timestamptz,text,text) to service_role;
+revoke all on function public.api_asset_service_record_update(uuid,uuid,uuid,text,text,text,text,numeric,timestamptz,timestamptz,text,text) from public, anon, authenticated;
+grant execute on function public.api_asset_service_record_update(uuid,uuid,uuid,text,text,text,text,numeric,timestamptz,timestamptz,text,text) to service_role;
 
 commit;

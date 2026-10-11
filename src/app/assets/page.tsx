@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { filterAssetList, isAssetUnassigned, presentAssetCustody, summarizeAssetList, type AssetQuickFilter } from "@/lib/assetListPresentation";
+import { filterAssetList, isAssetUnassigned, presentAssetCustody, summarizeAssetList, normalizeVietnamese, type AssetQuickFilter } from "@/lib/assetListPresentation";
 import { presentAssetCondition } from "@/lib/assetStatusPresentation";
 import { listAssets, type Asset } from "@/lib/services";
 
@@ -15,14 +15,6 @@ type AssetRow = Asset & {
 };
 type DepartmentOption = { id: string; name: string };
 type UserOption = { id: string; full_name: string; department_id: string | null };
-
-const assetStatusLabel: Record<string, string> = {
-  available: "Sẵn sàng",
-  in_use: "Đang sử dụng",
-  maintenance: "Bảo trì",
-  broken: "Hỏng",
-  liquidated: "Thanh lý",
-};
 
 const quickFilters: { value: AssetQuickFilter; label: string }[] = [
   { value: "all", label: "Tất cả" },
@@ -41,6 +33,7 @@ const statusTone: Record<string, string> = {
 };
 
 function StatusBadge({ row }: { row: AssetRow }) {
+  if (row.status === "liquidated") return <span className="inline-flex min-h-7 items-center whitespace-nowrap rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">Đã thanh lý</span>;
   const showUnassigned = isAssetUnassigned(row);
   const label = showUnassigned ? "Chưa phân công" : "Đang sử dụng";
   const tone = showUnassigned ? "border-amber-200 bg-amber-50 text-amber-900" : statusTone.in_use;
@@ -71,6 +64,7 @@ export default function AssetsPage() {
   const [qCondition, setQCondition] = useState("");
   const [quickFilter, setQuickFilter] = useState<AssetQuickFilter>("all");
   const [qAssignee, setQAssignee] = useState("");
+  const [qEmployeeSearch, setQEmployeeSearch] = useState("");
 
   const loadData = useCallback(async () => {
     const assetsRes = await listAssets();
@@ -102,7 +96,7 @@ export default function AssetsPage() {
   }, [authLoading, user, router, hasPermission, loadData]);
 
   const filteredRows = useMemo(
-    () => filterAssetList(rows, { name: qName, category: "", status: qCondition, quick: quickFilter, assigneeId: qAssignee }).filter((row) => !qDepartment || row.currentAssignment?.department_id === qDepartment),
+    () => filterAssetList(rows, { name: qName, category: "", conditionStatus: qCondition, quick: quickFilter, departmentId: qDepartment, assigneeId: qAssignee }),
     [rows, qName, qCondition, quickFilter, qAssignee, qDepartment],
   );
   const summary = useMemo(() => summarizeAssetList(rows), [rows]);
@@ -124,6 +118,7 @@ export default function AssetsPage() {
     setQCondition("");
     setQuickFilter("all");
     setQAssignee("");
+    setQEmployeeSearch("");
   };
 
   return (
@@ -145,9 +140,9 @@ export default function AssetsPage() {
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="grid gap-3 md:grid-cols-[minmax(240px,1.4fr)_minmax(150px,0.8fr)_minmax(170px,0.8fr)_auto] md:items-end">
               <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Tên tài sản</span><input className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200" placeholder="Tìm tên tài sản..." value={qName} onChange={(event) => setQName(event.target.value)} /></label>
-              <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Phòng ban</span><select className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal" value={qDepartment} onChange={(event) => setQDepartment(event.target.value)}><option value="">Tất cả phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
+              <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Phòng ban</span><select className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal" value={qDepartment} onChange={(event) => { setQDepartment(event.target.value); setQAssignee(""); }}><option value="">Tất cả phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
               <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Tình trạng</span><select className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal" value={qCondition} onChange={(event) => setQCondition(event.target.value)}><option value="">Tất cả tình trạng</option><option value="normal">Bình thường</option><option value="needs_maintenance">Cần bảo trì</option><option value="under_service">Đang sửa chữa</option><option value="broken">Hỏng</option></select></label>
-              <label className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Người sử dụng</span><select className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal" value={qAssignee} onChange={(event) => setQAssignee(event.target.value)}><option value="">Tất cả người sử dụng</option><option value="__shared">Tài sản dùng chung</option><option value="__unassigned">Chưa phân công</option>{users.map((person) => <option key={person.id} value={person.id}>{person.full_name}</option>)}</select></label>
+              <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Nhân viên</span><input role="combobox" aria-controls="employee-filter-options" aria-expanded={Boolean(qDepartment && qEmployeeSearch)} disabled={!qDepartment} className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal disabled:bg-slate-100" placeholder={qDepartment ? "Tìm nhân viên..." : "Chọn phòng ban trước"} value={qAssignee ? (users.find((person) => person.id === qAssignee)?.full_name ?? "") : qEmployeeSearch} onChange={(event) => { setQAssignee(""); setQEmployeeSearch(event.target.value); }} onKeyDown={(event) => { if (event.key === "Escape") setQEmployeeSearch(""); if (event.key === "Enter") { const match = users.filter((person) => person.department_id === qDepartment).find((person) => normalizeVietnamese(person.full_name).includes(normalizeVietnamese(qEmployeeSearch))); if (match) { setQAssignee(match.id); setQEmployeeSearch(""); } } }} />{qDepartment && qEmployeeSearch ? <div id="employee-filter-options" role="listbox" className="max-h-40 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">{users.filter((person) => person.department_id === qDepartment && normalizeVietnamese(person.full_name).includes(normalizeVietnamese(qEmployeeSearch))).slice(0, 8).map((person) => <button type="button" role="option" aria-selected={false} key={person.id} onClick={() => { setQAssignee(person.id); setQEmployeeSearch(""); }} className="block w-full px-3 py-2 text-left text-sm hover:bg-orange-50">{person.full_name}</button>)}</div> : null}<div className="mt-1 flex flex-wrap gap-1"><button type="button" disabled={!qDepartment} onClick={() => { setQAssignee("__shared"); setQEmployeeSearch(""); }} className="rounded-md border px-2 py-1 text-xs font-semibold disabled:opacity-50">Tài sản dùng chung của phòng</button>{qAssignee ? <button type="button" onClick={() => { setQAssignee(""); setQEmployeeSearch(""); }} className="rounded-md border px-2 py-1 text-xs">Xóa nhân viên</button> : null}</div></div>
               <button type="button" onClick={clearFilters} className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-300">Xóa lọc</button>
             </div>
             <div className="mt-4 flex flex-wrap gap-2" aria-label="Bộ lọc nhanh">

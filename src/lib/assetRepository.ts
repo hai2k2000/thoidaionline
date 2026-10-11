@@ -242,7 +242,7 @@ export function createAssetRepository(database: AssetRepositoryDb) {
   async function updateServiceRecordForActor(actor: AssetRepositoryActor, recordId: string, input: Omit<AssetServiceRecordInput, "asset_id"> & { asset_id?: string }): Promise<ServiceResult<AssetServiceRecord>> {
     if (!canManageAssets(actor)) return fail("forbidden");
     const result = await (database.rpc("api_asset_service_record_update", {
-      p_actor_id: actor.id, p_record_id: recordId, p_service_type: input.service_type,
+      p_actor_id: actor.id, p_record_id: recordId, p_asset_id: input.asset_id, p_service_type: input.service_type,
       p_service_status: input.service_status, p_description: input.description,
       p_service_provider: input.service_provider ?? null, p_cost: input.cost ?? null,
       p_started_at: input.started_at ?? null, p_completed_at: input.completed_at ?? null,

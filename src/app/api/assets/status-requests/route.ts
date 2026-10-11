@@ -68,6 +68,9 @@ export async function POST(request: Request) {
   const requestedStatus = body?.requested_status === "broken" ? "broken" : body?.requested_status === "maintenance" ? "maintenance" : "";
   const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
   if (!assetId || !requestedStatus || reason.length < 3) return json({ error: "invalid_request" }, { status: 400 });
+  const current = await serverSupabase.from("assets").select("condition_status,status").eq("id", assetId).maybeSingle();
+  const targetCondition = requestedStatus === "maintenance" ? "needs_maintenance" : "broken";
+  if (current.data && (current.data.condition_status ?? (current.data.status === "maintenance" ? "needs_maintenance" : current.data.status)) === targetCondition) return json({ error: "condition_noop" }, { status: 409 });
   const { data, error } = await serverSupabase.rpc("api_asset_status_request_create", { p_actor_id: actor.id, p_asset_id: assetId, p_requested_status: requestedStatus, p_reason: reason });
   if (error) return json({ error: error.message || "status_request_failed" }, { status: error.code === "42501" ? 403 : error.code === "23505" ? 409 : 400 });
   return json({ request: data }, { status: 201 });
