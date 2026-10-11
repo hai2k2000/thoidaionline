@@ -45,3 +45,21 @@ export async function setQuickReportUserPermission(
   if (error) throw error;
   return data;
 }
+
+
+export async function setAssetManageUserPermission(
+  actor: RbacActor,
+  userId: string,
+  granted: boolean,
+) {
+  if (!hasPermission(actor, "permission.manage")) {
+    throw Object.assign(new Error("permission_denied"), { code: "42501" });
+  }
+  const { data, error } = await serverSupabase.rpc("api_set_asset_manage_user_permission", {
+    p_actor_id: actor.id,
+    p_user_id: userId,
+    p_granted: granted,
+  });
+  if (error) throw error;
+  return data;
+}

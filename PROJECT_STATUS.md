@@ -607,3 +607,32 @@ Production mutation: NONE. Database/Q3 data unchanged; no production migration, 
 
 Next:
 - Owner approval for production deployment review.
+
+## Asset UI + Permission Management Phase 1
+
+Current Phase: COMPLETE; pre-production owner review
+Current Task: UI polish and dynamic asset.manage grant/revoke
+
+Completed:
+- Polished asset filters, responsive table widths, note header, compact detail action, and mobile cards without changing V2.3 asset semantics.
+- Reused canonical asset.view and asset.manage permissions; exposed asset.view as read-only and asset.manage as the mutable permission selector.
+- Added generic role and user grant/revoke RPCs for asset.manage using permission.manage authorization, audit_logs, and service-role-only execution.
+- No named-user whitelist or automatic grants.
+
+Validation:
+- Focused asset/RBAC/UI tests: 47/47 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS.
+- git diff --check: PASS.
+- Route manifest: PASS.
+- Safe migration tests: 24/24 PASS.
+- Disposable PostgreSQL migration rehearsal: PASS.
+- Production-like build: PASS with runtime env loaded from /opt/thoidai-work/.env.production in-process only.
+
+Migration:
+- Added supabase/migrations/20261014100000_asset_manage_permission_management.sql; not applied to production.
+
+Production mutation: NONE.
+
+Next:
+- Owner review only; do not migrate, deploy, restart, or change production grants without separate authorization.

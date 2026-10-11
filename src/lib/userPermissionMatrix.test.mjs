@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { buildQuickReportUserPermissions } = await import("./permissionMatrix.ts");
+const { buildPermissionUsers, buildQuickReportUserPermissions } = await import("./permissionMatrix.ts");
 
 const permission = { id: "quick", code: "task.quick_report.create", name: "Quick Report", module: "task", description: null };
 const users = [
@@ -47,4 +47,19 @@ test("revoke of direct grant does not remove inherited role access", () => {
   assert.equal(result[0].roleGranted, true);
   assert.equal(result[0].directGranted, false);
   assert.equal(result[0].effective, true);
+});
+
+
+test("generic permission user builder resolves asset.manage without changing Quick Report compatibility", () => {
+  const result = buildPermissionUsers(
+    [users[0], users[1]],
+    [{ id: "asset", code: "asset.manage", name: "Quản lý tài sản", module: "assets", description: null }],
+    [{ role_id: "employee", permission_id: "asset", scope: "all" }],
+    [{ user_id: "direct-only", permission_id: "asset" }],
+    "asset.manage",
+  );
+  assert.deepEqual(result.map((entry) => [entry.id, entry.roleGranted, entry.directGranted, entry.effective]), [
+    ["role-only", true, false, true],
+    ["direct-only", true, true, true],
+  ]);
 });
