@@ -45,6 +45,22 @@ test("asset desktop table keeps the canonical responsive columns without categor
   assert.match(globals, /\.table-scroll\s*\{[^}]*overflow-x:\s*auto;/s);
 });
 
+test("asset filters use a balanced responsive grid and separate quick-filter chips", () => {
+  const list = readFileSync(new URL("../app/assets/page.tsx", import.meta.url), "utf8");
+  const filterStart = list.indexOf('Bộ lọc danh sách');
+  const tableStart = list.indexOf('<section className="mt-4 rounded-2xl', filterStart);
+  const filters = list.slice(filterStart, tableStart);
+
+  assert.match(filters, /grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 xl:grid-cols-5 items-start/);
+  assert.match(filters, /aria-label="Bộ lọc nhanh"/);
+  assert.match(filters, /aria-pressed={quickFilter === filter.value}/);
+  assert.match(filters, /border-t border-slate-100 pt-3/);
+  assert.match(filters, /Tài sản dùng chung của phòng/);
+  assert.match(filters, /mt-0.5 leading-4/);
+  assert.match(filters, /disabled:cursor-not-allowed disabled:bg-slate-100/);
+  assert.doesNotMatch(filters, /<span>Lọc nhanh<\/span><select/);
+});
+
 test("asset detail merges custody into the main form and keeps business labels human-readable", () => {
   const detail = readFileSync(new URL("../app/assets/[id]/page.tsx", import.meta.url), "utf8");
   assert.match(detail, /Thông tin tài sản/);
