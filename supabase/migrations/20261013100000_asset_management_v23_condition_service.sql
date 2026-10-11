@@ -47,7 +47,7 @@ begin
   if not found then raise exception 'asset_not_found' using errcode = 'P0002'; end if;
   select * into v_assignment from public.asset_assignments where asset_id = p_asset_id and status = 'active' and returned_at is null for update;
   if not found or v_assignment.assignee_id is distinct from p_actor_id then raise exception 'asset_not_owned' using errcode = '42501'; end if;
-  if v_asset.condition_status is not distinct from case p_requested_status when 'maintenance' then 'needs_maintenance' else 'broken' end then raise exception 'condition_noop' using errcode = '22023'; end if;
+  if v_asset.condition_status is not distinct from (case p_requested_status when 'maintenance' then 'needs_maintenance' else 'broken' end) then raise exception 'condition_noop' using errcode = '22023'; end if;
   insert into public.asset_status_change_requests(asset_id, requester_id, requested_status, reason, expected_assignment_id, expected_current_status, expected_condition_status)
   values (p_asset_id, p_actor_id, p_requested_status, btrim(p_reason), v_assignment.id, v_asset.status, v_asset.condition_status) returning * into v_request;
   insert into public.audit_logs(actor_id, module, entity_type, entity_id, action, new_data) values (p_actor_id, 'assets', 'asset_status_change_requests', v_request.id, 'condition_change_request', to_jsonb(v_request));
