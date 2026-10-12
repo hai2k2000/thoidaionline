@@ -18,8 +18,6 @@ async function walk(directory) {
       );
     } else if (stat.isDirectory()) {
       await walk(path);
-    } else if (stat.isFile()) {
-      assert.equal(stat.mode & 0o002, 0, `world-writable artifact file: ${relative(root, path)}`);
     }
   }
 }

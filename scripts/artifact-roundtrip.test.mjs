@@ -10,6 +10,7 @@ test("artifact upload includes hidden provenance and performs a verified downloa
   assert.match(workflow, /\.release-meta/);
   assert.match(workflow, /\.artifact-manifest\.json/);
   assert.match(workflow, /\.artifact-manifest\.sha256/);
+  assert.match(workflow, /mkdir -p "\$root\/\.next\/cache"/);
   assert.match(workflow, /verify-standalone-artifact\.mjs/);
   assert.match(workflow, /scan-artifact-secrets\.mjs/);
   assert.match(workflow, /verify-artifact-roundtrip\.mjs/);
