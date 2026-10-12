@@ -697,3 +697,23 @@ Follow Up:
 
 Next:
 - READY TO MERGE PR #9 and PR #2; do not merge, activate, restart, migrate, change production symlinks/timers, or run cleanup APPLY without separate approval.
+# Artifact Upload Integrity Hotfix
+
+Current Phase: Phase 1 hotfix; owner merge review
+Current Task: Preserve hidden artifact metadata and verify upload/download round-trip
+
+Completed:
+- Added hidden-file inclusion to the immutable artifact upload.
+- Added same-run artifact download and verify-only round-trip checks.
+- Added regression coverage for hidden metadata, required runtime files, secret scan, and deployment non-activation.
+
+Validation:
+- Focused upload-integrity tests: PASS.
+- TypeScript, ESLint, diff check: pending CI on hotfix PR.
+- Production/VPS changed: NO.
+
+Blockers:
+- Canonical artifact from run 38319801598 remains invalid for Phase 2 because its archive omitted hidden metadata.
+
+Next:
+- Push hotfix and create a small PR; stop for owner merge approval.

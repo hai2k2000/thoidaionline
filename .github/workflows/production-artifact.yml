@@ -71,12 +71,13 @@ jobs:
           scripts/package-standalone.test.mjs
           scripts/standalone-packaging.test.mjs
           scripts/external-artifact-contract.test.mjs
+          scripts/artifact-roundtrip.test.mjs
       - name: Retention regression
         run: bash scripts/production/release-retention-managed.test.sh
       - name: TypeScript
         run: npx tsc --noEmit
       - name: ESLint
-        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/check-ci-build-env.mjs scripts/check-canonical-build-env.mjs scripts/external-artifact-contract.test.mjs scripts/canonical-build-env.test.mjs
+        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/check-ci-build-env.mjs scripts/check-canonical-build-env.mjs scripts/external-artifact-contract.test.mjs scripts/artifact-roundtrip.test.mjs scripts/verify-artifact-roundtrip.mjs scripts/canonical-build-env.test.mjs
       - name: Route manifest
         run: npm run check:routes
       - name: Validate non-production build configuration
@@ -100,5 +101,24 @@ jobs:
         with:
           name: thoidai-standalone-${{ github.sha }}
           path: ${{ runner.temp }}/thoidai-standalone
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
+      - name: Download artifact round-trip
+        uses: actions/download-artifact@v4
+        with:
+          name: thoidai-standalone-${{ github.sha }}
+          path: ${{ runner.temp }}/thoidai-roundtrip
+      - name: Verify artifact round-trip
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/thoidai-roundtrip"
+          for path in .release-meta .artifact-manifest.json .artifact-manifest.sha256 .next/BUILD_ID .next/static server.js required-route-manifest.json; do
+            test -e "$root/$path" || { echo "round-trip artifact missing: $path" >&2; exit 1; }
+          done
+          test ! -e "$root/.env"
+          test ! -e "$root/.env.local"
+          test ! -e "$root/.env.production"
+          node scripts/verify-standalone-artifact.mjs "$root"
+          node scripts/scan-artifact-secrets.mjs "$root"
+          node scripts/verify-artifact-roundtrip.mjs "$root"
