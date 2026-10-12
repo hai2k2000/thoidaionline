@@ -42,6 +42,15 @@ reference_state() {
   esac
 }
 
+config_reference_state() {
+  local target=$1
+  shift
+  local paths=()
+  for path in "$@"; do [[ -e "$path" ]] && paths+=("$path"); done
+  (( ${#paths[@]} )) || { echo no; return; }
+  reference_state grep -R -l --fixed-strings "$target" "${paths[@]}"
+}
+
 managed_release() {
   local path=$1 meta="$path/.release-meta"
   [[ -f "$meta" && -f "$path/.deploy-success" && -f "$path/.next/BUILD_ID" && -f "$path/required-route-manifest.json" ]] || return 1
@@ -90,8 +99,8 @@ while IFS= read -r -d '' path; do
   elif [[ ${keep[$real]+yes} ]]; then reason=${keep[$real]};
   elif [[ -e "$path/.keep" ]]; then reason=protected-.keep;
   elif [[ -e "$path/.deploy-evidence" || -e "$path/.provenance" || -e "$path/provenance.json" ]]; then reason=protected-evidence;
-  elif [[ "$(reference_state grep -R -l --fixed-strings "$real" /etc/systemd/system /etc/nginx)" == yes ]]; then reason=configuration-reference;
-  elif [[ "$(reference_state grep -R -l --fixed-strings "$real" /etc/systemd/system /etc/nginx)" == unknown ]]; then reason=reference-scan-failed;
+  elif [[ "$(config_reference_state "$real" /etc/systemd/system /etc/nginx)" == yes ]]; then reason=configuration-reference;
+  elif [[ "$(config_reference_state "$real" /etc/systemd/system /etc/nginx)" == unknown ]]; then reason=reference-scan-failed;
   elif command -v pgrep >/dev/null 2>&1 && [[ "$(reference_state pgrep -af -- "$real")" == yes ]]; then reason=process-reference;
   elif command -v pgrep >/dev/null 2>&1 && [[ "$(reference_state pgrep -af -- "$real")" == unknown ]]; then reason=reference-scan-failed;
   elif command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == yes ]]; then reason=open-file-reference;
