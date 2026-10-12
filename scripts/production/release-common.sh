@@ -18,7 +18,9 @@ set -Eeuo pipefail
 : "${THOIDAI_LSOF_BIN:=lsof}"
 : "${THOIDAI_FINDMNT_BIN:=findmnt}"
 : "${THOIDAI_DOCKER_BIN:=docker}"
+: "${THOIDAI_FIND_BIN:=find}"
 : "${THOIDAI_DF_BIN:=df}"
+: "${THOIDAI_NGINX_ROOT:=/etc/nginx}"
 : "${THOIDAI_TCP_CHECK_BIN:=}"
 : "${THOIDAI_ENV_VERIFY_BIN:=/opt/ops/thoidai-work/verify-release-env.sh}"
 : "${THOIDAI_TCP_HOST:=127.0.0.1}"
@@ -255,20 +257,92 @@ migration_readiness_check() {
   log_event "READINESS_PASS service=$THOIDAI_SERVICE current=$expected_workdir nrestarts=$after_restarts"
 }
 
+path_relation() {
+  local first=${1:?first path required} second=${2:?second path required}
+  [[ "$first" == "$second" || "$first" == "$second"/* || "$second" == "$first"/* ]]
+}
+
 path_reference() {
-  local path=${1:?path required} output='' required
-  command -v "$THOIDAI_PGREP_BIN" >/dev/null 2>&1 || { printf 'inspection-unavailable\n'; return; }
-  if "$THOIDAI_PGREP_BIN" -af -- "$path" >/dev/null 2>&1; then output=process; fi
-  required=("$THOIDAI_LSOF_BIN" "$THOIDAI_FINDMNT_BIN" "$THOIDAI_DOCKER_BIN")
-  for tool in "${required[@]}"; do command -v "$tool" >/dev/null 2>&1 || { printf 'inspection-unavailable\n'; return; }; done
-  if "$THOIDAI_LSOF_BIN" +D "$path" 2>/dev/null | tail -n +2 | grep -q .; then output=${output:+$output,}open-file; fi
-  if grep -R -l --fixed-strings "$path" "$THOIDAI_SYSTEMD_ROOT" /etc/nginx 2>/dev/null | head -1 | grep -q .; then output=${output:+$output,}systemd; fi
-  mount_output=$("$THOIDAI_FINDMNT_BIN" -rn -T "$path" 2>/dev/null) || { printf 'inspection-unavailable\n'; return; }
-  if grep -F "$path" <<<"$mount_output" >/dev/null; then output=${output:+$output,}mount; fi
-  container_ids=$("$THOIDAI_DOCKER_BIN" ps -aq 2>/dev/null) || { printf 'inspection-unavailable\n'; return; }
+  local path=${1:?path required} output='' required status command_output entry target
+  local -a config_roots=()
+  required=("$THOIDAI_PGREP_BIN" "$THOIDAI_LSOF_BIN" "$THOIDAI_FINDMNT_BIN" "$THOIDAI_DOCKER_BIN" "$THOIDAI_FIND_BIN")
+  for required in "${required[@]}"; do
+    command -v "$required" >/dev/null 2>&1 || { printf 'inspection-unavailable\n'; return; }
+  done
+
+  if "$THOIDAI_PGREP_BIN" -af -- "$path" >/dev/null 2>&1; then
+    output=process
+  else
+    status=$?
+    (( status == 1 )) || { printf 'inspection-unavailable\n'; return; }
+  fi
+
+  if command_output=$("$THOIDAI_LSOF_BIN" +D "$path" 2>&1); then
+    [[ -z "$command_output" ]] || output=${output:+$output,}open-file
+  else
+    status=$?
+    (( status == 1 )) && [[ -z "$command_output" ]] || { printf 'inspection-unavailable\n'; return; }
+  fi
+
+  [[ -d "$THOIDAI_SYSTEMD_ROOT" ]] || { printf 'inspection-unavailable\n'; return; }
+  config_roots+=("$THOIDAI_SYSTEMD_ROOT")
+  if [[ -e "$THOIDAI_NGINX_ROOT" ]]; then
+    [[ -d "$THOIDAI_NGINX_ROOT" ]] || { printf 'inspection-unavailable\n'; return; }
+    config_roots+=("$THOIDAI_NGINX_ROOT")
+  fi
+  if command_output=$(grep -R -l --fixed-strings -- "$path" "${config_roots[@]}" 2>&1); then
+    output=${output:+$output,}systemd
+  else
+    status=$?
+    (( status == 1 )) || { printf 'inspection-unavailable\n'; return; }
+  fi
+
+  if command_output=$("$THOIDAI_FINDMNT_BIN" -Rnr --submounts -o TARGET -T "$path" 2>&1); then
+    while IFS= read -r entry; do
+      [[ -n "$entry" ]] || continue
+      if [[ "$entry" == "$path" || "$entry" == "$path"/* ]]; then
+        output=${output:+$output,}mount
+        break
+      fi
+    done <<< "$command_output"
+  else
+    printf 'inspection-unavailable\n'
+    return
+  fi
+
+  if command_output=$("$THOIDAI_FIND_BIN" "$THOIDAI_RELEASE_ROOT" -mindepth 1 -maxdepth 1 -type l -print 2>&1); then
+    while IFS= read -r entry; do
+      [[ -n "$entry" ]] || continue
+      target=$(readlink -f -- "$entry") || { printf 'inspection-unavailable\n'; return; }
+      if path_relation "$path" "$target"; then
+        output=${output:+$output,}symlink
+        break
+      fi
+    done <<< "$command_output"
+  else
+    printf 'inspection-unavailable\n'
+    return
+  fi
+
+  if command_output=$("$THOIDAI_DOCKER_BIN" ps -aq 2>&1); then
+    container_ids=$command_output
+  else
+    printf 'inspection-unavailable\n'
+    return
+  fi
   if [[ -n "$container_ids" ]]; then
-    mounts=$("$THOIDAI_DOCKER_BIN" inspect $container_ids --format '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' 2>/dev/null) || { printf 'inspection-unavailable\n'; return; }
-    if grep -Fx "$path" <<<"$mounts" >/dev/null; then output=${output:+$output,}container; fi
+    if mounts=$("$THOIDAI_DOCKER_BIN" inspect $container_ids --format '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' 2>&1); then
+      while IFS= read -r entry; do
+        [[ -n "$entry" ]] || continue
+        if path_relation "$path" "$entry"; then
+          output=${output:+$output,}container
+          break
+        fi
+      done <<< "$mounts"
+    else
+      printf 'inspection-unavailable\n'
+      return
+    fi
   fi
   printf '%s\n' "$output"
 }
