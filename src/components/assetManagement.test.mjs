@@ -40,7 +40,7 @@ test("asset desktop table keeps the canonical responsive columns without categor
   assert.doesNotMatch(desktopTable, /row\.tracking_mode/);
   assert.match(desktopTable, /data-table table-fixed min-w-\[900px\]/);
   assert.doesNotMatch(desktopTable, /min-w-\[1220px\]/);
-  assert.match(desktopTable, /colSpan=\{7\}/);
+  assert.match(desktopTable, /colSpan=\{6\}/);
   assert.match(desktopTable, /<colgroup>/);
   assert.match(globals, /\.table-scroll\s*\{[^}]*overflow-x:\s*auto;/s);
 });
@@ -99,4 +99,23 @@ test("asset detail renders assignment start and end as separate chronological ev
   assert.match(detail, /Chuyển giao đến/);
   assert.match(detail, /Chuyển giao đi/);
   assert.match(detail, /events\.sort\(\(a, b\) => new Date\(a\.at\)/);
+});
+
+test("asset list rows navigate directly to editable details without a separate action control", () => {
+  const list = readFileSync(new URL("../app/assets/page.tsx", import.meta.url), "utf8");
+  const desktopStart = list.indexOf('<div className="hidden md:block">');
+  const mobileStart = list.indexOf('<div className="grid gap-3 md:hidden">');
+  const desktopTable = list.slice(desktopStart, mobileStart);
+  const mobileCards = list.slice(mobileStart);
+
+  assert.doesNotMatch(desktopTable, />Hành động<\/th>/);
+  assert.doesNotMatch(desktopTable, />Xem <span/);
+  assert.match(desktopTable, /<tr key=\{row\.id \?\? row\.asset_code\} className="[^\"]*cursor-pointer/);
+  assert.match(desktopTable, /<Link href=\{`\/assets\/\$\{row\.id\}`\}/);
+  assert.match(desktopTable, /aria-label=\{`Mở chi tiết tài sản \$\{row\.asset_name\}`\}/);
+  assert.match(desktopTable, /colSpan=\{6\}/);
+  assert.doesNotMatch(mobileCards, />Xem <span/);
+  assert.match(mobileCards, /<Link[^>]*href=\{`\/assets\/\$\{row\.id\}`\}/);
+  assert.match(mobileCards, /aria-label=\{`Mở chi tiết tài sản \$\{row\.asset_name\}`\}/);
+  assert.match(mobileCards, /cursor-pointer/);
 });

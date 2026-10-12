@@ -187,7 +187,6 @@ export default function AssetsPage() {
                     <col className="w-[124px]" />
                     <col className="w-[20%]" />
                     <col className="min-w-[170px]" />
-                    <col className="w-[92px]" />
                   </colgroup>
                   <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
                     <tr>
@@ -197,23 +196,21 @@ export default function AssetsPage() {
                       <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Tình trạng</th>
                       <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Người sử dụng</th>
                       <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Ghi chú</th>
-                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide">Hành động</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredRows.map((row) => {
                       const owner = custody(row);
-                      return <tr key={row.id ?? row.asset_code} className="h-[72px] transition-colors hover:bg-slate-50/90">
-                        <td className="px-4 py-3"><p className="line-clamp-2 break-words font-semibold leading-5 text-slate-950" title={row.asset_name}>{row.asset_name}</p>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</td>
+                      return <tr key={row.id ?? row.asset_code} className="h-[72px] cursor-pointer transition-colors hover:bg-slate-50/90" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) return; router.push(`/assets/${row.id}`); }}>
+                        <td className="px-4 py-3"><Link href={`/assets/${row.id}`} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"><p className="line-clamp-2 break-words font-semibold leading-5 text-slate-950" title={row.asset_name}>{row.asset_name}</p>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</Link></td>
                         <td className="px-2 py-3 text-center text-base font-bold tabular-nums text-slate-900">{row.quantity ?? 1}</td>
                         <td className="px-3 py-3"><StatusBadge row={row} /></td>
                         <td className="px-3 py-3"><ConditionBadge row={row} /></td>
                         <td className="px-3 py-3"><p className={`break-words font-medium leading-5 ${owner.unassigned ? "text-amber-900" : "text-slate-900"}`}>{owner.person}</p></td>
                         <td className="px-3 py-3"><p className="line-clamp-2 break-words leading-5 text-slate-600" title={row.note ?? undefined}>{row.note || "—"}</p></td>
-                        <td className="px-3 py-3 text-right"><Link href={`/assets/${row.id}`} className="inline-flex min-h-10 items-center whitespace-nowrap rounded-md px-2.5 py-2 text-xs font-bold text-slate-500 transition hover:bg-orange-50 hover:text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-300">Xem <span aria-hidden="true" className="ml-1 text-orange-600">›</span></Link></td>
                       </tr>;
                     })}
-                    {loaded && !message && filteredRows.length === 0 ? <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</td></tr> : null}
+                    {loaded && !message && filteredRows.length === 0 ? <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</td></tr> : null}
                   </tbody>
                 </table>
               </div>
@@ -222,12 +219,11 @@ export default function AssetsPage() {
             <div className="grid gap-3 md:hidden">
               {filteredRows.map((row) => {
                 const owner = custody(row);
-                return <article key={row.id ?? row.asset_code} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                return <Link key={row.id ?? row.asset_code} href={`/assets/${row.id}`} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-orange-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-300">
                   <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-semibold leading-5 text-slate-950">{row.asset_name}</h2>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</div><div className="flex flex-wrap justify-end gap-1"><StatusBadge row={row} /><ConditionBadge row={row} /></div></div>
                   <div className="mt-3 flex flex-wrap gap-2"><MetadataBadge>{row.category || "Chưa rõ"}</MetadataBadge><MetadataBadge tone={row.tracking_mode === "lot" ? "sky" : "slate"}>{row.tracking_mode === "lot" ? "Theo lô" : "Cá thể"}</MetadataBadge><MetadataBadge>SL: {row.quantity ?? 1}</MetadataBadge></div>
                   <dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người sử dụng</dt><dd className={`mt-1 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-600"}`}>{owner.person}</dd></div>{row.note ? <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú</dt><dd className="mt-1 line-clamp-2 leading-5 text-slate-600" title={row.note}>{row.note}</dd></div> : null}</dl>
-                  <div className="mt-4 border-t border-slate-100 pt-3 text-right"><Link href={`/assets/${row.id}`} className="inline-flex min-h-11 items-center rounded-md px-2.5 py-2 text-sm font-bold text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-300 hover:bg-orange-50 hover:text-orange-800">Xem <span aria-hidden="true" className="ml-1 text-orange-600">›</span></Link></div>
-                </article>;
+                </Link>;
               })}
               {loaded && !message && filteredRows.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</p> : null}
             </div>
