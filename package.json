@@ -21,6 +21,10 @@
     "check:baseline": "node scripts/check-release-baseline.mjs",
     "package:standalone": "node scripts/package-standalone.mjs",
     "verify:standalone": "node scripts/verify-standalone-artifact.mjs",
+    "artifact:manifest": "node scripts/artifact-manifest.mjs",
+    "artifact:verify": "node scripts/verify-artifact-manifest.mjs",
+    "artifact:secret-scan": "node scripts/scan-artifact-secrets.mjs",
+    "deploy:external:verify": "bash scripts/production/deploy-external-artifact.sh",
     "retention:dry-run": "bash scripts/production/release-retention.sh --dry-run"
   },
   "dependencies": {

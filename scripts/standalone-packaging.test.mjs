@@ -8,7 +8,7 @@ const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 test("Next standalone output is enabled", () => assert.match(config, /output:\s*["']standalone["']/));
 test("standalone tracing excludes development-only source payloads", () => assert.match(config, /outputFileTracingExcludes/));
 test("packaging commands exist", () => {
-  for (const script of ["package:standalone", "verify:standalone", "retention:dry-run"]) assert.equal(typeof packageJson.scripts[script], "string");
+  for (const script of ["package:standalone", "verify:standalone", "artifact:manifest", "artifact:verify", "artifact:secret-scan", "deploy:external:verify", "retention:dry-run"]) assert.equal(typeof packageJson.scripts[script], "string");
 });
 test("packaging keeps guards and env symlinks", () => {
   const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
@@ -16,6 +16,7 @@ test("packaging keeps guards and env symlinks", () => {
   assert.match(packager, /RELEASE_BASELINE_COMMIT/);
   assert.match(packager, /required-route-manifest\.json/);
   assert.match(packager, /\.env\.local/);
+  assert.match(packager, /verify-artifact-manifest\.mjs/);
   assert.match(verifier, /app-paths-manifest\.json/);
 });
 test("runtime uploads stay outside the traced artifact", () => {
