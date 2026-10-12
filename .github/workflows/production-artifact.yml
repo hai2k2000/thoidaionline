@@ -39,9 +39,18 @@ jobs:
       - name: Prepare canonical ref for lineage checks
         run: |
           git fetch origin integration/production:refs/remotes/origin/integration/production
-          git branch --force integration/production origin/integration/production
+          remote_sha=$(git rev-parse refs/remotes/origin/integration/production)
+          if git show-ref --verify --quiet refs/heads/integration/production; then
+            local_sha=$(git rev-parse refs/heads/integration/production)
+            test "$local_sha" = "$remote_sha" || {
+              echo "Canonical ref mismatch: local=$local_sha remote=$remote_sha" >&2
+              exit 1
+            }
+          else
+            git branch integration/production "$remote_sha"
+          fi
           echo "THOIDAI_REMOTE_HEAD=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "THOIDAI_INTEGRATION_COMMIT=$(git rev-parse origin/integration/production)" >> "$GITHUB_ENV"
+          echo "THOIDAI_INTEGRATION_COMMIT=$remote_sha" >> "$GITHUB_ENV"
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -57,6 +66,7 @@ jobs:
           scripts/artifact-secret-scan.test.mjs
           scripts/ci-build-env.test.mjs
           scripts/canonical-build-env.test.mjs
+          scripts/canonical-ref-preparation.test.mjs
           scripts/deploy-gate.test.mjs
           scripts/package-standalone.test.mjs
           scripts/standalone-packaging.test.mjs
