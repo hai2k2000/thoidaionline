@@ -1,0 +1,13 @@
+# Managed Release Metadata Schema
+
+New standalone artifacts use `.release-meta` as a line-oriented `key=value` record. Values must not contain secrets or newlines.
+
+Required provenance fields:
+
+`release_id`, `build_id`, `commit`, `branch`, `local_head`, `remote_head`, `artifact_source_commit`, `metadata_commit`, `integration_branch`, `integration_baseline`, `source_worktree`, `created_at`, `artifact_type`, `canonical_baseline`, `artifact_bytes`, `env_model`.
+
+Required lifecycle fields:
+
+`protection=managed`, `rollback_eligible=yes`, `health_status=pending`, `deploy_status=pending`, `deployed_at=`, `rollback_role=unassigned`.
+
+`env_model=runtime-injected` is mandatory for external CI artifacts. Legacy releases with missing or older metadata remain `UNKNOWN`; Phase 1 does not backfill or delete them. Retention must preserve current, previous, rollback-1, rollback-2, references, evidence, `.keep`, and UNKNOWN records, with a seven-day grace period for managed historical releases.

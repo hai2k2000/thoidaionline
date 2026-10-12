@@ -12,10 +12,22 @@ const baselineText = await readFile(join(root, "scripts/check-release-baseline.m
 const canonicalBaseline = baselineText.match(/legacyBaseline = "([^"]+)"/)?.[1] || baselineText.match(/canonicalBaseline = "([^"]+)"/)?.[1];
 const output = resolve(process.env.STANDALONE_ARTIFACT_DIR || join(root, ".artifacts", "standalone", `${buildId}-${Date.now()}`));
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
-const remoteHead = execFileSync("git", ["rev-parse", "@{u}"], { cwd: root, encoding: "utf8" }).trim();
+const gitValue = (args, envName, fallback = "") => {
+  if (process.env[envName]) return process.env[envName];
+  try {
+    return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  } catch {
+    if (fallback) return fallback;
+    throw new Error(`missing ${envName} and git value ${args.join(" ")}`);
+  }
+};
+const remoteHead = gitValue(["rev-parse", "@{u}"], "THOIDAI_REMOTE_HEAD", commit);
 const integrationBranch = process.env.THOIDAI_INTEGRATION_BRANCH || "integration/production";
-const integrationBaseline = execFileSync("git", ["rev-parse", integrationBranch], { cwd: root, encoding: "utf8" }).trim();
+const integrationBaseline = gitValue(["rev-parse", integrationBranch], "THOIDAI_INTEGRATION_COMMIT", commit);
 const currentProductionParent = process.env.THOIDAI_CURRENT_PRODUCTION_COMMIT || "e72e4969a0fd20f176bb906f4f2203d58f30a74e";
+const branch = process.env.THOIDAI_RELEASE_BRANCH || gitValue(["branch", "--show-current"], "THOIDAI_RELEASE_BRANCH", "detached");
+const sourceWorktree = process.env.THOIDAI_SOURCE_WORKTREE || root;
+const runtimeEnvModel = process.env.THOIDAI_RUNTIME_ENV_MODEL || "symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production";
 
 if (!existsSync(standalone)) throw new Error("Next standalone output is missing; run next build first.");
 if (!canonicalBaseline) throw new Error("canonical baseline is missing from check-release-baseline.mjs");
@@ -36,10 +48,12 @@ if (existsSync(join(root, "public"))) await cp(join(root, "public"), join(output
 const sharedRoot = process.env.THOIDAI_SHARED_ROOT || "/opt/thoidai-work";
 for (const name of [".env.local", ".env.production"]) {
   await rm(join(output, name), { force: true });
-  await symlink(join(sharedRoot, name), join(output, name));
+  if (runtimeEnvModel.startsWith("symlink:")) await symlink(join(sharedRoot, name), join(output, name));
 }
 await cp(join(root, "scripts", "start-standalone.mjs"), join(output, "start-standalone.mjs"));
 await cp(join(root, "scripts", "verify-standalone-artifact.mjs"), join(output, "verify-standalone-artifact.mjs"));
+await cp(join(root, "scripts", "artifact-manifest.mjs"), join(output, "artifact-manifest.mjs"));
+await cp(join(root, "scripts", "verify-artifact-manifest.mjs"), join(output, "verify-artifact-manifest.mjs"));
 await mkdir(join(output, "scripts", "production"), { recursive: true });
 for (const name of ["build-standalone-release.sh", "mark-release-success.sh", "release-retention.sh"]) {
   await cp(join(root, "scripts", "production", name), join(output, "scripts", "production", name));
@@ -70,7 +84,9 @@ await writeFile(join(output, "package.json"), `${JSON.stringify({ name: "thoidai
 const artifactBytes = execFileSync("du", ["-sb", output], { encoding: "utf8" }).trim().split(/\s+/, 1)[0];
 await writeFile(join(output, ".release-meta"), [
   `release_id=${buildId}-standalone`,
+  `build_id=${buildId}`,
   `commit=${commit}`,
+  `branch=${branch}`,
   `local_head=${commit}`,
   `remote_head=${remoteHead}`,
   `artifact_source_commit=${commit}`,
@@ -78,12 +94,14 @@ await writeFile(join(output, ".release-meta"), [
   `current_production_parent=${currentProductionParent}`,
   `integration_branch=${integrationBranch}`,
   `integration_baseline=${integrationBaseline}`,
+  `source_worktree=${sourceWorktree}`,
+  "deployed_at=",
   `created_at=${new Date().toISOString()}`,
   "artifact_type=next-standalone",
   `canonical_baseline=${canonicalBaseline}`,
   `artifact_bytes=${artifactBytes}`,
   "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260926140000_department_plans_v2.sql,supabase/migrations/20260926150000_department_plan_to_task_v1.sql,supabase/migrations/20260926160000_department_plan_assignment_v2.sql,supabase/migrations/20260925100000_journalism_self_registration.sql,supabase/migrations/20260928140000_tbt_any_assignee.sql,supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql,supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql,supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql,supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql,supabase/migrations/20261003100000_department_period_plan_v2.sql,supabase/migrations/20261003120000_department_plan_duplicate_guard.sql,supabase/migrations/20261004100000_department_plan_saturday_friday.sql,supabase/migrations/20261004110000_department_plan_friday_friday.sql",
-  "env_model=symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production",
+  `env_model=${runtimeEnvModel}`,
   "build_verification=production-like-env-build-pass",
   `contract_suite=${process.env.THOIDAI_CONTRACT_SUITE_RESULT || "pending"}`,
   "protection=managed",
@@ -93,5 +111,6 @@ await writeFile(join(output, ".release-meta"), [
   "rollback_role=unassigned",
   "",
 ].join("\n"));
+await import(join(output, "artifact-manifest.mjs")).then(({ writeManifest }) => writeManifest(output));
 execFileSync(process.execPath, [join(output, "verify-standalone-artifact.mjs"), output], { stdio: "inherit" });
 console.log(`standalone-artifact: ${output}`);

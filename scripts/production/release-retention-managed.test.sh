@@ -4,11 +4,12 @@ set -Eeuo pipefail
 root=$(mktemp -d)
 bin=$(mktemp -d)
 trap 'rm -rf -- "$root" "$bin"' EXIT
-mkdir -p "$root/current-release" "$root/previous-release" "$root/rollback1-release" "$root/rollback-release" "$root/superseded-release" "$root/legacy-release"
+mkdir -p "$root/current-release" "$root/previous-release" "$root/rollback1-release" "$root/rollback-release" "$root/history-a-release" "$root/history-b-release" "$root/history-c-release" "$root/recent-release" "$root/evidence-release" "$root/legacy-release"
 write_meta() {
+  local created_at=${2:-2026-09-23T09:00:00Z}
   cat > "$1/.release-meta" <<EOF
 commit=0123456789abcdef0123456789abcdef01234567
-created_at=2026-09-23T09:00:00Z
+created_at=$created_at
 artifact_type=next-standalone
 canonical_baseline=e501652e969900b97938acccd8f998df4e5d1873
 protection=managed
@@ -24,7 +25,12 @@ write_meta "$root/current-release"
 write_meta "$root/previous-release"
 write_meta "$root/rollback1-release"
 write_meta "$root/rollback-release"
-write_meta "$root/superseded-release"
+write_meta "$root/history-a-release" 2026-09-23T09:00:00Z
+write_meta "$root/history-b-release" 2026-09-22T09:00:00Z
+write_meta "$root/history-c-release" 2026-09-21T09:00:00Z
+write_meta "$root/recent-release" 2026-10-10T09:00:00Z
+write_meta "$root/evidence-release" 2026-09-20T09:00:00Z
+touch "$root/evidence-release/.provenance"
 touch "$root/legacy-release/.next-BUILD_ID"
 ln -s "$root/current-release" "$root/current"
 ln -s "$root/previous-release" "$root/previous"
@@ -42,9 +48,13 @@ chmod +x "$bin/systemctl" "$bin/curl"
 THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc bash scripts/production/mark-release-success.sh "$root/current-release"
 grep -F 'health_status=pass' "$root/current-release/.deploy-success"
 grep -F 'deploy_status=success' "$root/current-release/.deploy-success"
-out=$(THOIDAI_RELEASE_ROOT="$root" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc bash scripts/production/release-retention.sh --dry-run)
+out=$(THOIDAI_RELEASE_ROOT="$root" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc THOIDAI_RETENTION_NOW_EPOCH=1791763200 bash scripts/production/release-retention.sh --dry-run)
 grep -F "$root/current-release" <<<"$out" | grep -F current
-grep -F "$root/superseded-release" <<<"$out" | grep -F superseded-managed
+grep -F "$root/history-a-release" <<<"$out" | grep -F historical-reserve
+grep -F "$root/history-b-release" <<<"$out" | grep -F historical-reserve
+grep -F "$root/history-c-release" <<<"$out" | grep -F superseded-managed
+grep -F "$root/recent-release" <<<"$out" | grep -F grace-period
+grep -F "$root/evidence-release" <<<"$out" | grep -F protected-evidence
 grep -F "$root/legacy-release" <<<"$out" | grep -F legacy-unmanaged
 ! grep -F "$root/legacy-release" <<<"$out" | grep -F DELETE
 echo "managed-retention: PASS"

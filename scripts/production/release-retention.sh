@@ -7,6 +7,8 @@ set -Eeuo pipefail
 : "${THOIDAI_SYSTEMCTL_BIN:=systemctl}"
 : "${THOIDAI_CURL_BIN:=curl}"
 : "${THOIDAI_CANONICAL_BASELINE:=e501652e969900b97938acccd8f998df4e5d1873}"
+: "${THOIDAI_RETENTION_GRACE_DAYS:=7}"
+: "${THOIDAI_RETENTION_HISTORICAL_MAX:=2}"
 
 mode=dry-run
 case "${1:-}" in
@@ -62,6 +64,9 @@ for name in current previous rollback-1 rollback-2; do
 done
 
 records=()
+historical=()
+now_epoch=${THOIDAI_RETENTION_NOW_EPOCH:-$(date -u +%s)}
+grace_seconds=$((THOIDAI_RETENTION_GRACE_DAYS * 86400))
 while IFS= read -r -d '' path; do
   base=$(basename "$path")
   case "$base" in current|previous|rollback-1|rollback-2|ops-backups|build-evidence) continue ;; esac
@@ -71,12 +76,36 @@ while IFS= read -r -d '' path; do
   elif (( ! links_complete )); then reason=managed-unvalidated-lifecycle;
   elif [[ ${keep[$real]+yes} ]]; then reason=${keep[$real]};
   elif [[ -e "$path/.keep" ]]; then reason=protected-.keep;
+  elif [[ -e "$path/.deploy-evidence" || -e "$path/.provenance" || -e "$path/provenance.json" ]]; then reason=protected-evidence;
   elif grep -R -l --fixed-strings "$real" /etc/systemd/system /etc/nginx 2>/dev/null | head -n 1 | grep -q .; then reason=configuration-reference;
   elif command -v pgrep >/dev/null 2>&1 && pgrep -af -- "$real" >/dev/null 2>&1; then reason=process-reference;
   elif command -v lsof >/dev/null 2>&1 && lsof +D "$real" 2>/dev/null | tail -n +2 | grep -q .; then reason=open-file-reference;
   fi
-  if [[ -n "$reason" ]]; then records+=("KEEP\t$path\t$reason"); else records+=("DELETE\t$path\tsuperseded-managed"); fi
+  if [[ -n "$reason" ]]; then
+    records+=("KEEP\t$path\t$reason")
+  else
+    created_at=$(meta_value "$path/.release-meta" created_at)
+    created_epoch=$(date -u -d "$created_at" +%s 2>/dev/null || echo 0)
+    if (( created_epoch <= 0 )); then
+      records+=("KEEP\t$path\tunknown-created-at")
+    elif (( now_epoch - created_epoch < grace_seconds )); then
+      records+=("KEEP\t$path\tgrace-period")
+    else
+      historical+=("$created_epoch"$'\t'"$path")
+    fi
+  fi
 done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -regextype posix-extended -regex '.*/[A-Za-z0-9][A-Za-z0-9._-]{7,127}$' -print0 | sort -z)
+
+historical_rank=0
+while IFS=$'\t' read -r _ path; do
+  [[ -n "$path" ]] || continue
+  if (( historical_rank < THOIDAI_RETENTION_HISTORICAL_MAX )); then
+    records+=("KEEP\t$path\thistorical-reserve")
+  else
+    records+=("DELETE\t$path\tsuperseded-managed")
+  fi
+  historical_rank=$((historical_rank + 1))
+done < <(printf '%s\n' "${historical[@]:-}" | sort -nr)
 
 printf '%b\n' "${records[@]}"
 if [[ "$mode" == apply ]]; then

@@ -1,0 +1,78 @@
+name: Production Standalone Artifact
+
+on:
+  pull_request:
+    branches: [integration/production]
+  push:
+    branches: [integration/production, 'codex/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-artifact-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      THOIDAI_RUNTIME_ENV_MODEL: runtime-injected
+      THOIDAI_RELEASE_BRANCH: ${{ github.ref_name }}
+      THOIDAI_REMOTE_HEAD: ${{ github.sha }}
+      THOIDAI_INTEGRATION_COMMIT: ${{ github.sha }}
+      THOIDAI_CONTRACT_SUITE_RESULT: ci-not-run-without-production-session
+      NEXT_PUBLIC_SUPABASE_URL: https://ci.invalid/supabase
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-placeholder
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare canonical ref for lineage checks
+        run: |
+          git fetch origin integration/production:refs/remotes/origin/integration/production
+          git branch --force integration/production origin/integration/production
+          echo "THOIDAI_INTEGRATION_COMMIT=$(git rev-parse origin/integration/production)" >> "$GITHUB_ENV"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Focused repository tests
+        run: >-
+          node --test
+          scripts/artifact-provenance.test.mjs
+          scripts/artifact-manifest.test.mjs
+          scripts/artifact-secret-scan.test.mjs
+          scripts/deploy-gate.test.mjs
+          scripts/package-standalone.test.mjs
+          scripts/standalone-packaging.test.mjs
+          scripts/external-artifact-contract.test.mjs
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: ESLint
+        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/external-artifact-contract.test.mjs
+      - name: Route manifest
+        run: npm run check:routes
+      - name: Production-like build
+        run: npm run build
+      - name: Package standalone artifact
+        run: npm run package:standalone
+        env:
+          STANDALONE_ARTIFACT_DIR: ${{ runner.temp }}/thoidai-standalone
+      - name: Verify artifact provenance and checksums
+        run: |
+          node scripts/verify-standalone-artifact.mjs "$RUNNER_TEMP/thoidai-standalone"
+          node scripts/scan-artifact-secrets.mjs "$RUNNER_TEMP/thoidai-standalone"
+      - name: Upload immutable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: thoidai-standalone-${{ github.sha }}
+          path: ${{ runner.temp }}/thoidai-standalone
+          if-no-files-found: error
+          retention-days: 14
