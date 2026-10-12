@@ -49,6 +49,7 @@ THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERV
 grep -F 'health_status=pass' "$root/current-release/.deploy-success"
 grep -F 'deploy_status=success' "$root/current-release/.deploy-success"
 out=$(THOIDAI_RELEASE_ROOT="$root" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc THOIDAI_RETENTION_NOW_EPOCH=1791763200 bash scripts/production/release-retention.sh --dry-run)
+printf '%s\n' "$out"
 grep -F "$root/current-release" <<<"$out" | grep -F current
 grep -F "$root/history-a-release" <<<"$out" | grep -F historical-reserve
 grep -F "$root/history-b-release" <<<"$out" | grep -F historical-reserve

@@ -51,6 +51,17 @@ config_reference_state() {
   reference_state grep -R -l --fixed-strings "$target" "${paths[@]}"
 }
 
+process_reference_state() {
+  local target=$1
+  command -v ps >/dev/null 2>&1 || { echo unknown; return; }
+  if ps -eo pid=,args= 2>/dev/null | awk -v target="$target" -v self="$$" -v parent="${PPID:-0}" \
+    '$1 != self && $1 != parent && index($0,target) && $0 !~ /release-retention\\.sh/ && $0 !~ /awk -v target/ && $0 !~ /ps -eo/ { found=1 } END { exit(found ? 0 : 1) }'; then
+    echo yes
+  else
+    echo no
+  fi
+}
+
 managed_release() {
   local path=$1 meta="$path/.release-meta"
   [[ -f "$meta" && -f "$path/.deploy-success" && -f "$path/.next/BUILD_ID" && -f "$path/required-route-manifest.json" ]] || return 1
@@ -101,8 +112,7 @@ while IFS= read -r -d '' path; do
   elif [[ -e "$path/.deploy-evidence" || -e "$path/.provenance" || -e "$path/provenance.json" ]]; then reason=protected-evidence;
   elif [[ "$(config_reference_state "$real" /etc/systemd/system /etc/nginx)" == yes ]]; then reason=configuration-reference;
   elif [[ "$(config_reference_state "$real" /etc/systemd/system /etc/nginx)" == unknown ]]; then reason=reference-scan-failed;
-  elif command -v pgrep >/dev/null 2>&1 && [[ "$(reference_state pgrep -af -- "$real")" == yes ]]; then reason=process-reference;
-  elif command -v pgrep >/dev/null 2>&1 && [[ "$(reference_state pgrep -af -- "$real")" == unknown ]]; then reason=reference-scan-failed;
+  elif [[ "$(process_reference_state "$real")" == yes ]]; then reason=process-reference;
   elif command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == yes ]]; then reason=open-file-reference;
   elif command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == unknown ]]; then reason=reference-scan-failed;
   fi
@@ -119,7 +129,7 @@ while IFS= read -r -d '' path; do
       historical+=("$created_epoch"$'\t'"$path")
     fi
   fi
-done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -regextype posix-extended -regex '.*/[A-Za-z0-9][A-Za-z0-9._-]{7,127}$' -print0 | sort -z)
+done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 
 historical_rank=0
 while IFS=$'\t' read -r _ path; do
