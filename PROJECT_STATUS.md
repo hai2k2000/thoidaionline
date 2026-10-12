@@ -697,3 +697,27 @@ Follow Up:
 
 Next:
 - READY TO MERGE PR #9 and PR #2; do not merge, activate, restart, migrate, change production symlinks/timers, or run cleanup APPLY without separate approval.
+# Phase 1 Merge Checkpoint — Canonical CI Blocked
+
+Current Phase: COMPLETE; Phase 2 not started
+Current Task: canonical CI failure review
+
+Completed:
+- GitHub repository variables `THOIDAI_PUBLIC_SUPABASE_URL` and `THOIDAI_PUBLIC_SUPABASE_ANON_KEY` were populated from the active production public configuration and matched without exposing values.
+- Public key classification: publishable; no service-role key used in CI.
+- RuleCodex PR #2 merged as `70bd34a8ba1382b692671487285ea368b1a86a44`.
+- Thời Đại Work PR #9 merged as `41f803980a1ac9d674684c3abd4f7701e486dfdc`.
+- Canonical `integration/production` points to `41f803980a1ac9d674684c3abd4f7701e486dfdc`.
+
+Validation:
+- Pre-merge HEAD/CI/mergeability gates: PASS.
+- Canonical workflow run `38318518888`: FAIL before build/package.
+- Failure: `git branch --force integration/production ...` cannot force-update the branch currently used by the Actions worktree.
+- Canonical artifact uploaded: NO.
+- Production mutation: NONE; active release unchanged, service active, `ExecMainStatus=0`, `/login=200`.
+
+Blockers:
+- HIGH — canonical CI workflow must be corrected in a follow-up change before Phase 2; do not use an artifact from the failed run.
+
+Next:
+- Owner review of the CI workflow blocker. Do not deploy, restart, migrate, change production symlinks/timers, or run retention APPLY.
