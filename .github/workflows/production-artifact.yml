@@ -94,6 +94,8 @@ jobs:
           STANDALONE_ARTIFACT_DIR: ${{ runner.temp }}/thoidai-standalone
       - name: Materialize internal symlinks for ZIP portability
         run: node scripts/materialize-artifact-symlinks.mjs "$RUNNER_TEMP/thoidai-standalone"
+        env:
+          THOIDAI_ARTIFACT_SOURCE_ROOT: ${{ github.workspace }}
       - name: Refresh artifact manifest after portability normalization
         run: node scripts/artifact-manifest.mjs "$RUNNER_TEMP/thoidai-standalone"
       - name: Verify artifact provenance and checksums
