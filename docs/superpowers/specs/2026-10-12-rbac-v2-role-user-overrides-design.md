@@ -65,11 +65,14 @@ The database exposes one canonical read RPC returning all catalog permissions fo
 
 Resolution rules:
 
-1. Inactive users and users with inactive roles receive no effective grants.
-2. A user deny removes every role scope for that permission.
-3. A user allow replaces role scopes with the explicit user scope.
-4. Without an override, all role scopes remain effective.
-5. Duplicate effective scopes are normalized.
+1. Inactive users receive no effective grants.
+2. An active user with an inactive role does not inherit role grants, but an existing direct user allow remains effective.
+3. A user deny removes every role scope and direct allow for that permission.
+4. A user allow replaces inherited role scopes with the explicit user scope, including when the user's role is inactive.
+5. Without an override, active users inherit scopes only from an active role.
+6. Duplicate effective scopes are normalized.
+
+These rules preserve the current direct-grant behavior while making explicit deny authoritative. Regression tests must cover active users with inactive roles so the resolver does not silently remove existing direct access or restore denied access.
 
 `loadRbacActor()` consumes this resolver. `RbacActor` retains effective grants for existing callers and gains source metadata for permission management/session display. Server APIs and database mutation RPCs use the same semantics.
 
@@ -204,7 +207,9 @@ The migration is additive and idempotent:
 4. update feature RPCs that currently union raw grant tables;
 5. preserve all current rows and their effective behavior.
 
-Rollback before production rollout is source-only because this checkpoint does not apply the migration. A future production rollback would restore prior function definitions, remove new general RPCs, and drop the `effect` constraint/column only after confirming no deny rows exist or exporting them for recovery.
+Rollback before production rollout is source-only because this checkpoint does not apply the migration. After explicit deny has been activated, rollback to an application version that does not understand deny is prohibited until a rollback compatibility gate proves that no effective permission would widen. Exporting deny rows and then deleting the column is not sufficient because the older resolver could restore role or direct access that deny had intentionally blocked.
+
+The rollback compatibility gate must evaluate every deny row against the target application's authorization behavior. Rollback may proceed only when each denied permission remains denied under the target version, or after an owner-approved compensating change removes the underlying role/direct allow without broadening any user's access. Deny rows and the `effect` column remain in place until that validation passes; otherwise rollback stops and the deny-aware application version remains active.
 
 ## Testing
 
