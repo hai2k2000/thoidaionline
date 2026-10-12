@@ -290,7 +290,7 @@ path_reference() {
     [[ -d "$THOIDAI_NGINX_ROOT" ]] || { printf 'inspection-unavailable\n'; return; }
     config_roots+=("$THOIDAI_NGINX_ROOT")
   fi
-  if command_output=$(grep -R -l --fixed-strings -- "$path" "${config_roots[@]}" 2>&1); then
+  if command_output=$(grep -r -l --fixed-strings -- "$path" "${config_roots[@]}" 2>&1); then
     output=${output:+$output,}systemd
   else
     status=$?

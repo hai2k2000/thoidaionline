@@ -306,7 +306,9 @@ exact_scan_symlinks() {
       if [[ "$link" == "$path"/* ]]; then link_inside_target=1; break; fi
     done
     (( link_inside_target )) && continue
-    resolved=$(readlink -e -- "$link") || {
+    # Resolve existing links canonically; for dangling links, lexical
+    # resolution is enough to prove whether the missing target is unrelated.
+    resolved=$(readlink -e -- "$link" 2>/dev/null || readlink -m -- "$link" 2>/dev/null) || {
       rm -f -- "$list_file"
       exact_fail "symlink inspection unavailable: $link"
     }
@@ -314,6 +316,15 @@ exact_scan_symlinks() {
       rm -f -- "$list_file"
       exact_fail "symlink inspection unavailable: $link"
     }
+    if [[ ! -e "$resolved" ]]; then
+      for path in "${exact_paths[@]}"; do
+        if path_relation "$resolved" "$path" || path_relation "$link" "$path"; then
+          rm -f -- "$list_file"
+          exact_fail "dangling symlink references exact target: $link"
+        fi
+      done
+      continue
+    fi
     for path in "${exact_paths[@]}"; do
       if path_relation "$resolved" "$path" || path_relation "$link" "$path"; then
         exact_symlink_refs[$path]="${exact_symlink_refs[$path]:+${exact_symlink_refs[$path]},}symlink:$link"
