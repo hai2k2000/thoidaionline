@@ -9,6 +9,7 @@ test("artifact upload includes hidden provenance and performs a verified downloa
   assert.match(workflow, /actions\/download-artifact@v4/);
   assert.match(workflow, /materialize-artifact-symlinks\.mjs/);
   assert.match(workflow, /artifact-manifest\.mjs/);
+  assert.match(workflow, /rm -f .*\.artifact-manifest\.json.*\.artifact-manifest\.sha256/);
   assert.match(workflow, /\.release-meta/);
   assert.match(workflow, /\.artifact-manifest\.json/);
   assert.match(workflow, /\.artifact-manifest\.sha256/);

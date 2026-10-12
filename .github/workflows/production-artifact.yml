@@ -97,7 +97,9 @@ jobs:
         env:
           THOIDAI_ARTIFACT_SOURCE_ROOT: ${{ github.workspace }}
       - name: Refresh artifact manifest after portability normalization
-        run: node scripts/artifact-manifest.mjs "$RUNNER_TEMP/thoidai-standalone"
+        run: |
+          rm -f "$RUNNER_TEMP/thoidai-standalone/.artifact-manifest.json" "$RUNNER_TEMP/thoidai-standalone/.artifact-manifest.sha256"
+          node scripts/artifact-manifest.mjs "$RUNNER_TEMP/thoidai-standalone"
       - name: Verify artifact provenance and checksums
         run: |
           node scripts/verify-standalone-artifact.mjs "$RUNNER_TEMP/thoidai-standalone"
