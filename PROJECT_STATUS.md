@@ -709,11 +709,13 @@ Completed:
 
 Validation:
 - Focused upload-integrity tests: PASS.
-- TypeScript, ESLint, diff check: pending CI on hotfix PR.
+- PR CI run `38323389570`: PASS.
+- Canonical/public build was intentionally not expected on PR; artifact was `ci-placeholder` and remains verification-only.
+- Uploaded ZIP round-trip: hidden metadata present; standalone verifier, checksum verifier, secret scan, and symlink portability checks PASS.
 - Production/VPS changed: NO.
 
 Blockers:
 - Canonical artifact from run 38319801598 remains invalid for Phase 2 because its archive omitted hidden metadata.
 
 Next:
-- Push hotfix and create a small PR; stop for owner merge approval.
+- Owner merge review for PR #11; after merge, rerun canonical CI and verify a new `canonical-public` artifact before Phase 2.
