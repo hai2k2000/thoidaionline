@@ -77,7 +77,7 @@ jobs:
       - name: TypeScript
         run: npx tsc --noEmit
       - name: ESLint
-        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/check-ci-build-env.mjs scripts/check-canonical-build-env.mjs scripts/external-artifact-contract.test.mjs scripts/artifact-roundtrip.test.mjs scripts/verify-artifact-roundtrip.mjs scripts/canonical-build-env.test.mjs
+        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/materialize-artifact-symlinks.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/check-ci-build-env.mjs scripts/check-canonical-build-env.mjs scripts/external-artifact-contract.test.mjs scripts/artifact-roundtrip.test.mjs scripts/verify-artifact-roundtrip.mjs scripts/canonical-build-env.test.mjs
       - name: Route manifest
         run: npm run check:routes
       - name: Validate non-production build configuration
@@ -92,6 +92,10 @@ jobs:
         run: npm run package:standalone
         env:
           STANDALONE_ARTIFACT_DIR: ${{ runner.temp }}/thoidai-standalone
+      - name: Materialize internal symlinks for ZIP portability
+        run: node scripts/materialize-artifact-symlinks.mjs "$RUNNER_TEMP/thoidai-standalone"
+      - name: Refresh artifact manifest after portability normalization
+        run: node scripts/artifact-manifest.mjs "$RUNNER_TEMP/thoidai-standalone"
       - name: Verify artifact provenance and checksums
         run: |
           node scripts/verify-standalone-artifact.mjs "$RUNNER_TEMP/thoidai-standalone"
