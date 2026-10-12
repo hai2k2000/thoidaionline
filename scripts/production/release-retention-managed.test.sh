@@ -55,6 +55,8 @@ grep -F "$root/history-b-release" <<<"$out" | grep -F historical-reserve
 grep -F "$root/history-c-release" <<<"$out" | grep -F superseded-managed
 grep -F "$root/recent-release" <<<"$out" | grep -F grace-period
 grep -F "$root/evidence-release" <<<"$out" | grep -F protected-evidence
+grep -F 'legacy-release' <<<"$out" | grep -F legacy-unmanaged
+! grep -F "$root/history-c-release" <<<"$out" | grep -F 'reference-scan-failed'
 grep -F "$root/legacy-release" <<<"$out" | grep -F legacy-unmanaged
 ! grep -F "$root/legacy-release" <<<"$out" | grep -F DELETE
 echo "managed-retention: PASS"

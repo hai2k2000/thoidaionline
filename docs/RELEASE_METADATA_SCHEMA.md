@@ -11,3 +11,5 @@ Required lifecycle fields:
 `protection=managed`, `rollback_eligible=yes`, `health_status=pending`, `deploy_status=pending`, `deployed_at=`, `rollback_role=unassigned`.
 
 `env_model=runtime-injected` is mandatory for external CI artifacts. Legacy releases with missing or older metadata remain `UNKNOWN`; Phase 1 does not backfill or delete them. Retention must preserve current, previous, rollback-1, rollback-2, references, evidence, `.keep`, and UNKNOWN records, with a seven-day grace period for managed historical releases.
+
+Artifact consumers must fail closed when provenance SHAs do not match, manifest coverage differs from the artifact tree, a checksum is invalid, or a reference scan cannot prove that a release is unused. The production disk gate defaults to 20 GiB free after estimated headroom.

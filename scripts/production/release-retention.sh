@@ -9,6 +9,7 @@ set -Eeuo pipefail
 : "${THOIDAI_CANONICAL_BASELINE:=e501652e969900b97938acccd8f998df4e5d1873}"
 : "${THOIDAI_RETENTION_GRACE_DAYS:=7}"
 : "${THOIDAI_RETENTION_HISTORICAL_MAX:=2}"
+[[ "$THOIDAI_RETENTION_GRACE_DAYS" =~ ^[0-9]+$ && "$THOIDAI_RETENTION_HISTORICAL_MAX" =~ ^[0-9]+$ ]] || { echo "retention policy values must be non-negative integers" >&2; exit 1; }
 
 mode=dry-run
 case "${1:-}" in
@@ -27,6 +28,18 @@ health_check() {
 meta_value() {
   local file=$1 key=$2
   awk -F= -v wanted="$key" '$1 == wanted {sub(/^[^=]*=/, ""); print; exit}' "$file"
+}
+
+reference_state() {
+  local tool=$1
+  shift
+  local status
+  if "$tool" "$@" >/dev/null 2>&1; then status=0; else status=$?; fi
+  case "$status" in
+    0) echo yes ;;
+    1) echo no ;;
+    *) echo unknown ;;
+  esac
 }
 
 managed_release() {
@@ -77,9 +90,12 @@ while IFS= read -r -d '' path; do
   elif [[ ${keep[$real]+yes} ]]; then reason=${keep[$real]};
   elif [[ -e "$path/.keep" ]]; then reason=protected-.keep;
   elif [[ -e "$path/.deploy-evidence" || -e "$path/.provenance" || -e "$path/provenance.json" ]]; then reason=protected-evidence;
-  elif grep -R -l --fixed-strings "$real" /etc/systemd/system /etc/nginx 2>/dev/null | head -n 1 | grep -q .; then reason=configuration-reference;
-  elif command -v pgrep >/dev/null 2>&1 && pgrep -af -- "$real" >/dev/null 2>&1; then reason=process-reference;
-  elif command -v lsof >/dev/null 2>&1 && lsof +D "$real" 2>/dev/null | tail -n +2 | grep -q .; then reason=open-file-reference;
+  elif [[ "$(reference_state grep -R -l --fixed-strings "$real" /etc/systemd/system /etc/nginx)" == yes ]]; then reason=configuration-reference;
+  elif [[ "$(reference_state grep -R -l --fixed-strings "$real" /etc/systemd/system /etc/nginx)" == unknown ]]; then reason=reference-scan-failed;
+  elif command -v pgrep >/dev/null 2>&1 && [[ "$(reference_state pgrep -af -- "$real")" == yes ]]; then reason=process-reference;
+  elif command -v pgrep >/dev/null 2>&1 && [[ "$(reference_state pgrep -af -- "$real")" == unknown ]]; then reason=reference-scan-failed;
+  elif command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == yes ]]; then reason=open-file-reference;
+  elif command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == unknown ]]; then reason=reference-scan-failed;
   fi
   if [[ -n "$reason" ]]; then
     records+=("KEEP\t$path\t$reason")

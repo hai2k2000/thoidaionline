@@ -16,4 +16,6 @@ The VPS handoff command is verify-only by default:
 bash scripts/production/deploy-external-artifact.sh /absolute/artifact/path <40-char-source-sha>
 ```
 
+The existing deployment gate re-verifies the artifact before and after copying, requires the source and metadata SHA values to match, and fails closed below the 20 GiB free-space floor after estimated headroom. Runtime env is linked only inside that gate at activation time.
+
 Activation is intentionally separate and requires the existing deployment gate plus an explicit approval variable. Phase 1 does not activate a release, apply a migration, restart production, or run retention APPLY.

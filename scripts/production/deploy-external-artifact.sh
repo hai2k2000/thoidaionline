@@ -24,10 +24,6 @@ if [[ "$mode" == --verify-only ]]; then
 fi
 
 [[ "${THOIDAI_EXTERNAL_DEPLOY_APPROVED:-0}" == 1 ]] || { echo "production activation requires THOIDAI_EXTERNAL_DEPLOY_APPROVED=1" >&2; exit 1; }
-for name in .env.local .env.production; do
-  [[ -f "$shared_root/$name" ]] || { echo "runtime environment file missing: $shared_root/$name" >&2; exit 1; }
-  [[ ! -e "$artifact/$name" && ! -L "$artifact/$name" ]] || { echo "artifact environment path already exists: $name" >&2; exit 1; }
-  ln -s -- "$shared_root/$name" "$artifact/$name"
-done
+for name in .env.local .env.production; do [[ -f "$shared_root/$name" ]] || { echo "runtime environment file missing: $shared_root/$name" >&2; exit 1; }; done
 
 exec "$script_dir/deploy-gate.sh" "$artifact"

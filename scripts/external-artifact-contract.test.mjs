@@ -11,6 +11,8 @@ test("external artifact workflow builds without production secrets or deploy act
   assert.match(workflow, /npm run build/);
   assert.match(workflow, /npm run package:standalone/);
   assert.match(workflow, /scan-artifact-secrets\.mjs/);
+  assert.match(workflow, /THOIDAI_RUNTIME_ENV_MODEL: runtime-injected/);
+  assert.match(workflow, /retention-days: 14/);
   assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{\{\s*secrets\./);
   assert.doesNotMatch(workflow, /ssh|scp|rsync|deploy-external-artifact\.sh.*--activate/);
 });
@@ -21,4 +23,12 @@ test("external deploy is verify-only by default and delegates activation to the 
   assert.match(deploy, /deploy-gate\.sh/);
   assert.doesNotMatch(deploy, /npm ci|npm run build|next build/);
   assert.match(packager, /env_model=\$\{runtimeEnvModel\}/);
+});
+
+test("artifact boundary enforces provenance and the production disk floor", () => {
+  assert.match(deploy, /verify-standalone-artifact\.mjs/);
+  assert.match(deploy, /artifact provenance does not match expected commit/);
+  const gate = readFileSync("scripts/production/deploy-gate.sh", "utf8");
+  assert.match(gate, /hard_min_free_kb=\$\{THOIDAI_HARD_MIN_FREE_KB:-20971520\}/);
+  assert.match(gate, /free_kb - estimated_headroom_kb/);
 });

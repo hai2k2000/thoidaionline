@@ -33,6 +33,15 @@ const appPaths = JSON.parse(readFileSync(join(root, ".next/server/app-paths-mani
 for (const { routePath, sourcePath } of routes) assert.ok(Object.hasOwn(appPaths, `${routePath}/${sourcePath?.endsWith("/route.ts") ? "route" : "page"}`), `missing artifact route: ${routePath}`);
 const envModel = releaseMeta.match(/^env_model=(.+)$/m)?.[1];
 assert.ok(envModel, "artifact environment model is missing");
+const metadata = Object.fromEntries(releaseMeta.split(/\r?\n/).filter(Boolean).map((line) => {
+  const index = line.indexOf("=");
+  return [line.slice(0, index), line.slice(index + 1)];
+}));
+for (const field of ["commit", "local_head", "remote_head", "artifact_source_commit", "metadata_commit", "integration_baseline"]) {
+  assert.match(metadata[field] || "", /^[0-9a-f]{40}$/i, `invalid provenance SHA: ${field}`);
+}
+for (const field of ["local_head", "remote_head", "artifact_source_commit", "metadata_commit"]) assert.equal(metadata[field], metadata.commit, `provenance mismatch: ${field}`);
+assert.equal(metadata.integration_branch, "integration/production", "artifact integration branch mismatch");
 for (const name of [".env.local", ".env.production"]) {
   const path = join(root, name);
   if (envModel.startsWith("symlink:")) {
