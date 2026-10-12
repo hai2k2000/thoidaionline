@@ -46,6 +46,11 @@ config_reference_state() {
   local target=$1
   shift
   local paths=()
+  local configured=${THOIDAI_RETENTION_REFERENCE_ROOTS:-}
+  if [[ -n "$configured" ]]; then
+    IFS=: read -r -a configured_paths <<< "$configured"
+    set -- "${configured_paths[@]}"
+  fi
   for path in "$@"; do [[ -e "$path" ]] && paths+=("$path"); done
   (( ${#paths[@]} )) || { echo no; return; }
   reference_state grep -R -l --fixed-strings "$target" "${paths[@]}"
@@ -112,9 +117,10 @@ while IFS= read -r -d '' path; do
   elif [[ -e "$path/.deploy-evidence" || -e "$path/.provenance" || -e "$path/provenance.json" ]]; then reason=protected-evidence;
   elif [[ "$(config_reference_state "$real" /etc/systemd/system /etc/nginx)" == yes ]]; then reason=configuration-reference;
   elif [[ "$(config_reference_state "$real" /etc/systemd/system /etc/nginx)" == unknown ]]; then reason=reference-scan-failed;
-  elif [[ "$(process_reference_state "$real")" == yes ]]; then reason=process-reference;
-  elif command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == yes ]]; then reason=open-file-reference;
-  elif command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == unknown ]]; then reason=reference-scan-failed;
+  elif [[ "${THOIDAI_RETENTION_REFERENCE_CHECK_MODE:-full}" != filesystem && "$(process_reference_state "$real")" == yes ]]; then reason=process-reference;
+  elif [[ "${THOIDAI_RETENTION_REFERENCE_CHECK_MODE:-full}" != filesystem && "$(process_reference_state "$real")" == unknown ]]; then reason=reference-scan-failed;
+  elif [[ "${THOIDAI_RETENTION_REFERENCE_CHECK_MODE:-full}" != filesystem ]] && command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == yes ]]; then reason=open-file-reference;
+  elif [[ "${THOIDAI_RETENTION_REFERENCE_CHECK_MODE:-full}" != filesystem ]] && command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == unknown ]]; then reason=reference-scan-failed;
   fi
   if [[ -n "$reason" ]]; then
     records+=("KEEP\t$path\t$reason")

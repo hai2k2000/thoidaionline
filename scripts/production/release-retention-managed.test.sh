@@ -4,6 +4,7 @@ set -Eeuo pipefail
 root=$(mktemp -d)
 bin=$(mktemp -d)
 trap 'rm -rf -- "$root" "$bin"' EXIT
+mkdir -p "$bin/refs"
 mkdir -p "$root/current-release" "$root/previous-release" "$root/rollback1-release" "$root/rollback-release" "$root/history-a-release" "$root/history-b-release" "$root/history-c-release" "$root/recent-release" "$root/evidence-release" "$root/legacy-release"
 write_meta() {
   local created_at=${2:-2026-09-23T09:00:00Z}
@@ -48,7 +49,7 @@ chmod +x "$bin/systemctl" "$bin/curl"
 THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc bash scripts/production/mark-release-success.sh "$root/current-release"
 grep -F 'health_status=pass' "$root/current-release/.deploy-success"
 grep -F 'deploy_status=success' "$root/current-release/.deploy-success"
-out=$(THOIDAI_RELEASE_ROOT="$root" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc THOIDAI_RETENTION_NOW_EPOCH=1791763200 bash scripts/production/release-retention.sh --dry-run)
+out=$(THOIDAI_RELEASE_ROOT="$root" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc THOIDAI_RETENTION_REFERENCE_ROOTS="$bin/refs" THOIDAI_RETENTION_REFERENCE_CHECK_MODE=filesystem THOIDAI_RETENTION_NOW_EPOCH=1791763200 bash scripts/production/release-retention.sh --dry-run)
 printf '%s\n' "$out"
 grep -F "$root/current-release" <<<"$out" | grep -F current
 grep -F "$root/history-a-release" <<<"$out" | grep -F historical-reserve
