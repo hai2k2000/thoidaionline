@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, lstatSync, readFileSync, readlinkSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readlinkSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { verifyManifest } from "./verify-artifact-manifest.mjs";
 
@@ -27,12 +27,38 @@ const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);
 assert.match(releaseMeta, /build_verification=production-like-env-build-pass/);
 assert.match(releaseMeta, /^env_model=(?:symlink:.+|runtime-injected)$/m);
+assert.match(releaseMeta, /^build_config=(?:ci-placeholder|canonical-public)$/m);
 for (const field of ["build_id=", "commit=", "branch=", "created_at=", "source_worktree=", "local_head=", "remote_head=", "artifact_source_commit=", "metadata_commit=", "current_production_parent=", "integration_branch=", "integration_baseline=", "contract_suite="]) assert.match(releaseMeta, new RegExp(`^${field}[^\\n]+`, "m"));
 const routes = JSON.parse(readFileSync(join(root, "required-route-manifest.json"), "utf8"));
 const appPaths = JSON.parse(readFileSync(join(root, ".next/server/app-paths-manifest.json"), "utf8"));
 for (const { routePath, sourcePath } of routes) assert.ok(Object.hasOwn(appPaths, `${routePath}/${sourcePath?.endsWith("/route.ts") ? "route" : "page"}`), `missing artifact route: ${routePath}`);
 const envModel = releaseMeta.match(/^env_model=(.+)$/m)?.[1];
+const buildConfig = releaseMeta.match(/^build_config=(.+)$/m)?.[1];
 assert.ok(envModel, "artifact environment model is missing");
+assert.ok(buildConfig, "artifact build config is missing");
+if (buildConfig === "canonical-public") {
+  const suspicious = [];
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) visit(path);
+      else if (entry.isFile()) {
+        const text = readFileSync(path, "utf8");
+        if (text.includes("https://ci.invalid/") || text.includes("ci-anon-key-placeholder")) suspicious.push(path);
+      }
+    }
+  };
+  for (const path of ["server.js", ".next", "public"]) {
+    const candidate = join(root, path);
+    if (existsSync(candidate) && lstatSync(candidate).isDirectory()) visit(candidate);
+    else if (existsSync(candidate)) {
+      const text = readFileSync(candidate, "utf8");
+      if (text.includes("https://ci.invalid/") || text.includes("ci-anon-key-placeholder")) suspicious.push(candidate);
+    }
+  }
+  assert.deepEqual(suspicious, [], "canonical-public artifact contains CI Supabase placeholders");
+}
 const metadata = Object.fromEntries(releaseMeta.split(/\r?\n/).filter(Boolean).map((line) => {
   const index = line.indexOf("=");
   return [line.slice(0, index), line.slice(index + 1)];

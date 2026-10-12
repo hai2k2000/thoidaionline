@@ -669,3 +669,30 @@ Production mutation: NONE.
 
 Next:
 - Owner review only; do not migrate, deploy, restart, or change production grants without separate authorization.
+# External CI Lifecycle Phase 1 Hardening
+
+Current Phase: COMPLETE; pre-merge owner approval
+Current Task: final merge gate and Phase 2 preparation
+
+Completed:
+- Added explicit artifact `build_config` provenance. CI artifacts built with reserved Supabase placeholders are marked `ci-placeholder` and remain verification/rehearsal-only.
+- Added fail-closed activation checks in the external artifact wrapper and deployment gate; only `canonical-public` artifacts can activate.
+- Added canonical public-config validation using repository/environment public variables while keeping the service-role key a non-production placeholder in CI.
+- Added canonical artifact placeholder scanning and focused regression coverage.
+- Retention remains dry-run by default; no APPLY or unattended deletion was enabled.
+
+Validation:
+- Focused Phase 1 hardening tests: 20/20 PASS.
+- Node syntax checks: PASS.
+- `git diff --check`: PASS.
+- Previous sealed CI evidence: 18/18 PASS.
+- Production mutation: NONE.
+
+Blockers:
+- None for source merge, subject to owner merge approval.
+
+Follow Up:
+- After PR #9 and RuleCodex PR #2 are actually merged, run Phase 2 Safe Rehearsal only: retrieve post-merge canonical artifact, verify provenance/checksum, read-only VPS disk gate, isolated staging verify-only/alternate-port smoke, safe rollback simulation, and retention dry-run.
+
+Next:
+- READY TO MERGE PR #9 and PR #2; do not merge, activate, restart, migrate, change production symlinks/timers, or run cleanup APPLY without separate approval.

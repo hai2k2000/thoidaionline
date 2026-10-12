@@ -20,6 +20,11 @@ jobs:
     timeout-minutes: 30
     env:
       THOIDAI_RUNTIME_ENV_MODEL: runtime-injected
+      THOIDAI_BUILD_CONFIG: ${{ github.ref == 'refs/heads/integration/production' && 'canonical-public' || 'ci-placeholder' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ github.ref == 'refs/heads/integration/production' && vars.THOIDAI_PUBLIC_SUPABASE_URL || 'https://ci.invalid/supabase' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ github.ref == 'refs/heads/integration/production' && vars.THOIDAI_PUBLIC_SUPABASE_ANON_KEY || 'ci-anon-key-placeholder' }}
+      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key-placeholder-01234567890123456789
+      SESSION_SECRET: ci-session-secret-placeholder-01234567890123456789
       # The repository lineage guard requires production-shaped builds to identify
       # as the canonical integration branch even when Actions checks a PR merge ref.
       THOIDAI_RELEASE_BRANCH: integration/production
@@ -51,6 +56,7 @@ jobs:
           scripts/artifact-manifest.test.mjs
           scripts/artifact-secret-scan.test.mjs
           scripts/ci-build-env.test.mjs
+          scripts/canonical-build-env.test.mjs
           scripts/deploy-gate.test.mjs
           scripts/package-standalone.test.mjs
           scripts/standalone-packaging.test.mjs
@@ -60,23 +66,17 @@ jobs:
       - name: TypeScript
         run: npx tsc --noEmit
       - name: ESLint
-        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/check-ci-build-env.mjs scripts/external-artifact-contract.test.mjs
+        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/check-ci-build-env.mjs scripts/check-canonical-build-env.mjs scripts/external-artifact-contract.test.mjs scripts/canonical-build-env.test.mjs
       - name: Route manifest
         run: npm run check:routes
       - name: Validate non-production build configuration
+        if: env.THOIDAI_BUILD_CONFIG == 'ci-placeholder'
         run: node scripts/check-ci-build-env.mjs
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://ci.invalid/supabase
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-placeholder
-          SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key-placeholder-01234567890123456789
-          SESSION_SECRET: ci-session-secret-placeholder-01234567890123456789
+      - name: Validate canonical public build configuration
+        if: env.THOIDAI_BUILD_CONFIG == 'canonical-public'
+        run: node scripts/check-canonical-build-env.mjs
       - name: Production-like build
         run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://ci.invalid/supabase
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-placeholder
-          SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key-placeholder-01234567890123456789
-          SESSION_SECRET: ci-session-secret-placeholder-01234567890123456789
       - name: Package standalone artifact
         run: npm run package:standalone
         env:

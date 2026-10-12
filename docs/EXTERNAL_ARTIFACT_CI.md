@@ -2,7 +2,7 @@
 
 GitHub Actions workflow `.github/workflows/production-artifact.yml` is the only Phase 1 build path for a production-shaped artifact. It installs dependencies, runs focused checks, TypeScript, ESLint, route validation, the production-like Next build, standalone packaging, provenance/checksum verification, and static secret scanning.
 
-The uploaded artifact is immutable and contains no runtime environment files or production credentials. Its `.release-meta` uses `env_model=runtime-injected`; the deployment host supplies `.env.local` and `.env.production` only during an explicitly approved activation.
+The uploaded CI artifact is immutable and contains no runtime environment files or production credentials. Its `.release-meta` explicitly records `build_config=ci-placeholder` and `env_model=runtime-injected`; it is valid for verification and rehearsal only. It MUST NOT be activated because `NEXT_PUBLIC_*` values are embedded at build time. A production candidate requires a new artifact built from the approved canonical commit with valid public Supabase configuration (`build_config=canonical-public`) and no production service-role secret in CI. Runtime secrets remain injected only at activation time.
 
 Required artifact files:
 

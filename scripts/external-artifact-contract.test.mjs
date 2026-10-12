@@ -23,6 +23,14 @@ test("external deploy is verify-only by default and delegates activation to the 
   assert.match(deploy, /deploy-gate\.sh/);
   assert.doesNotMatch(deploy, /npm ci|npm run build|next build/);
   assert.match(packager, /env_model=\$\{runtimeEnvModel\}/);
+  assert.match(packager, /build_config=\$\{buildConfig\}/);
+  assert.match(deploy, /production activation rejects non-canonical public build config/);
+});
+
+test("CI placeholder artifacts are verification-only and cannot activate", () => {
+  assert.match(workflow, /THOIDAI_BUILD_CONFIG:[^\n]*ci-placeholder/);
+  assert.match(deploy, /build_config=.*\.release-meta/);
+  assert.match(deploy, /\[\[ \"\$build_config\" == canonical-public \]\]/);
 });
 
 test("artifact boundary enforces provenance and the production disk floor", () => {
@@ -31,4 +39,5 @@ test("artifact boundary enforces provenance and the production disk floor", () =
   const gate = readFileSync("scripts/production/deploy-gate.sh", "utf8");
   assert.match(gate, /hard_min_free_kb=\$\{THOIDAI_HARD_MIN_FREE_KB:-20971520\}/);
   assert.match(gate, /free_kb - estimated_headroom_kb/);
+  assert.match(gate, /build config is not canonical-public/);
 });

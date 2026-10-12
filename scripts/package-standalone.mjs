@@ -28,6 +28,15 @@ const currentProductionParent = process.env.THOIDAI_CURRENT_PRODUCTION_COMMIT ||
 const branch = process.env.THOIDAI_RELEASE_BRANCH || gitValue(["branch", "--show-current"], "THOIDAI_RELEASE_BRANCH", "detached");
 const sourceWorktree = process.env.THOIDAI_SOURCE_WORKTREE || root;
 const runtimeEnvModel = process.env.THOIDAI_RUNTIME_ENV_MODEL || "symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production";
+const buildConfig = process.env.THOIDAI_BUILD_CONFIG || (process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("https://ci.invalid/") ? "ci-placeholder" : "canonical-public");
+if (!["ci-placeholder", "canonical-public"].includes(buildConfig)) throw new Error(`unsupported artifact build config: ${buildConfig}`);
+const publicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const publicSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+if (buildConfig === "ci-placeholder") {
+  if (!publicSupabaseUrl.startsWith("https://ci.invalid/") || publicSupabaseAnonKey !== "ci-anon-key-placeholder") throw new Error("ci-placeholder artifact requires non-production public Supabase placeholders");
+} else if (!publicSupabaseUrl || publicSupabaseUrl.startsWith("https://ci.invalid/") || publicSupabaseAnonKey === "ci-anon-key-placeholder") {
+  throw new Error("canonical-public artifact requires valid public Supabase configuration");
+}
 
 if (!existsSync(standalone)) throw new Error("Next standalone output is missing; run next build first.");
 if (!canonicalBaseline) throw new Error("canonical baseline is missing from check-release-baseline.mjs");
@@ -102,6 +111,7 @@ await writeFile(join(output, ".release-meta"), [
   `artifact_bytes=${artifactBytes}`,
   "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260926140000_department_plans_v2.sql,supabase/migrations/20260926150000_department_plan_to_task_v1.sql,supabase/migrations/20260926160000_department_plan_assignment_v2.sql,supabase/migrations/20260925100000_journalism_self_registration.sql,supabase/migrations/20260928140000_tbt_any_assignee.sql,supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql,supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql,supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql,supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql,supabase/migrations/20261003100000_department_period_plan_v2.sql,supabase/migrations/20261003120000_department_plan_duplicate_guard.sql,supabase/migrations/20261004100000_department_plan_saturday_friday.sql,supabase/migrations/20261004110000_department_plan_friday_friday.sql",
   `env_model=${runtimeEnvModel}`,
+  `build_config=${buildConfig}`,
   "build_verification=production-like-env-build-pass",
   `contract_suite=${process.env.THOIDAI_CONTRACT_SUITE_RESULT || "pending"}`,
   "protection=managed",

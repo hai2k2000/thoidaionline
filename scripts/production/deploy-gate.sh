@@ -18,6 +18,8 @@ if [[ "${THOIDAI_CANARY_ONLY:-0}" == 1 ]]; then echo "canary gate: PASS"; exit 0
 new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 [[ ! -e "$new_release" && ! -L "$new_release" ]] || { echo "release target already exists" >&2; exit 1; }
 node "$artifact/verify-standalone-artifact.mjs" "$artifact"
+build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release-meta")
+[[ "$build_config" == canonical-public ]] || { echo "DEPLOY ABORTED: artifact build config is not canonical-public" >&2; exit 1; }
 cp -a -- "$artifact" "$new_release"
 node "$new_release/verify-standalone-artifact.mjs" "$new_release"
 install -d -o "${THOIDAI_SERVICE_USER:-thoidai-work}" -g "${THOIDAI_SERVICE_GROUP:-thoidai-work}" -m 0750 -- "$new_release/.next/cache"

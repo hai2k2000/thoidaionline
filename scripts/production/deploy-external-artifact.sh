@@ -15,6 +15,7 @@ node "$artifact/verify-standalone-artifact.mjs" "$artifact"
 actual_commit=$(awk -F= '$1=="commit" {print $2; exit}' "$artifact/.release-meta")
 source_commit=$(awk -F= '$1=="artifact_source_commit" {print $2; exit}' "$artifact/.release-meta")
 env_model=$(awk -F= '$1=="env_model" {print $2; exit}' "$artifact/.release-meta")
+build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release-meta")
 [[ "$actual_commit" == "$expected_commit" && "$source_commit" == "$expected_commit" ]] || { echo "artifact provenance does not match expected commit" >&2; exit 1; }
 [[ "$env_model" == runtime-injected ]] || { echo "external artifact must use env_model=runtime-injected" >&2; exit 1; }
 
@@ -24,6 +25,7 @@ if [[ "$mode" == --verify-only ]]; then
 fi
 
 [[ "${THOIDAI_EXTERNAL_DEPLOY_APPROVED:-0}" == 1 ]] || { echo "production activation requires THOIDAI_EXTERNAL_DEPLOY_APPROVED=1" >&2; exit 1; }
+[[ "$build_config" == canonical-public ]] || { echo "production activation rejects non-canonical public build config: ${build_config:-missing}" >&2; exit 1; }
 for name in .env.local .env.production; do [[ -f "$shared_root/$name" ]] || { echo "runtime environment file missing: $shared_root/$name" >&2; exit 1; }; done
 
 exec "$script_dir/deploy-gate.sh" "$artifact"
