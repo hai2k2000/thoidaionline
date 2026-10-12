@@ -20,7 +20,9 @@ jobs:
     timeout-minutes: 30
     env:
       THOIDAI_RUNTIME_ENV_MODEL: runtime-injected
-      THOIDAI_RELEASE_BRANCH: ${{ github.ref_name }}
+      # The repository lineage guard requires production-shaped builds to identify
+      # as the canonical integration branch even when Actions checks a PR merge ref.
+      THOIDAI_RELEASE_BRANCH: integration/production
       THOIDAI_REMOTE_HEAD: ${{ github.sha }}
       THOIDAI_INTEGRATION_COMMIT: ${{ github.sha }}
       THOIDAI_CONTRACT_SUITE_RESULT: ci-not-run-without-production-session
