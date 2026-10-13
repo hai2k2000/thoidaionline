@@ -822,6 +822,7 @@ Completed:
 - Added authenticated browser smoke for `/login`, `/assets`, and `/tasks/quick-report`.
 - Added harness contract tests and isolation documentation.
 - Excluded the disposable harness from Next standalone tracing so production artifact secret scans cannot package test fixture scripts.
+- Masked every generated sandbox JWT, session secret, and test password before exporting workflow environment state.
 
 Validation:
 - Harness contract tests: 3/3 PASS.

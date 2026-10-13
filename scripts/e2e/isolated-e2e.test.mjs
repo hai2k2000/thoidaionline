@@ -24,6 +24,8 @@ test("sandbox fixture uses pinned local-only services and RBAC V2 migration", ()
   assert.match(fixture, /has_function_privilege/);
   assert.match(fixture, /127\.0\.0\.1/);
   assert.match(fixture, /E2E_SESSION_SECRET/);
+  assert.match(fixture, /add-mask.*session_secret/);
+  assert.match(fixture, /add-mask.*test_password/);
   assert.doesNotMatch(fixture, /NEXT_PUBLIC_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY/);
 });
 

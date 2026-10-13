@@ -71,6 +71,9 @@ jobs:
         env:
           ROLE_LIFECYCLE_ENABLED: 'true'
           THOIDAI_BUILD_CONFIG: sandbox-e2e
+          THOIDAI_RELEASE_BRANCH: integration/production
+          THOIDAI_INTEGRATION_COMMIT: 36b4c117a365355062ccfa5d78afbfb7a2be7197
+          THOIDAI_REMOTE_HEAD: 36b4c117a365355062ccfa5d78afbfb7a2be7197
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL"
@@ -88,6 +91,9 @@ jobs:
         env:
           ROLE_LIFECYCLE_ENABLED: 'true'
           THOIDAI_BUILD_CONFIG: sandbox-e2e
+          THOIDAI_RELEASE_BRANCH: integration/production
+          THOIDAI_INTEGRATION_COMMIT: 36b4c117a365355062ccfa5d78afbfb7a2be7197
+          THOIDAI_REMOTE_HEAD: 36b4c117a365355062ccfa5d78afbfb7a2be7197
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL"

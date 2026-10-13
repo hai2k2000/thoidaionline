@@ -133,7 +133,8 @@ test "$(docker exec "$postgres" psql -At -U postgres -d thoidai_e2e -c "select h
 docker exec "$postgres" psql -v ON_ERROR_STOP=1 -U postgres -d thoidai_e2e -c \
   'alter table public.staff_users add column if not exists must_change_password boolean not null default false' >/dev/null
 
-password_hash=$(node --input-type=module -e "import bcrypt from 'bcryptjs'; console.log(await bcrypt.hash('Sandbox-E2E-2026!', 10));")
+test_password=$(node -e "console.log(require('node:crypto').randomBytes(24).toString('base64url'))")
+password_hash=$(E2E_PASSWORD="$test_password" node --input-type=module -e "import bcrypt from 'bcryptjs'; console.log(await bcrypt.hash(process.env.E2E_PASSWORD, 10));")
 docker exec -i "$postgres" psql -v ON_ERROR_STOP=1 -U postgres -d thoidai_e2e <<SQL >/dev/null
 insert into public.staff_users(id,full_name,username,email,password_hash,password,role_id,department_id,active,session_version,must_change_password,preferences)
 values
@@ -183,6 +184,9 @@ service_key=$(make_jwt service_role)
 echo "::add-mask::$jwt_secret"
 echo "::add-mask::$anon_key"
 echo "::add-mask::$service_key"
+session_secret=$(node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))")
+echo "::add-mask::$session_secret"
+echo "::add-mask::$test_password"
 
 docker run -d --name "$postgrest" --network "$network" -p "127.0.0.1:${api_port}:3000" \
   -e PGRST_DB_URI="postgres://authenticator:e2e-authenticator-only@${postgres}:5432/thoidai_e2e" \
@@ -198,10 +202,10 @@ cat >"$env_file" <<EOF
 E2E_POSTGREST_URL=http://127.0.0.1:${api_port}
 E2E_ANON_KEY=${anon_key}
 E2E_SERVICE_ROLE_KEY=${service_key}
-E2E_SESSION_SECRET=$(node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))")
+E2E_SESSION_SECRET=${session_secret}
 E2E_ADMIN_USERNAME=e2e-admin
 E2E_EMPLOYEE_USERNAME=e2e-employee
-E2E_PASSWORD=Sandbox-E2E-2026!
+E2E_PASSWORD=${test_password}
 E2E_NETWORK=${network}
 E2E_POSTGRES_CONTAINER=${postgres}
 E2E_POSTGREST_CONTAINER=${postgrest}
