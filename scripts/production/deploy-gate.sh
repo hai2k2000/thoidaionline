@@ -20,6 +20,7 @@ new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 node "$artifact/verify-standalone-artifact.mjs" "$artifact"
 build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release-meta")
 [[ "$build_config" == canonical-public ]] || { echo "DEPLOY ABORTED: artifact build config is not canonical-public" >&2; exit 1; }
+[[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]] || { echo "DEPLOY ABORTED: authenticated smoke credentials are required" >&2; exit 1; }
 cp -a -- "$artifact" "$new_release"
 node "$new_release/verify-standalone-artifact.mjs" "$new_release"
 install -d -o "${THOIDAI_SERVICE_USER:-thoidai-work}" -g "${THOIDAI_SERVICE_GROUP:-thoidai-work}" -m 0750 -- "$new_release/.next/cache"
@@ -61,19 +62,29 @@ for attempt in $(seq 1 30); do
 done
 if (( ! health_ok )); then
   flock -u 9
-  "$(dirname "$0")/rollback-application.sh"
+  THOIDAI_ROLLBACK_CURRENT_TARGET="$current_target" \
+  THOIDAI_ROLLBACK_PREVIOUS_TARGET="$previous_target" \
+  THOIDAI_ROLLBACK_1_TARGET="$rollback_1_target" \
+  THOIDAI_ROLLBACK_2_TARGET="$rollback_2_target" \
+    "$(dirname "$0")/rollback-application.sh"
   exit 1
 fi
-if [[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]]; then
-  if ! node scripts/contract-smoke.mjs; then
-    flock -u 9
+if ! node scripts/contract-smoke.mjs; then
+  flock -u 9
+  THOIDAI_ROLLBACK_CURRENT_TARGET="$current_target" \
+  THOIDAI_ROLLBACK_PREVIOUS_TARGET="$previous_target" \
+  THOIDAI_ROLLBACK_1_TARGET="$rollback_1_target" \
+  THOIDAI_ROLLBACK_2_TARGET="$rollback_2_target" \
     "$(dirname "$0")/rollback-application.sh"
-    exit 1
-  fi
-  if ! node scripts/production/browser-path-smoke.mjs; then
-    flock -u 9
+  exit 1
+fi
+if ! node scripts/production/browser-path-smoke.mjs; then
+  flock -u 9
+  THOIDAI_ROLLBACK_CURRENT_TARGET="$current_target" \
+  THOIDAI_ROLLBACK_PREVIOUS_TARGET="$previous_target" \
+  THOIDAI_ROLLBACK_1_TARGET="$rollback_1_target" \
+  THOIDAI_ROLLBACK_2_TARGET="$rollback_2_target" \
     "$(dirname "$0")/rollback-application.sh"
-    exit 1
-  fi
+  exit 1
 fi
 echo "deploy-gate: PASS ($new_release)"
