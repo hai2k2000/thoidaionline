@@ -26,3 +26,8 @@ test("legacy permission mutation remains a narrow compatibility path", () => {
   assert.match(route, /asset\.manage/);
   assert.doesNotMatch(route, /role_code\s*===\s*["']admin["']/);
 });
+
+test("permission catalog uses the unambiguous staff department relationship", () => {
+  assert.match(route, /departments!staff_users_department_id_fkey\(name\)/);
+  assert.doesNotMatch(route, /select\([^\n]*departments\(name\)/);
+});

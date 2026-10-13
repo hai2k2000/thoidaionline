@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 45
     env:
       OLD_APP_COMMIT: bd4803933d6b98fd6996852992be566e6286ea67
-      NEW_APP_COMMIT: 9acead5accc6d439d63f89655d8066ee66b9dbda
+      NEW_APP_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout harness source
         uses: actions/checkout@v4
