@@ -808,3 +808,29 @@ Decision:
 
 Next:
 - Owner may merge PR #14. Keep production activation blocked and provide an isolated runtime E2E environment before migration approval.
+
+## Phase 3B Isolated E2E — Post-Merge Checkpoint
+
+Current Phase: BLOCKED at isolated authenticated runtime E2E; owner review
+Current Task: post-merge canonical artifact and sandbox feasibility audit
+
+Canonical merge:
+- PR #14 merged normally with merge SHA `36b4c117a365355062ccfa5d78afbfb7a2be7197`.
+- Canonical CI run `38353438657`: PASS.
+- Canonical artifact ID `11791533518`; ZIP digest `DB137B062DFE929BFE3590DB5788EE4DF313B92FBBCFCAE863F44D5C04C86DBD`; size `30285219` bytes; retention expiry `2026-10-27T05:51:41Z`.
+- Extracted artifact verification: standalone verifier PASS, manifest/checksum PASS, secret scan PASS; `build_config=canonical-public`, `rbac_v2=supported`, source commit equals canonical merge SHA, and RBAC V2 migration reference is present.
+
+Sandbox feasibility:
+- Linux VPS read-only audit: PostgreSQL 17/Docker available; approximately 24.2 GiB free; production service active, `ExecMainStatus=0`, `NRestarts=0`, `/login=200`.
+- Existing isolated PostgreSQL containers are available, but no isolated Supabase Auth/PostgREST/runtime application stack with sandbox public URL and test-session path was provisioned or proven. Production ports/services and credentials were not used.
+
+E2E result:
+- Old app + migrated DB authenticated runtime E2E: BLOCKED — no proven isolated Auth/PostgREST/application stack.
+- New RBAC V2 app + migrated DB authenticated runtime E2E: BLOCKED — same isolation/runtime-config blocker.
+- SQL migration rehearsal, resolver tests, rollback compatibility fixtures, artifact verification, and CI remain PASS; these do not replace the required runtime E2E.
+
+Production safety:
+- Production migration, deployment, restart, database/grant/user changes, symlink/systemd/timer changes, and retention APPLY: NONE.
+
+Decision:
+- Migration-first production rollout: NO-GO until isolated authenticated runtime E2E is provisioned and passes for both old and new application paths.
