@@ -823,6 +823,7 @@ Completed:
 - Added harness contract tests and isolation documentation.
 - Excluded the disposable harness from Next standalone tracing so production artifact secret scans cannot package test fixture scripts.
 - Masked every generated sandbox JWT, session secret, and test password before exporting workflow environment state.
+- Old/new sandbox builds and migration setup pass; the first runtime attempt exposed an old-app sandbox login 401 and now includes non-secret schema/log diagnostics for root-cause closure.
 
 Validation:
 - Harness contract tests: 3/3 PASS.
