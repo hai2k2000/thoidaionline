@@ -26,3 +26,13 @@ test("automatic rollback checks RBAC compatibility before restoring an older tar
   assert.match(source, /RBAC rollback compatibility gate failed for rollback target/i);
   assert.match(source, /automatic rollback blocked by RBAC compatibility gate/i);
 });
+
+test("controlled smoke waiver is explicit, single-use, and still records a non-pass smoke status", () => {
+  assert.match(source, /THOIDAI_AUTHENTICATED_SMOKE_WAIVER/);
+  assert.match(source, /controlled-deploy-exception\.mjs/);
+  assert.match(source, /AUTHENTICATED_SMOKE=WAIVED/);
+  assert.match(source, /approval.*commit/i);
+  assert.match(source, /invalid, expired, or already used/i);
+  assert.match(source, /artifact\/scripts\/production\/controlled-deploy-exception\.mjs/);
+  assert.match(source, /check-rbac-rollback-compatibility\.sh[\s\S]*controlled-deploy-exception\.mjs/);
+});

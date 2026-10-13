@@ -26,6 +26,9 @@ fi
 
 [[ "${THOIDAI_EXTERNAL_DEPLOY_APPROVED:-0}" == 1 ]] || { echo "production activation requires THOIDAI_EXTERNAL_DEPLOY_APPROVED=1" >&2; exit 1; }
 [[ "$build_config" == canonical-public ]] || { echo "production activation rejects non-canonical public build config: ${build_config:-missing}" >&2; exit 1; }
+if [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
+  [[ -n "${THOIDAI_DEPLOY_EXCEPTION_APPROVAL:-}" ]] || { echo "controlled smoke-waiver requires an approval file" >&2; exit 1; }
+fi
 for name in .env.local .env.production; do [[ -f "$shared_root/$name" ]] || { echo "runtime environment file missing: $shared_root/$name" >&2; exit 1; }; done
 
 exec "$script_dir/deploy-gate.sh" "$artifact"

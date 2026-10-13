@@ -1,5 +1,24 @@
 # Thoidai Work3 PR #6 Final Review & Fix
 
+## Controlled RBAC V2 deployment exception
+
+Current Phase: bounded implementation complete; owner review pending
+Current Task: one-time authenticated-smoke waiver for the exact approved canonical artifact
+
+Completed:
+- Added an opt-in, exact-SHA, time-bounded owner approval contract with atomic one-time consumption.
+- Kept backup, migration, grants, rollback, disk, lock, provenance, and health gates unchanged; normal deployments still require authenticated smoke.
+- Packaged and verified the validator in the standalone artifact and added secret-free `AUTHENTICATED_SMOKE=WAIVED` evidence plus a manual post-activation checklist.
+
+Validation:
+- Focused exception, deploy-gate, external-artifact, and standalone packaging tests: 28/28 PASS.
+- TypeScript, changed-file ESLint, route manifest, and `git diff --check`: PASS.
+- POSIX deployment/rollback fixtures: not runnable on this Windows host; CI must execute them on Ubuntu.
+- Production code/database/grants/releases/service: unchanged.
+
+Next:
+- Review and merge the single PR, then generate a new canonical artifact. Do not activate this branch or reuse an older artifact.
+
 ## RBAC V2 SQL Scope Ambiguity Hotfix
 
 Current Phase: hotfix complete; owner merge review pending

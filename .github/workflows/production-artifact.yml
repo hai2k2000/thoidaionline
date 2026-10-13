@@ -69,6 +69,7 @@ jobs:
           scripts/canonical-ref-preparation.test.mjs
           scripts/rbac-v2-scope-hotfix.test.mjs
           scripts/deploy-gate.test.mjs
+          scripts/production/controlled-deploy-exception.test.mjs
           scripts/package-standalone.test.mjs
           scripts/standalone-packaging.test.mjs
           scripts/external-artifact-contract.test.mjs
@@ -84,7 +85,7 @@ jobs:
       - name: TypeScript
         run: npx tsc --noEmit
       - name: ESLint
-        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/materialize-artifact-symlinks.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/check-ci-build-env.mjs scripts/check-canonical-build-env.mjs scripts/external-artifact-contract.test.mjs scripts/artifact-roundtrip.test.mjs scripts/verify-artifact-roundtrip.mjs scripts/canonical-build-env.test.mjs
+        run: npx eslint scripts/package-standalone.mjs scripts/artifact-manifest.mjs scripts/materialize-artifact-symlinks.mjs scripts/verify-artifact-manifest.mjs scripts/verify-standalone-artifact.mjs scripts/scan-artifact-secrets.mjs scripts/check-ci-build-env.mjs scripts/check-canonical-build-env.mjs scripts/external-artifact-contract.test.mjs scripts/artifact-roundtrip.test.mjs scripts/verify-artifact-roundtrip.mjs scripts/canonical-build-env.test.mjs scripts/production/controlled-deploy-exception.mjs scripts/production/controlled-deploy-exception.test.mjs
       - name: Route manifest
         run: npm run check:routes
       - name: Validate non-production build configuration
