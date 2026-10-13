@@ -772,3 +772,19 @@ Validation before canonical sync:
 
 Next:
 - Complete post-merge focused validation and RBAC V2 compatibility audit; do not merge, migrate, deploy, restart, or change production.
+
+# PR #12 Canonical Sync / RBAC V2 Compatibility Gate
+
+Canonical sync:
+- Merged `origin/integration/production` at `adac1984fd1d2859d7622a44426a8743c8c835e0` by ordinary merge.
+- PR #12 HEAD is `34612bb963de83d5fd398cde41ab62bd91479f87`; no force-push or history rewrite.
+- Push CI `38344920004` and PR CI `38344924507`: PASS.
+
+RBAC V2 compatibility audit:
+- Production read-only audit found no applied `20261015100000_rbac_v2_role_user_overrides.sql` migration.
+- Production does not expose `api_list_effective_permissions`, `api_set_user_permission_override`, or `api_replace_role_permissions`; `user_permission_grants.effect` is not available.
+- Canonical application code calls these RPCs and reads the new `effect` column during authenticated session/permission flows.
+
+Decision:
+- `PHASE 3B BLOCKED — DATABASE COMPATIBILITY`.
+- Do not merge PR #12 into the canonical branch, deploy, restart, apply migration, or change production grants until an owner-approved migration-first rollout plan and rollback compatibility plan exist.
