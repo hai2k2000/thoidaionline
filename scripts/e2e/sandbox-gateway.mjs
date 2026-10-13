@@ -22,7 +22,7 @@ const server = http.createServer(async (request, response) => {
       request.on("end", () => resolve(Buffer.concat(chunks)));
       request.on("error", reject);
     });
-    const forwardedHeaders = Object.fromEntries([...request.headers].filter(([name]) => !["connection", "content-length", "host", "transfer-encoding"].includes(name)));
+    const forwardedHeaders = Object.fromEntries([...request.headers].filter(([name, value]) => typeof value === "string" && !["connection", "content-length", "host", "transfer-encoding"].includes(name)));
     const upstreamUrl = new URL(request.url.slice(prefix.length) || "/", target);
     const upstream = await new Promise((resolve, reject) => {
       const upstreamRequest = http.request(upstreamUrl, { method: request.method, headers: forwardedHeaders }, (upstreamResponse) => resolve(upstreamResponse));
@@ -30,11 +30,10 @@ const server = http.createServer(async (request, response) => {
       if (body) upstreamRequest.write(body);
       upstreamRequest.end();
     });
-    const responseHeaders = Object.fromEntries(Object.entries(upstream.headers).filter(([name]) => !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
-    response.writeHead(upstream.statusCode ?? 502, responseHeaders);
+    response.writeHead(upstream.statusCode ?? 502);
     upstream.pipe(response);
   } catch (error) {
-    console.error(`sandbox gateway request failed: ${error?.cause?.code ?? error?.code ?? error?.name ?? "unknown"} ${error?.cause?.message ?? ""}`.trim());
+    console.error(`sandbox gateway request failed: ${error?.cause?.code ?? error?.code ?? error?.name ?? "unknown"} ${error?.cause?.message ?? error?.message ?? ""}`.trim());
     if (!response.headersSent) response.writeHead(502, { "content-type": "text/plain" });
     response.end("sandbox gateway upstream failure");
   }
