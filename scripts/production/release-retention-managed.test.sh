@@ -19,6 +19,7 @@ health_status=pass
 deploy_status=success
 EOF
   printf 'health_status=pass\ndeploy_status=success\n' > "$1/.deploy-success"
+  printf 'deadbeef  .artifact-manifest.json\n' > "$1/.artifact-manifest.sha256"
   mkdir -p "$1/.next"
   touch "$1/.next/BUILD_ID" "$1/required-route-manifest.json"
 }
@@ -46,9 +47,11 @@ cat > "$bin/curl" <<'EOF'
 exit 0
 EOF
 chmod +x "$bin/systemctl" "$bin/curl"
+meta_before=$(sha256sum "$root/current-release/.release-meta" | awk '{print $1}')
 THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc bash scripts/production/mark-release-success.sh "$root/current-release"
 grep -F 'health_status=pass' "$root/current-release/.deploy-success"
 grep -F 'deploy_status=success' "$root/current-release/.deploy-success"
+test "$meta_before" = "$(sha256sum "$root/current-release/.release-meta" | awk '{print $1}')"
 out=$(THOIDAI_RELEASE_ROOT="$root" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_SERVICE=svc THOIDAI_RETENTION_REFERENCE_ROOTS="$bin/refs" THOIDAI_RETENTION_REFERENCE_CHECK_MODE=filesystem THOIDAI_RETENTION_NOW_EPOCH=1791763200 bash scripts/production/release-retention.sh --dry-run)
 printf '%s\n' "$out"
 grep -F "$root/current-release" <<<"$out" | grep -F current

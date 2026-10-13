@@ -17,7 +17,7 @@ for target in "$current_target" ${previous_target:+"$previous_target"} ${rollbac
 done
 set_link() {
   local target=$1 name=$2
-  ln -s -- "$target" "$release_root/$name.new"
+  ln -sfn -- "$target" "$release_root/$name.new"
   mv -Tf -- "$release_root/$name.new" "$release_root/$name"
 }
 set_link "$current_target" current

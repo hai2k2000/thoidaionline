@@ -1,5 +1,27 @@
 # Thoidai Work3 PR #6 Final Review & Fix
 
+## Phase 3A Rollback Safety Correction
+
+Current Phase: implementation complete; PR #12 owner merge review
+Current Task: continuous deploy locking, fail-closed automatic rollback, and immutable deployment evidence
+
+Completed:
+- Kept one deploy lock continuously held across activation, health/smoke validation, and automatic rollback.
+- Added explicit rollback for pointer mutation, restart, health, contract-smoke, and browser-smoke failures.
+- Restored the complete pre-activation pointer snapshot and emitted durable CRITICAL evidence when rollback cannot prove health.
+- Preserved manual rollback as an independently locked command.
+- Stopped rewriting `.release-meta`; deployment success is recorded separately in `.deploy-success` with original metadata and manifest digests.
+- Added Linux fixture regression coverage to the canonical PR workflow.
+
+Validation:
+- Focused source tests: PASS.
+- Shell syntax and `git diff --check`: PASS.
+- Behavioral Linux fixture covers restart, health, contract, browser, pointer mutation, concurrent lock rejection, full snapshot restoration, and rollback failure evidence.
+- Production mutation: NONE.
+
+Next:
+- Push PR #12 update, require GitHub CI PASS, then stop for owner merge review. Do not merge or deploy.
+
 Current Phase: COMPLETE; owner merge review
 Current Task: Asset UI permission management final review
 

@@ -12,4 +12,5 @@ test("rollback can restore the complete lifecycle pointer snapshot", () => {
   assert.match(source, /set_link "\$previous_target" previous/);
   assert.match(source, /set_link "\$rollback_1_target" rollback-1/);
   assert.match(source, /set_link "\$rollback_2_target" rollback-2/);
+  assert.match(source, /flock -n 9/);
 });

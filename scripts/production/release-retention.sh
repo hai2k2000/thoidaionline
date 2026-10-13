@@ -76,8 +76,6 @@ managed_release() {
   [[ "$(meta_value "$meta" canonical_baseline)" == "$THOIDAI_CANONICAL_BASELINE" ]] || return 1
   [[ "$(meta_value "$meta" protection)" == managed ]] || return 1
   [[ "$(meta_value "$meta" rollback_eligible)" == yes ]] || return 1
-  [[ "$(meta_value "$meta" health_status)" == pass ]] || return 1
-  [[ "$(meta_value "$meta" deploy_status)" == success ]] || return 1
   grep -q '^health_status=pass$' "$path/.deploy-success" || return 1
   grep -q '^deploy_status=success$' "$path/.deploy-success" || return 1
 }
