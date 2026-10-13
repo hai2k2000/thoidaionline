@@ -24,7 +24,6 @@ jobs:
     env:
       OLD_APP_COMMIT: bd4803933d6b98fd6996852992be566e6286ea67
       NEW_APP_COMMIT: 36b4c117a365355062ccfa5d78afbfb7a2be7197
-      E2E_ENV_FILE: ${{ runner.temp }}/thoidai-e2e.env
     steps:
       - name: Checkout harness source
         uses: actions/checkout@v4
@@ -58,7 +57,7 @@ jobs:
         shell: bash
         run: |
           bash scripts/e2e/start-sandbox.sh
-          cat "$E2E_ENV_FILE" >> "$GITHUB_ENV"
+          cat "$RUNNER_TEMP/thoidai-e2e.env" >> "$GITHUB_ENV"
 
       - name: Prepare exact old and new source worktrees
         shell: bash
@@ -73,7 +72,7 @@ jobs:
           ROLE_LIFECYCLE_ENABLED: 'true'
           THOIDAI_BUILD_CONFIG: sandbox-e2e
         run: |
-          set -a; source "$E2E_ENV_FILE"; set +a
+          set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL"
           export NEXT_PUBLIC_SUPABASE_ANON_KEY="$E2E_ANON_KEY"
           export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
@@ -90,7 +89,7 @@ jobs:
           ROLE_LIFECYCLE_ENABLED: 'true'
           THOIDAI_BUILD_CONFIG: sandbox-e2e
         run: |
-          set -a; source "$E2E_ENV_FILE"; set +a
+          set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL"
           export NEXT_PUBLIC_SUPABASE_ANON_KEY="$E2E_ANON_KEY"
           export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
@@ -112,7 +111,7 @@ jobs:
           ROLE_LIFECYCLE_ENABLED: 'true'
           PORT: '3102'
         run: |
-          set -a; source "$E2E_ENV_FILE"; set +a
+          set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET"
           nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-old.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-old.pid"
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3102/login >/dev/null 2>&1 && break; sleep 1; done
@@ -128,7 +127,7 @@ jobs:
           PORT: '3103'
           TASK_RBAC_V2_ENABLED: 'true'
         run: |
-          set -a; source "$E2E_ENV_FILE"; set +a
+          set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET"
           nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-new.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-new.pid"
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3103/login >/dev/null 2>&1 && break; sleep 1; done
@@ -152,11 +151,11 @@ jobs:
         run: |
           git worktree remove --force "$RUNNER_TEMP/thoidai-old" 2>/dev/null || true
           git worktree remove --force "$RUNNER_TEMP/thoidai-new" 2>/dev/null || true
-          if [ -f "$E2E_ENV_FILE" ]; then
-            network=$(sed -n 's/^E2E_NETWORK=//p' "$E2E_ENV_FILE")
-            postgres=$(sed -n 's/^E2E_POSTGRES_CONTAINER=//p' "$E2E_ENV_FILE")
-            postgrest=$(sed -n 's/^E2E_POSTGREST_CONTAINER=//p' "$E2E_ENV_FILE")
+          if [ -f "$RUNNER_TEMP/thoidai-e2e.env" ]; then
+            network=$(sed -n 's/^E2E_NETWORK=//p' "$RUNNER_TEMP/thoidai-e2e.env")
+            postgres=$(sed -n 's/^E2E_POSTGRES_CONTAINER=//p' "$RUNNER_TEMP/thoidai-e2e.env")
+            postgrest=$(sed -n 's/^E2E_POSTGREST_CONTAINER=//p' "$RUNNER_TEMP/thoidai-e2e.env")
             docker rm -f "$postgrest" "$postgres" >/dev/null 2>&1 || true
             docker network rm "$network" >/dev/null 2>&1 || true
-            rm -f "$E2E_ENV_FILE"
+            rm -f "$RUNNER_TEMP/thoidai-e2e.env"
           fi
