@@ -824,6 +824,7 @@ Completed:
 - Excluded the disposable harness from Next standalone tracing so production artifact secret scans cannot package test fixture scripts.
 - Masked every generated sandbox JWT, session secret, and test password before exporting workflow environment state.
 - Old/new sandbox builds and migration setup pass; the first runtime attempt exposed an old-app sandbox login 401 and now includes non-secret schema/log diagnostics for root-cause closure.
+- Legacy runtime harness uses `ROLE_LIFECYCLE_ENABLED=false` to exercise the old resolver against the migrated schema without requiring the newer role-lifecycle join; new RBAC V2 runtime remains lifecycle-enabled.
 
 Validation:
 - Harness contract tests: 3/3 PASS.

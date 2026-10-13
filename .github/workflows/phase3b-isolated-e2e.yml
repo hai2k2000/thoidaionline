@@ -114,7 +114,7 @@ jobs:
         shell: bash
         working-directory: ${{ runner.temp }}/thoidai-old
         env:
-          ROLE_LIFECYCLE_ENABLED: 'true'
+          ROLE_LIFECYCLE_ENABLED: 'false'
           PORT: '3102'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
@@ -131,6 +131,7 @@ jobs:
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           docker exec "$E2E_POSTGRES_CONTAINER" psql -At -U postgres -d thoidai_e2e -c "select username, active, session_version, must_change_password, (password_hash is not null), (password is not null) from public.staff_users where username in ('e2e-admin','e2e-employee') order by username" || true
+          curl -fsS -H "apikey: $E2E_SERVICE_ROLE_KEY" -H "Authorization: Bearer $E2E_SERVICE_ROLE_KEY" "$E2E_POSTGREST_URL/staff_users?username=eq.e2e-admin&select=username,active,session_version,must_change_password,password_hash,password,roles(active)" | sed -E 's/"password_hash":"[^"]+"/"password_hash":"[redacted]"/g; s/"password":"[^"]+"/"password":"[redacted]"/g' || true
           tail -n 120 "$RUNNER_TEMP/thoidai-old.log" || true
 
       - name: Run new application authenticated HTTP and browser E2E
