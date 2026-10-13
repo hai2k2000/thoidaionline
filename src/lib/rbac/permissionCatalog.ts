@@ -25,3 +25,8 @@ export const RBAC_PERMISSION_CODES = [
 ] as const;
 
 export type RbacPermissionCode = (typeof RBAC_PERMISSION_CODES)[number];
+
+export function isCatalogPermission(code: string): code is RbacPermissionCode {
+  return (RBAC_PERMISSION_CODES as readonly string[]).includes(code);
+}
+export { supportedScopesForPermission } from "./permissionScopes.mjs";

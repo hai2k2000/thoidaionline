@@ -61,14 +61,16 @@ test("permissions route requires server permission.manage and protects mutations
   assert.match(route, /permissions/);
 });
 
-test("permissions page presents the role/module/permission/scope hierarchy and Quick Report controls", () => {
+test("permissions page presents the catalog-driven role and user override controls", () => {
   const page = readFileSync("src/app/permissions/page.tsx", "utf8");
   assert.match(page, /ROLE|Vai trò/);
   assert.match(page, /MODULE|Mô-đun|module/i);
   assert.match(page, /PERMISSION|Quyền|permission/i);
   assert.match(page, /SCOPE|Phạm vi|scope/i);
-  assert.match(page, /task\.quick_report\.create/);
-  assert.match(page, /Tạo\/Báo cáo công việc phát sinh/);
+  assert.match(page, /Theo người dùng/);
+  assert.match(page, /Kế thừa/);
+  assert.match(page, /Chặn riêng/);
+  assert.match(page, /Lưu thay đổi/);
   assert.match(page, /method:\s*["']POST["']/);
   assert.doesNotMatch(page, /Tạo vai trò|Thêm vai trò|Đổi tên|Khóa|Mở khóa/);
 });
