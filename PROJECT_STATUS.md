@@ -833,7 +833,7 @@ Validation:
 - Local Windows Docker/PostgreSQL/browser E2E: NOT RUN; the disposable Linux workflow is the authoritative runtime gate.
 
 Blockers:
-- Latest disposable-runner attempt (`38365590825`) stopped before either runtime suite because the ad-hoc Playwright install failed during npm peer resolution; sandbox setup and both builds passed. The workflow now installs the runner with `--no-package-lock --legacy-peer-deps` so the disposable browser dependency cannot rewrite application dependency state.
+- Disposable-runner attempt `38365590825` stopped before either runtime suite because the ad-hoc Playwright install failed during npm peer resolution; run `38367362901` confirms the hardened install PASS, sandbox setup/builds PASS, then the old-app login gate still returned 401. Failure diagnostics are now retained as a redacted, runner-generated artifact because this GitHub token cannot download raw job logs.
 - Production migration/deployment/activation remains prohibited.
 
 Next:
