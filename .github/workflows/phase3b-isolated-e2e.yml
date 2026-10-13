@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
-          env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" nohup node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" </dev/null > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
+          E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
           trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
           for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
@@ -135,7 +135,7 @@ jobs:
           PORT: '3102'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
-          env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" nohup node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" </dev/null > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
+          E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
           trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
           for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
@@ -202,7 +202,7 @@ jobs:
           TASK_RBAC_V2_ENABLED: 'true'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
-          env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" nohup node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" </dev/null > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
+          E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
           trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
           for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
