@@ -808,3 +808,30 @@ Decision:
 
 Next:
 - Owner may merge PR #14. Keep production activation blocked and provide an isolated runtime E2E environment before migration approval.
+
+## Phase 3B.1 Isolated Authenticated E2E Harness
+
+Current Phase: IN PROGRESS; owner review after disposable GitHub Actions run
+Current Task: Build and validate isolated old-app/new-RBAC-V2 authenticated E2E harness
+
+Completed:
+- Added `.github/workflows/phase3b-isolated-e2e.yml` for Ubuntu 24.04 disposable-runner execution.
+- Added a localhost-only PostgreSQL 17 + PostgREST sandbox with the representative migration chain through `20261015100000_rbac_v2_role_user_overrides.sql`.
+- Added exact old (`bd4803933d6b98fd6996852992be566e6286ea67`) and canonical (`36b4c117a365355062ccfa5d78afbfb7a2be7197`) sandbox builds.
+- Added authenticated HTTP checks for login/session, assets, permission management, quick report, allow/deny overrides, and self-elevation protection.
+- Added authenticated browser smoke for `/login`, `/assets`, and `/tasks/quick-report`.
+- Added harness contract tests and isolation documentation.
+
+Validation:
+- Harness contract tests: 3/3 PASS.
+- Bash syntax: PASS.
+- `git diff --check`: PASS.
+- Local Windows Docker/PostgreSQL/browser E2E: NOT RUN; the disposable Linux workflow is the authoritative runtime gate.
+
+Blockers:
+- Awaiting GitHub Actions disposable-runner evidence for old-app and new-app runtime E2E.
+- Production migration/deployment/activation remains prohibited.
+
+Next:
+- Commit/push this branch and open a PR targeting `integration/production`.
+- Review the workflow run evidence; report `PASS` only after both runtime suites and browser smoke pass.

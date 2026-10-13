@@ -1,0 +1,162 @@
+name: Phase 3B.1 Isolated Authenticated E2E
+# NO production credentials, endpoints, backups, or runtime secrets are used.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [integration/production]
+    paths:
+      - 'scripts/e2e/**'
+      - '.github/workflows/phase3b-isolated-e2e.yml'
+      - 'PROJECT_STATUS.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase3b-isolated-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-authenticated-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      OLD_APP_COMMIT: bd4803933d6b98fd6996852992be566e6286ea67
+      NEW_APP_COMMIT: 36b4c117a365355062ccfa5d78afbfb7a2be7197
+      E2E_ENV_FILE: ${{ runner.temp }}/thoidai-e2e.env
+    steps:
+      - name: Checkout harness source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare canonical lineage ref
+        shell: bash
+        run: |
+          git fetch origin integration/production:refs/remotes/origin/integration/production
+          remote_sha=$(git rev-parse refs/remotes/origin/integration/production)
+          if git show-ref --verify --quiet refs/heads/integration/production; then
+            test "$(git rev-parse refs/heads/integration/production)" = "$remote_sha"
+          else
+            git branch integration/production "$remote_sha"
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Install harness dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate harness contracts
+        run: node --test scripts/e2e/isolated-e2e.test.mjs
+
+      - name: Start disposable PostgreSQL/PostgREST sandbox
+        shell: bash
+        run: |
+          bash scripts/e2e/start-sandbox.sh
+          cat "$E2E_ENV_FILE" >> "$GITHUB_ENV"
+
+      - name: Prepare exact old and new source worktrees
+        shell: bash
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/thoidai-old" "$OLD_APP_COMMIT"
+          git worktree add --detach "$RUNNER_TEMP/thoidai-new" "$NEW_APP_COMMIT"
+
+      - name: Build old application with sandbox public endpoint
+        shell: bash
+        working-directory: ${{ runner.temp }}/thoidai-old
+        env:
+          ROLE_LIFECYCLE_ENABLED: 'true'
+          THOIDAI_BUILD_CONFIG: sandbox-e2e
+        run: |
+          set -a; source "$E2E_ENV_FILE"; set +a
+          export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL"
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY="$E2E_ANON_KEY"
+          export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
+          export SESSION_SECRET="$E2E_SESSION_SECRET"
+          npm ci --no-audit --no-fund
+          npm run build
+          cp -a .next/static .next/standalone/.next/static
+          if [ -d public ]; then cp -a public .next/standalone/public; fi
+
+      - name: Build new RBAC V2 application with sandbox public endpoint
+        shell: bash
+        working-directory: ${{ runner.temp }}/thoidai-new
+        env:
+          ROLE_LIFECYCLE_ENABLED: 'true'
+          THOIDAI_BUILD_CONFIG: sandbox-e2e
+        run: |
+          set -a; source "$E2E_ENV_FILE"; set +a
+          export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL"
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY="$E2E_ANON_KEY"
+          export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
+          export SESSION_SECRET="$E2E_SESSION_SECRET"
+          npm ci --no-audit --no-fund
+          npm run build
+          cp -a .next/static .next/standalone/.next/static
+          if [ -d public ]; then cp -a public .next/standalone/public; fi
+
+      - name: Install disposable browser runner
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.51.1
+          npx playwright install --with-deps chromium
+
+      - name: Run old application authenticated HTTP E2E
+        shell: bash
+        working-directory: ${{ runner.temp }}/thoidai-old
+        env:
+          ROLE_LIFECYCLE_ENABLED: 'true'
+          PORT: '3102'
+        run: |
+          set -a; source "$E2E_ENV_FILE"; set +a
+          export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET"
+          nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-old.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-old.pid"
+          for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3102/login >/dev/null 2>&1 && break; sleep 1; done
+          test -s "$RUNNER_TEMP/thoidai-old.pid"
+          E2E_BASE_URL=http://127.0.0.1:3102 E2E_MODE=old node "$GITHUB_WORKSPACE/scripts/e2e/http-smoke.mjs"
+          kill "$(cat "$RUNNER_TEMP/thoidai-old.pid")" || true
+
+      - name: Run new application authenticated HTTP and browser E2E
+        shell: bash
+        working-directory: ${{ runner.temp }}/thoidai-new
+        env:
+          ROLE_LIFECYCLE_ENABLED: 'true'
+          PORT: '3103'
+          TASK_RBAC_V2_ENABLED: 'true'
+        run: |
+          set -a; source "$E2E_ENV_FILE"; set +a
+          export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET"
+          nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-new.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-new.pid"
+          for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3103/login >/dev/null 2>&1 && break; sleep 1; done
+          test -s "$RUNNER_TEMP/thoidai-new.pid"
+          E2E_BASE_URL=http://127.0.0.1:3103 node "$GITHUB_WORKSPACE/scripts/e2e/http-smoke.mjs"
+          browser_path=$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux/chrome' | head -n 1)
+          test -n "$browser_path"
+          E2E_BASE_URL=http://127.0.0.1:3103 E2E_BROWSER_EXECUTABLE_PATH="$browser_path" node "$GITHUB_WORKSPACE/scripts/e2e/browser-smoke.mjs"
+          kill "$(cat "$RUNNER_TEMP/thoidai-new.pid")" || true
+
+      - name: Sandbox resource evidence
+        if: always()
+        shell: bash
+        run: |
+          df -h "$RUNNER_TEMP" || true
+          docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
+
+      - name: Destroy disposable sandbox and worktrees
+        if: always()
+        shell: bash
+        run: |
+          git worktree remove --force "$RUNNER_TEMP/thoidai-old" 2>/dev/null || true
+          git worktree remove --force "$RUNNER_TEMP/thoidai-new" 2>/dev/null || true
+          if [ -f "$E2E_ENV_FILE" ]; then
+            network=$(sed -n 's/^E2E_NETWORK=//p' "$E2E_ENV_FILE")
+            postgres=$(sed -n 's/^E2E_POSTGRES_CONTAINER=//p' "$E2E_ENV_FILE")
+            postgrest=$(sed -n 's/^E2E_POSTGREST_CONTAINER=//p' "$E2E_ENV_FILE")
+            docker rm -f "$postgrest" "$postgres" >/dev/null 2>&1 || true
+            docker network rm "$network" >/dev/null 2>&1 || true
+            rm -f "$E2E_ENV_FILE"
+          fi
