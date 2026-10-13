@@ -66,6 +66,8 @@ test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () 
   assert.match(sdkProbe, /createClient/);
   assert.match(sdkProbe, /direct root endpoint unexpectedly accepted/);
   assert.match(sdkProbe, /sandbox gateway did not satisfy/);
+  assert.match(sdkProbe, /directHttpStatus/);
+  assert.match(sdkProbe, /gatewayHttpStatus/);
   assert.match(workflow, /node scripts\/e2e\/sandbox-gateway\.mjs/);
   assert.match(workflow, /node scripts\/e2e\/supabase-sdk-probe\.mjs/);
   assert.match(workflow, /NEXT_PUBLIC_SUPABASE_URL=\"\$E2E_SUPABASE_URL\"/);

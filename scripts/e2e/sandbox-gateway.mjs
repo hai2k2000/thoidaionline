@@ -21,12 +21,14 @@ const server = http.createServer(async (request, response) => {
     request.on("end", () => resolve(Buffer.concat(chunks)));
     request.on("error", reject);
   });
+  const forwardedHeaders = Object.fromEntries([...request.headers].filter(([name]) => !["connection", "content-length", "host", "transfer-encoding"].includes(name)));
   const upstream = await fetch(new URL(request.url.slice(prefix.length) || "/", target), {
     method: request.method,
-    headers: request.headers,
+    headers: forwardedHeaders,
     body,
   });
-  response.writeHead(upstream.status, Object.fromEntries(upstream.headers));
+  const responseHeaders = Object.fromEntries([...upstream.headers].filter(([name]) => !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
+  response.writeHead(upstream.status, responseHeaders);
   response.end(Buffer.from(await upstream.arrayBuffer()));
 });
 
