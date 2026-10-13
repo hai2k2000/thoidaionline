@@ -54,9 +54,9 @@ Passed locally:
 - TypeScript: PASS (`npm exec tsc -- --noEmit`).
 - Changed-file ESLint: PASS (0 errors, 0 warnings).
 - `git diff --check`: PASS.
-- Existing PR CI build/package checks before this update: PASS (runs `38345282242` and `38345286582`).
+- Fresh post-push GitHub build/package checks: PASS (runs `38347429615` and `38347433629` on commit `72d954e63816438a90ed086a192d484a56b41547`).
 
-Linux-only deployment and rollback fixture scripts were not executable under Windows POSIX emulation and are configured to run in GitHub CI. No Windows packaging failure is treated as an RBAC failure. A fresh post-push Linux artifact run remains required before rollout approval.
+Linux-only deployment and rollback fixture scripts were not executable under Windows POSIX emulation and are configured to run in GitHub CI. No Windows packaging failure is treated as an RBAC failure. The fresh Linux CI artifact run passed; production rollout approval remains separate.
 
 ## Rollout Plan (not executed)
 
@@ -70,7 +70,7 @@ Linux-only deployment and rollback fixture scripts were not executable under Win
 
 ## Remaining Blockers
 
-- Owner merge approval for PR #12 and fresh post-push CI/artifact evidence.
+- Owner merge approval for PR #12.
 - Explicit approval for production migration and activation.
 - Authenticated smoke credentials and a verified deny-aware rollback target.
 - Production post-migration effective-permission and audit-log verification.
