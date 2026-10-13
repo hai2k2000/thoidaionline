@@ -19,6 +19,12 @@ test("packaging keeps guards and env symlinks", () => {
   assert.match(packager, /verify-artifact-manifest\.mjs/);
   assert.match(verifier, /app-paths-manifest\.json/);
 });
+test("artifact migration reference includes RBAC V2 dependency", () => {
+  const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+  const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");
+  assert.match(packager, /20261015100000_rbac_v2_role_user_overrides\.sql/);
+  assert.match(verifier, /20261015100000_rbac_v2_role_user_overrides\.sql/);
+});
 test("runtime uploads stay outside the traced artifact", () => {
   const uploadRoute = readFileSync("src/app/api/hr/upload/route.ts", "utf8");
   assert.match(uploadRoute, /turbopackIgnore/);

@@ -23,6 +23,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261003120000_department_plan_duplicate_guard.sql",
   "supabase/migrations/20261004100000_department_plan_saturday_friday.sql",
   "supabase/migrations/20261004110000_department_plan_friday_friday.sql",
+  "supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);
