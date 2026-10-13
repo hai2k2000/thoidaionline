@@ -20,3 +20,12 @@
 - Không được báo hoàn thành khi source đã triển khai nhưng vẫn còn commit local chưa push hoặc file thuộc phạm vi còn dirty/untracked.
 - Không force-push, không rewrite history và không đưa file môi trường, credential, backup, build output hoặc runtime artifact vào Git.
 - Nếu push thất bại, phải báo blocker cùng bằng chứng; không được mô tả dự án là đã đồng bộ Git.
+
+## EXTERNAL ARTIFACT BUILD VÀ RELEASE LIFECYCLE
+
+- Build/test/package production chạy trên GitHub Actions; không chạy `npm ci` hoặc `next build` trên VPS trong quy trình external-artifact.
+- Artifact phải là Next.js standalone, có `.release-meta`, `.artifact-manifest.json`, `.artifact-manifest.sha256` và provenance/checksum verification trước khi bàn giao.
+- Runtime secrets không được đóng gói. Artifact CI dùng `env_model=runtime-injected`; chỉ deployment gate được phép gắn runtime env tại thời điểm activation.
+- `scripts/production/deploy-external-artifact.sh` mặc định verify-only; activation phải có owner approval và ủy quyền rõ ràng, sau đó delegate cho `deploy-gate.sh`.
+- Lifecycle mới giữ current/previous/rollback-1/rollback-2, bảo vệ `.keep`, evidence, references và UNKNOWN; retention chỉ dry-run cho đến khi có phê duyệt APPLY riêng.
+- Mọi build/worktree mới phải có metadata và kiểm tra hard floor disk 20 GiB. Không backfill metadata legacy trong Phase 1.

@@ -3,8 +3,9 @@ set -Eeuo pipefail
 artifact=${1:?usage: $0 <artifact>}
 release_root=${THOIDAI_RELEASE_ROOT:-/opt/releases/thoidai-work}
 lock_file=${THOIDAI_DEPLOY_LOCK:-/run/lock/thoidai-work-deploy.lock}
-hard_min_free_kb=${THOIDAI_HARD_MIN_FREE_KB:-5242880}
+hard_min_free_kb=${THOIDAI_HARD_MIN_FREE_KB:-20971520}
 estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-1048576}
+[[ "$hard_min_free_kb" =~ ^[0-9]+$ && "$estimated_headroom_kb" =~ ^[0-9]+$ ]] || { echo "DEPLOY ABORTED: invalid disk gate values" >&2; exit 1; }
 [[ -d "$artifact" && -f "$artifact/.release-meta" ]] || { echo "artifact missing metadata" >&2; exit 1; }
 free_kb=$(df -Pk "$release_root" | awk 'NR==2 {print $4}')
 if (( free_kb < hard_min_free_kb || free_kb - estimated_headroom_kb < hard_min_free_kb )); then
@@ -16,9 +17,21 @@ if [[ "${THOIDAI_CANARY_ONLY:-0}" == 1 ]]; then echo "canary gate: PASS"; exit 0
 "$(dirname "$0")/nginx-supa-buffer-guard.sh"
 new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 [[ ! -e "$new_release" && ! -L "$new_release" ]] || { echo "release target already exists" >&2; exit 1; }
+node "$artifact/verify-standalone-artifact.mjs" "$artifact"
+build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release-meta")
+[[ "$build_config" == canonical-public ]] || { echo "DEPLOY ABORTED: artifact build config is not canonical-public" >&2; exit 1; }
 cp -a -- "$artifact" "$new_release"
+node "$new_release/verify-standalone-artifact.mjs" "$new_release"
 install -d -o "${THOIDAI_SERVICE_USER:-thoidai-work}" -g "${THOIDAI_SERVICE_GROUP:-thoidai-work}" -m 0750 -- "$new_release/.next/cache"
 chown "${THOIDAI_SERVICE_USER:-thoidai-work}:${THOIDAI_SERVICE_GROUP:-thoidai-work}" -- "$new_release/.next/cache"
+env_model=$(awk -F= '$1=="env_model" {print $2; exit}' "$new_release/.release-meta")
+if [[ "$env_model" == runtime-injected ]]; then
+  shared_root=${THOIDAI_SHARED_ROOT:-/opt/thoidai-work}
+  for name in .env.local .env.production; do
+    [[ -f "$shared_root/$name" ]] || { echo "runtime environment file missing: $shared_root/$name" >&2; exit 1; }
+    ln -s -- "$shared_root/$name" "$new_release/$name"
+  done
+fi
 current_target=$(readlink -f -- "$release_root/current")
 [[ "$current_target" == "$release_root"/* && -d "$current_target" ]] || { echo "current release target invalid" >&2; exit 1; }
 rollback_1_target=$(readlink -f -- "$release_root/rollback-1" 2>/dev/null || true)

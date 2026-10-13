@@ -695,3 +695,53 @@ Production mutation: NONE.
 
 Next:
 - Owner review only; do not migrate, deploy, restart, or change production grants without separate authorization.
+# External CI Lifecycle Phase 1 Hardening
+
+Current Phase: COMPLETE; pre-merge owner approval
+Current Task: final merge gate and Phase 2 preparation
+
+Completed:
+- Added explicit artifact `build_config` provenance. CI artifacts built with reserved Supabase placeholders are marked `ci-placeholder` and remain verification/rehearsal-only.
+- Added fail-closed activation checks in the external artifact wrapper and deployment gate; only `canonical-public` artifacts can activate.
+- Added canonical public-config validation using repository/environment public variables while keeping the service-role key a non-production placeholder in CI.
+- Added canonical artifact placeholder scanning and focused regression coverage.
+- Retention remains dry-run by default; no APPLY or unattended deletion was enabled.
+
+Validation:
+- Focused Phase 1 hardening tests: 20/20 PASS.
+- Node syntax checks: PASS.
+- `git diff --check`: PASS.
+- Previous sealed CI evidence: 18/18 PASS.
+- New GitHub Actions push and pull-request runs for `b1f41955adf7519c3d69ffce30d85f0811e9e378`: PASS.
+- Production mutation: NONE.
+
+Blockers:
+- None for source merge, subject to owner merge approval.
+
+Follow Up:
+- After PR #9 and RuleCodex PR #2 are actually merged, run Phase 2 Safe Rehearsal only: retrieve post-merge canonical artifact, verify provenance/checksum, read-only VPS disk gate, isolated staging verify-only/alternate-port smoke, safe rollback simulation, and retention dry-run.
+
+Next:
+- READY TO MERGE PR #9 and PR #2; do not merge, activate, restart, migrate, change production symlinks/timers, or run cleanup APPLY without separate approval.
+# Artifact Upload Integrity Hotfix
+
+Current Phase: Phase 1 hotfix; owner merge review
+Current Task: Preserve hidden artifact metadata and verify upload/download round-trip
+
+Completed:
+- Added hidden-file inclusion to the immutable artifact upload.
+- Added same-run artifact download and verify-only round-trip checks.
+- Added regression coverage for hidden metadata, required runtime files, secret scan, and deployment non-activation.
+
+Validation:
+- Focused upload-integrity tests: PASS.
+- PR CI run `38323389570`: PASS.
+- Canonical/public build was intentionally not expected on PR; artifact was `ci-placeholder` and remains verification-only.
+- Uploaded ZIP round-trip: hidden metadata present; standalone verifier, checksum verifier, secret scan, and symlink portability checks PASS.
+- Production/VPS changed: NO.
+
+Blockers:
+- Canonical artifact from run 38319801598 remains invalid for Phase 2 because its archive omitted hidden metadata.
+
+Next:
+- Owner merge review for PR #11; after merge, rerun canonical CI and verify a new `canonical-public` artifact before Phase 2.
