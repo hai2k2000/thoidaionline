@@ -8,6 +8,16 @@ const httpSmoke = readFileSync(new URL("./http-smoke.mjs", import.meta.url), "ut
 const browserSmoke = readFileSync(new URL("./browser-smoke.mjs", import.meta.url), "utf8");
 const gateway = readFileSync(new URL("./sandbox-gateway.mjs", import.meta.url), "utf8");
 const sdkProbe = readFileSync(new URL("./supabase-sdk-probe.mjs", import.meta.url), "utf8");
+const fixtureSources = [fixture, httpSmoke, sdkProbe];
+
+test("sandbox fixture UUIDs are valid deterministic UUID v4 values", () => {
+  const uuidLike = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
+  const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const fixtureIds = fixtureSources.flatMap((source) => source.match(uuidLike) ?? []);
+
+  assert.ok(fixtureIds.length > 0, "expected deterministic UUID fixtures");
+  for (const fixtureId of fixtureIds) assert.match(fixtureId, uuidV4);
+});
 
 test("isolated workflow is disposable and non-production", () => {
   assert.match(workflow, /workflow_dispatch/);

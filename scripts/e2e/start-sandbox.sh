@@ -117,16 +117,16 @@ for file in "${files[@]}"; do
   if [[ "$file" == "20260318101500_baseline.sql" ]]; then
     docker exec -i "$postgres" psql -v ON_ERROR_STOP=1 -U postgres -d thoidai_e2e <<'SQL' >/dev/null
 insert into public.departments(id,code,name,active) values
-  ('10000000-0000-0000-0000-000000000001','e2e','E2E Department',true),
-  ('10000000-0000-0000-0000-000000000002','e2e-other','E2E Other',true)
+  ('10000000-0000-4000-8000-000000000001','e2e','E2E Department',true),
+  ('10000000-0000-4000-8000-000000000002','e2e-other','E2E Other',true)
 on conflict (id) do nothing;
 insert into public.roles(id,code,name,level) values
-  ('20000000-0000-0000-0000-000000000001','admin','E2E Admin',10),
-  ('20000000-0000-0000-0000-000000000002','nhan_vien','E2E Employee',1)
+  ('20000000-0000-4000-8000-000000000001','admin','E2E Admin',10),
+  ('20000000-0000-4000-8000-000000000002','nhan_vien','E2E Employee',1)
 on conflict (id) do nothing;
 insert into public.role_permissions(role_id,can_manage_users,can_manage_permissions,can_create_task,can_edit_all_tasks,can_comment)
-values ('20000000-0000-0000-0000-000000000001',true,true,true,true,true),
-       ('20000000-0000-0000-0000-000000000002',false,false,true,false,true)
+values ('20000000-0000-4000-8000-000000000001',true,true,true,true,true),
+       ('20000000-0000-4000-8000-000000000002',false,false,true,false,true)
 on conflict (role_id) do update set can_manage_users=excluded.can_manage_users, can_manage_permissions=excluded.can_manage_permissions;
 SQL
   fi
@@ -149,25 +149,25 @@ password_hash=$(E2E_PASSWORD="$test_password" node --input-type=module -e "impor
 docker exec -i "$postgres" psql -v ON_ERROR_STOP=1 -U postgres -d thoidai_e2e <<SQL >/dev/null
 insert into public.staff_users(id,full_name,username,email,password_hash,password,role_id,department_id,active,session_version,must_change_password,preferences)
 values
- ('30000000-0000-0000-0000-000000000001','E2E Admin','e2e-admin','e2e-admin@test.invalid','$password_hash',null,'20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001',true,0,false,'{}'),
- ('30000000-0000-0000-0000-000000000002','E2E Employee','e2e-employee','e2e-employee@test.invalid','$password_hash',null,'20000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000001',true,0,false,'{}')
+ ('30000000-0000-4000-8000-000000000001','E2E Admin','e2e-admin','e2e-admin@test.invalid','$password_hash',null,'20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001',true,0,false,'{}'),
+ ('30000000-0000-4000-8000-000000000002','E2E Employee','e2e-employee','e2e-employee@test.invalid','$password_hash',null,'20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001',true,0,false,'{}')
 on conflict (id) do update set password_hash=excluded.password_hash,password=null,active=true,must_change_password=false;
 insert into public.permissions(code,name,module,description) values
  ('asset.view','View assets','assets','E2E asset view'),
  ('asset.manage','Manage assets','assets','E2E asset manage')
 on conflict (code) do nothing;
 insert into public.role_permission_grants(role_id,permission_id,scope)
-select '20000000-0000-0000-0000-000000000001', id, 'all' from public.permissions where code in ('asset.view','asset.manage','task.quick_report.create','permission.manage')
+select '20000000-0000-4000-8000-000000000001', id, 'all' from public.permissions where code in ('asset.view','asset.manage','task.quick_report.create','permission.manage')
 on conflict (role_id,permission_id,scope) do nothing;
 insert into public.role_permission_grants(role_id,permission_id,scope)
-select '20000000-0000-0000-0000-000000000002', id, 'assigned' from public.permissions where code='asset.view'
+select '20000000-0000-4000-8000-000000000002', id, 'assigned' from public.permissions where code='asset.view'
 on conflict (role_id,permission_id,scope) do nothing;
 insert into public.assets(id,asset_code,asset_name,category,status,condition_status)
-values ('40000000-0000-0000-0000-000000000001','E2E-001','E2E assigned asset','e2e','in_use','normal'),
-       ('40000000-0000-0000-0000-000000000002','E2E-002','E2E hidden asset','e2e','available','normal')
+values ('40000000-0000-4000-8000-000000000001','E2E-001','E2E assigned asset','e2e','in_use','normal'),
+       ('40000000-0000-4000-8000-000000000002','E2E-002','E2E hidden asset','e2e','available','normal')
 on conflict (id) do update set status=excluded.status,condition_status=excluded.condition_status;
 insert into public.asset_assignments(id,asset_id,assignee_id,department_id,status,created_by)
-values ('50000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000001','active','30000000-0000-0000-0000-000000000001')
+values ('50000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','active','30000000-0000-4000-8000-000000000001')
 on conflict (id) do nothing;
 SQL
 

@@ -77,7 +77,7 @@ if (mode === "old") {
   process.exit(0);
 }
 
-const employeeId = "30000000-0000-0000-0000-000000000002";
+const employeeId = "30000000-0000-4000-8000-000000000002";
 const adminRole = permissionBody.roles?.find((role) => role.code === "admin");
 if (!adminRole) throw new Error("admin role matrix missing");
 const withoutManager = adminRole.modules.flatMap((module) => module.permissions)
@@ -99,7 +99,7 @@ expectStatus(await report(employee, randomUUID()), 403, "employee quick report d
 if (!postgrestUrl || !serviceRoleKey) throw new Error("rollback compatibility probe configuration missing");
 const rollbackGate = async () => fetch(`${postgrestUrl}/rpc/rbac_v2_assert_legacy_rollback_compatible`, { method: "POST", headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}`, "content-type": "application/json" }, body: "{}" });
 if ((await rollbackGate()).ok) throw new Error("rollback compatibility gate accepted an explicit deny");
-const selfOverride = await request("/api/permissions", { method: "POST", headers: { origin: baseUrl, host: new URL(baseUrl).host }, body: JSON.stringify({ action: "set_user_override", userId: "30000000-0000-0000-0000-000000000001", permissionCode: "asset.manage", effect: "allow", scope: "all" }) }, admin);
+const selfOverride = await request("/api/permissions", { method: "POST", headers: { origin: baseUrl, host: new URL(baseUrl).host }, body: JSON.stringify({ action: "set_user_override", userId: "30000000-0000-4000-8000-000000000001", permissionCode: "asset.manage", effect: "allow", scope: "all" }) }, admin);
 expectStatus(selfOverride, 403, "self override protection");
 const restore = await request("/api/permissions", { method: "POST", headers: { origin: baseUrl, host: new URL(baseUrl).host }, body: JSON.stringify({ action: "restore_user_inheritance", userId: employeeId }) }, admin);
 expectStatus(restore, 200, "restore user inheritance");
