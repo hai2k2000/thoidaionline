@@ -7,9 +7,9 @@ Checkpoint: no merge, migration, deploy, restart, or production grant change
 
 ## Decision
 
-**BLOCKED — ready for owner-provided rollout credentials and a later retry.**
+**BLOCKED — secure database preparation is ready; authenticated smoke session remains owner-supplied.**
 
-The artifact inventory blocker is closed in canonical production. Database and authenticated smoke mechanisms are identified, but the required approved runtime credentials/session are not available in the current rollout process. No production mutation was attempted.
+The artifact inventory blocker is closed in canonical production. The Docker-local database path passed read-only migration dry-run and rollback compatibility checks. The authenticated smoke session remains owner-supplied at retry time. No production mutation was attempted.
 
 ## Blocker A — Migration Inventory
 
@@ -41,9 +41,9 @@ Read-only inspection on `vps-aylaspa` found:
 - `user_permission_grants.effect`, `api_list_effective_permissions`, and `rbac_v2_assert_legacy_rollback_compatible` are still absent, as expected before migration.
 - Application `.env` files contain no `DATABASE_URL`, `SUPABASE_DB_URL`, or `THOIDAI_RBAC_DB_URL`. No systemd DB URL was present.
 
-Status: **mechanism identified, approved pipeline credential not provisioned**.
+Status: **Docker-local mechanism verified; no persistent credential was created or stored**.
 
-Required owner action: provide an approved, temporary DB connection to the rollout process through the secure channel, preferably as `THOIDAI_RBAC_DB_URL`, or explicitly authorize the existing Docker-local PostgreSQL runner invocation without persisting its credential. Do not paste the URL/password into chat, commit it, or alter database access configuration.
+Evidence: exact migration dry-run PASS through `THOIDAI_RBAC_DB_URL`; rollback compatibility gate PASS through the same database using a temporary Docker-local `psql` wrapper. Password material existed only in process memory and was not logged or persisted.
 
 ## Blocker C — Authenticated Smoke Readiness
 
@@ -54,7 +54,7 @@ Existing smoke mechanisms were confirmed:
 - Deployment gate requires authenticated smoke evidence for activation; authentication is never bypassed.
 - Current rollout environment has neither smoke variable set. No production user, password, session, cookie, or bearer token was created or changed.
 
-Required owner action: perform an authorized login through the normal secure channel and make a short-lived cookie or bearer value available to the deployment process without sending it in chat. Smoke should use an approved test/owner account and must not alter real user grants.
+Required owner action: perform an authorized login and enter a short-lived cookie or bearer value directly in a private VPS shell without sending it in chat. Verify account identity and required permissions read-only before activation. See `docs/operations/rbac-v2-secure-rollout-inputs.md`.
 
 ## Additional Safety Verification
 
@@ -74,6 +74,9 @@ On clean branch `codex/rbac-v2-rollout-blocker-closure` from canonical `36b4c117
 - Changed-file ESLint: PASS.
 - `git diff --check`: PASS.
 - Canonical CI artifact run `38353438657`: PASS.
+- Exact migration dry-run against Docker-local production DB: PASS; SHA-256 `6755059e92c145d60582e1b1e3a483690ddf6d770cc13fcc7eb44785554ac20c`.
+- Read-only rollback compatibility gate against Docker-local production DB: PASS.
+- Unauthenticated protected API probes: expected `401`.
 
 ## Production Safety
 
@@ -86,6 +89,6 @@ On clean branch `codex/rbac-v2-rollout-blocker-closure` from canonical `36b4c117
 
 ## Retry Gate
 
-Retry is allowed only after the owner supplies the secure DB connection and authenticated smoke session, and after a fresh preflight confirms disk, pointers, baseline counts, rollback compatibility path, and final manager protection. The next checkpoint may then perform backup, disposable restore/rehearsal, migration, activation, and smoke under the separately authorized rollout procedure.
+Retry is allowed only after the owner supplies the authenticated smoke session directly on the VPS and a fresh preflight confirms disk, pointers, baseline counts, rollback compatibility, and final manager protection. The Docker-local DB input procedure is ready. The next checkpoint may then perform backup, disposable restore/rehearsal, migration, activation, and smoke under the separately authorized rollout procedure.
 
-Final checkpoint: **RBAC V2 ROLLOUT BLOCKER CLOSURE — BLOCKED**
+Final checkpoint: **RBAC V2 ROLLOUT BLOCKER CLOSURE — BLOCKED (SMOKE SESSION REQUIRED)**
