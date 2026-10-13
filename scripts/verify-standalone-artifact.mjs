@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
 import { existsSync, lstatSync, readFileSync, readlinkSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { verifyManifest } from "./verify-artifact-manifest.mjs";
 
 const root = resolve(process.argv[2] || process.cwd());
 // The runtime cache is created on first start; it is intentionally not an uploaded build requirement.
-for (const path of ["server.js", ".next/BUILD_ID", ".next/server/app-paths-manifest.json", ".next/static", "public", "start-standalone.mjs", "required-route-manifest.json", "RELEASE_BASELINE_COMMIT", "MIGRATION_REFERENCE", ".release-meta", ".artifact-manifest.json", ".artifact-manifest.sha256"]) assert.ok(existsSync(join(root, path)), `missing artifact path: ${path}`);
+for (const path of [
+  "server.js", ".next/BUILD_ID", ".next/server/app-paths-manifest.json", ".next/static", "public", "start-standalone.mjs",
+  "scripts/contract-smoke.mjs", "scripts/required-api-contracts.mjs", "scripts/production/browser-path-smoke.mjs", "src/lib/journalismScope.mjs",
+  "required-route-manifest.json", "RELEASE_BASELINE_COMMIT", "MIGRATION_REFERENCE", ".release-meta", ".artifact-manifest.json", ".artifact-manifest.sha256",
+]) assert.ok(existsSync(join(root, path)), `missing artifact path: ${path}`);
+const smokeContracts = await import(pathToFileURL(join(root, "scripts", "required-api-contracts.mjs")));
+assert.equal(smokeContracts.canUseJournalismForSmoke({ role_code: "admin", department_code: null, rbacPermissions: ["journalism.metadata.update"] }), true, "artifact Journalism allow policy mismatch");
+assert.equal(smokeContracts.canUseJournalismForSmoke({ role_code: "admin", department_code: null, rbacPermissions: [] }), false, "artifact Journalism deny policy mismatch");
 assert.equal(readFileSync(join(root, "RELEASE_BASELINE_COMMIT"), "utf8").trim(), "e501652e969900b97938acccd8f998df4e5d1873", "artifact baseline mismatch");
 assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().split("\n"), [
   "supabase/migrations/20260924120000_task_approval_gates.sql",

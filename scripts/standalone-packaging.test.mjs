@@ -44,3 +44,19 @@ test("managed metadata and success marker are part of future releases", () => {
   assert.match(marker, /health_status=pass/);
   assert.match(marker, /deploy_status=success/);
 });
+
+test("authenticated smoke dependencies are packaged and verified", () => {
+  const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+  const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");
+  const workflow = readFileSync(".github/workflows/production-artifact.yml", "utf8");
+  for (const path of [
+    "scripts/contract-smoke.mjs",
+    "scripts/required-api-contracts.mjs",
+    "scripts/production/browser-path-smoke.mjs",
+    "src/lib/journalismScope.mjs",
+  ]) {
+    assert.match(packager, new RegExp(path.split("/").map((part) => `(?:${part})`).join("[\\\\/]")), path);
+    assert.match(verifier, new RegExp(path.split("/").map((part) => `(?:${part})`).join("[\\\\/]")), path);
+  }
+  assert.match(workflow, /import\(.*required-api-contracts\.mjs/);
+});
