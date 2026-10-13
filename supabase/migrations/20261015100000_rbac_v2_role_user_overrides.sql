@@ -152,9 +152,31 @@ begin
 end
 $function$;
 
--- A legacy application cannot safely downgrade while deny rows exist: dropping
--- the effect column would silently widen access. Rollback tooling must call this
--- gate before activating a version that does not understand explicit denies.
+create or replace function public.rbac_v2_scope_not_wider_than_effective(
+  p_actor_id uuid,
+  p_permission_code text,
+  p_scope text
+) returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $function$
+  select exists (
+    select 1
+    from public.api_list_effective_permissions(p_actor_id) e
+    cross join lateral unnest(e.effective_scopes) as granted_scope(scope)
+    where e.permission_code = p_permission_code
+      and (
+        granted_scope.scope = p_scope
+        or granted_scope.scope = 'all'
+      )
+  );
+$function$;
+
+-- A legacy application cannot safely downgrade while deny rows exist or while
+-- a narrow allow override would be widened by the legacy role/user union.
+-- Rollback tooling must call this gate before activating an older resolver.
 create or replace function public.rbac_v2_assert_legacy_rollback_compatible()
 returns void
 language plpgsql
@@ -164,6 +186,24 @@ as $function$
 begin
   if exists (select 1 from public.user_permission_grants where effect = 'deny') then
     raise exception 'Rollback compatibility gate failed: explicit deny rows exist.' using errcode = '55006';
+  end if;
+  if exists (
+    select 1
+    from public.staff_users u
+    join public.roles r on r.id = u.role_id and r.active = true
+    join public.role_permission_grants rg on rg.role_id = r.id
+    join public.permissions p on p.id = rg.permission_id
+    join public.user_permission_grants ug
+      on ug.user_id = u.id
+     and ug.permission_id = rg.permission_id
+     and ug.effect = 'allow'
+    where u.active = true
+      and not (
+        ug.scope = rg.scope
+        or ug.scope = 'all'
+      )
+  ) then
+    raise exception 'Rollback compatibility gate failed: legacy union would widen a narrow allow override.' using errcode = '55006';
   end if;
 end
 $function$;
@@ -376,11 +416,18 @@ begin
     ) then
       raise exception 'Duplicate permission scope.' using errcode = '22023';
     end if;
-    if p_role_id = v_actor_role_id and not exists (
-      select 1 from public.api_list_effective_permissions(p_actor_id)
-      where permission_code = v_code and cardinality(effective_scopes) > 0
-    ) and jsonb_array_length(v_item->'scopes') > 0 then
-      raise exception 'Self elevation is not allowed.' using errcode = '42501';
+    if p_role_id = v_actor_role_id then
+      for v_scope in select value from jsonb_array_elements_text(v_item->'scopes') loop
+        if not exists (
+          select 1
+          from jsonb_array_elements(v_old) old_item
+          cross join lateral jsonb_array_elements_text(old_item->'scopes') old_scope(scope)
+          where old_item->>'permissionCode' = v_code
+            and old_scope.scope = v_scope
+        ) and not public.rbac_v2_scope_not_wider_than_effective(p_actor_id, v_code, v_scope) then
+          raise exception 'Self elevation is not allowed.' using errcode = '42501';
+        end if;
+      end loop;
     end if;
     v_new := v_new || jsonb_build_array(jsonb_build_object(
       'permissionCode', v_code,

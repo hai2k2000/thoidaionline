@@ -29,6 +29,65 @@ select '00000000-0000-0000-0000-000000000011', id, 'all'
 from public.permissions
 where code = 'asset.manage'
 on conflict do nothing;
+insert into public.role_permission_grants(role_id, permission_id, scope)
+select '00000000-0000-0000-0000-000000000010', id, 'self'
+from public.permissions
+where code = 'task.view'
+on conflict do nothing;
+insert into public.role_permission_grants(role_id, permission_id, scope)
+select '00000000-0000-0000-0000-000000000011', id, 'all'
+from public.permissions
+where code = 'task.view'
+on conflict do nothing;
+
+do $$
+begin
+  begin
+    perform public.api_replace_role_permissions(
+      '00000000-0000-0000-0000-000000000020',
+      '00000000-0000-0000-0000-000000000010',
+      jsonb_build_array(
+        jsonb_build_object('permissionCode', 'permission.manage', 'scopes', jsonb_build_array('all')),
+        jsonb_build_object('permissionCode', 'task.view', 'scopes', jsonb_build_array('all'))
+      )
+    );
+    raise exception 'self scope widening accepted';
+  exception when sqlstate '42501' then null;
+  end;
+  perform public.api_replace_role_permissions(
+    '00000000-0000-0000-0000-000000000020',
+    '00000000-0000-0000-0000-000000000010',
+    jsonb_build_array(
+      jsonb_build_object('permissionCode', 'permission.manage', 'scopes', jsonb_build_array('all')),
+      jsonb_build_object('permissionCode', 'task.view', 'scopes', jsonb_build_array('self'))
+    )
+  );
+  if not exists (
+    select 1 from public.api_list_effective_permissions('00000000-0000-0000-0000-000000000020')
+    where permission_code = 'task.view' and effective_scopes = array['self']::text[]
+  ) then
+    raise exception 'self scope narrowing was rejected or not applied';
+  end if;
+end $$;
+
+do $$
+begin
+  perform public.api_set_user_permission_override(
+    '00000000-0000-0000-0000-000000000020',
+    '00000000-0000-0000-0000-000000000021',
+    'task.view',
+    'allow',
+    'self'
+  );
+  begin
+    perform public.rbac_v2_assert_legacy_rollback_compatible();
+    raise exception 'rollback gate accepted role all plus direct self allow';
+  exception when sqlstate '55006' then null;
+  end;
+  delete from public.user_permission_grants
+  where user_id = '00000000-0000-0000-0000-000000000021'
+    and permission_id = (select id from public.permissions where code = 'task.view');
+end $$;
 
 do $$
 declare

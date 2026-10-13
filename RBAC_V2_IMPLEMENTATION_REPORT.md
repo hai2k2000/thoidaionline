@@ -39,3 +39,10 @@
 - Production service restarted or deployed: NO.
 - Feature branch: `codex/rbac-v2-role-user-overrides`.
 - Rollout blocker: owner review and explicit production migration/deployment approval remain required.
+
+## Final Review Fixes
+
+- Self-role replacement now compares each newly requested scope with the actor's current effective scope set. New/wider scopes are rejected; unchanged scopes and narrowing/removal remain allowed.
+- Legacy rollback compatibility now fails closed when an active user's role grant plus a narrower direct allow would make a legacy union resolver return a broader scope.
+- Local read-only migration rehearsal recorded `permissions=20`, `role_grant_count=29`, and `user_grant_count=0` before and after the RBAC V2 migration (including a second application). No existing role-plus-direct-allow combinations were present to reconcile, and no production grants were changed.
+- `integration/production` was fetched and merged into the feature branch without force-push; no merge conflicts occurred.

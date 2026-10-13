@@ -26,6 +26,12 @@ Production safety:
 Next:
 - Push the feature branch and open the owner-review PR targeting `integration/production`; stop before merge, migration, or deployment.
 
+Final review fixes:
+- Self-role permission replacement rejects new or broader effective scopes while allowing narrowing and removal.
+- Rollback compatibility rejects legacy-union widening caused by role grants plus narrow direct allows, in addition to explicit denies.
+- Local pre/post migration evidence: 20 permissions, 29 role grants, and 0 user grants on both sides; no role-plus-direct-allow cases existed to reconcile.
+- Latest `integration/production` was merged without conflicts or history rewrite.
+
 Current Phase: COMPLETE; owner merge review
 Current Task: Asset UI permission management final review
 
