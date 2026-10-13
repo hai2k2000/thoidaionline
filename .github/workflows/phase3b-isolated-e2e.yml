@@ -107,7 +107,7 @@ jobs:
 
       - name: Install disposable browser runner
         run: |
-          npm install --no-save --ignore-scripts playwright@1.51.1
+          npm install --no-save --no-package-lock --ignore-scripts --legacy-peer-deps playwright@1.51.1
           npx playwright install --with-deps chromium
 
       - name: Run old application authenticated HTTP E2E

@@ -833,9 +833,8 @@ Validation:
 - Local Windows Docker/PostgreSQL/browser E2E: NOT RUN; the disposable Linux workflow is the authoritative runtime gate.
 
 Blockers:
-- Awaiting GitHub Actions disposable-runner evidence for old-app and new-app runtime E2E.
+- Latest disposable-runner attempt (`38365590825`) stopped before either runtime suite because the ad-hoc Playwright install failed during npm peer resolution; sandbox setup and both builds passed. The workflow now installs the runner with `--no-package-lock --legacy-peer-deps` so the disposable browser dependency cannot rewrite application dependency state.
 - Production migration/deployment/activation remains prohibited.
 
 Next:
-- Commit/push this branch and open a PR targeting `integration/production`.
-- Review the workflow run evidence; report `PASS` only after both runtime suites and browser smoke pass.
+- Re-run the disposable Linux workflow and review old/new runtime plus browser evidence; report `PASS` only after both runtime suites and browser smoke pass.

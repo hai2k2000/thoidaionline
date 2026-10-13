@@ -37,3 +37,8 @@ test("authenticated smoke covers authorization and browser paths without printin
   assert.match(browserSmoke, /#password/);
   assert.doesNotMatch(httpSmoke, /console\.log\([^)]*password/);
 });
+
+test("browser runner install is disposable and does not rewrite application dependencies", () => {
+  assert.match(workflow, /npm install --no-save --no-package-lock --ignore-scripts --legacy-peer-deps playwright@1\.51\.1/);
+  assert.match(workflow, /npx playwright install --with-deps chromium/);
+});
