@@ -57,6 +57,9 @@ const forbiddenOptions = await request("/api/assets?options=1", {}, employee);
 expectStatus(forbiddenOptions, 403, "employee asset options authorization");
 
 const adminPermissions = await request("/api/permissions", {}, admin);
+if (adminPermissions.status !== 200) {
+  console.error(`::error title=Permission catalog response::${JSON.stringify(await json(adminPermissions))}`);
+}
 expectStatus(adminPermissions, 200, "admin permission catalog");
 const permissionBody = await json(adminPermissions);
 if (mode === "new" && !permissionBody.effectiveCatalog?.some((row) => row.permission_code === "permission.manage" && row.effective_scopes?.length)) throw new Error("admin permission.manage missing");

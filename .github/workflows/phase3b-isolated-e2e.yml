@@ -268,6 +268,7 @@ jobs:
           tail -n 120 "$RUNNER_TEMP/thoidai-new-http.log" 2>/dev/null | while IFS= read -r line; do echo "::error title=New HTTP E2E::$line"; done || true
           tail -n 120 "$RUNNER_TEMP/thoidai-new-browser.log" 2>/dev/null | while IFS= read -r line; do echo "::error title=Browser E2E::$line"; done || true
           tail -n 120 "$RUNNER_TEMP/thoidai-gateway.log" 2>/dev/null | while IFS= read -r line; do echo "::warning title=Sandbox gateway::$line"; done || true
+          grep 'sandbox gateway error body' "$RUNNER_TEMP/thoidai-gateway.log" 2>/dev/null | tail -n 5 | while IFS= read -r line; do echo "::error title=Sandbox gateway error::$line"; done || true
 
       - name: Sandbox resource evidence
         if: always()
