@@ -141,7 +141,9 @@ jobs:
           const response = await fetch(`${base}/staff_users?username=eq.e2e-admin&select=active,password_hash` , { headers });
           const rows = await response.json();
           const row = rows[0];
-          console.log(JSON.stringify({ status: response.status, rowCount: rows.length, active: row?.active === true, bcryptMatch: row?.password_hash ? await bcrypt.compare(process.env.E2E_PASSWORD, row.password_hash) : false }));
+          const legacyQuery = await fetch(`${base}/staff_users?or=(username.eq.e2e-admin,email.ilike.e2e-admin,phone.eq.e2e-admin)&select=id,username,password,password_hash,active,session_version,must_change_password&limit=1`, { headers: { ...headers, accept: "application/vnd.pgrst.object+json" } });
+          const legacyBody = await legacyQuery.json();
+          console.log(JSON.stringify({ status: response.status, rowCount: rows.length, active: row?.active === true, bcryptMatch: row?.password_hash ? await bcrypt.compare(process.env.E2E_PASSWORD, row.password_hash) : false, legacyStatus: legacyQuery.status, legacyKeys: Object.keys(legacyBody).filter((key) => !["password", "password_hash"].includes(key)) }));
           NODE
           curl -sS -i -X POST -H "origin: http://127.0.0.1:3102" -H "host: 127.0.0.1:3102" -H "content-type: application/json" --data '{"identifier":"e2e-admin","password":"[redacted]"}' http://127.0.0.1:3102/api/auth/login | sed -E 's/(set-cookie: ).*/\1[redacted]/I' > "$diagnostics/login-response.txt" 2>&1 || true
           tail -n 120 "$RUNNER_TEMP/thoidai-old.log" > "$diagnostics/old-app.log" 2>&1 || true
