@@ -14,10 +14,18 @@ Status: owner review only. This runbook does not authorize production mutation.
 ## Rehearsal evidence
 
 - Backup restore fixture: `/opt/thoidai-work/ops-backups/asset-ui-permission-deploy/20261011T130022Z/production-db.dump` (1,221,456 bytes), restored with PostgreSQL 17 tooling.
-- Exact migration: `supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql`.
+- Exact migration chain: `supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql` followed by `supabase/migrations/20261015110000_rbac_v2_scope_ambiguity_fix.sql`.
+- The second migration is an additive `CREATE OR REPLACE FUNCTION` compatibility fix for PostgreSQL SQLSTATE `42702`; the historical migration remains immutable.
 - Migration SHA-256: `DA1C7A84B919CE690F5396AAD98B35BB7F82566F435EAAF8470C45A5B07FC463`.
+- Hotfix SHA-256: `57A364FDC845C31740518530BB801CD53DEA2B4E12CD2753CEB92E58FC19578A`.
 - Exact-file runner: first apply PASS; second invocation `ALREADY_APPLIED`; target ledger row count exactly one.
 - Isolated SQL regression: `RBAC_SQL_TEST=PASS`; `effect`, new RPCs, legacy RPCs/ACLs, and grant counts verified. Production was not written.
+
+## Scope ambiguity hotfix rehearsal
+
+- Before hotfix: the real `api_list_role_permission_grants` RPC returns PostgREST error `42702` (`column reference "scope" is ambiguous`) on the migrated disposable fixture.
+- After hotfix: the same RPC must return HTTP 200 with qualified scope values, invalid actors remain rejected, and service-role-only EXECUTE/ownership are unchanged.
+- The hotfix is applied through the safe exact-file runner; a second invocation must return `ALREADY_APPLIED`.
 
 ## Rollback scenarios
 
