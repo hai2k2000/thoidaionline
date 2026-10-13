@@ -162,7 +162,7 @@ SQL
 
 docker exec -i "$postgres" psql -v ON_ERROR_STOP=1 -U postgres -d thoidai_e2e <<'SQL' >/dev/null
 grant select on all tables in schema public to anon, authenticated;
-grant insert, update, delete on all tables in schema public to service_role;
+grant select, insert, update, delete on all tables in schema public to service_role;
 grant usage, select, update on all sequences in schema public to service_role;
 grant select, insert, update, delete on all tables in schema storage to service_role;
 grant execute on all functions in schema public to service_role;

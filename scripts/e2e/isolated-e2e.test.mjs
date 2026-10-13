@@ -22,6 +22,7 @@ test("sandbox fixture uses pinned local-only services and RBAC V2 migration", ()
   assert.match(fixture, /20261015100000_rbac_v2_role_user_overrides\.sql/);
   assert.match(fixture, /schema_migrations/);
   assert.match(fixture, /has_function_privilege/);
+  assert.match(fixture, /grant select, insert, update, delete on all tables in schema public to service_role/);
   assert.match(fixture, /127\.0\.0\.1/);
   assert.match(fixture, /E2E_SESSION_SECRET/);
   assert.match(fixture, /add-mask.*session_secret/);

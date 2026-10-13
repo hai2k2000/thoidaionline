@@ -833,7 +833,7 @@ Validation:
 - Local Windows Docker/PostgreSQL/browser E2E: NOT RUN; the disposable Linux workflow is the authoritative runtime gate.
 
 Blockers:
-- Disposable-runner attempt `38365590825` stopped before either runtime suite because the ad-hoc Playwright install failed during npm peer resolution; run `38367362901` confirms the hardened install PASS, sandbox setup/builds PASS, then the old-app login gate still returned 401. Failure diagnostics are now retained as a redacted, runner-generated artifact because this GitHub token cannot download raw job logs.
+- Disposable-runner attempt `38365590825` exposed the ad-hoc Playwright install issue; run `38367362901` confirms the hardened install PASS. Redacted diagnostics from run `38369562702` then proved the old-app 401 was caused by a fixture ACL omission: PostgREST `service_role` received write grants after migrations created tables but lacked `SELECT`. The sandbox grant now includes `SELECT`, with a focused regression assertion.
 - Production migration/deployment/activation remains prohibited.
 
 Next:
