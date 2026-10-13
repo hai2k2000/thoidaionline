@@ -23,14 +23,16 @@ const server = http.createServer(async (request, response) => {
       request.on("error", reject);
     });
     const forwardedHeaders = Object.fromEntries([...request.headers].filter(([name]) => !["connection", "content-length", "host", "transfer-encoding"].includes(name)));
-    const upstream = await fetch(new URL(request.url.slice(prefix.length) || "/", target), {
-      method: request.method,
-      headers: forwardedHeaders,
-      body,
+    const upstreamUrl = new URL(request.url.slice(prefix.length) || "/", target);
+    const upstream = await new Promise((resolve, reject) => {
+      const upstreamRequest = http.request(upstreamUrl, { method: request.method, headers: forwardedHeaders }, (upstreamResponse) => resolve(upstreamResponse));
+      upstreamRequest.on("error", reject);
+      if (body) upstreamRequest.write(body);
+      upstreamRequest.end();
     });
-    const responseHeaders = Object.fromEntries([...upstream.headers].filter(([name]) => !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
-    response.writeHead(upstream.status, responseHeaders);
-    response.end(Buffer.from(await upstream.arrayBuffer()));
+    const responseHeaders = Object.fromEntries(Object.entries(upstream.headers).filter(([name]) => !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
+    response.writeHead(upstream.statusCode ?? 502, responseHeaders);
+    upstream.pipe(response);
   } catch (error) {
     console.error(`sandbox gateway request failed: ${error?.cause?.code ?? error?.code ?? error?.name ?? "unknown"} ${error?.cause?.message ?? ""}`.trim());
     if (!response.headersSent) response.writeHead(502, { "content-type": "text/plain" });
