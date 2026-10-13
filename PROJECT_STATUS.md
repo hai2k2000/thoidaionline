@@ -833,8 +833,8 @@ Validation:
 - Local Windows Docker/PostgreSQL/browser E2E: NOT RUN; the disposable Linux workflow is the authoritative runtime gate.
 
 Blockers:
-- Disposable-runner attempt `38365590825` exposed the ad-hoc Playwright install issue; run `38367362901` confirms the hardened install PASS. Redacted diagnostics from run `38369562702` proved the old-app 401 was caused by a fixture ACL omission: PostgREST `service_role` received write grants after migrations created tables but lacked `SELECT`. Run `38370519599` confirms the ACL/password probe now PASS (`rowCount=1`, active, bcrypt match), while old login still returned 401; the legacy old-app build now pins `ROLE_LIFECYCLE_ENABLED=false` at build time as well as runtime so Next.js cannot retain the new resolver flag in the standalone bundle.
+- Disposable-runner attempt `38365590825` exposed the ad-hoc Playwright install issue; run `38367362901` confirms the hardened install PASS. Redacted diagnostics from run `38369562702` proved the first old-app 401 was caused by a fixture ACL omission; the sandbox now grants `SELECT` to `service_role`. Runs `38370519599` and `38372001870` confirm the ACL, password, exact legacy query, and bcrypt probes PASS, while old login still returned 401. Run `38374557577` (HEAD `ffdaa99`) also failed at the old-app authenticated gate before new-app/browser suites; no production endpoint or credential was used. The exact cause inside the legacy standalone process remains unresolved, so this checkpoint is BLOCKED rather than E2E PASS.
 - Production migration/deployment/activation remains prohibited.
 
 Next:
-- Re-run the disposable Linux workflow and review old/new runtime plus browser evidence; report `PASS` only after both runtime suites and browser smoke pass.
+- Preserve the failed-run diagnostics and owner-review the remaining legacy standalone login blocker; do not claim isolated E2E PASS until old-app, new-app, and browser suites all execute successfully.
