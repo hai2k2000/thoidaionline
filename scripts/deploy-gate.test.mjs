@@ -32,7 +32,10 @@ test("controlled smoke waiver is explicit, single-use, and still records a non-p
   assert.match(source, /controlled-deploy-exception\.mjs/);
   assert.match(source, /AUTHENTICATED_SMOKE=WAIVED/);
   assert.match(source, /approval.*commit/i);
-  assert.match(source, /invalid, expired, or already used/i);
+  assert.match(source, /invalid, stale, or already used/i);
   assert.match(source, /artifact\/scripts\/production\/controlled-deploy-exception\.mjs/);
   assert.match(source, /check-rbac-rollback-compatibility\.sh[\s\S]*controlled-deploy-exception\.mjs/);
+  assert.match(source, /THOIDAI_RBAC_READINESS_EVIDENCE/);
+  assert.match(source, /controlled-deploy-exception\.mjs/);
+  assert.match(source, /readiness_path/);
 });

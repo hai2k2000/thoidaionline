@@ -28,6 +28,7 @@ fi
 [[ "$build_config" == canonical-public ]] || { echo "production activation rejects non-canonical public build config: ${build_config:-missing}" >&2; exit 1; }
 if [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
   [[ -n "${THOIDAI_DEPLOY_EXCEPTION_APPROVAL:-}" ]] || { echo "controlled smoke-waiver requires an approval file" >&2; exit 1; }
+  [[ -n "${THOIDAI_RBAC_READINESS_EVIDENCE:-}" ]] || { echo "controlled smoke-waiver requires RBAC readiness evidence" >&2; exit 1; }
 fi
 for name in .env.local .env.production; do [[ -f "$shared_root/$name" ]] || { echo "runtime environment file missing: $shared_root/$name" >&2; exit 1; }; done
 

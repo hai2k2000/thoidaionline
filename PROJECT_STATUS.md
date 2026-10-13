@@ -7,11 +7,13 @@ Current Task: one-time authenticated-smoke waiver for the exact approved canonic
 
 Completed:
 - Added an opt-in, exact-SHA, time-bounded owner approval contract with atomic one-time consumption.
+- Added fail-closed readiness attestation for fresh backup/restore, migration, schema/RPC, grants parity, and last-manager evidence before pointer mutation.
+- Restricted exception identifiers, registry metadata, and approval lifetime with negative regression coverage.
 - Kept backup, migration, grants, rollback, disk, lock, provenance, and health gates unchanged; normal deployments still require authenticated smoke.
 - Packaged and verified the validator in the standalone artifact and added secret-free `AUTHENTICATED_SMOKE=WAIVED` evidence plus a manual post-activation checklist.
 
 Validation:
-- Focused exception, deploy-gate, external-artifact, and standalone packaging tests: 28/28 PASS.
+- Focused exception, deploy-gate, external-artifact, and standalone packaging tests: pending final rerun after review fixes.
 - TypeScript, changed-file ESLint, route manifest, and `git diff --check`: PASS.
 - POSIX deployment/rollback fixtures: not runnable on this Windows host; CI must execute them on Ubuntu.
 - Production code/database/grants/releases/service: unchanged.

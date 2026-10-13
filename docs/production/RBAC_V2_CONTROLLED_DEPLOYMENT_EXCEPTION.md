@@ -23,6 +23,17 @@ The owner must create a root-owned mode `0600` JSON file outside the release art
 
 The approval must be private, root-owned, not expired, not from the future, and scoped exactly as shown. The exception flag is never enabled by CI and must be set explicitly for the single approved activation. A wrong SHA, missing field, expired approval, reused file, or unsafe field fails closed.
 
+Approval lifetime is limited to one hour from `approved_at`. The waiver also requires `THOIDAI_RBAC_READINESS_EVIDENCE`, a fresh root-owned mode `0600` readiness manifest produced by `thoidai-rbac-v2-safe-rollout-v1`. The manifest must match the artifact SHA, be verified within the last 30 minutes, and contain checksummed private evidence files for all of:
+
+- backup integrity;
+- disposable restore rehearsal;
+- RBAC V2 migration ledger/checksum;
+- schema and RPC verification;
+- effective grants parity; and
+- the last `permission.manage` manager.
+
+The activation gate verifies this manifest and every proof checksum before any release pointer changes. Missing, stale, wrong-SHA, failed, tampered, or incorrectly owned evidence fails closed.
+
 ## Gates that remain mandatory
 
 Artifact provenance/checksum, backup and disposable restore, migration ledger/checksum, grants parity and last `permission.manage` manager, schema/RPC checks, database and application rollback compatibility, disk budget, deploy lock, systemd/HTTP health, release pointers, and recovery evidence all remain required. The waiver is consumed only after the rollback target gate passes and before release mutation.

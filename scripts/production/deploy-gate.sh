@@ -46,8 +46,10 @@ build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release
 [[ "$build_config" == canonical-public ]] || { echo "DEPLOY ABORTED: artifact build config is not canonical-public" >&2; exit 1; }
 if [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
   approval_path=${THOIDAI_DEPLOY_EXCEPTION_APPROVAL:-}
+  readiness_path=${THOIDAI_RBAC_READINESS_EVIDENCE:-}
   waiver_evidence=${THOIDAI_DEPLOY_EXCEPTION_EVIDENCE:-${THOIDAI_DEPLOY_EVIDENCE_ROOT:-/var/lib/thoidai-work/deploy-evidence}/rbac-v2-smoke-waiver-$(date -u +%Y%m%dT%H%M%SZ).evidence}
   [[ -n "$approval_path" ]] || { echo "DEPLOY ABORTED: controlled smoke-waiver approval is required" >&2; exit 1; }
+  [[ -n "$readiness_path" ]] || { echo "DEPLOY ABORTED: RBAC readiness evidence is required" >&2; exit 1; }
 else
   [[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]] || { echo "DEPLOY ABORTED: authenticated smoke credentials are required" >&2; exit 1; }
 fi
@@ -81,7 +83,7 @@ THOIDAI_RBAC_ROLLBACK_TARGET_PATH="$current_target" "$rbac_gate" || { echo "DEPL
 if [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
   exception_validator="$artifact/scripts/production/controlled-deploy-exception.mjs"
   [[ -f "$exception_validator" ]] || { echo "DEPLOY ABORTED: artifact is missing the controlled exception validator" >&2; exit 1; }
-  "$node_bin" "$exception_validator" "$approval_path" "$artifact_commit" "$waiver_evidence" || { echo "DEPLOY ABORTED: controlled smoke-waiver approval is invalid, expired, or already used" >&2; exit 1; }
+  "$node_bin" "$exception_validator" "$approval_path" "$artifact_commit" "$waiver_evidence" "$readiness_path" || { echo "DEPLOY ABORTED: controlled smoke-waiver approval or RBAC readiness evidence is invalid, stale, or already used" >&2; exit 1; }
   smoke_waived=1
 fi
 
