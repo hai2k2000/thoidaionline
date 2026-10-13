@@ -881,6 +881,12 @@ CI follow-up:
 - Run `38385052584` showed the application auth query returns 200, then the session lookup query returns 400 on the migrated fixture. The next SDK probe captures the exact session-query error code/status to close the remaining compatibility distinction.
 - Run `38386163729` identified session-query error `42703` (undefined column). The sandbox migration list omitted `20260814190000_phase1_authorization_facade.sql`, which defines legacy `role_permissions` columns selected by the old app. Added that migration to the disposable fixture chain; no application or production schema change.
 - Run `38386880888` failed while applying that migration because its dependency type `task_evaluation_checkpoints` was also absent. Added `20260813110000_task_evaluation_checkpoints.sql` before the authorization facade migration.
+- Run `38387658296` applied the complete fixture and passed SDK prefix/build gates. Old-app login/session then remained blocked because `api_list_role_permission_grants` returned HTTP 400; redacted runtime log reports PostgreSQL `column reference "scope" is ambiguous`. This is a real RBAC V2 migration/application compatibility defect, not a sandbox URL or fixture-prefix issue.
+
+Final decision for PR #16:
+- `BLOCKED — old-app authenticated E2E`.
+- Gate A prefix/query probes: PASS; old-app login/session: FAIL due RBAC RPC SQL error; Gates B/C/D did not execute.
+- Do not claim authenticated E2E PASS, merge PR #16, apply production migration, deploy, restart, or alter production auth/RBAC SQL from this harness checkpoint.
 
 Decision:
 - Runtime E2E remains BLOCKED until the disposable GitHub Actions workflow executes the SDK prefix gate, old-app login/session, old-app authorization, new RBAC V2 suite, and authenticated browser smoke successfully.
