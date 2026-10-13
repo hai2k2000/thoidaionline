@@ -821,6 +821,7 @@ Completed:
 - Added authenticated HTTP checks for login/session, assets, permission management, quick report, allow/deny overrides, and self-elevation protection.
 - Added authenticated browser smoke for `/login`, `/assets`, and `/tasks/quick-report`.
 - Added harness contract tests and isolation documentation.
+- Excluded the disposable harness from Next standalone tracing so production artifact secret scans cannot package test fixture scripts.
 
 Validation:
 - Harness contract tests: 3/3 PASS.
