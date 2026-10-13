@@ -31,6 +31,7 @@ const server = http.createServer(async (request, response) => {
       upstreamRequest.end();
     });
     const responseHeaders = Object.fromEntries(Object.entries(upstream.headers).filter(([name, value]) => typeof value === "string" && !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
+    console.error(`sandbox gateway ${request.method} ${request.url} -> ${upstream.statusCode ?? 502}`);
     response.writeHead(upstream.statusCode ?? 502, responseHeaders);
     upstream.pipe(response);
   } catch (error) {
