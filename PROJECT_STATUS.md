@@ -13,9 +13,9 @@ Completed:
 - Packaged and verified the validator in the standalone artifact and added secret-free `AUTHENTICATED_SMOKE=WAIVED` evidence plus a manual post-activation checklist.
 
 Validation:
-- Focused exception, deploy-gate, external-artifact, and standalone packaging tests: pending final rerun after review fixes.
+- Focused exception, deploy-gate, external-artifact, and standalone packaging tests: 40/40 PASS.
 - TypeScript, changed-file ESLint, route manifest, and `git diff --check`: PASS.
-- POSIX deployment/rollback fixtures: not runnable on this Windows host; CI must execute them on Ubuntu.
+- Ubuntu deployment/rollback fixtures, production-like build, packaging, and artifact round-trip: PASS in PR CI.
 - Production code/database/grants/releases/service: unchanged.
 
 Next:
