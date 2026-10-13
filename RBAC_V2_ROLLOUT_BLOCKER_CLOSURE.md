@@ -54,7 +54,7 @@ Existing smoke mechanisms were confirmed:
 - Deployment gate requires authenticated smoke evidence for activation; authentication is never bypassed.
 - Current rollout environment has neither smoke variable set. No production user, password, session, cookie, or bearer token was created or changed.
 
-Required owner action: perform an authorized login and enter a short-lived cookie or bearer value directly in a private VPS shell without sending it in chat. Verify account identity and required permissions read-only before activation. See `docs/operations/rbac-v2-secure-rollout-inputs.md`.
+Required owner action: perform an authorized login, then run `bash scripts/production/run-authenticated-smoke.sh` in one private VPS shell. Enter either the complete `name=value` Cookie field or the bearer token alone when prompted. The same process verifies identity and `/api/permissions`, runs contract and browser-path smoke, and clears both variables on success, failure, or interruption. Observe `authenticated identity: PASS`, `permission catalog: PASS`, `authenticated-contracts: PASS (13)`, `browser-task-list-path: PASS (7)`, and `session variables cleared`. See `docs/operations/rbac-v2-secure-rollout-inputs.md`.
 
 ## Additional Safety Verification
 
@@ -77,10 +77,12 @@ On clean branch `codex/rbac-v2-rollout-blocker-closure` from canonical `36b4c117
 - Exact migration dry-run against Docker-local production DB: PASS; SHA-256 `6755059e92c145d60582e1b1e3a483690ddf6d770cc13fcc7eb44785554ac20c`.
 - Read-only rollback compatibility gate against Docker-local production DB: PASS.
 - Unauthenticated protected API probes: expected `401`.
+- Isolated authenticated smoke handoff fixture with fake token: PASS; both cookie and bearer parsing paths were exercised without printing the token, and cleanup was observed on PASS and FAIL.
 
 ## Production Safety
 
 - Database migration: **NO**.
+- Disposable backup/restore rehearsal: **NO**; migration dry-run is not a substitute.
 - Production backup: **NO new backup created**.
 - Service restart/deploy: **NO**.
 - Release/symlink changes: **NO**.

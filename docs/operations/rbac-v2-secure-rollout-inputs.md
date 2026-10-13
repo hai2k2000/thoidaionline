@@ -24,30 +24,35 @@ The exact migration SHA must be checked before apply. Invoke the safe runner wit
 
 ## Authenticated smoke input
 
-Smoke requires a short-lived owner-approved session. Existing scripts accept `THOIDAI_SMOKE_COOKIE` or `THOIDAI_SMOKE_BEARER`; they never create a user or bypass authentication.
+Smoke requires a short-lived owner-approved session. Existing scripts accept `THOIDAI_SMOKE_COOKIE` or `THOIDAI_SMOKE_BEARER`; they never create a user or bypass authentication. The owner must run one command in one private SSH shell so the identity check and both smoke scripts are children of the same process. An independently launched Codex SSH shell does not inherit the owner's exported variables.
 
-Owner procedure directly on the VPS:
-
-1. Log in through the normal application flow using an authorized owner/test account.
-2. Open a private shell on the VPS and enter the short-lived value without echoing it:
+After logging in normally with an authorized owner/test account, run exactly:
 
 ```bash
-read -rs THOIDAI_SMOKE_COOKIE
-export THOIDAI_SMOKE_COOKIE
+bash scripts/production/run-authenticated-smoke.sh
 ```
 
-3. Confirm the account identity and required permissions using the read-only session/API checks before activation.
-4. Run only the approved read-only contract/browser smoke during preparation.
-5. Immediately remove the value:
+The command prompts for `cookie` or `bearer`, then reads the value without echoing it. Enter the complete cookie header field for `THOIDAI_SMOKE_COOKIE`, for example `thoidai_work_session=<value>`; enter only the token for `THOIDAI_SMOKE_BEARER` (no `Bearer ` prefix). The script then performs read-only `/api/auth/session` identity validation, read-only `/api/permissions` validation, authenticated contract smoke, and browser-path smoke in that same shell.
 
-```bash
-unset THOIDAI_SMOKE_COOKIE
-```
+Expected success markers are:
+
+- `authenticated identity: PASS`
+- `permission catalog: PASS`
+- `authenticated-contracts: PASS (13)`
+- `browser-task-list-path: PASS (7)`
+- `session variables cleared`
+
+On any failure, the command exits non-zero and still prints `session variables cleared`. The `EXIT`, `HUP`, `INT`, and `TERM` traps remove both session variables, including interruption during hidden input. The session is cleared before the command returns; it is never available to a separate shell.
 
 Do not paste the cookie/bearer into chat, files, GitHub comments, CI metadata, shell history, or reports. Do not change real-user grants or passwords for smoke.
 
 ## Preparation checks
 
 - Unauthenticated `/api/permissions`, `/api/auth/session`, and `/api/tasks?journalism=false` return `401`.
-- Authenticated smoke is ready only after the owner confirms the authorized account/session is present in the temporary shell.
+- Authenticated smoke is ready only after the owner confirms the authorized account/session is present in the temporary shell and observes the four PASS markers plus cleanup.
 - Any smoke data write requires an approved fixture and cleanup procedure; preparation remains read-only.
+
+## Gate evidence distinctions
+
+- The pre-migration rollback compatibility gate already passed read-only; it is not evidence of a post-migration deny/narrow-allow compatibility check.
+- Migration dry-run classification and checksum validation are not a disposable backup/restore rehearsal. Backup and disposable restore remain separate owner-approved rollout steps.
