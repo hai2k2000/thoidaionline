@@ -220,7 +220,16 @@ jobs:
           export E2E_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
           E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
-          cleanup_gateway() { kill "$gateway_pid" 2>/dev/null || true; wait "$gateway_pid" 2>/dev/null || true; }
+          cleanup_gateway() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              tail -n 120 "$RUNNER_TEMP/thoidai-new.log" 2>/dev/null | while IFS= read -r line; do echo "::error title=New app log::$line"; done || true
+              tail -n 120 "$RUNNER_TEMP/thoidai-gateway.log" 2>/dev/null | while IFS= read -r line; do echo "::warning title=Sandbox gateway::$line"; done || true
+            fi
+            kill "$gateway_pid" 2>/dev/null || true
+            wait "$gateway_pid" 2>/dev/null || true
+            return "$status"
+          }
           trap cleanup_gateway EXIT
           for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
           curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null
