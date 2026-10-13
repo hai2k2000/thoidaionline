@@ -51,4 +51,6 @@ test("browser runner install is disposable and does not rewrite application depe
   assert.match(workflow, /legacyQuery/);
   assert.match(workflow, /actual-password-status/);
   assert.match(workflow, /legacyBcryptMatch/);
+  assert.match(workflow, /env ROLE_LIFECYCLE_ENABLED=false PORT=3102/);
+  assert.match(workflow, /env ROLE_LIFECYCLE_ENABLED=true TASK_RBAC_V2_ENABLED=true PORT=3103/);
 });

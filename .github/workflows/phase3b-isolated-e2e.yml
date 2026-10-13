@@ -118,8 +118,7 @@ jobs:
           PORT: '3102'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
-          export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET"
-          nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-old.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-old.pid"
+          env ROLE_LIFECYCLE_ENABLED=false PORT=3102 NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET" nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-old.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-old.pid"
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3102/login >/dev/null 2>&1 && break; sleep 1; done
           test -s "$RUNNER_TEMP/thoidai-old.pid"
           E2E_BASE_URL=http://127.0.0.1:3102 E2E_MODE=old node "$GITHUB_WORKSPACE/scripts/e2e/http-smoke.mjs"
@@ -181,8 +180,7 @@ jobs:
           TASK_RBAC_V2_ENABLED: 'true'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
-          export NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET"
-          nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-new.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-new.pid"
+          env ROLE_LIFECYCLE_ENABLED=true TASK_RBAC_V2_ENABLED=true PORT=3103 NEXT_PUBLIC_SUPABASE_URL="$E2E_POSTGREST_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET" nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-new.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-new.pid"
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3103/login >/dev/null 2>&1 && break; sleep 1; done
           test -s "$RUNNER_TEMP/thoidai-new.pid"
           E2E_BASE_URL=http://127.0.0.1:3103 node "$GITHUB_WORKSPACE/scripts/e2e/http-smoke.mjs"
