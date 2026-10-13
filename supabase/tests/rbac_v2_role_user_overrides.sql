@@ -40,6 +40,47 @@ from public.permissions
 where code = 'task.view'
 on conflict do nothing;
 
+delete from public.role_permission_grants
+where role_id = '00000000-0000-0000-0000-000000000010'
+  and permission_id = (select id from public.permissions where code = 'task.view');
+insert into public.user_permission_grants(user_id, permission_id, effect, scope, created_by)
+select '00000000-0000-0000-0000-000000000020', id, 'allow', 'all', '00000000-0000-0000-0000-000000000020'
+from public.permissions
+where code = 'task.view'
+on conflict (user_id, permission_id) do update set effect = excluded.effect, scope = excluded.scope, created_by = excluded.created_by;
+
+do $$
+begin
+  begin
+    perform public.api_replace_role_permissions(
+      '00000000-0000-0000-0000-000000000020',
+      '00000000-0000-0000-0000-000000000010',
+      jsonb_build_array(
+        jsonb_build_object('permissionCode', 'permission.manage', 'scopes', jsonb_build_array('all')),
+        jsonb_build_object('permissionCode', 'task.view', 'scopes', jsonb_build_array('all'))
+      )
+    );
+    raise exception 'direct allow self role elevation accepted';
+  exception when sqlstate '42501' then null;
+  end;
+  if exists (
+    select 1 from public.role_permission_grants g
+    join public.permissions p on p.id = g.permission_id
+    where g.role_id = '00000000-0000-0000-0000-000000000010'
+      and p.code = 'task.view'
+  ) then
+    raise exception 'self role gained task.view from direct allow';
+  end if;
+end $$;
+
+delete from public.user_permission_grants
+where user_id = '00000000-0000-0000-0000-000000000020'
+  and permission_id = (select id from public.permissions where code = 'task.view');
+insert into public.role_permission_grants(role_id, permission_id, scope)
+select '00000000-0000-0000-0000-000000000010', id, 'self'
+from public.permissions
+where code = 'task.view';
+
 do $$
 begin
   begin
@@ -67,6 +108,46 @@ begin
     where permission_code = 'task.view' and effective_scopes = array['self']::text[]
   ) then
     raise exception 'self scope narrowing was rejected or not applied';
+  end if;
+end $$;
+
+update public.role_permission_grants g
+set scope = 'all'
+from public.permissions p
+where g.permission_id = p.id
+  and g.role_id = '00000000-0000-0000-0000-000000000010'
+  and p.code = 'task.view';
+
+do $$
+begin
+  perform public.api_replace_role_permissions(
+    '00000000-0000-0000-0000-000000000020',
+    '00000000-0000-0000-0000-000000000010',
+    jsonb_build_array(
+      jsonb_build_object('permissionCode', 'permission.manage', 'scopes', jsonb_build_array('all')),
+      jsonb_build_object('permissionCode', 'task.view', 'scopes', jsonb_build_array('self'))
+    )
+  );
+  if not exists (
+    select 1 from public.api_list_effective_permissions('00000000-0000-0000-0000-000000000020')
+    where permission_code = 'task.view' and effective_scopes = array['self']::text[]
+  ) then
+    raise exception 'self role scope narrowing failed';
+  end if;
+  perform public.api_replace_role_permissions(
+    '00000000-0000-0000-0000-000000000020',
+    '00000000-0000-0000-0000-000000000010',
+    jsonb_build_array(
+      jsonb_build_object('permissionCode', 'permission.manage', 'scopes', jsonb_build_array('all'))
+    )
+  );
+  if exists (
+    select 1 from public.role_permission_grants g
+    join public.permissions p on p.id = g.permission_id
+    where g.role_id = '00000000-0000-0000-0000-000000000010'
+      and p.code = 'task.view'
+  ) then
+    raise exception 'self role permission removal failed';
   end if;
 end $$;
 

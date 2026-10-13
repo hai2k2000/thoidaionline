@@ -152,28 +152,6 @@ begin
 end
 $function$;
 
-create or replace function public.rbac_v2_scope_not_wider_than_effective(
-  p_actor_id uuid,
-  p_permission_code text,
-  p_scope text
-) returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $function$
-  select exists (
-    select 1
-    from public.api_list_effective_permissions(p_actor_id) e
-    cross join lateral unnest(e.effective_scopes) as granted_scope(scope)
-    where e.permission_code = p_permission_code
-      and (
-        granted_scope.scope = p_scope
-        or granted_scope.scope = 'all'
-      )
-  );
-$function$;
-
 -- A legacy application cannot safely downgrade while deny rows exist or while
 -- a narrow allow override would be widened by the legacy role/user union.
 -- Rollback tooling must call this gate before activating an older resolver.
@@ -424,7 +402,13 @@ begin
           cross join lateral jsonb_array_elements_text(old_item->'scopes') old_scope(scope)
           where old_item->>'permissionCode' = v_code
             and old_scope.scope = v_scope
-        ) and not public.rbac_v2_scope_not_wider_than_effective(p_actor_id, v_code, v_scope) then
+        ) and not exists (
+          select 1
+          from jsonb_array_elements(v_old) old_item
+          cross join lateral jsonb_array_elements_text(old_item->'scopes') old_scope(scope)
+          where old_item->>'permissionCode' = v_code
+            and old_scope.scope = 'all'
+        ) then
           raise exception 'Self elevation is not allowed.' using errcode = '42501';
         end if;
       end loop;

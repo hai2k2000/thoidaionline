@@ -18,7 +18,8 @@ test("RBAC v2 protects Quick Report with deny-aware effective scopes", () => {
 test("role replacement rejects self scope widening while allowing narrowing", () => {
   assert.match(rbac, /for v_scope in select value from jsonb_array_elements_text\(v_item->'scopes'\)/i);
   assert.match(rbac, /jsonb_array_elements\(v_old\)[\s\S]*old_scope\(scope\)/i);
-  assert.match(rbac, /rbac_v2_scope_not_wider_than_effective\(p_actor_id, v_code, v_scope\)/i);
+  assert.doesNotMatch(rbac, /rbac_v2_scope_not_wider_than_effective\(p_actor_id, v_code, v_scope\)/i);
+  assert.match(rbac, /old_scope\.scope\s*=\s*'all'/i);
   assert.match(rbac, /Self elevation is not allowed\./i);
   assert.match(rbac, /p_role_id\s*=\s*v_actor_role_id[\s\S]{0,2200}Self elevation is not allowed/i);
 });
