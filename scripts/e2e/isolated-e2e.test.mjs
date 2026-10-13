@@ -68,6 +68,7 @@ test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () 
   assert.match(gateway, /startsWith\("\/rest\/v1"\)/);
   assert.match(gateway, /request\.url\.slice\(prefix\.length\)/);
   assert.match(gateway, /request\.headers/);
+  assert.match(gateway, /sandbox gateway error body/);
   assert.match(sdkProbe, /createClient/);
   assert.match(sdkProbe, /direct root endpoint unexpectedly accepted/);
   assert.match(sdkProbe, /sandbox gateway did not satisfy/);

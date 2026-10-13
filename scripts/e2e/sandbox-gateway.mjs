@@ -32,6 +32,17 @@ const server = http.createServer(async (request, response) => {
     });
     const responseHeaders = Object.fromEntries(Object.entries(upstream.headers).filter(([name, value]) => typeof value === "string" && !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
     console.error(`sandbox gateway ${request.method} ${request.url} -> ${upstream.statusCode ?? 502}`);
+    if ((upstream.statusCode ?? 502) >= 400) {
+      const errorBody = await new Promise((resolve) => {
+        const chunks = [];
+        upstream.on("data", (chunk) => chunks.push(chunk));
+        upstream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8").slice(0, 1000)));
+        upstream.on("error", () => resolve("upstream error"));
+      });
+      console.error(`sandbox gateway error body ${errorBody}`);
+      response.writeHead(upstream.statusCode ?? 502, responseHeaders).end(errorBody);
+      return;
+    }
     response.writeHead(upstream.statusCode ?? 502, responseHeaders);
     upstream.pipe(response);
   } catch (error) {
