@@ -86,6 +86,7 @@ files=(
   20260817050000_phase3_additive_task_schema.sql
   20260819123000_role_lifecycle_and_tbt_direct.sql
   20260820090000_task_assignment_reviewer_daily_due_time.sql
+  20260821130000_user_notification_reads.sql
   20260822200000_account_personalization.sql
   20260916100000_phase1a_rbac_core.sql
   20260916103000_phase1a_rbac_db_helper.sql

@@ -37,6 +37,7 @@ test("sandbox fixture uses pinned local-only services and RBAC V2 migration", ()
   assert.match(fixture, /20260813110000_task_evaluation_checkpoints\.sql/);
   assert.match(fixture, /20260817050000_phase3_additive_task_schema\.sql/);
   assert.match(fixture, /20260820090000_task_assignment_reviewer_daily_due_time\.sql/);
+  assert.match(fixture, /20260821130000_user_notification_reads\.sql/);
   assert.match(fixture, /20260924120000_task_approval_gates\.sql/);
   assert.match(fixture, /20260924130000_task_assignment_semantics\.sql/);
   assert.match(fixture, /schema_migrations/);
@@ -55,6 +56,10 @@ test("authenticated smoke covers authorization and browser paths without printin
   assert.match(httpSmoke, /self override protection/);
   assert.match(browserSmoke, /#identifier/);
   assert.match(browserSmoke, /#password/);
+  assert.match(browserSmoke, /waitUntil: "domcontentloaded"/);
+  assert.match(browserSmoke, /waitForURL/);
+  assert.match(browserSmoke, /waitForResponse/);
+  assert.match(browserSmoke, /waitFor\(\{ state: "visible" \}\)/);
   assert.doesNotMatch(httpSmoke, /console\.log\([^)]*password/);
   assert.match(httpSmoke, /title=HTTP E2E status/);
   assert.match(httpSmoke, /title=Quick Report E2E status/);
