@@ -59,10 +59,6 @@ jobs:
           bash scripts/e2e/start-sandbox.sh
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           gateway_port=$((20000 + ($$ % 700)))
-          env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT="$gateway_port" nohup node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" </dev/null > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/thoidai-gateway.pid"
-          for _ in $(seq 1 30); do curl -fsS "http://127.0.0.1:${gateway_port}/health" >/dev/null 2>&1 && break; sleep 1; done
-          curl -fsS "http://127.0.0.1:${gateway_port}/health" >/dev/null
           echo "E2E_SUPABASE_URL=http://127.0.0.1:${gateway_port}" >> "$RUNNER_TEMP/thoidai-e2e.env"
           {
             cat "$RUNNER_TEMP/thoidai-e2e.env"
@@ -73,6 +69,11 @@ jobs:
         shell: bash
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
+          env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" nohup node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" </dev/null > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
+          gateway_pid=$!
+          trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null
           node scripts/e2e/supabase-sdk-probe.mjs
 
       - name: Prepare exact old and new source worktrees
@@ -134,6 +135,11 @@ jobs:
           PORT: '3102'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
+          env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" nohup node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" </dev/null > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
+          gateway_pid=$!
+          trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null
           env ROLE_LIFECYCLE_ENABLED=false PORT=3102 NEXT_PUBLIC_SUPABASE_URL="$E2E_SUPABASE_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET" nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-old.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-old.pid"
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3102/login >/dev/null 2>&1 && break; sleep 1; done
           test -s "$RUNNER_TEMP/thoidai-old.pid"
@@ -196,6 +202,11 @@ jobs:
           TASK_RBAC_V2_ENABLED: 'true'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
+          env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" nohup node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" </dev/null > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
+          gateway_pid=$!
+          trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null
           env ROLE_LIFECYCLE_ENABLED=true TASK_RBAC_V2_ENABLED=true PORT=3103 NEXT_PUBLIC_SUPABASE_URL="$E2E_SUPABASE_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET" nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-new.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-new.pid"
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3103/login >/dev/null 2>&1 && break; sleep 1; done
           test -s "$RUNNER_TEMP/thoidai-new.pid"
@@ -216,9 +227,6 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ -f "$RUNNER_TEMP/thoidai-gateway.pid" ]; then
-            kill "$(cat "$RUNNER_TEMP/thoidai-gateway.pid")" 2>/dev/null || true
-          fi
           git worktree remove --force "$RUNNER_TEMP/thoidai-old" 2>/dev/null || true
           git worktree remove --force "$RUNNER_TEMP/thoidai-new" 2>/dev/null || true
           if [ -f "$RUNNER_TEMP/thoidai-e2e.env" ]; then

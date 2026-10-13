@@ -69,10 +69,11 @@ test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () 
   assert.match(sdkProbe, /directHttpStatus/);
   assert.match(sdkProbe, /gatewayHttpStatus/);
   assert.match(workflow, /node scripts\/e2e\/sandbox-gateway\.mjs/);
-  assert.match(workflow, /env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT=\"\$gateway_port\" nohup node scripts\/e2e\/sandbox-gateway\.mjs/);
+  assert.match(workflow, /env -u RUNNER_TRACKING_ID E2E_GATEWAY_PORT=\"\$\{E2E_SUPABASE_URL##\*:\}\" nohup node scripts\/e2e\/sandbox-gateway\.mjs/);
   assert.match(workflow, /node scripts\/e2e\/supabase-sdk-probe\.mjs/);
   assert.match(workflow, /echo \"E2E_SUPABASE_URL=http:\/\/127\.0\.0\.1:\$\{gateway_port\}\" >> \"\$RUNNER_TEMP\/thoidai-e2e\.env\"/);
   assert.doesNotMatch(workflow, /gateway_port=\$\(sed -n .*E2E_SUPABASE_URL/);
   assert.match(workflow, /NEXT_PUBLIC_SUPABASE_URL=\"\$E2E_SUPABASE_URL\"/);
   assert.doesNotMatch(workflow, /NEXT_PUBLIC_SUPABASE_URL=\"\$E2E_POSTGREST_URL\"/);
+  assert.match(workflow, /trap 'kill \"\$gateway_pid\" 2>\/dev\/null \|\| true' EXIT/);
 });
