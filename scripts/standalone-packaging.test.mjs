@@ -24,8 +24,10 @@ test("artifact migration reference includes RBAC V2 dependency", () => {
   const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");
   assert.match(packager, /20261015100000_rbac_v2_role_user_overrides\.sql/);
   assert.match(packager, /20261015110000_rbac_v2_scope_ambiguity_fix\.sql/);
+  assert.match(packager, /20261015120000_quick_report_rpc_payload_compatibility\.sql/);
   assert.match(verifier, /20261015100000_rbac_v2_role_user_overrides\.sql/);
   assert.match(verifier, /20261015110000_rbac_v2_scope_ambiguity_fix\.sql/);
+  assert.match(verifier, /20261015120000_quick_report_rpc_payload_compatibility\.sql/);
 });
 test("runtime uploads stay outside the traced artifact", () => {
   const uploadRoute = readFileSync("src/app/api/hr/upload/route.ts", "utf8");

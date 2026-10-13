@@ -42,7 +42,7 @@ export async function GET() {
     serverSupabase.from("roles").select("id,code,name,level,active").order("level", { ascending: false }).order("name"),
     serverSupabase.from("permissions").select("id,code,name,module,description").order("module").order("code"),
     serverSupabase.from("role_permission_grants").select("role_id,permission_id,scope").order("role_id").order("permission_id").order("scope"),
-    serverSupabase.from("staff_users").select("id,username,full_name,active,role_id,roles(code,name,active),departments(name)").order("full_name"),
+    serverSupabase.from("staff_users").select("id,username,full_name,active,role_id,roles(code,name,active),departments!staff_users_department_id_fkey(name)").order("full_name"),
     serverSupabase.from("user_permission_grants").select("user_id,permission_id,effect,scope").order("user_id").order("permission_id"),
   ]);
   const error = rolesResult.error ?? permissionsResult.error ?? grantsResult.error ?? usersResult.error ?? userGrantsResult.error;

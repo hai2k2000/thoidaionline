@@ -853,3 +853,89 @@ Decision:
 
 Next:
 - Owner may merge PR #14. Keep production activation blocked and provide an isolated runtime E2E environment before migration approval.
+
+## Phase 3B.1 Isolated Authenticated E2E Harness
+
+Current Phase: IN PROGRESS; owner review after disposable GitHub Actions run
+Current Task: Build and validate isolated old-app/new-RBAC-V2 authenticated E2E harness
+
+Completed:
+- Added `.github/workflows/phase3b-isolated-e2e.yml` for Ubuntu 24.04 disposable-runner execution.
+- Added a localhost-only PostgreSQL 17 + PostgREST sandbox with the representative migration chain through `20261015100000_rbac_v2_role_user_overrides.sql`.
+- Added exact old (`bd4803933d6b98fd6996852992be566e6286ea67`) and canonical (`36b4c117a365355062ccfa5d78afbfb7a2be7197`) sandbox builds.
+- Added authenticated HTTP checks for login/session, assets, permission management, quick report, allow/deny overrides, and self-elevation protection.
+- Added authenticated browser smoke for `/login`, `/assets`, and `/tasks/quick-report`.
+- Added harness contract tests and isolation documentation.
+- Excluded the disposable harness from Next standalone tracing so production artifact secret scans cannot package test fixture scripts.
+- Masked every generated sandbox JWT, session secret, and test password before exporting workflow environment state.
+- Old/new sandbox builds and migration setup pass; the first runtime attempt exposed an old-app sandbox login 401 and now includes non-secret schema/log diagnostics for root-cause closure.
+- Legacy runtime harness uses `ROLE_LIFECYCLE_ENABLED=false` to exercise the old resolver against the migrated schema without requiring the newer role-lifecycle join; new RBAC V2 runtime remains lifecycle-enabled.
+
+Validation:
+- Harness contract tests: 3/3 PASS.
+- Bash syntax: PASS.
+- `git diff --check`: PASS.
+- Local Windows Docker/PostgreSQL/browser E2E: NOT RUN; the disposable Linux workflow is the authoritative runtime gate.
+
+Blockers:
+- Disposable-runner attempt `38365590825` exposed the ad-hoc Playwright install issue; run `38367362901` confirms the hardened install PASS. Redacted diagnostics from run `38369562702` proved the first old-app 401 was caused by a fixture ACL omission; the sandbox now grants `SELECT` to `service_role`. Runs `38370519599` and `38372001870` confirm the ACL, password, exact legacy query, and bcrypt probes PASS, while old login still returned 401. Run `38374557577` (HEAD `ffdaa99`) also failed at the old-app authenticated gate before new-app/browser suites; no production endpoint or credential was used. The exact cause inside the legacy standalone process remains unresolved, so this checkpoint is BLOCKED rather than E2E PASS.
+- Production migration/deployment/activation remains prohibited.
+
+Next:
+- Preserve the failed-run diagnostics and owner-review the remaining legacy standalone login blocker; do not claim isolated E2E PASS until old-app, new-app, and browser suites all execute successfully.
+
+## Phase 3B.1 Supabase Prefix Investigation
+
+Current Phase: BLOCKED; owner review after harness fix
+Current Task: Resolve old-app authenticated E2E 401 on the disposable Linux runner
+
+Evidence:
+- Canonical was synchronized to `5a444a45e2cc0d589ffa6de40ff1e9bf3d7108d` with an ordinary merge; the merge is local on the PR #16 branch until pushed.
+- Run `38374557577` showed the sandbox row, active flag, exact legacy query, and bcrypt comparison passing while the old standalone login still returned HTTP 401.
+- The sandbox PostgREST endpoint is exposed at `/`, while Supabase JS constructs REST requests under `/rest/v1`; this explains why direct root probes pass but the application request can fail.
+
+Harness fix:
+- Added a localhost-only `scripts/e2e/sandbox-gateway.mjs` that forwards `/rest/v1/*` (and the supported storage prefix) to the disposable PostgREST target without mocking data, permissions, or authentication.
+- Added `scripts/e2e/supabase-sdk-probe.mjs` using `@supabase/supabase-js@2.112.4` to prove the direct-root failure and gateway success without printing credentials.
+- Old and new app builds/runtime now use `E2E_SUPABASE_URL`; direct `E2E_POSTGREST_URL` remains limited to non-secret diagnostics and rollback-compatibility probes.
+- Added gateway cleanup and focused contract assertions; production URLs, artifacts, auth logic, and deployment scripts are unchanged.
+
+Local validation:
+- Isolated harness contract tests: 5/5 PASS.
+- Node syntax checks: PASS.
+- E2E-script ESLint: PASS.
+- TypeScript: PASS.
+- `git diff --check`: PASS.
+
+CI follow-up:
+- Run `38376779104` reached the new SDK prefix step but failed because the workflow tried to parse `GITHUB_ENV` with `sed`; the resulting gateway URL lost its port and Node reported `ECONNREFUSED 127.0.0.1:80`.
+- This was a harness wiring defect, not an application authentication result. The fix persists `E2E_SUPABASE_URL` in the sandbox env file and sources it directly in later steps.
+- Run `38378461348` confirmed the URL was correct (`127.0.0.1:20373`) but the gateway process was reaped between steps, producing `ECONNREFUSED` on the gateway port. The next minimal fix starts it with `nohup` and retains the existing `always()` cleanup.
+- Run `38378950904` confirmed `nohup` alone did not survive the Actions runner process cleanup. The next fix detaches the gateway from `RUNNER_TRACKING_ID` and stdin while retaining explicit PID cleanup.
+- Run `38379433000` confirmed the runner still reaped the detached gateway between steps. The harness is now changed to start, health-check, and trap-clean the gateway inside each consuming step (SDK probe, old app, and new app), avoiding cross-step daemon assumptions.
+- Run `38380089534` showed the same refusal even inside the consumer step with detached launch. The gateway is now a normal background child of that step, with health-check and EXIT trap cleanup; no cross-step process persistence is assumed.
+- Run `38380491284` still failed on the first gateway request while health-check passed. Added fail-closed 502 handling and redacted gateway diagnostics so the next run distinguishes upstream request failure from process lifecycle failure.
+- Run `38380820149` confirmed gateway lifecycle is fixed: SDK probe reached it, direct root was `404/PGRST125`, and gateway returned `502`; gateway log reports an upstream `TypeError`. The next run records only the underlying non-secret cause code/message to isolate the remaining forwarding issue.
+- Run `38381257702` confirmed the upstream error remains a generic Node fetch `TypeError` while direct PostgREST is healthy. The gateway now uses Node's native `http.request` proxy instead of `fetch`, preserving methods/headers/body without undici proxy ambiguity.
+- Run `38381615931` showed the native proxy still returns 502 without a safe message; tightened header normalization and response handling for the next bounded retry.
+- Root cause identified: Node's `IncomingMessage.headers` is a plain object, so the spread expression caused the gateway `TypeError` before contacting PostgREST. Replaced it with `Object.entries(request.headers)`.
+- Run `38382116999` passed the SDK prefix gate and both builds, then Gate A failed because the old/new worktree steps resolved the new gateway script relative to the old application checkout. The runtime steps now execute the harness script from `$GITHUB_WORKSPACE`.
+- Run `38382789605` proved the old app reaches the gateway but still returns 401. Diagnostics showed gateway request succeeds at transport level; root cause is missing upstream response headers after native proxying, especially `content-type`, so Supabase JSON parsing returned no row. Response headers are restored with hop-by-hop filtering.
+- Run `38383614183` retained the same 401 after response headers were restored; transport, direct SDK prefix, and fixture bcrypt probes pass. The next probe adds the exact legacy `authenticateCredentials()` OR/select query through the gateway.
+- Run `38384316405` confirmed the exact legacy SDK query returns a live row and bcrypt hash through the gateway, while old standalone login remains 401. Added non-sensitive gateway method/path/status telemetry to identify the runtime request path in the next isolated run.
+- Run `38385052584` showed the application auth query returns 200, then the session lookup query returns 400 on the migrated fixture. The next SDK probe captures the exact session-query error code/status to close the remaining compatibility distinction.
+- Run `38386163729` identified session-query error `42703` (undefined column). The sandbox migration list omitted `20260814190000_phase1_authorization_facade.sql`, which defines legacy `role_permissions` columns selected by the old app. Added that migration to the disposable fixture chain; no application or production schema change.
+- Run `38386880888` failed while applying that migration because its dependency type `task_evaluation_checkpoints` was also absent. Added `20260813110000_task_evaluation_checkpoints.sql` before the authorization facade migration.
+- Run `38387658296` applied the complete fixture and passed SDK prefix/build gates. Old-app login/session then remained blocked because `api_list_role_permission_grants` returned HTTP 400; redacted runtime log reports PostgreSQL `column reference "scope" is ambiguous`. This is a real RBAC V2 migration/application compatibility defect, not a sandbox URL or fixture-prefix issue.
+
+Final decision for PR #16:
+- `BLOCKED — old-app authenticated E2E`.
+- Gate A prefix/query probes: PASS; old-app login/session: FAIL due RBAC RPC SQL error; Gates B/C/D did not execute.
+- Do not claim authenticated E2E PASS, merge PR #16, apply production migration, deploy, restart, or alter production auth/RBAC SQL from this harness checkpoint.
+
+Decision:
+- Runtime E2E remains BLOCKED until the disposable GitHub Actions workflow executes the SDK prefix gate, old-app login/session, old-app authorization, new RBAC V2 suite, and authenticated browser smoke successfully.
+- No production endpoint, credential, database, migration, deployment, restart, symlink, systemd/timer, or retention APPLY was used.
+
+Next:
+- Commit and push only the E2E harness/workflow/status changes, then wait for PR and disposable Phase 3B.1 workflow runs. Do not merge PR #16 or proceed to production migration/activation without owner approval.
