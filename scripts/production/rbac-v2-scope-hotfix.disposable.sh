@@ -122,6 +122,7 @@ after=$(curl -sS -o /tmp/rbac-scope-after.json -w '%{http_code}' -X POST "${head
 test "$after" = 200
 grep -q 'scope.regression' /tmp/rbac-scope-after.json
 grep -q '"scope":"all"' /tmp/rbac-scope-after.json
+test "$(psql "$db" -Atqc "select count(*) from public.api_list_role_permission_grants('30000000-0000-0000-0000-000000000001') where permission_code='scope.regression' and scope='all'")" = 1
 
 psql "$db" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 insert into public.user_permission_grants(user_id,permission_id,scope,effect,created_by)
