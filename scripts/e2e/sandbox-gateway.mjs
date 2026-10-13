@@ -30,7 +30,8 @@ const server = http.createServer(async (request, response) => {
       if (body) upstreamRequest.write(body);
       upstreamRequest.end();
     });
-    response.writeHead(upstream.statusCode ?? 502);
+    const responseHeaders = Object.fromEntries(Object.entries(upstream.headers).filter(([name, value]) => typeof value === "string" && !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
+    response.writeHead(upstream.statusCode ?? 502, responseHeaders);
     upstream.pipe(response);
   } catch (error) {
     console.error(`sandbox gateway request failed: ${error?.cause?.code ?? error?.code ?? error?.name ?? "unknown"} ${error?.cause?.message ?? error?.message ?? ""}`.trim());

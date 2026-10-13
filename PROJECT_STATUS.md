@@ -875,6 +875,7 @@ CI follow-up:
 - Run `38381615931` showed the native proxy still returns 502 without a safe message; tightened header normalization and response handling for the next bounded retry.
 - Root cause identified: Node's `IncomingMessage.headers` is a plain object, so the spread expression caused the gateway `TypeError` before contacting PostgREST. Replaced it with `Object.entries(request.headers)`.
 - Run `38382116999` passed the SDK prefix gate and both builds, then Gate A failed because the old/new worktree steps resolved the new gateway script relative to the old application checkout. The runtime steps now execute the harness script from `$GITHUB_WORKSPACE`.
+- Run `38382789605` proved the old app reaches the gateway but still returns 401. Diagnostics showed gateway request succeeds at transport level; root cause is missing upstream response headers after native proxying, especially `content-type`, so Supabase JSON parsing returned no row. Response headers are restored with hop-by-hop filtering.
 
 Decision:
 - Runtime E2E remains BLOCKED until the disposable GitHub Actions workflow executes the SDK prefix gate, old-app login/session, old-app authorization, new RBAC V2 suite, and authenticated browser smoke successfully.
