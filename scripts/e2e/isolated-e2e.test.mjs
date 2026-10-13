@@ -6,6 +6,8 @@ const workflow = readFileSync(new URL("../../.github/workflows/phase3b-isolated-
 const fixture = readFileSync(new URL("./start-sandbox.sh", import.meta.url), "utf8");
 const httpSmoke = readFileSync(new URL("./http-smoke.mjs", import.meta.url), "utf8");
 const browserSmoke = readFileSync(new URL("./browser-smoke.mjs", import.meta.url), "utf8");
+const gateway = readFileSync(new URL("./sandbox-gateway.mjs", import.meta.url), "utf8");
+const sdkProbe = readFileSync(new URL("./supabase-sdk-probe.mjs", import.meta.url), "utf8");
 
 test("isolated workflow is disposable and non-production", () => {
   assert.match(workflow, /workflow_dispatch/);
@@ -53,4 +55,19 @@ test("browser runner install is disposable and does not rewrite application depe
   assert.match(workflow, /legacyBcryptMatch/);
   assert.match(workflow, /env ROLE_LIFECYCLE_ENABLED=false PORT=3102/);
   assert.match(workflow, /env ROLE_LIFECYCLE_ENABLED=true TASK_RBAC_V2_ENABLED=true PORT=3103/);
+});
+
+test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () => {
+  assert.match(gateway, /127\.0\.0\.1/);
+  assert.match(gateway, /sandbox gateway target must be localhost HTTP/);
+  assert.match(gateway, /startsWith\("\/rest\/v1"\)/);
+  assert.match(gateway, /request\.url\.slice\(prefix\.length\)/);
+  assert.match(gateway, /request\.headers/);
+  assert.match(sdkProbe, /createClient/);
+  assert.match(sdkProbe, /direct root endpoint unexpectedly accepted/);
+  assert.match(sdkProbe, /sandbox gateway did not satisfy/);
+  assert.match(workflow, /node scripts\/e2e\/sandbox-gateway\.mjs/);
+  assert.match(workflow, /node scripts\/e2e\/supabase-sdk-probe\.mjs/);
+  assert.match(workflow, /NEXT_PUBLIC_SUPABASE_URL=\"\$E2E_SUPABASE_URL\"/);
+  assert.doesNotMatch(workflow, /NEXT_PUBLIC_SUPABASE_URL=\"\$E2E_POSTGREST_URL\"/);
 });

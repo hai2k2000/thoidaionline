@@ -838,3 +838,33 @@ Blockers:
 
 Next:
 - Preserve the failed-run diagnostics and owner-review the remaining legacy standalone login blocker; do not claim isolated E2E PASS until old-app, new-app, and browser suites all execute successfully.
+
+## Phase 3B.1 Supabase Prefix Investigation
+
+Current Phase: BLOCKED; owner review after harness fix
+Current Task: Resolve old-app authenticated E2E 401 on the disposable Linux runner
+
+Evidence:
+- Canonical was synchronized to `5a444a45e2cc0d589ffa6de40ff1e9bf3d7108d` with an ordinary merge; the merge is local on the PR #16 branch until pushed.
+- Run `38374557577` showed the sandbox row, active flag, exact legacy query, and bcrypt comparison passing while the old standalone login still returned HTTP 401.
+- The sandbox PostgREST endpoint is exposed at `/`, while Supabase JS constructs REST requests under `/rest/v1`; this explains why direct root probes pass but the application request can fail.
+
+Harness fix:
+- Added a localhost-only `scripts/e2e/sandbox-gateway.mjs` that forwards `/rest/v1/*` (and the supported storage prefix) to the disposable PostgREST target without mocking data, permissions, or authentication.
+- Added `scripts/e2e/supabase-sdk-probe.mjs` using `@supabase/supabase-js@2.112.4` to prove the direct-root failure and gateway success without printing credentials.
+- Old and new app builds/runtime now use `E2E_SUPABASE_URL`; direct `E2E_POSTGREST_URL` remains limited to non-secret diagnostics and rollback-compatibility probes.
+- Added gateway cleanup and focused contract assertions; production URLs, artifacts, auth logic, and deployment scripts are unchanged.
+
+Local validation:
+- Isolated harness contract tests: 5/5 PASS.
+- Node syntax checks: PASS.
+- E2E-script ESLint: PASS.
+- TypeScript: PASS.
+- `git diff --check`: PASS.
+
+Decision:
+- Runtime E2E remains BLOCKED until the disposable GitHub Actions workflow executes the SDK prefix gate, old-app login/session, old-app authorization, new RBAC V2 suite, and authenticated browser smoke successfully.
+- No production endpoint, credential, database, migration, deployment, restart, symlink, systemd/timer, or retention APPLY was used.
+
+Next:
+- Commit and push only the E2E harness/workflow/status changes, then wait for PR and disposable Phase 3B.1 workflow runs. Do not merge PR #16 or proceed to production migration/activation without owner approval.
