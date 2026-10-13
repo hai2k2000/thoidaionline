@@ -751,3 +751,60 @@ Blockers:
 
 Next:
 - Owner merge review for PR #11; after merge, rerun canonical CI and verify a new `canonical-public` artifact before Phase 2.
+
+## Phase 3B Migration-First Compatibility Plan
+
+Current Phase: COMPLETE; migration-first plan ready for owner review
+Current Task: RBAC V2 database compatibility and artifact contract
+
+Completed:
+- Audited production read-only: migration `20261014100000` is present; `20261015100000` is not applied; `user_permission_grants.effect` and RBAC V2 RPCs are absent.
+- Rehearsed the exact `20261015100000_rbac_v2_role_user_overrides.sql` migration on an isolated PostgreSQL 17 restore fixture; first apply PASS, second invocation `ALREADY_APPLIED`.
+- RBAC SQL regression PASS; `effect`, new RPCs, legacy RPC ACLs, grant counts, and single migration-ledger registration were verified without production mutation.
+- Added the RBAC V2 migration to standalone `MIGRATION_REFERENCE` and `.release-meta`; artifact verifier and focused packaging regression now require the same contract.
+
+Validation:
+- Focused artifact/package/provenance/manifest/secret/round-trip tests: 19/19 PASS.
+- RBAC V2 focused and safe migration evidence: 69/69 PASS; isolated SQL rehearsal PASS.
+- `git diff --check`: PASS.
+
+Compatibility:
+- Old app + old DB: PASS (current production baseline).
+- New app + old DB: NO-GO; missing `effect` and RBAC V2 RPCs are required by the new application.
+- New app + new DB: migration and SQL contract PASS; end-to-end application smoke on the migrated fixture remains pending.
+- Old app + new DB: likely structurally compatible because legacy RPCs remain, but end-to-end old-app runtime verification is pending.
+
+Rollback:
+- Do not automatically roll back the application after RBAC V2 denies/overrides exist; `rbac_v2_assert_legacy_rollback_compatible()` must PASS or use a forward-fix path.
+- Freeze RBAC mutations during the pilot window unless the owner approves a tested forward-fix plan. PITR/database restore is not an automatic rollback because it may lose post-backup data.
+
+Production safety:
+- Production database, grants, users, release pointers, service, and symlinks unchanged.
+- Production activation remains `NO-GO` until migration-first rollout approval and application compatibility gates pass.
+
+Next:
+- Push the small artifact-contract PR for owner review; keep PR #12 open and unmerged. Production Pilot remains `NO-GO`.
+
+## Phase 3B Compatibility E2E Checkpoint
+
+Current Phase: COMPLETE; owner merge review
+Current Task: PR #14 synchronized with canonical RBAC V2 deployment hardening
+
+Completed:
+- Merged canonical `integration/production` SHA `6bae544ba92ac43d0a48040d06d92387d71597f2` into this branch with an ordinary merge; no reset or force update.
+- Preserved `rbac_v2=supported`, the RBAC V2 migration reference, immutable artifact metadata, provenance/manifest verification, and rollback compatibility gates.
+- Focused artifact/RBAC/deploy/rollback/retention tests: 30/30 PASS; `git diff --check`: PASS.
+- PR CI runs `38352320630` and `38352315627`: PASS; PR #14 is mergeable CLEAN against the new canonical base.
+
+E2E status:
+- Old application + migrated DB runtime E2E: BLOCKED locally because the required isolated PostgreSQL/Docker runtime is unavailable on this Windows host; no production credentials or database were used.
+- New RBAC V2 application + migrated DB runtime E2E: BLOCKED for the same reason; SQL rehearsal and pure resolver tests remain PASS, but they do not replace runtime smoke.
+- Backup restore and exact migration rehearsal evidence remains sealed from the isolated PostgreSQL 17 fixture: PASS / `ALREADY_APPLIED` on second run.
+
+Decision:
+- PR #14 merge: READY for owner merge approval.
+- Migration-first production pilot: NO-GO until both old-app and new-app authenticated runtime E2E gates run on an isolated migrated fixture.
+- Production migration, deploy, restart, DB/grant/user/symlink/systemd/timer changes: NONE.
+
+Next:
+- Owner may merge PR #14. Keep production activation blocked and provide an isolated runtime E2E environment before migration approval.
