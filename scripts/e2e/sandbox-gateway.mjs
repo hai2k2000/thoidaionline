@@ -22,7 +22,7 @@ const server = http.createServer(async (request, response) => {
       request.on("end", () => resolve(Buffer.concat(chunks)));
       request.on("error", reject);
     });
-    const forwardedHeaders = Object.fromEntries([...request.headers].filter(([name, value]) => typeof value === "string" && !["connection", "content-length", "host", "transfer-encoding"].includes(name)));
+    const forwardedHeaders = Object.fromEntries(Object.entries(request.headers).filter(([name, value]) => typeof value === "string" && !["connection", "content-length", "host", "transfer-encoding"].includes(name)));
     const upstreamUrl = new URL(request.url.slice(prefix.length) || "/", target);
     const upstream = await new Promise((resolve, reject) => {
       const upstreamRequest = http.request(upstreamUrl, { method: request.method, headers: forwardedHeaders }, (upstreamResponse) => resolve(upstreamResponse));
