@@ -54,7 +54,7 @@ Passed locally:
 - TypeScript: PASS (`npm exec tsc -- --noEmit`).
 - Changed-file ESLint: PASS (0 errors, 0 warnings).
 - `git diff --check`: PASS.
-- Fresh post-push GitHub build/package checks: PASS (runs `38347429615` and `38347433629` on commit `72d954e63816438a90ed086a192d484a56b41547`).
+- Fresh post-push GitHub build/package checks: PASS (runs `38347650433` and `38347654824` on final commit `5956fc53b8ce28892a1bfb23c3529b7187a3d578`).
 
 Linux-only deployment and rollback fixture scripts were not executable under Windows POSIX emulation and are configured to run in GitHub CI. No Windows packaging failure is treated as an RBAC failure. The fresh Linux CI artifact run passed; production rollout approval remains separate.
 
