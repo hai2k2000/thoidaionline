@@ -80,6 +80,7 @@ files=(
   20260813210000_password_reset_security.sql
   20260814070000_job_titles.sql
   20260814160000_employee_password_reset_admin.sql
+  20260814190000_phase1_authorization_facade.sql
   20260819123000_role_lifecycle_and_tbt_direct.sql
   20260822200000_account_personalization.sql
   20260916100000_phase1a_rbac_core.sql

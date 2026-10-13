@@ -879,6 +879,7 @@ CI follow-up:
 - Run `38383614183` retained the same 401 after response headers were restored; transport, direct SDK prefix, and fixture bcrypt probes pass. The next probe adds the exact legacy `authenticateCredentials()` OR/select query through the gateway.
 - Run `38384316405` confirmed the exact legacy SDK query returns a live row and bcrypt hash through the gateway, while old standalone login remains 401. Added non-sensitive gateway method/path/status telemetry to identify the runtime request path in the next isolated run.
 - Run `38385052584` showed the application auth query returns 200, then the session lookup query returns 400 on the migrated fixture. The next SDK probe captures the exact session-query error code/status to close the remaining compatibility distinction.
+- Run `38386163729` identified session-query error `42703` (undefined column). The sandbox migration list omitted `20260814190000_phase1_authorization_facade.sql`, which defines legacy `role_permissions` columns selected by the old app. Added that migration to the disposable fixture chain; no application or production schema change.
 
 Decision:
 - Runtime E2E remains BLOCKED until the disposable GitHub Actions workflow executes the SDK prefix gate, old-app login/session, old-app authorization, new RBAC V2 suite, and authenticated browser smoke successfully.
