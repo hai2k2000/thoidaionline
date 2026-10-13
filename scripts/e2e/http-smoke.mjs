@@ -21,6 +21,7 @@ const request = async (path, options = {}, cookie = "") => {
 const json = async (response) => response.json().catch(() => ({}));
 const expectStatus = (response, expected, label) => {
   if (response.status !== expected) {
+    response.clone().json().then((body) => console.error(`::error title=HTTP E2E response::${label}: ${JSON.stringify(body)}`)).catch(() => {});
     console.error(`::error title=HTTP E2E status::${label}: expected ${expected}, got ${response.status}`);
     throw new Error(`${label}: expected ${expected}, got ${response.status}`);
   }
