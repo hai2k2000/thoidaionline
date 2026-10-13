@@ -11,13 +11,14 @@ trap 'rm -rf "$root"' EXIT
 release_root="$root/releases"
 bin="$root/bin"
 mkdir -p "$release_root" "$bin" "$root/artifact/.next" "$root/artifact/scripts/production"
-printf 'build_config=canonical-public\nenv_model=symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production\n' > "$root/artifact/.release-meta"
+printf 'commit=4fcd766d3b96a261297d9bd1d121c41a8a211f62\nbuild_config=canonical-public\nenv_model=symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production\n' > "$root/artifact/.release-meta"
 touch "$root/artifact/verify-standalone-artifact.mjs"
 
 cat > "$bin/node" <<'EOF'
 #!/usr/bin/env bash
 case "$(basename "$1")" in
   verify-standalone-artifact.mjs) exit 0 ;;
+  controlled-deploy-exception.mjs) echo "RBAC readiness evidence is required" >&2; exit 1 ;;
   contract-smoke.mjs) [[ "${FAIL_KIND:-}" != contract && "${FAIL_KIND:-}" != rollback && "${FAIL_KIND:-}" != concurrent ]] ;;
   browser-path-smoke.mjs) [[ "${FAIL_KIND:-}" != browser ]] ;;
   *) exit 0 ;;
@@ -144,6 +145,16 @@ sleep 0.2
 PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/held.lock" THOIDAI_NEW_RELEASE_PATH="$release_root/new-concurrent" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" THOIDAI_CONTRACT_SMOKE_SCRIPT="$root/contract-smoke.mjs" THOIDAI_BROWSER_SMOKE_SCRIPT="$root/browser-path-smoke.mjs" THOIDAI_SMOKE_COOKIE=test bash scripts/production/deploy-gate.sh "$root/artifact" >/dev/null 2>"$root/concurrent.err" && exit 1
 grep -q 'deploy lock unavailable' "$root/concurrent.err"
 wait "$holder"
+
+rm -f "$root/mutation.log"
+printf '{}' > "$root/approval.json"
+if PATH="$bin:$PATH" FIXTURE_ROOT="$root" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/waiver.lock" THOIDAI_NEW_RELEASE_PATH="$release_root/new-waiver-missing-readiness" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" THOIDAI_AUTHENTICATED_SMOKE_WAIVER=1 THOIDAI_DEPLOY_EXCEPTION_APPROVAL="$root/approval.json" bash scripts/production/deploy-gate.sh "$root/artifact" >"$root/waiver.out" 2>"$root/waiver.err"; then
+  echo "waiver accepted missing RBAC readiness evidence" >&2
+  exit 1
+fi
+grep -q 'RBAC readiness evidence is required' "$root/waiver.err"
+[[ "$(snapshot)" == "$expected" ]]
+[[ ! -s "$root/mutation.log" ]]
 
 echo "deploy-gate-fixtures: PASS (restart health contract browser per-pointer ln/mv fail-closed rollback and real flock contention)"
 

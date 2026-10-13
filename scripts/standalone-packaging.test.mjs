@@ -60,3 +60,10 @@ test("authenticated smoke dependencies are packaged and verified", () => {
   }
   assert.match(workflow, /import\(.*required-api-contracts\.mjs/);
 });
+
+test("controlled deployment exception validator is packaged for the activation gate", () => {
+  const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+  const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");
+  assert.match(packager, /controlled-deploy-exception\.mjs/);
+  assert.match(verifier, /controlled-deploy-exception\.mjs/);
+});
