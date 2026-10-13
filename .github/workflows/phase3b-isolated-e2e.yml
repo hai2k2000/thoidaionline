@@ -236,11 +236,27 @@ jobs:
           env ROLE_LIFECYCLE_ENABLED=true TASK_RBAC_V2_ENABLED=true PORT=3103 NEXT_PUBLIC_SUPABASE_URL="$E2E_SUPABASE_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET" nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-new.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-new.pid"
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3103/login >/dev/null 2>&1 && break; sleep 1; done
           test -s "$RUNNER_TEMP/thoidai-new.pid"
+          set +e
           E2E_BASE_URL=http://127.0.0.1:3103 node "$GITHUB_WORKSPACE/scripts/e2e/http-smoke.mjs" > "$RUNNER_TEMP/thoidai-new-http.log" 2>&1
+          http_status=$?
+          set -e
+          if [ "$http_status" -ne 0 ]; then
+            summary=$(grep -E 'Error:|expected|missing|cannot' "$RUNNER_TEMP/thoidai-new-http.log" | head -n 1 || true)
+            echo "::error title=New HTTP failure::$summary"
+            exit "$http_status"
+          fi
           browser_path=$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux/chrome' | head -n 1)
           echo "browser_path=${browser_path:-missing}"
           test -n "$browser_path"
+          set +e
           E2E_BASE_URL=http://127.0.0.1:3103 E2E_BROWSER_EXECUTABLE_PATH="$browser_path" node "$GITHUB_WORKSPACE/scripts/e2e/browser-smoke.mjs" > "$RUNNER_TEMP/thoidai-new-browser.log" 2>&1
+          browser_status=$?
+          set -e
+          if [ "$browser_status" -ne 0 ]; then
+            summary=$(grep -E 'Error:|expected|missing|cannot' "$RUNNER_TEMP/thoidai-new-browser.log" | head -n 1 || true)
+            echo "::error title=Browser failure::$summary"
+            exit "$browser_status"
+          fi
           kill "$(cat "$RUNNER_TEMP/thoidai-new.pid")" || true
 
       - name: Diagnose isolated new-app E2E failure
