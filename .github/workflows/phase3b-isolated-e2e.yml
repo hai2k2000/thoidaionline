@@ -96,6 +96,8 @@ jobs:
           THOIDAI_REMOTE_HEAD: 9acead5accc6d439d63f89655d8066ee66b9dbda
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
+          gateway_port=$((22000 + (GITHUB_RUN_ID % 500)))
+          export E2E_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_SUPABASE_URL"
           export NEXT_PUBLIC_SUPABASE_ANON_KEY="$E2E_ANON_KEY"
           export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
@@ -116,6 +118,8 @@ jobs:
           THOIDAI_REMOTE_HEAD: 9acead5accc6d439d63f89655d8066ee66b9dbda
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
+          gateway_port=$((23000 + (GITHUB_RUN_ID % 500)))
+          export E2E_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_SUPABASE_URL"
           export NEXT_PUBLIC_SUPABASE_ANON_KEY="$E2E_ANON_KEY"
           export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
@@ -138,7 +142,7 @@ jobs:
           PORT: '3102'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
-          gateway_port=$((22000 + ($$ % 500)))
+          gateway_port=$((22000 + (GITHUB_RUN_ID % 500)))
           export E2E_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
           E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node "$GITHUB_WORKSPACE/scripts/e2e/sandbox-gateway.mjs" "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
@@ -212,7 +216,7 @@ jobs:
           TASK_RBAC_V2_ENABLED: 'true'
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
-          gateway_port=$((23000 + ($$ % 500)))
+          gateway_port=$((23000 + (GITHUB_RUN_ID % 500)))
           export E2E_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
           E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
