@@ -48,5 +48,6 @@ test("artifact boundary enforces provenance and the production disk floor", () =
 test("controlled deployment exception remains opt-in and delegated to the gate", () => {
   assert.match(deploy, /THOIDAI_AUTHENTICATED_SMOKE_WAIVER/);
   assert.match(deploy, /deploy-gate\.sh/);
+  assert.match(deploy, /THOIDAI_RBAC_READINESS_EVIDENCE/);
   assert.doesNotMatch(workflow, /THOIDAI_AUTHENTICATED_SMOKE_WAIVER/);
 });
