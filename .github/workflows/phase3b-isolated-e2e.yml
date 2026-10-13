@@ -242,6 +242,14 @@ jobs:
           E2E_BASE_URL=http://127.0.0.1:3103 E2E_BROWSER_EXECUTABLE_PATH="$browser_path" node "$GITHUB_WORKSPACE/scripts/e2e/browser-smoke.mjs"
           kill "$(cat "$RUNNER_TEMP/thoidai-new.pid")" || true
 
+      - name: Diagnose isolated new-app E2E failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "::error title=New app process::$(cat "$RUNNER_TEMP/thoidai-new.pid" 2>/dev/null || echo missing)"
+          tail -n 120 "$RUNNER_TEMP/thoidai-new.log" 2>/dev/null | while IFS= read -r line; do echo "::error title=New app log::$line"; done || true
+          tail -n 120 "$RUNNER_TEMP/thoidai-gateway.log" 2>/dev/null | while IFS= read -r line; do echo "::warning title=Sandbox gateway::$line"; done || true
+
       - name: Sandbox resource evidence
         if: always()
         shell: bash

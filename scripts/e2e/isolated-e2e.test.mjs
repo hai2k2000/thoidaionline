@@ -97,4 +97,5 @@ test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () 
   assert.match(workflow, /Build new RBAC V2 application with sandbox public endpoint[\s\S]*?gateway_port=\$\(\(23000 \+ \(GITHUB_RUN_ID % 500\)\)\)/);
   assert.match(workflow, /title=New app log/);
   assert.match(workflow, /title=Sandbox gateway/);
+  assert.match(workflow, /Diagnose isolated new-app E2E failure/);
 });
