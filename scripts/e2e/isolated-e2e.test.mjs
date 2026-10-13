@@ -46,6 +46,8 @@ test("authenticated smoke covers authorization and browser paths without printin
   assert.match(browserSmoke, /#identifier/);
   assert.match(browserSmoke, /#password/);
   assert.doesNotMatch(httpSmoke, /console\.log\([^)]*password/);
+  assert.match(httpSmoke, /title=HTTP E2E status/);
+  assert.match(httpSmoke, /title=Quick Report E2E status/);
   assert.match(workflow, /working-directory: \$\{\{ runner\.temp \}\}\/thoidai-old[\s\S]*?ROLE_LIFECYCLE_ENABLED: 'false'/);
   assert.match(workflow, /working-directory: \$\{\{ runner\.temp \}\}\/thoidai-new[\s\S]*?ROLE_LIFECYCLE_ENABLED: 'true'/);
 });

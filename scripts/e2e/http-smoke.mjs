@@ -20,11 +20,15 @@ const request = async (path, options = {}, cookie = "") => {
 };
 const json = async (response) => response.json().catch(() => ({}));
 const expectStatus = (response, expected, label) => {
-  if (response.status !== expected) throw new Error(`${label}: expected ${expected}, got ${response.status}`);
+  if (response.status !== expected) {
+    console.error(`::error title=HTTP E2E status::${label}: expected ${expected}, got ${response.status}`);
+    throw new Error(`${label}: expected ${expected}, got ${response.status}`);
+  }
 };
 const expectQuickReportStatus = async (response, expected, label) => {
   if (response.status === expected) return response;
   const body = await json(response);
+  console.error(`::error title=Quick Report E2E status::${label}: expected ${expected}, got ${response.status} (${JSON.stringify(body?.error ?? body)})`);
   throw new Error(`${label}: expected ${expected}, got ${response.status} (${JSON.stringify(body?.error ?? body)})`);
 };
 
