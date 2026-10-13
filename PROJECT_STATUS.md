@@ -784,3 +784,27 @@ Production safety:
 
 Next:
 - Push the small artifact-contract PR for owner review; keep PR #12 open and unmerged. Production Pilot remains `NO-GO`.
+
+## Phase 3B Compatibility E2E Checkpoint
+
+Current Phase: COMPLETE; owner merge review
+Current Task: PR #14 synchronized with canonical RBAC V2 deployment hardening
+
+Completed:
+- Merged canonical `integration/production` SHA `6bae544ba92ac43d0a48040d06d92387d71597f2` into this branch with an ordinary merge; no reset or force update.
+- Preserved `rbac_v2=supported`, the RBAC V2 migration reference, immutable artifact metadata, provenance/manifest verification, and rollback compatibility gates.
+- Focused artifact/RBAC/deploy/rollback/retention tests: 30/30 PASS; `git diff --check`: PASS.
+- PR CI runs `38352320630` and `38352315627`: PASS; PR #14 is mergeable CLEAN against the new canonical base.
+
+E2E status:
+- Old application + migrated DB runtime E2E: BLOCKED locally because the required isolated PostgreSQL/Docker runtime is unavailable on this Windows host; no production credentials or database were used.
+- New RBAC V2 application + migrated DB runtime E2E: BLOCKED for the same reason; SQL rehearsal and pure resolver tests remain PASS, but they do not replace runtime smoke.
+- Backup restore and exact migration rehearsal evidence remains sealed from the isolated PostgreSQL 17 fixture: PASS / `ALREADY_APPLIED` on second run.
+
+Decision:
+- PR #14 merge: READY for owner merge approval.
+- Migration-first production pilot: NO-GO until both old-app and new-app authenticated runtime E2E gates run on an isolated migrated fixture.
+- Production migration, deploy, restart, DB/grant/user/symlink/systemd/timer changes: NONE.
+
+Next:
+- Owner may merge PR #14. Keep production activation blocked and provide an isolated runtime E2E environment before migration approval.
