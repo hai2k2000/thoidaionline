@@ -50,4 +50,5 @@ test("browser runner install is disposable and does not rewrite application depe
   assert.match(workflow, /bcryptMatch/);
   assert.match(workflow, /legacyQuery/);
   assert.match(workflow, /actual-password-status/);
+  assert.match(workflow, /legacyBcryptMatch/);
 });
