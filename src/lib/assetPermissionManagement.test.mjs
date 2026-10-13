@@ -6,13 +6,13 @@ const route = readFileSync(new URL("../app/api/permissions/route.ts", import.met
 const page = readFileSync(new URL("../app/permissions/page.tsx", import.meta.url), "utf8");
 const repository = readFileSync(new URL("./rbac/repository.ts", import.meta.url), "utf8");
 const migration = readFileSync(new URL("../../supabase/migrations/20261014100000_asset_manage_permission_management.sql", import.meta.url), "utf8");
+const catalog = readFileSync(new URL("./rbac/permissionCatalog.ts", import.meta.url), "utf8");
 
  test("asset permissions remain separated into read-only view and mutable management", () => {
-  assert.match(page, /Xem tài sản/);
-  assert.match(page, /asset\.view/);
-  assert.match(page, /Chỉ đọc/);
-  assert.match(page, /Quản lý tài sản/);
-  assert.match(page, /asset\.manage/);
+  assert.match(page, /permission\.name/);
+  assert.match(catalog, /asset\.view/);
+  assert.match(page, /scopeOptions/);
+  assert.match(catalog, /asset\.manage/);
   assert.match(route, /permissionCode/);
 });
 
@@ -26,7 +26,7 @@ test("asset.manage mutations are generic and server-authorized", () => {
 });
 
 test("asset.view is read-only and cannot be selected for mutation", () => {
-  assert.match(page, /asset\.view/);
+  assert.match(catalog, /asset\.view/);
   assert.match(route, /permissionCode !== "task\.quick_report\.create" && permissionCode !== "asset\.manage"/);
   assert.doesNotMatch(route, /api_set_asset_view/);
 });
@@ -56,7 +56,7 @@ test("asset list UI keeps the requested polished table and mobile contracts", ()
   const assets = readFileSync(new URL("../app/assets/page.tsx", import.meta.url), "utf8");
   assert.match(assets, /min-w-\[900px\]/);
   assert.match(assets, /whitespace-nowrap[^\n]*Ghi chú|Ghi chú[^\n]*whitespace-nowrap/);
-  assert.match(assets, />Xem <span/);
+  assert.match(assets, /aria-label=\{`Mở chi tiết tài sản/);
   assert.match(assets, /Tài sản dùng chung của phòng/);
   assert.match(assets, /role="combobox"/);
 });
