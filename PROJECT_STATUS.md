@@ -874,6 +874,7 @@ CI follow-up:
 - Run `38381257702` confirmed the upstream error remains a generic Node fetch `TypeError` while direct PostgREST is healthy. The gateway now uses Node's native `http.request` proxy instead of `fetch`, preserving methods/headers/body without undici proxy ambiguity.
 - Run `38381615931` showed the native proxy still returns 502 without a safe message; tightened header normalization and response handling for the next bounded retry.
 - Root cause identified: Node's `IncomingMessage.headers` is a plain object, so the spread expression caused the gateway `TypeError` before contacting PostgREST. Replaced it with `Object.entries(request.headers)`.
+- Run `38382116999` passed the SDK prefix gate and both builds, then Gate A failed because the old/new worktree steps resolved the new gateway script relative to the old application checkout. The runtime steps now execute the harness script from `$GITHUB_WORKSPACE`.
 
 Decision:
 - Runtime E2E remains BLOCKED until the disposable GitHub Actions workflow executes the SDK prefix gate, old-app login/session, old-app authorization, new RBAC V2 suite, and authenticated browser smoke successfully.
