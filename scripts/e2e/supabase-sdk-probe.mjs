@@ -8,6 +8,7 @@ const direct = createClient(directUrl, key, { auth: { persistSession: false, aut
 const gateway = createClient(gatewayUrl, key, { auth: { persistSession: false, autoRefreshToken: false } });
 const directResult = await direct.from("staff_users").select("username,active").eq("username", "e2e-admin").maybeSingle();
 const gatewayResult = await gateway.from("staff_users").select("username,active").eq("username", "e2e-admin").maybeSingle();
+const authQuery = await gateway.from("staff_users").select("id,username,password,password_hash,active,session_version,must_change_password").or("username.eq.e2e-admin,email.ilike.e2e-admin,phone.eq.e2e-admin").limit(1).maybeSingle();
 const query = "staff_users?username=eq.e2e-admin&select=username,active";
 const directHttp = await fetch(`${directUrl}/rest/v1/${query}`, { headers: { apikey: key, authorization: `Bearer ${key}` } });
 const gatewayHttp = await fetch(`${gatewayUrl}/rest/v1/${query}`, { headers: { apikey: key, authorization: `Bearer ${key}` } });
@@ -18,8 +19,11 @@ console.log(JSON.stringify({
   gatewayError: gatewayResult.error?.code ?? null,
   gatewayErrorStatus: gatewayResult.error?.status ?? null,
   gatewayRow: Boolean(gatewayResult.data),
+  authQueryError: authQuery.error?.code ?? null,
+  authQueryRow: Boolean(authQuery.data),
+  authQueryHash: typeof authQuery.data?.password_hash === "string",
   directHttpStatus: directHttp.status,
   gatewayHttpStatus: gatewayHttp.status,
 }));
 if (!directResult.error || directResult.data || directHttp.status < 400) throw new Error("direct root endpoint unexpectedly accepted Supabase SDK REST query");
-if (gatewayResult.error || !gatewayResult.data || !gatewayHttp.ok) throw new Error("sandbox gateway did not satisfy Supabase SDK REST query");
+if (gatewayResult.error || !gatewayResult.data || gatewayResult.data.active !== true || authQuery.error || !authQuery.data || !authQuery.data.active || !authQuery.data.password_hash || !gatewayHttp.ok) throw new Error("sandbox gateway did not satisfy Supabase SDK REST query");
