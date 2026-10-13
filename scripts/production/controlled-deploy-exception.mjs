@@ -2,6 +2,7 @@ import { link, lstat, mkdir, readFile, unlink, writeFile } from "node:fs/promise
 import { dirname } from "node:path";
 
 export const APPROVAL_SCOPE = "rbac-v2-authenticated-smoke-waiver";
+export const DEFAULT_CONSUMED_REGISTRY = "/var/lib/thoidai-work/deploy-evidence/.rbac-v2-exceptions-consumed";
 
 const isSafeField = (value) => typeof value === "string" && /^[A-Za-z0-9._:@/-]{1,200}$/.test(value);
 
@@ -43,7 +44,7 @@ async function readApprovalFile(path, { enforcePrivate = false, enforceOwner = f
   return approval;
 }
 
-export async function consumeApproval(path, { expectedCommit, evidencePath, now = new Date(), enforcePrivate = false, enforceOwner = false } = {}) {
+export async function consumeApproval(path, { expectedCommit, evidencePath, registryDir = DEFAULT_CONSUMED_REGISTRY, now = new Date(), enforcePrivate = false, enforceOwner = false } = {}) {
   const approval = await readApprovalFile(path, { enforcePrivate, enforceOwner });
   const validation = validateApproval(approval, { expectedCommit, now });
   if (!validation.ok) throw new Error(validation.errors.join("; "));
@@ -52,8 +53,7 @@ export async function consumeApproval(path, { expectedCommit, evidencePath, now 
     if (error?.code === "ENOENT" || error?.code === "EEXIST") throw new Error("approval was already consumed");
     throw error;
   });
-  const registryDir = dirname(evidencePath || path);
-  const registryPath = `${registryDir}/.rbac-v2-exceptions-consumed/${approval.exception_id}`;
+  const registryPath = `${registryDir}/${approval.exception_id}`;
   await mkdir(dirname(registryPath), { recursive: true, mode: 0o700 });
   await writeFile(registryPath, `approved_commit=${expectedCommit}\nconsumed_at=${new Date(now).toISOString()}\n`, { flag: "wx", mode: 0o600 }).catch((error) => {
     if (error?.code === "EEXIST") {

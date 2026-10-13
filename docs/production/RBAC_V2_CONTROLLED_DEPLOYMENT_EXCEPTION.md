@@ -4,7 +4,7 @@ This is a one-time, fail-closed exception for the approved RBAC V2 rollout only.
 
 ## Approval contract
 
-The owner must create a root-owned mode `0600` JSON file outside the release artifact. The file is consumed by the activation gate and cannot be reused. Its `approved_commit` must equal the exact full SHA in the artifact metadata.
+The owner must create a root-owned mode `0600` JSON file outside the release artifact. The file is consumed by the activation gate and cannot be reused. A durable root-owned registry under `/var/lib/thoidai-work/deploy-evidence/.rbac-v2-exceptions-consumed` records the consumed `exception_id`; changing the evidence output directory cannot reset one-time use. Its `approved_commit` must equal the exact full SHA in the artifact metadata.
 
 ```json
 {
@@ -29,6 +29,6 @@ Artifact provenance/checksum, backup and disposable restore, migration ledger/ch
 
 ## Evidence and manual acceptance
 
-The gate writes a secret-free evidence file containing `AUTHENTICATED_SMOKE=WAIVED` and `approval_state=CONSUMED`. It must never be reported as smoke `PASS`. After activation, the owner must manually verify login, Permission Management, Role Matrix, User Overrides, effective permissions, explicit deny behavior, and the last `permission.manage` manager. `/login` HTTP 200 alone is not acceptance. If manual checks fail, use the verified compatibility-gated recovery procedure; do not improvise a database rollback.
+The gate writes a secret-free evidence file containing `AUTHENTICATED_SMOKE=WAIVED` and `approval_state=CONSUMED`. This covers both authenticated contract and browser-path smoke because both require the omitted session. It must never be reported as smoke `PASS`. After activation, the owner must manually verify login, Permission Management, Role Matrix, User Overrides, effective permissions, explicit deny behavior, and the last `permission.manage` manager. `/login` HTTP 200 alone is not acceptance. If manual checks fail, use the verified compatibility-gated recovery procedure; do not improvise a database rollback.
 
 Normal deployments still require the existing cookie/bearer authenticated contract and browser smoke. This exception is not a general bypass and is not enabled by the workflow.

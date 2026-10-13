@@ -41,10 +41,10 @@ test("consumes approval once and records waiver evidence without secrets", async
   const approvalPath = join(root, "approval.json");
   const evidencePath = join(root, "waiver.evidence");
   await writeFile(approvalPath, `${JSON.stringify(baseApproval(), null, 2)}\n`, { mode: 0o600 });
-  const first = await consumeApproval(approvalPath, { expectedCommit: commit, evidencePath, now: new Date("2026-10-13T13:30:00Z") });
+  const first = await consumeApproval(approvalPath, { expectedCommit: commit, evidencePath, registryDir: join(root, "registry"), now: new Date("2026-10-13T13:30:00Z") });
   assert.equal(first.ok, true);
   assert.match(await readFile(evidencePath, "utf8"), /AUTHENTICATED_SMOKE=WAIVED/);
-  await assert.rejects(() => consumeApproval(approvalPath, { expectedCommit: commit, evidencePath, now: new Date("2026-10-13T13:31:00Z") }), /already consumed/);
+  await assert.rejects(() => consumeApproval(approvalPath, { expectedCommit: commit, evidencePath, registryDir: join(root, "registry"), now: new Date("2026-10-13T13:31:00Z") }), /already consumed/);
 });
 
 test("rejects a copied approval after the exception id is consumed", async () => {
@@ -52,7 +52,7 @@ test("rejects a copied approval after the exception id is consumed", async () =>
   const approvalPath = join(root, "approval.json");
   const copiedPath = join(root, "copied-approval.json");
   await writeFile(approvalPath, `${JSON.stringify(baseApproval({ exception_id: "rbac-v2-copy-test" }))}\n`, { mode: 0o600 });
-  await consumeApproval(approvalPath, { expectedCommit: commit, evidencePath: join(root, "first.evidence"), now: new Date("2026-10-13T13:30:00Z") });
+  await consumeApproval(approvalPath, { expectedCommit: commit, evidencePath: join(root, "first", "first.evidence"), registryDir: join(root, "registry"), now: new Date("2026-10-13T13:30:00Z") });
   await writeFile(copiedPath, `${JSON.stringify(baseApproval({ exception_id: "rbac-v2-copy-test" }))}\n`, { mode: 0o600 });
-  await assert.rejects(() => consumeApproval(copiedPath, { expectedCommit: commit, evidencePath: join(root, "second.evidence"), now: new Date("2026-10-13T13:31:00Z") }), /already consumed/);
+  await assert.rejects(() => consumeApproval(copiedPath, { expectedCommit: commit, evidencePath: join(root, "second", "second.evidence"), registryDir: join(root, "registry"), now: new Date("2026-10-13T13:31:00Z") }), /already consumed/);
 });
