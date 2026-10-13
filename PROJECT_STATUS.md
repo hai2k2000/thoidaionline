@@ -866,6 +866,7 @@ CI follow-up:
 - Run `38376779104` reached the new SDK prefix step but failed because the workflow tried to parse `GITHUB_ENV` with `sed`; the resulting gateway URL lost its port and Node reported `ECONNREFUSED 127.0.0.1:80`.
 - This was a harness wiring defect, not an application authentication result. The fix persists `E2E_SUPABASE_URL` in the sandbox env file and sources it directly in later steps.
 - Run `38378461348` confirmed the URL was correct (`127.0.0.1:20373`) but the gateway process was reaped between steps, producing `ECONNREFUSED` on the gateway port. The next minimal fix starts it with `nohup` and retains the existing `always()` cleanup.
+- Run `38378950904` confirmed `nohup` alone did not survive the Actions runner process cleanup. The next fix detaches the gateway from `RUNNER_TRACKING_ID` and stdin while retaining explicit PID cleanup.
 
 Decision:
 - Runtime E2E remains BLOCKED until the disposable GitHub Actions workflow executes the SDK prefix gate, old-app login/session, old-app authorization, new RBAC V2 suite, and authenticated browser smoke successfully.
