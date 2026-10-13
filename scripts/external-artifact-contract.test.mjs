@@ -13,6 +13,9 @@ test("external artifact workflow builds without production secrets or deploy act
   assert.match(workflow, /scan-artifact-secrets\.mjs/);
   assert.match(workflow, /THOIDAI_RUNTIME_ENV_MODEL: runtime-injected/);
   assert.match(workflow, /retention-days: 14/);
+  assert.match(workflow, /include-hidden-files: true/);
+  assert.match(workflow, /actions\/download-artifact@v4/);
+  assert.match(workflow, /verify-artifact-roundtrip\.mjs/);
   assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{\{\s*secrets\./);
   assert.doesNotMatch(workflow, /ssh|scp|rsync|deploy-external-artifact\.sh.*--activate/);
 });
