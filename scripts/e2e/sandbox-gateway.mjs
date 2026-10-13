@@ -32,7 +32,7 @@ const server = http.createServer(async (request, response) => {
     response.writeHead(upstream.status, responseHeaders);
     response.end(Buffer.from(await upstream.arrayBuffer()));
   } catch (error) {
-    console.error(`sandbox gateway request failed: ${error?.code ?? error?.name ?? "unknown"}`);
+    console.error(`sandbox gateway request failed: ${error?.cause?.code ?? error?.code ?? error?.name ?? "unknown"} ${error?.cause?.message ?? ""}`.trim());
     if (!response.headersSent) response.writeHead(502, { "content-type": "text/plain" });
     response.end("sandbox gateway upstream failure");
   }
