@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { REQUIRED_PRODUCTION_ROUTES } from "../src/lib/requiredProductionRoutes.mjs";
 
 const root = process.cwd();
@@ -63,8 +63,19 @@ await cp(join(root, "scripts", "start-standalone.mjs"), join(output, "start-stan
 await cp(join(root, "scripts", "verify-standalone-artifact.mjs"), join(output, "verify-standalone-artifact.mjs"));
 await cp(join(root, "scripts", "artifact-manifest.mjs"), join(output, "artifact-manifest.mjs"));
 await cp(join(root, "scripts", "verify-artifact-manifest.mjs"), join(output, "verify-artifact-manifest.mjs"));
+const authenticatedSmokeFiles = [
+  "scripts/contract-smoke.mjs",
+  "scripts/required-api-contracts.mjs",
+  "scripts/production/browser-path-smoke.mjs",
+  "src/lib/journalismScope.mjs",
+];
+for (const relativePath of authenticatedSmokeFiles) {
+  const destination = join(output, ...relativePath.split("/"));
+  await mkdir(dirname(destination), { recursive: true });
+  await cp(join(root, ...relativePath.split("/")), destination);
+}
 await mkdir(join(output, "scripts", "production"), { recursive: true });
-for (const name of ["build-standalone-release.sh", "mark-release-success.sh", "release-retention.sh"]) {
+for (const name of ["build-standalone-release.sh", "mark-release-success.sh", "release-retention.sh", "controlled-deploy-exception.mjs"]) {
   await cp(join(root, "scripts", "production", name), join(output, "scripts", "production", name));
 }
 await rm(join(output, "scripts", "check-required-routes.mjs"), { force: true });
