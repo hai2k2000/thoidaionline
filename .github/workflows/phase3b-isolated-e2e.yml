@@ -63,6 +63,7 @@ jobs:
           echo $! > "$RUNNER_TEMP/thoidai-gateway.pid"
           for _ in $(seq 1 30); do curl -fsS "http://127.0.0.1:${gateway_port}/health" >/dev/null 2>&1 && break; sleep 1; done
           curl -fsS "http://127.0.0.1:${gateway_port}/health" >/dev/null
+          echo "E2E_SUPABASE_URL=http://127.0.0.1:${gateway_port}" >> "$RUNNER_TEMP/thoidai-e2e.env"
           {
             cat "$RUNNER_TEMP/thoidai-e2e.env"
             echo "E2E_SUPABASE_URL=http://127.0.0.1:${gateway_port}"
@@ -72,8 +73,6 @@ jobs:
         shell: bash
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
-          gateway_port=$(sed -n 's#^E2E_SUPABASE_URL=http://127.0.0.1:##p' "$GITHUB_ENV" | tail -n 1)
-          export E2E_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
           node scripts/e2e/supabase-sdk-probe.mjs
 
       - name: Prepare exact old and new source worktrees
