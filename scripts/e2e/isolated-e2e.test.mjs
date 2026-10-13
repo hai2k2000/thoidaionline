@@ -89,5 +89,5 @@ test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () 
   assert.doesNotMatch(workflow, /gateway_port=\$\(sed -n .*E2E_SUPABASE_URL/);
   assert.match(workflow, /NEXT_PUBLIC_SUPABASE_URL=\"\$E2E_SUPABASE_URL\"/);
   assert.doesNotMatch(workflow, /NEXT_PUBLIC_SUPABASE_URL=\"\$E2E_POSTGREST_URL\"/);
-  assert.match(workflow, /trap 'kill \"\$gateway_pid\" 2>\/dev\/null \|\| true' EXIT/);
+  assert.match(workflow, /cleanup_gateway\(\) \{ kill \"\$gateway_pid\" 2>\/dev\/null \|\| true; wait \"\$gateway_pid\" 2>\/dev\/null \|\| true; \}/);
 });

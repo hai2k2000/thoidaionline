@@ -71,7 +71,8 @@ jobs:
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node "$GITHUB_WORKSPACE/scripts/e2e/sandbox-gateway.mjs" "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
-          trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
+          cleanup_gateway() { kill "$gateway_pid" 2>/dev/null || true; wait "$gateway_pid" 2>/dev/null || true; }
+          trap cleanup_gateway EXIT
           for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
           curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null
           node scripts/e2e/supabase-sdk-probe.mjs
@@ -208,7 +209,8 @@ jobs:
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
-          trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
+          cleanup_gateway() { kill "$gateway_pid" 2>/dev/null || true; wait "$gateway_pid" 2>/dev/null || true; }
+          trap cleanup_gateway EXIT
           for _ in $(seq 1 30); do curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
           curl -fsS "$E2E_SUPABASE_URL/health" >/dev/null
           env ROLE_LIFECYCLE_ENABLED=true TASK_RBAC_V2_ENABLED=true PORT=3103 NEXT_PUBLIC_SUPABASE_URL="$E2E_SUPABASE_URL" SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY" SESSION_SECRET="$E2E_SESSION_SECRET" nohup node .next/standalone/server.js > "$RUNNER_TEMP/thoidai-new.log" 2>&1 & echo $! > "$RUNNER_TEMP/thoidai-new.pid"
