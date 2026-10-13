@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 45
     env:
       OLD_APP_COMMIT: bd4803933d6b98fd6996852992be566e6286ea67
-      NEW_APP_COMMIT: 36b4c117a365355062ccfa5d78afbfb7a2be7197
+      NEW_APP_COMMIT: 9acead5accc6d439d63f89655d8066ee66b9dbda
     steps:
       - name: Checkout harness source
         uses: actions/checkout@v4
@@ -89,8 +89,8 @@ jobs:
           ROLE_LIFECYCLE_ENABLED: 'false'
           THOIDAI_BUILD_CONFIG: sandbox-e2e
           THOIDAI_RELEASE_BRANCH: integration/production
-          THOIDAI_INTEGRATION_COMMIT: 36b4c117a365355062ccfa5d78afbfb7a2be7197
-          THOIDAI_REMOTE_HEAD: 36b4c117a365355062ccfa5d78afbfb7a2be7197
+          THOIDAI_INTEGRATION_COMMIT: 9acead5accc6d439d63f89655d8066ee66b9dbda
+          THOIDAI_REMOTE_HEAD: 9acead5accc6d439d63f89655d8066ee66b9dbda
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_SUPABASE_URL"
@@ -109,8 +109,8 @@ jobs:
           ROLE_LIFECYCLE_ENABLED: 'true'
           THOIDAI_BUILD_CONFIG: sandbox-e2e
           THOIDAI_RELEASE_BRANCH: integration/production
-          THOIDAI_INTEGRATION_COMMIT: 36b4c117a365355062ccfa5d78afbfb7a2be7197
-          THOIDAI_REMOTE_HEAD: 36b4c117a365355062ccfa5d78afbfb7a2be7197
+          THOIDAI_INTEGRATION_COMMIT: 9acead5accc6d439d63f89655d8066ee66b9dbda
+          THOIDAI_REMOTE_HEAD: 9acead5accc6d439d63f89655d8066ee66b9dbda
         run: |
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$E2E_SUPABASE_URL"

@@ -98,6 +98,7 @@ files=(
   20261013100000_asset_management_v23_condition_service.sql
   20261014100000_asset_manage_permission_management.sql
   20261015100000_rbac_v2_role_user_overrides.sql
+  20261015110000_rbac_v2_scope_ambiguity_fix.sql
 )
 
 # The first RBAC migration expects the admin role to exist. Seed the role and
@@ -127,6 +128,7 @@ done
 
 test "$(docker exec "$postgres" psql -At -U postgres -d thoidai_e2e -c "select count(*) from supabase_migrations.schema_migrations")" = "${#files[@]}"
 test "$(docker exec "$postgres" psql -At -U postgres -d thoidai_e2e -c "select count(*) from supabase_migrations.schema_migrations where version='20261015100000'")" = 1
+test "$(docker exec "$postgres" psql -At -U postgres -d thoidai_e2e -c "select count(*) from supabase_migrations.schema_migrations where version='20261015110000'")" = 1
 test "$(docker exec "$postgres" psql -At -U postgres -d thoidai_e2e -c "select count(*) from pg_proc where pronamespace='public'::regnamespace and proname='api_list_effective_permissions'")" = 1
 test "$(docker exec "$postgres" psql -At -U postgres -d thoidai_e2e -c "select has_function_privilege('service_role','public.api_list_effective_permissions(uuid)','execute')")" = t
 
