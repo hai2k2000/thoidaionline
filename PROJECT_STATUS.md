@@ -741,3 +741,25 @@ Blockers:
 
 Next:
 - Owner merge review for PR #11; after merge, rerun canonical CI and verify a new `canonical-public` artifact before Phase 2.
+
+# PR #12 Pointer Fail-Closed Hardening
+
+Current Phase: Phase 3A pre-pilot; owner merge review
+Current Task: fail closed on every lifecycle pointer mutation error
+
+Completed:
+- Replaced grouped pointer mutation with individually checked atomic `ln`/`mv` operations for `rollback-2`, `rollback-1`, `previous`, and `current`.
+- Any pointer preparation or mutation failure stops immediately and invokes automatic rollback while the original deploy lock remains held.
+- Automatic rollback now verifies all four lifecycle pointers against the pre-activation snapshot and only reports PASS when pointer and service health checks pass.
+- Linux fixture covers `ln` and `mv` failure at each pointer, restart/health/contract/browser failures, rollback failure evidence, and real concurrent `flock` contention.
+
+Validation:
+- Node focused deploy/rollback/release tests: 6/6 PASS.
+- Linux behavioral fixture: PASS.
+- Shell syntax: PASS on Linux sandbox.
+- Retention regression: PASS on Linux sandbox.
+- `git diff --check`: PASS.
+- Production mutation: NONE.
+
+Next:
+- Commit and push to PR #12, wait for Push/PR CI, then stop at `PR #12 POINTER FAIL-CLOSED PASS — READY FOR OWNER MERGE REVIEW`.

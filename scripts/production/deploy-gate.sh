@@ -79,6 +79,14 @@ rollback_snapshot() {
   "$systemctl_bin" restart "$service" || rollback_status=1
   "$systemctl_bin" is-active --quiet "$service" || rollback_status=1
   "$curl_bin" -fsS --max-time 15 -o /dev/null "$health_url" || rollback_status=1
+  for pointer in current previous rollback-1 rollback-2; do
+    expected="${current_target}"
+    [[ "$pointer" == previous ]] && expected="$previous_target"
+    [[ "$pointer" == rollback-1 ]] && expected="$rollback_1_target"
+    [[ "$pointer" == rollback-2 ]] && expected="$rollback_2_target"
+    actual=$(readlink -f -- "$release_root/$pointer" 2>/dev/null || true)
+    [[ "$actual" == "$expected" ]] || rollback_status=1
+  done
   if (( rollback_status != 0 )); then
     printf 'CRITICAL: automatic rollback failed; snapshot current=%s previous=%s rollback-1=%s rollback-2=%s\n' \
       "$current_target" "$previous_target" "$rollback_1_target" "$rollback_2_target" >&2
@@ -111,13 +119,23 @@ fail_after_mutation() {
   exit 1
 }
 
-if ! {
-  rm -f -- "$release_root/rollback-2.new" "$release_root/rollback-1.new" "$release_root/previous.new" "$release_root/current.new"
-  "$ln_bin" -sfn -- "$rollback_1_target" "$release_root/rollback-2.new" && "$mv_bin" -Tf -- "$release_root/rollback-2.new" "$release_root/rollback-2"
-  "$ln_bin" -sfn -- "$current_target" "$release_root/rollback-1.new" && "$mv_bin" -Tf -- "$release_root/rollback-1.new" "$release_root/rollback-1"
-  "$ln_bin" -sfn -- "$current_target" "$release_root/previous.new" && "$mv_bin" -Tf -- "$release_root/previous.new" "$release_root/previous"
-  "$ln_bin" -s -- "$new_release" "$release_root/current.new" && "$mv_bin" -Tf -- "$release_root/current.new" "$release_root/current"
-}; then
+atomic_pointer() {
+  local target=$1 name=$2 tmp="$release_root/$2.new"
+  rm -f -- "$tmp" || return 1
+  "$ln_bin" -sfn -- "$target" "$tmp" || return 1
+  "$mv_bin" -Tf -- "$tmp" "$release_root/$name" || return 1
+}
+
+if ! atomic_pointer "$rollback_1_target" rollback-2; then
+  fail_after_mutation "lifecycle pointer mutation failed"
+fi
+if ! atomic_pointer "$current_target" rollback-1; then
+  fail_after_mutation "lifecycle pointer mutation failed"
+fi
+if ! atomic_pointer "$current_target" previous; then
+  fail_after_mutation "lifecycle pointer mutation failed"
+fi
+if ! atomic_pointer "$new_release" current; then
   fail_after_mutation "lifecycle pointer mutation failed"
 fi
 
