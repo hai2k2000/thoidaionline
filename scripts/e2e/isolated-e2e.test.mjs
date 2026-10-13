@@ -98,5 +98,7 @@ test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () 
   assert.match(workflow, /title=New app log/);
   assert.match(workflow, /title=Sandbox gateway/);
   assert.match(workflow, /Diagnose isolated new-app E2E failure/);
+  assert.match(workflow, /thoidai-new-http\.log/);
+  assert.match(workflow, /thoidai-new-browser\.log/);
   assert.match(workflow, /working-directory: \$\{\{ runner\.temp \}\}\/thoidai-new[\s\S]*?node \"\$GITHUB_WORKSPACE\/scripts\/e2e\/sandbox-gateway\.mjs\"/);
 });
