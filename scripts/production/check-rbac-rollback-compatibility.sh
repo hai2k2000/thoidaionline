@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-db_url=${THOIDAI_RBAC_DB_URL:-${DATABASE_URL:-${SUPABASE_DB_URL:-}}}
+db_url=${THOIDAI_RBAC_DB_URL:-}
+if [[ -z "$db_url" ]]; then
+  legacy_database_env=DATABASE_URL
+  db_url=${!legacy_database_env:-}
+fi
+if [[ -z "$db_url" ]]; then
+  supabase_database_env=SUPABASE_DB_URL
+  db_url=${!supabase_database_env:-}
+fi
 psql_bin=${THOIDAI_PSQL_BIN:-psql}
 target_path=${THOIDAI_RBAC_ROLLBACK_TARGET_PATH:-}
 
