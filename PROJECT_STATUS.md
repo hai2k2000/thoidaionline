@@ -869,6 +869,7 @@ CI follow-up:
 - Run `38378950904` confirmed `nohup` alone did not survive the Actions runner process cleanup. The next fix detaches the gateway from `RUNNER_TRACKING_ID` and stdin while retaining explicit PID cleanup.
 - Run `38379433000` confirmed the runner still reaped the detached gateway between steps. The harness is now changed to start, health-check, and trap-clean the gateway inside each consuming step (SDK probe, old app, and new app), avoiding cross-step daemon assumptions.
 - Run `38380089534` showed the same refusal even inside the consumer step with detached launch. The gateway is now a normal background child of that step, with health-check and EXIT trap cleanup; no cross-step process persistence is assumed.
+- Run `38380491284` still failed on the first gateway request while health-check passed. Added fail-closed 502 handling and redacted gateway diagnostics so the next run distinguishes upstream request failure from process lifecycle failure.
 
 Decision:
 - Runtime E2E remains BLOCKED until the disposable GitHub Actions workflow executes the SDK prefix gate, old-app login/session, old-app authorization, new RBAC V2 suite, and authenticated browser smoke successfully.

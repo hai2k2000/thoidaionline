@@ -172,6 +172,7 @@ jobs:
           actual_body=$(printf '%s' "$actual_response" | sed '/^STATUS:/d' | tr '\n' ' ' | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')
           echo "actual-password-status=$actual_status body=$actual_body" >> "$diagnostics/credential-probe.txt"
           tail -n 120 "$RUNNER_TEMP/thoidai-old.log" > "$diagnostics/old-app.log" 2>&1 || true
+          tail -n 120 "$RUNNER_TEMP/thoidai-gateway.log" > "$diagnostics/gateway.log" 2>&1 || true
           while IFS= read -r line; do
             line=$(printf '%s' "$line" | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g; s/(set-cookie: ).*/\1[redacted]/I')
             echo "::error title=Isolated E2E diagnostic::$line"
@@ -183,6 +184,9 @@ jobs:
           while IFS= read -r line; do
             echo "::warning title=Credential probe::$line"
           done < "$diagnostics/credential-probe.txt"
+          while IFS= read -r line; do
+            echo "::warning title=Sandbox gateway::$line"
+          done < "$diagnostics/gateway.log"
 
       - name: Upload isolated E2E diagnostics
         if: failure()

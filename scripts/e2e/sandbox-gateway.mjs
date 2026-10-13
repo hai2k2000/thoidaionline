@@ -6,30 +6,36 @@ if (target.protocol !== "http:" || !/^127\.0\.0\.1:\d+$/.test(target.host)) thro
 if (!Number.isInteger(port) || port < 1024) throw new Error("E2E_GATEWAY_PORT is required");
 
 const server = http.createServer(async (request, response) => {
-  if (request.url === "/health") {
-    response.writeHead(200, { "content-type": "text/plain" }).end("ok");
-    return;
+  try {
+    if (request.url === "/health") {
+      response.writeHead(200, { "content-type": "text/plain" }).end("ok");
+      return;
+    }
+    const prefix = request.url?.startsWith("/rest/v1") ? "/rest/v1" : request.url?.startsWith("/storage/v1") ? "/storage/v1" : "";
+    if (!prefix) {
+      response.writeHead(404).end();
+      return;
+    }
+    const body = request.method === "GET" || request.method === "HEAD" ? undefined : await new Promise((resolve, reject) => {
+      const chunks = [];
+      request.on("data", (chunk) => chunks.push(chunk));
+      request.on("end", () => resolve(Buffer.concat(chunks)));
+      request.on("error", reject);
+    });
+    const forwardedHeaders = Object.fromEntries([...request.headers].filter(([name]) => !["connection", "content-length", "host", "transfer-encoding"].includes(name)));
+    const upstream = await fetch(new URL(request.url.slice(prefix.length) || "/", target), {
+      method: request.method,
+      headers: forwardedHeaders,
+      body,
+    });
+    const responseHeaders = Object.fromEntries([...upstream.headers].filter(([name]) => !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
+    response.writeHead(upstream.status, responseHeaders);
+    response.end(Buffer.from(await upstream.arrayBuffer()));
+  } catch (error) {
+    console.error(`sandbox gateway request failed: ${error?.code ?? error?.name ?? "unknown"}`);
+    if (!response.headersSent) response.writeHead(502, { "content-type": "text/plain" });
+    response.end("sandbox gateway upstream failure");
   }
-  const prefix = request.url?.startsWith("/rest/v1") ? "/rest/v1" : request.url?.startsWith("/storage/v1") ? "/storage/v1" : "";
-  if (!prefix) {
-    response.writeHead(404).end();
-    return;
-  }
-  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await new Promise((resolve, reject) => {
-    const chunks = [];
-    request.on("data", (chunk) => chunks.push(chunk));
-    request.on("end", () => resolve(Buffer.concat(chunks)));
-    request.on("error", reject);
-  });
-  const forwardedHeaders = Object.fromEntries([...request.headers].filter(([name]) => !["connection", "content-length", "host", "transfer-encoding"].includes(name)));
-  const upstream = await fetch(new URL(request.url.slice(prefix.length) || "/", target), {
-    method: request.method,
-    headers: forwardedHeaders,
-    body,
-  });
-  const responseHeaders = Object.fromEntries([...upstream.headers].filter(([name]) => !["connection", "content-encoding", "content-length", "transfer-encoding"].includes(name)));
-  response.writeHead(upstream.status, responseHeaders);
-  response.end(Buffer.from(await upstream.arrayBuffer()));
 });
 
 server.listen(port, "127.0.0.1", () => console.log(`sandbox gateway listening on 127.0.0.1:${port}`));
