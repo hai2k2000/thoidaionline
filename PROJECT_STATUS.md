@@ -1,26 +1,36 @@
 # Thoidai Work3 PR #6 Final Review & Fix
 
-## Phase 3A Rollback Safety Correction
+## RBAC V2 Role Matrix and User Overrides
 
-Current Phase: implementation complete; PR #12 owner merge review
-Current Task: continuous deploy locking, fail-closed automatic rollback, and immutable deployment evidence
+Current Phase: implementation complete; pre-production owner review
+Current Task: feature branch validation and PR handoff
 
 Completed:
-- Kept one deploy lock continuously held across activation, health/smoke validation, and automatic rollback.
-- Added explicit rollback for pointer mutation, restart, health, contract-smoke, and browser-smoke failures.
-- Restored the complete pre-activation pointer snapshot and emitted durable CRITICAL evidence when rollback cannot prove health.
-- Preserved manual rollback as an independently locked command.
-- Stopped rewriting `.release-meta`; deployment success is recorded separately in `.deploy-success` with original metadata and manifest digests.
-- Added Linux fixture regression coverage to the canonical PR workflow.
+- Added catalog-driven role matrix and per-user inherit/allow/deny management on top of the existing RBAC tables.
+- Centralized effective permission resolution with inactive-user, inactive-role, deny precedence, scope, audit, self-elevation, and last-manager protections.
+- Added additive migration and idempotent RPC contracts without creating new permissions or grants.
+- Preserved legacy Quick Report and asset compatibility wrappers while enforcing the canonical resolver server-side.
 
 Validation:
-- Focused source tests: PASS.
-- Shell syntax and `git diff --check`: PASS.
-- Behavioral Linux fixture covers restart, health, contract, browser, pointer mutation, concurrent lock rejection, full snapshot restoration, and rollback failure evidence.
-- Production mutation: NONE.
+- Focused RBAC/UI/route: 45/45 PASS; broad RBAC/permission subset: 85/85 PASS.
+- Migration runner: 24/24 PASS; local embedded PostgreSQL full-chain rehearsal and second RBAC V2 migration application: PASS.
+- TypeScript, changed-file ESLint, route manifest, git diff check, and production-like build: PASS.
+- Local disk gate: 27,792,584,704 free bytes against a 21,474,836,480-byte floor.
+
+Production safety:
+- Production changed: NO.
+- Database/grants changed: NO.
+- Migration applied: NO.
+- Production deployed/restarted: NO.
 
 Next:
-- Push PR #12 update, require GitHub CI PASS, then stop for owner merge review. Do not merge or deploy.
+- Push the feature branch and open the owner-review PR targeting `integration/production`; stop before merge, migration, or deployment.
+
+Final review fixes:
+- Self-role permission replacement rejects new or broader effective scopes while allowing narrowing and removal.
+- Rollback compatibility rejects legacy-union widening caused by role grants plus narrow direct allows, in addition to explicit denies.
+- Local pre/post migration evidence: 20 permissions, 29 role grants, and 0 user grants on both sides; no role-plus-direct-allow cases existed to reconcile.
+- Latest `integration/production` was merged without conflicts or history rewrite.
 
 Current Phase: COMPLETE; owner merge review
 Current Task: Asset UI permission management final review
@@ -741,25 +751,3 @@ Blockers:
 
 Next:
 - Owner merge review for PR #11; after merge, rerun canonical CI and verify a new `canonical-public` artifact before Phase 2.
-
-# PR #12 Pointer Fail-Closed Hardening
-
-Current Phase: Phase 3A pre-pilot; owner merge review
-Current Task: fail closed on every lifecycle pointer mutation error
-
-Completed:
-- Replaced grouped pointer mutation with individually checked atomic `ln`/`mv` operations for `rollback-2`, `rollback-1`, `previous`, and `current`.
-- Any pointer preparation or mutation failure stops immediately and invokes automatic rollback while the original deploy lock remains held.
-- Automatic rollback now verifies all four lifecycle pointers against the pre-activation snapshot and only reports PASS when pointer and service health checks pass.
-- Linux fixture covers `ln` and `mv` failure at each pointer, restart/health/contract/browser failures, rollback failure evidence, and real concurrent `flock` contention.
-
-Validation:
-- Node focused deploy/rollback/release tests: 6/6 PASS.
-- Linux behavioral fixture: PASS.
-- Shell syntax: PASS on Linux sandbox.
-- Retention regression: PASS on Linux sandbox.
-- `git diff --check`: PASS.
-- Production mutation: NONE.
-
-Next:
-- Commit and push to PR #12, wait for Push/PR CI, then stop at `PR #12 POINTER FAIL-CLOSED PASS — READY FOR OWNER MERGE REVIEW`.

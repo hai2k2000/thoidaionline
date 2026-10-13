@@ -19,3 +19,10 @@ test("production activation requires authenticated smoke and restores the full p
   assert.doesNotMatch(source, /flock -u 9/);
   assert.doesNotMatch(source, /rollback-application\.sh/);
 });
+
+test("automatic rollback checks RBAC compatibility before restoring an older target", () => {
+  assert.match(source, /check-rbac-rollback-compatibility\.sh/);
+  assert.match(source, /rbac rollback compatibility/i);
+  assert.match(source, /RBAC rollback compatibility gate failed for rollback target/i);
+  assert.match(source, /automatic rollback blocked by RBAC compatibility gate/i);
+});

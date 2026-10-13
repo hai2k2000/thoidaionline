@@ -69,6 +69,10 @@ cat > "$bin/nginx-guard" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
+cat > "$bin/rbac-gate" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
 cat > "$bin/install" <<'EOF'
 #!/usr/bin/env bash
 mkdir -p "${@: -1}"
@@ -103,7 +107,7 @@ run_failure() {
   local kind=$1
   local expected_result=${2:-pass}
   rm -f "$root/restart.count" "$root/curl.count" "$root/mutation.log"
-  PATH="$bin:$PATH" FAIL_KIND="$kind" FIXTURE_ROOT="$root" THOIDAI_HEALTH_ATTEMPTS=1 THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/deploy.lock" THOIDAI_DEPLOY_EVIDENCE_ROOT="$root/evidence" THOIDAI_NEW_RELEASE_PATH="$release_root/new-$kind" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_LN_BIN="$bin/ln" THOIDAI_MV_BIN="$bin/mv" THOIDAI_INSTALL_BIN="$bin/install" THOIDAI_CHOWN_BIN="$bin/chown" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_CONTRACT_SMOKE_SCRIPT="$root/contract-smoke.mjs" THOIDAI_BROWSER_SMOKE_SCRIPT="$root/browser-path-smoke.mjs" THOIDAI_SMOKE_COOKIE=test bash scripts/production/deploy-gate.sh "$root/artifact" >"$root/$kind.out" 2>"$root/$kind.err" && return 1
+  PATH="$bin:$PATH" FAIL_KIND="$kind" FIXTURE_ROOT="$root" THOIDAI_HEALTH_ATTEMPTS=1 THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/deploy.lock" THOIDAI_DEPLOY_EVIDENCE_ROOT="$root/evidence" THOIDAI_NEW_RELEASE_PATH="$release_root/new-$kind" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_LN_BIN="$bin/ln" THOIDAI_MV_BIN="$bin/mv" THOIDAI_INSTALL_BIN="$bin/install" THOIDAI_CHOWN_BIN="$bin/chown" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" THOIDAI_CONTRACT_SMOKE_SCRIPT="$root/contract-smoke.mjs" THOIDAI_BROWSER_SMOKE_SCRIPT="$root/browser-path-smoke.mjs" THOIDAI_SMOKE_COOKIE=test bash scripts/production/deploy-gate.sh "$root/artifact" >"$root/$kind.out" 2>"$root/$kind.err" && return 1
   [[ "$(snapshot)" == "$expected" ]] || { echo "pointer snapshot mismatch: $kind" >&2; return 1; }
   ! grep -q 'deploy-gate: PASS' "$root/$kind.out"
   case "$kind" in
@@ -137,7 +141,7 @@ find "$root/evidence" -name 'rollback-failure-*.evidence' -print -quit | grep -q
 flock -n "$root/held.lock" -c 'sleep 2' &
 holder=$!
 sleep 0.2
-PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/held.lock" THOIDAI_NEW_RELEASE_PATH="$release_root/new-concurrent" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_CONTRACT_SMOKE_SCRIPT="$root/contract-smoke.mjs" THOIDAI_BROWSER_SMOKE_SCRIPT="$root/browser-path-smoke.mjs" THOIDAI_SMOKE_COOKIE=test bash scripts/production/deploy-gate.sh "$root/artifact" >/dev/null 2>"$root/concurrent.err" && exit 1
+PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/held.lock" THOIDAI_NEW_RELEASE_PATH="$release_root/new-concurrent" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" THOIDAI_CONTRACT_SMOKE_SCRIPT="$root/contract-smoke.mjs" THOIDAI_BROWSER_SMOKE_SCRIPT="$root/browser-path-smoke.mjs" THOIDAI_SMOKE_COOKIE=test bash scripts/production/deploy-gate.sh "$root/artifact" >/dev/null 2>"$root/concurrent.err" && exit 1
 grep -q 'deploy lock unavailable' "$root/concurrent.err"
 wait "$holder"
 

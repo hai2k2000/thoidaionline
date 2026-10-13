@@ -1,3 +1,5 @@
+import { supportedScopesForPermission } from "./rbac/permissionScopes.mjs";
+
 export type PermissionMatrixRoleRow = {
   id: string;
   code: string;
@@ -45,6 +47,29 @@ export type PermissionMatrixUserRow = {
 export type UserPermissionGrantRow = {
   user_id: string;
   permission_id: string;
+  effect?: "allow" | "deny";
+  scope?: PermissionMatrixGrantRow["scope"];
+};
+
+export type EffectivePermissionSource = "role" | "user_allow" | "user_deny" | "none";
+export type OverrideEffect = "inherit" | "allow" | "deny";
+
+export type PermissionMatrixUser = PermissionMatrixUserRow & {
+  department_name?: string | null;
+  overrides: Record<string, { effect: "allow" | "deny"; scope: PermissionMatrixGrantRow["scope"] }>;
+  effective: Record<string, {
+    scopes: PermissionMatrixGrantRow["scope"][];
+    source: EffectivePermissionSource;
+    roleScopes: PermissionMatrixGrantRow["scope"][];
+  }>;
+};
+
+export type PermissionManagementPayload = {
+  permissions: PermissionMatrixPermissionRow[];
+  modules: PermissionMatrixModule[];
+  roles: PermissionMatrixRole[];
+  users: PermissionMatrixUser[];
+  scopeOptions: Record<string, PermissionMatrixGrantRow["scope"][]>;
 };
 
 export type PermissionUser = {
@@ -73,7 +98,6 @@ export function getEffectivePermissionSourceLabel(
   if (entry.directGranted || entry.roleGranted) return "Không hiệu lực";
   return "—";
 }
-
 export function buildPermissionMatrix(
   roles: readonly PermissionMatrixRoleRow[],
   permissions: readonly PermissionMatrixPermissionRow[],
@@ -147,4 +171,66 @@ export function buildQuickReportUserPermissions(
   userGrants: readonly UserPermissionGrantRow[],
 ): QuickReportUserPermission[] {
   return buildPermissionUsers(users, permissions, roleGrants, userGrants, "task.quick_report.create");
+}
+
+export function buildPermissionManagementPayload(input: {
+  roles: readonly PermissionMatrixRoleRow[];
+  permissions: readonly PermissionMatrixPermissionRow[];
+  roleGrants: readonly PermissionMatrixGrantRow[];
+  users: readonly (PermissionMatrixUserRow & { department_name?: string | null })[];
+  userGrants: readonly UserPermissionGrantRow[];
+}): PermissionManagementPayload {
+  const roles = buildPermissionMatrix(input.roles, input.permissions, input.roleGrants);
+  const roleScopesByKey = new Map<string, PermissionMatrixGrantRow["scope"][]>();
+  for (const grant of input.roleGrants) {
+    const key = `${grant.role_id}:${grant.permission_id}`;
+    const scopes = roleScopesByKey.get(key) ?? [];
+    if (!scopes.includes(grant.scope)) scopes.push(grant.scope);
+    roleScopesByKey.set(key, scopes);
+  }
+  const permissionById = new Map(input.permissions.map((permission) => [permission.id, permission]));
+  const overridesByUser = new Map<string, Record<string, { effect: "allow" | "deny"; scope: PermissionMatrixGrantRow["scope"] }>>();
+  for (const grant of input.userGrants) {
+    const permission = permissionById.get(grant.permission_id);
+    if (!permission || !grant.effect || !grant.scope) continue;
+    const overrides = overridesByUser.get(grant.user_id) ?? {};
+    overrides[permission.code] = { effect: grant.effect, scope: grant.scope };
+    overridesByUser.set(grant.user_id, overrides);
+  }
+  const roleById = new Map(input.roles.map((role) => [role.id, role]));
+  const users = input.users.map((user) => {
+    const role = roleById.get(user.role_id);
+    const overrides = overridesByUser.get(user.id) ?? {};
+    const effective = Object.fromEntries(input.permissions.map((permission) => {
+      const roleScopes = roleScopesByKey.get(`${user.role_id}:${permission.id}`) ?? [];
+      const override = overrides[permission.code];
+      const scopes = !user.active
+        ? []
+        : override?.effect === "deny"
+          ? []
+          : override?.effect === "allow"
+            ? [override.scope]
+            : role?.active === true ? roleScopes : [];
+      const source: EffectivePermissionSource = !user.active
+        ? "none"
+        : override?.effect === "deny"
+          ? "user_deny"
+          : override?.effect === "allow"
+            ? "user_allow"
+            : role?.active === true && roleScopes.length > 0 ? "role" : "none";
+      return [permission.code, { scopes, source, roleScopes }];
+    })) as PermissionMatrixUser["effective"];
+    return { ...user, overrides, effective };
+  });
+  const modules = [...new Set(input.permissions.map((permission) => permission.module))].map((key) => ({
+    key,
+    permissions: input.permissions.filter((permission) => permission.module === key).map((permission) => ({ ...permission, scopes: [] })),
+  }));
+  return {
+    permissions: [...input.permissions],
+    modules,
+    roles,
+    users,
+    scopeOptions: Object.fromEntries(input.permissions.map((permission) => [permission.code, [...supportedScopesForPermission(permission.code)] as PermissionMatrixGrantRow["scope"][]])),
+  };
 }

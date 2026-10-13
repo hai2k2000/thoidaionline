@@ -17,6 +17,7 @@ health_url=${THOIDAI_HEALTH_URL:-http://127.0.0.1:3001/login}
 health_attempts=${THOIDAI_HEALTH_ATTEMPTS:-30}
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 nginx_guard=${THOIDAI_NGINX_GUARD_SCRIPT:-$script_dir/nginx-supa-buffer-guard.sh}
+rbac_gate=${THOIDAI_RBAC_ROLLBACK_GATE:-$script_dir/check-rbac-rollback-compatibility.sh}
 
 hard_min_free_kb=${THOIDAI_HARD_MIN_FREE_KB:-20971520}
 estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-1048576}
@@ -67,6 +68,7 @@ current_target=$(read_pointer current) || exit 1
 previous_target=$(read_pointer previous) || exit 1
 rollback_1_target=$(read_pointer rollback-1) || exit 1
 rollback_2_target=$(read_pointer rollback-2) || exit 1
+THOIDAI_RBAC_ROLLBACK_TARGET_PATH="$current_target" "$rbac_gate" || { echo "DEPLOY ABORTED: RBAC rollback compatibility gate failed for rollback target" >&2; exit 1; }
 
 rollback_snapshot() {
   local rollback_status=0
@@ -100,6 +102,10 @@ rollback_snapshot() {
 fail_after_mutation() {
   local reason=$1
   echo "DEPLOY ABORTED: $reason" >&2
+  if ! THOIDAI_RBAC_ROLLBACK_TARGET_PATH="$current_target" "$rbac_gate"; then
+    echo "CRITICAL: automatic rollback blocked by RBAC compatibility gate" >&2
+    exit 1
+  fi
   local rollback_status=0
   rollback_snapshot || rollback_status=$?
   if (( rollback_status != 0 )); then
