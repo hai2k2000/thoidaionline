@@ -34,7 +34,7 @@ export async function verifyManifest(root) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
       const rel = path.slice(resolve(root).length + 1).replaceAll("\\", "/");
-      if (rel === ".artifact-manifest.json" || rel === ".artifact-manifest.sha256" || rel === ".env.local" || rel === ".env.production" || rel === ".next/cache" || rel.startsWith(".next/cache/")) continue;
+      if (rel === ".artifact-manifest.json" || rel === ".artifact-manifest.sha256" || rel === ".env.local" || rel === ".env.production" || rel === ".deploy-success" || rel === ".next/cache" || rel.startsWith(".next/cache/")) continue;
       if (entry.isSymbolicLink() || entry.isFile()) expected.add(rel);
       else if (entry.isDirectory()) await collect(path);
     }
