@@ -49,4 +49,5 @@ test("browser runner install is disposable and does not rewrite application depe
   assert.match(workflow, /Isolated E2E diagnostic/);
   assert.match(workflow, /bcryptMatch/);
   assert.match(workflow, /legacyQuery/);
+  assert.match(workflow, /actual-password-status/);
 });

@@ -146,6 +146,10 @@ jobs:
           console.log(JSON.stringify({ status: response.status, rowCount: rows.length, active: row?.active === true, bcryptMatch: row?.password_hash ? await bcrypt.compare(process.env.E2E_PASSWORD, row.password_hash) : false, legacyStatus: legacyQuery.status, legacyKeys: Object.keys(legacyBody).filter((key) => !["password", "password_hash"].includes(key)) }));
           NODE
           curl -sS -i -X POST -H "origin: http://127.0.0.1:3102" -H "host: 127.0.0.1:3102" -H "content-type: application/json" --data '{"identifier":"e2e-admin","password":"[redacted]"}' http://127.0.0.1:3102/api/auth/login | sed -E 's/(set-cookie: ).*/\1[redacted]/I' > "$diagnostics/login-response.txt" 2>&1 || true
+          actual_response=$(curl -sS -w '\nSTATUS:%{http_code}' -X POST -H "origin: http://127.0.0.1:3102" -H "host: 127.0.0.1:3102" -H "content-type: application/json" --data "{\"identifier\":\"e2e-admin\",\"password\":\"$E2E_PASSWORD\"}" http://127.0.0.1:3102/api/auth/login || true)
+          actual_status=$(printf '%s' "$actual_response" | sed -n 's/^STATUS://p')
+          actual_body=$(printf '%s' "$actual_response" | sed '/^STATUS:/d' | tr '\n' ' ' | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')
+          echo "actual-password-status=$actual_status body=$actual_body" >> "$diagnostics/credential-probe.txt"
           tail -n 120 "$RUNNER_TEMP/thoidai-old.log" > "$diagnostics/old-app.log" 2>&1 || true
           while IFS= read -r line; do
             line=$(printf '%s' "$line" | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g; s/(set-cookie: ).*/\1[redacted]/I')
