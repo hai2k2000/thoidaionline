@@ -82,7 +82,7 @@ test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () 
   assert.match(sdkProbe, /authQueryHash/);
   assert.match(sdkProbe, /sessionQueryError/);
   assert.match(sdkProbe, /sessionQueryStatus/);
-  assert.match(workflow, /node scripts\/e2e\/sandbox-gateway\.mjs/);
+  assert.match(workflow, /node (?:\"\$GITHUB_WORKSPACE\/)?scripts\/e2e\/sandbox-gateway\.mjs/);
   assert.match(workflow, /E2E_GATEWAY_PORT=\"\$\{E2E_SUPABASE_URL##\*:\}\" node scripts\/e2e\/sandbox-gateway\.mjs/);
   assert.match(workflow, /node scripts\/e2e\/supabase-sdk-probe\.mjs/);
   assert.match(workflow, /echo \"E2E_SUPABASE_URL=http:\/\/127\.0\.0\.1:\$\{gateway_port\}\" >> \"\$RUNNER_TEMP\/thoidai-e2e\.env\"/);
@@ -98,4 +98,5 @@ test("Supabase sandbox gateway preserves the real SDK REST prefix contract", () 
   assert.match(workflow, /title=New app log/);
   assert.match(workflow, /title=Sandbox gateway/);
   assert.match(workflow, /Diagnose isolated new-app E2E failure/);
+  assert.match(workflow, /working-directory: \$\{\{ runner\.temp \}\}\/thoidai-new[\s\S]*?node \"\$GITHUB_WORKSPACE\/scripts\/e2e\/sandbox-gateway\.mjs\"/);
 });

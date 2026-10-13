@@ -218,7 +218,7 @@ jobs:
           set -a; source "$RUNNER_TEMP/thoidai-e2e.env"; set +a
           gateway_port=$((23000 + (GITHUB_RUN_ID % 500)))
           export E2E_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
-          E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
+          E2E_GATEWAY_PORT="${E2E_SUPABASE_URL##*:}" node "$GITHUB_WORKSPACE/scripts/e2e/sandbox-gateway.mjs" "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/thoidai-gateway.log" 2>&1 &
           gateway_pid=$!
           cleanup_gateway() {
             status=$?
