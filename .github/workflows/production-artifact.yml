@@ -67,6 +67,7 @@ jobs:
           scripts/ci-build-env.test.mjs
           scripts/canonical-build-env.test.mjs
           scripts/canonical-ref-preparation.test.mjs
+          scripts/rbac-v2-scope-hotfix.test.mjs
           scripts/deploy-gate.test.mjs
           scripts/package-standalone.test.mjs
           scripts/standalone-packaging.test.mjs
@@ -78,6 +79,8 @@ jobs:
         run: bash scripts/production/deploy-gate-fixture.test.sh
       - name: RBAC rollback gate fixture regression
         run: bash scripts/production/rbac-rollback-gate-fixture.test.sh
+      - name: RBAC V2 scope ambiguity disposable regression
+        run: bash scripts/production/rbac-v2-scope-hotfix.disposable.sh
       - name: TypeScript
         run: npx tsc --noEmit
       - name: ESLint

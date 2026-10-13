@@ -1,5 +1,21 @@
 # Thoidai Work3 PR #6 Final Review & Fix
 
+## RBAC V2 SQL Scope Ambiguity Hotfix
+
+Current Phase: hotfix implementation; owner merge review pending
+Current Task: additive compatibility migration for `api_list_role_permission_grants`
+
+In Progress:
+- Add `20261015110000_rbac_v2_scope_ambiguity_fix.sql` without modifying the historical RBAC V2 migration.
+- Verify the real RPC before/after through disposable PostgreSQL 17 + PostgREST and include the hotfix in standalone artifact contracts.
+
+Production safety:
+- Production database, grants, users, releases, service and symlinks unchanged.
+- PR #16 remains open and is not modified by this hotfix.
+
+Next:
+- Run focused tests and GitHub Actions, push the hotfix branch, and stop at owner merge review.
+
 ## RBAC V2 Role Matrix and User Overrides
 
 Current Phase: implementation complete; pre-production owner review
