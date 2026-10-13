@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
 import { resolveEffectivePermission } from "./authorization.ts";
 
 test("active user inherits active role scopes", () => {
@@ -55,7 +54,6 @@ test("inactive users have no effective permission", () => {
   assert.deepEqual(result.effectiveScopes, []);
   assert.equal(result.source, "none");
 });
-
 test("active user without override does not inherit inactive role", () => {
   const result = resolveEffectivePermission({
     active: true,
@@ -67,4 +65,3 @@ test("active user without override does not inherit inactive role", () => {
   assert.deepEqual(result.effectiveScopes, []);
   assert.equal(result.source, "none");
 });
-

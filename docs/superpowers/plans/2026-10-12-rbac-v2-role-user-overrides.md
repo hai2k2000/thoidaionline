@@ -1,5 +1,4 @@
 # RBAC V2 Role Matrix and User Overrides Implementation Plan
-
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Extend the existing Thoi Dai Work RBAC catalog so administrators can manage every role permission and explicit per-user inherit/allow/deny override with one server-authoritative effective-permission model.
@@ -407,4 +406,3 @@
 - [x] Focused tests, migration rehearsal, TypeScript, ESLint, route manifest, disk gate, and production-like build pass.
 - [x] Feature branch is pushed and PR targets `integration/production`.
 - [x] No production migration, grant change, restart, merge, or deployment occurs.
-

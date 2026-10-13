@@ -1,29 +1,52 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+
 artifact=${1:?usage: $0 <artifact>}
 release_root=${THOIDAI_RELEASE_ROOT:-/opt/releases/thoidai-work}
 lock_file=${THOIDAI_DEPLOY_LOCK:-/run/lock/thoidai-work-deploy.lock}
+systemctl_bin=${THOIDAI_SYSTEMCTL_BIN:-systemctl}
+curl_bin=${THOIDAI_CURL_BIN:-curl}
+node_bin=${THOIDAI_NODE_BIN:-node}
+ln_bin=${THOIDAI_LN_BIN:-ln}
+mv_bin=${THOIDAI_MV_BIN:-mv}
+install_bin=${THOIDAI_INSTALL_BIN:-install}
+chown_bin=${THOIDAI_CHOWN_BIN:-chown}
+cp_bin=${THOIDAI_CP_BIN:-cp}
+service=${THOIDAI_SERVICE:-thoidai-work.service}
+health_url=${THOIDAI_HEALTH_URL:-http://127.0.0.1:3001/login}
+health_attempts=${THOIDAI_HEALTH_ATTEMPTS:-30}
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+nginx_guard=${THOIDAI_NGINX_GUARD_SCRIPT:-$script_dir/nginx-supa-buffer-guard.sh}
+rbac_gate=${THOIDAI_RBAC_ROLLBACK_GATE:-$script_dir/check-rbac-rollback-compatibility.sh}
+
 hard_min_free_kb=${THOIDAI_HARD_MIN_FREE_KB:-20971520}
 estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-1048576}
 [[ "$hard_min_free_kb" =~ ^[0-9]+$ && "$estimated_headroom_kb" =~ ^[0-9]+$ ]] || { echo "DEPLOY ABORTED: invalid disk gate values" >&2; exit 1; }
 [[ -d "$artifact" && -f "$artifact/.release-meta" ]] || { echo "artifact missing metadata" >&2; exit 1; }
 free_kb=$(df -Pk "$release_root" | awk 'NR==2 {print $4}')
 if (( free_kb < hard_min_free_kb || free_kb - estimated_headroom_kb < hard_min_free_kb )); then
-  echo "DEPLOY ABORTED"; echo "Free space: ${free_kb}KB"; echo "Required minimum: ${hard_min_free_kb}KB"; echo "Estimated build headroom: ${estimated_headroom_kb}KB"; exit 1
+  echo "DEPLOY ABORTED"
+  echo "Free space: ${free_kb}KB"
+  echo "Required minimum: ${hard_min_free_kb}KB"
+  echo "Estimated build headroom: ${estimated_headroom_kb}KB"
+  exit 1
 fi
+
 exec 9>"$lock_file"
 flock -n 9 || { echo "DEPLOY ABORTED: deploy lock unavailable" >&2; exit 1; }
 if [[ "${THOIDAI_CANARY_ONLY:-0}" == 1 ]]; then echo "canary gate: PASS"; exit 0; fi
-"$(dirname "$0")/nginx-supa-buffer-guard.sh"
+"$nginx_guard"
+
 new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 [[ ! -e "$new_release" && ! -L "$new_release" ]] || { echo "release target already exists" >&2; exit 1; }
-node "$artifact/verify-standalone-artifact.mjs" "$artifact"
+"$node_bin" "$artifact/verify-standalone-artifact.mjs" "$artifact"
 build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release-meta")
 [[ "$build_config" == canonical-public ]] || { echo "DEPLOY ABORTED: artifact build config is not canonical-public" >&2; exit 1; }
-cp -a -- "$artifact" "$new_release"
-node "$new_release/verify-standalone-artifact.mjs" "$new_release"
-install -d -o "${THOIDAI_SERVICE_USER:-thoidai-work}" -g "${THOIDAI_SERVICE_GROUP:-thoidai-work}" -m 0750 -- "$new_release/.next/cache"
-chown "${THOIDAI_SERVICE_USER:-thoidai-work}:${THOIDAI_SERVICE_GROUP:-thoidai-work}" -- "$new_release/.next/cache"
+[[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]] || { echo "DEPLOY ABORTED: authenticated smoke credentials are required" >&2; exit 1; }
+"$cp_bin" -a -- "$artifact" "$new_release"
+"$node_bin" "$new_release/verify-standalone-artifact.mjs" "$new_release"
+"$install_bin" -d -o "${THOIDAI_SERVICE_USER:-thoidai-work}" -g "${THOIDAI_SERVICE_GROUP:-thoidai-work}" -m 0750 -- "$new_release/.next/cache"
+"$chown_bin" "${THOIDAI_SERVICE_USER:-thoidai-work}:${THOIDAI_SERVICE_GROUP:-thoidai-work}" -- "$new_release/.next/cache"
 env_model=$(awk -F= '$1=="env_model" {print $2; exit}' "$new_release/.release-meta")
 if [[ "$env_model" == runtime-injected ]]; then
   shared_root=${THOIDAI_SHARED_ROOT:-/opt/thoidai-work}
@@ -32,48 +55,114 @@ if [[ "$env_model" == runtime-injected ]]; then
     ln -s -- "$shared_root/$name" "$new_release/$name"
   done
 fi
-current_target=$(readlink -f -- "$release_root/current")
-[[ "$current_target" == "$release_root"/* && -d "$current_target" ]] || { echo "current release target invalid" >&2; exit 1; }
-rollback_1_target=$(readlink -f -- "$release_root/rollback-1" 2>/dev/null || true)
-previous_target=$(readlink -f -- "$release_root/previous" 2>/dev/null || true)
-[[ -d "$rollback_1_target" ]] || rollback_1_target=$previous_target
-rollback_2_target=$(readlink -f -- "$release_root/rollback-2" 2>/dev/null || true)
-[[ -d "$rollback_2_target" ]] || rollback_2_target=$rollback_1_target
-[[ -d "$rollback_1_target" && "$rollback_1_target" == "$release_root"/* ]] || rollback_1_target=$current_target
-[[ -d "$rollback_2_target" && "$rollback_2_target" == "$release_root"/* ]] || rollback_2_target=$rollback_1_target
-ln -sfn -- "$rollback_1_target" "$release_root/rollback-2.new"
-mv -Tf -- "$release_root/rollback-2.new" "$release_root/rollback-2"
-ln -sfn -- "$current_target" "$release_root/rollback-1.new"
-mv -Tf -- "$release_root/rollback-1.new" "$release_root/rollback-1"
-ln -sfn -- "$current_target" "$release_root/previous.new"
-mv -Tf -- "$release_root/previous.new" "$release_root/previous"
-ln -s -- "$new_release" "$release_root/current.new"
-mv -Tf -- "$release_root/current.new" "$release_root/current"
-systemctl restart "${THOIDAI_SERVICE:-thoidai-work.service}"
+
+read_pointer() {
+  local name=$1 target
+  [[ -L "$release_root/$name" ]] || { echo "DEPLOY ABORTED: lifecycle pointer missing: $name" >&2; return 1; }
+  target=$(readlink -f -- "$release_root/$name" 2>/dev/null || true)
+  [[ "$target" == "$release_root"/* && -d "$target" ]] || { echo "DEPLOY ABORTED: lifecycle pointer invalid: $name" >&2; return 1; }
+  printf '%s' "$target"
+}
+
+current_target=$(read_pointer current) || exit 1
+previous_target=$(read_pointer previous) || exit 1
+rollback_1_target=$(read_pointer rollback-1) || exit 1
+rollback_2_target=$(read_pointer rollback-2) || exit 1
+THOIDAI_RBAC_ROLLBACK_TARGET_PATH="$current_target" "$rbac_gate" || { echo "DEPLOY ABORTED: RBAC rollback compatibility gate failed for rollback target" >&2; exit 1; }
+
+rollback_snapshot() {
+  local rollback_status=0
+  set +e
+  rm -f -- "$release_root/current.rollback.new" "$release_root/previous.rollback.new" "$release_root/rollback-1.rollback.new" "$release_root/rollback-2.rollback.new"
+  "$ln_bin" -sfn -- "$current_target" "$release_root/current.rollback.new" && "$mv_bin" -Tf -- "$release_root/current.rollback.new" "$release_root/current" || rollback_status=1
+  "$ln_bin" -sfn -- "$previous_target" "$release_root/previous.rollback.new" && "$mv_bin" -Tf -- "$release_root/previous.rollback.new" "$release_root/previous" || rollback_status=1
+  "$ln_bin" -sfn -- "$rollback_1_target" "$release_root/rollback-1.rollback.new" && "$mv_bin" -Tf -- "$release_root/rollback-1.rollback.new" "$release_root/rollback-1" || rollback_status=1
+  "$ln_bin" -sfn -- "$rollback_2_target" "$release_root/rollback-2.rollback.new" && "$mv_bin" -Tf -- "$release_root/rollback-2.rollback.new" "$release_root/rollback-2" || rollback_status=1
+  "$systemctl_bin" restart "$service" || rollback_status=1
+  "$systemctl_bin" is-active --quiet "$service" || rollback_status=1
+  "$curl_bin" -fsS --max-time 15 -o /dev/null "$health_url" || rollback_status=1
+  for pointer in current previous rollback-1 rollback-2; do
+    expected="${current_target}"
+    [[ "$pointer" == previous ]] && expected="$previous_target"
+    [[ "$pointer" == rollback-1 ]] && expected="$rollback_1_target"
+    [[ "$pointer" == rollback-2 ]] && expected="$rollback_2_target"
+    actual=$(readlink -f -- "$release_root/$pointer" 2>/dev/null || true)
+    [[ "$actual" == "$expected" ]] || rollback_status=1
+  done
+  if (( rollback_status != 0 )); then
+    printf 'CRITICAL: automatic rollback failed; snapshot current=%s previous=%s rollback-1=%s rollback-2=%s\n' \
+      "$current_target" "$previous_target" "$rollback_1_target" "$rollback_2_target" >&2
+  else
+    echo "automatic rollback: PASS (full pointer snapshot restored)" >&2
+  fi
+  set -e
+  return "$rollback_status"
+}
+
+fail_after_mutation() {
+  local reason=$1
+  echo "DEPLOY ABORTED: $reason" >&2
+  if ! THOIDAI_RBAC_ROLLBACK_TARGET_PATH="$current_target" "$rbac_gate"; then
+    echo "CRITICAL: automatic rollback blocked by RBAC compatibility gate" >&2
+    exit 1
+  fi
+  local rollback_status=0
+  rollback_snapshot || rollback_status=$?
+  if (( rollback_status != 0 )); then
+    local evidence_root=${THOIDAI_DEPLOY_EVIDENCE_ROOT:-/var/lib/thoidai-work/deploy-evidence}
+    mkdir -p -- "$evidence_root" 2>/dev/null || true
+    {
+      printf 'event=automatic-rollback-failure\nreason=%s\nrollback_status=%s\n' "$reason" "$rollback_status"
+      printf 'recorded_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      printf 'snapshot_current=%s\nsnapshot_previous=%s\nsnapshot_rollback_1=%s\nsnapshot_rollback_2=%s\n' \
+        "$current_target" "$previous_target" "$rollback_1_target" "$rollback_2_target"
+      for name in current previous rollback-1 rollback-2; do
+        printf 'observed_%s=%s\n' "$name" "$(readlink -f -- "$release_root/$name" 2>/dev/null || echo missing)"
+      done
+    } > "$evidence_root/rollback-failure-$(date -u +%Y%m%dT%H%M%SZ)-$$.evidence" 2>/dev/null || true
+    echo "CRITICAL: production health is not proven after rollback failure" >&2
+  fi
+  exit 1
+}
+
+atomic_pointer() {
+  local target=$1 name=$2 tmp="$release_root/$2.new"
+  rm -f -- "$tmp" || return 1
+  "$ln_bin" -sfn -- "$target" "$tmp" || return 1
+  "$mv_bin" -Tf -- "$tmp" "$release_root/$name" || return 1
+}
+
+if ! atomic_pointer "$rollback_1_target" rollback-2; then
+  fail_after_mutation "lifecycle pointer mutation failed"
+fi
+if ! atomic_pointer "$current_target" rollback-1; then
+  fail_after_mutation "lifecycle pointer mutation failed"
+fi
+if ! atomic_pointer "$current_target" previous; then
+  fail_after_mutation "lifecycle pointer mutation failed"
+fi
+if ! atomic_pointer "$new_release" current; then
+  fail_after_mutation "lifecycle pointer mutation failed"
+fi
+
+if ! "$systemctl_bin" restart "$service"; then
+  fail_after_mutation "service restart failed"
+fi
 health_ok=0
-for attempt in $(seq 1 30); do
-  if systemctl is-active --quiet "${THOIDAI_SERVICE:-thoidai-work.service}" \
-    && curl -fsS --max-time 15 -o /dev/null "${THOIDAI_HEALTH_URL:-http://127.0.0.1:3001/login}"; then
+for attempt in $(seq 1 "$health_attempts"); do
+  if "$systemctl_bin" is-active --quiet "$service" && "$curl_bin" -fsS --max-time 15 -o /dev/null "$health_url"; then
     health_ok=1
     break
   fi
   sleep 1
 done
 if (( ! health_ok )); then
-  flock -u 9
-  "$(dirname "$0")/rollback-application.sh"
-  exit 1
+  fail_after_mutation "service health check failed"
 fi
-if [[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]]; then
-  if ! node scripts/contract-smoke.mjs; then
-    flock -u 9
-    "$(dirname "$0")/rollback-application.sh"
-    exit 1
-  fi
-  if ! node scripts/production/browser-path-smoke.mjs; then
-    flock -u 9
-    "$(dirname "$0")/rollback-application.sh"
-    exit 1
-  fi
+if ! "$node_bin" "${THOIDAI_CONTRACT_SMOKE_SCRIPT:-scripts/contract-smoke.mjs}"; then
+  fail_after_mutation "authenticated contract smoke failed"
+fi
+if ! "$node_bin" "${THOIDAI_BROWSER_SMOKE_SCRIPT:-scripts/production/browser-path-smoke.mjs}"; then
+  fail_after_mutation "browser-path smoke failed"
 fi
 echo "deploy-gate: PASS ($new_release)"

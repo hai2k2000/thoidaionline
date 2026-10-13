@@ -32,6 +32,7 @@ test("managed metadata and success marker are part of future releases", () => {
   const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
   const marker = readFileSync("scripts/production/mark-release-success.sh", "utf8");
   for (const field of ["commit=", "created_at=", "artifact_type=", "canonical_baseline=", "protection=", "rollback_eligible="]) assert.match(packager, new RegExp(field));
+  assert.match(packager, /rbac_v2=supported/);
   assert.match(marker, /health_status=pass/);
   assert.match(marker, /deploy_status=success/);
 });

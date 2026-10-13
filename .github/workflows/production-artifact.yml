@@ -74,6 +74,10 @@ jobs:
           scripts/artifact-roundtrip.test.mjs
       - name: Retention regression
         run: bash scripts/production/release-retention-managed.test.sh
+      - name: Deployment rollback fixture regression
+        run: bash scripts/production/deploy-gate-fixture.test.sh
+      - name: RBAC rollback gate fixture regression
+        run: bash scripts/production/rbac-rollback-gate-fixture.test.sh
       - name: TypeScript
         run: npx tsc --noEmit
       - name: ESLint
