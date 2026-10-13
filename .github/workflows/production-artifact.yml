@@ -127,7 +127,6 @@ jobs:
           test ! -e "$root/.env"
           test ! -e "$root/.env.local"
           test ! -e "$root/.env.production"
-          mkdir -p "$root/.next/cache"
           node scripts/verify-standalone-artifact.mjs "$root"
           node scripts/scan-artifact-secrets.mjs "$root"
           node scripts/verify-artifact-roundtrip.mjs "$root"

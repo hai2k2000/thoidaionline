@@ -4,7 +4,8 @@ import { join, resolve } from "node:path";
 import { verifyManifest } from "./verify-artifact-manifest.mjs";
 
 const root = resolve(process.argv[2] || process.cwd());
-for (const path of ["server.js", ".next/BUILD_ID", ".next/server/app-paths-manifest.json", ".next/static", ".next/cache", "public", "start-standalone.mjs", "required-route-manifest.json", "RELEASE_BASELINE_COMMIT", "MIGRATION_REFERENCE", ".release-meta", ".artifact-manifest.json", ".artifact-manifest.sha256"]) assert.ok(existsSync(join(root, path)), `missing artifact path: ${path}`);
+// The runtime cache is created on first start; it is intentionally not an uploaded build requirement.
+for (const path of ["server.js", ".next/BUILD_ID", ".next/server/app-paths-manifest.json", ".next/static", "public", "start-standalone.mjs", "required-route-manifest.json", "RELEASE_BASELINE_COMMIT", "MIGRATION_REFERENCE", ".release-meta", ".artifact-manifest.json", ".artifact-manifest.sha256"]) assert.ok(existsSync(join(root, path)), `missing artifact path: ${path}`);
 assert.equal(readFileSync(join(root, "RELEASE_BASELINE_COMMIT"), "utf8").trim(), "e501652e969900b97938acccd8f998df4e5d1873", "artifact baseline mismatch");
 assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().split("\n"), [
   "supabase/migrations/20260924120000_task_approval_gates.sql",
