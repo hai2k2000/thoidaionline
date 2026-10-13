@@ -22,6 +22,11 @@ const json = async (response) => response.json().catch(() => ({}));
 const expectStatus = (response, expected, label) => {
   if (response.status !== expected) throw new Error(`${label}: expected ${expected}, got ${response.status}`);
 };
+const expectQuickReportStatus = async (response, expected, label) => {
+  if (response.status === expected) return response;
+  const body = await json(response);
+  throw new Error(`${label}: expected ${expected}, got ${response.status} (${JSON.stringify(body?.error ?? body)})`);
+};
 
 async function login(username) {
   const response = await request("/api/auth/login", { method: "POST", headers: { origin: baseUrl, host: new URL(baseUrl).host }, body: JSON.stringify({ identifier: username, password }) });
@@ -56,7 +61,7 @@ expectStatus(await request("/api/permissions", {}, employee), 403, "employee per
 const quickReportPage = await request("/tasks/quick-report", {}, admin);
 expectStatus(quickReportPage, 200, "admin quick report page");
 const report = (cookie, id) => request("/api/tasks/quick-report", { method: "POST", headers: { origin: baseUrl, host: new URL(baseUrl).host }, body: JSON.stringify({ requestId: id, rows: [{ title: "E2E quick report", category: "other", startDate: "2026-10-13", completionDate: null, status: "in_progress", notes: "isolated" }] }) }, cookie);
-expectStatus(await report(admin, randomUUID()), 201, "admin quick report mutation");
+await expectQuickReportStatus(await report(admin, randomUUID()), 201, "admin quick report mutation");
 expectStatus(await report(employee, randomUUID()), 403, "employee quick report denied before override");
 
 if (mode === "old") {
@@ -78,7 +83,7 @@ const override = async (effect) => {
   expectStatus(response, 200, `employee ${effect} override`);
 };
 await override("allow");
-expectStatus(await report(employee, randomUUID()), 201, "employee quick report allowed override");
+await expectQuickReportStatus(await report(employee, randomUUID()), 201, "employee quick report allowed override");
 await override("deny");
 expectStatus(await report(employee, randomUUID()), 403, "employee quick report denied override");
 if (!postgrestUrl || !serviceRoleKey) throw new Error("rollback compatibility probe configuration missing");
