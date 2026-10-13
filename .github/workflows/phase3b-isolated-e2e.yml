@@ -136,6 +136,14 @@ jobs:
           curl -fsS -H "apikey: $E2E_SERVICE_ROLE_KEY" -H "Authorization: Bearer $E2E_SERVICE_ROLE_KEY" "$E2E_POSTGREST_URL/staff_users?username=eq.e2e-admin&select=username,active,session_version,must_change_password,password_hash,password,roles(active)" | sed -E 's/"password_hash":"[^"]+"/"password_hash":"[redacted]"/g; s/"password":"[^"]+"/"password":"[redacted]"/g' > "$diagnostics/postgrest-user.json" 2>&1 || true
           curl -sS -i -X POST -H "origin: http://127.0.0.1:3102" -H "host: 127.0.0.1:3102" -H "content-type: application/json" --data '{"identifier":"e2e-admin","password":"[redacted]"}' http://127.0.0.1:3102/api/auth/login | sed -E 's/(set-cookie: ).*/\1[redacted]/I' > "$diagnostics/login-response.txt" 2>&1 || true
           tail -n 120 "$RUNNER_TEMP/thoidai-old.log" > "$diagnostics/old-app.log" 2>&1 || true
+          while IFS= read -r line; do
+            line=$(printf '%s' "$line" | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g; s/(set-cookie: ).*/\1[redacted]/I')
+            echo "::error title=Isolated E2E diagnostic::$line"
+          done < "$diagnostics/login-response.txt"
+          while IFS= read -r line; do
+            line=$(printf '%s' "$line" | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')
+            echo "::warning title=Old app log::$line"
+          done < "$diagnostics/old-app.log"
 
       - name: Upload isolated E2E diagnostics
         if: failure()

@@ -43,4 +43,5 @@ test("browser runner install is disposable and does not rewrite application depe
   assert.match(workflow, /npx playwright install --with-deps chromium/);
   assert.match(workflow, /Upload isolated E2E diagnostics/);
   assert.match(workflow, /include-hidden-files: false/);
+  assert.match(workflow, /Isolated E2E diagnostic/);
 });
