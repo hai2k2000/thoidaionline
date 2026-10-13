@@ -27,6 +27,8 @@ test("sandbox fixture uses pinned local-only services and RBAC V2 migration", ()
   assert.match(fixture, /20260813110000_task_evaluation_checkpoints\.sql/);
   assert.match(fixture, /20260817050000_phase3_additive_task_schema\.sql/);
   assert.match(fixture, /20260820090000_task_assignment_reviewer_daily_due_time\.sql/);
+  assert.match(fixture, /20260924120000_task_approval_gates\.sql/);
+  assert.match(fixture, /20260924130000_task_assignment_semantics\.sql/);
   assert.match(fixture, /schema_migrations/);
   assert.match(fixture, /has_function_privilege/);
   assert.match(fixture, /grant select, insert, update, delete on all tables in schema public to service_role/);

@@ -90,6 +90,8 @@ files=(
   20260916100000_phase1a_rbac_core.sql
   20260916103000_phase1a_rbac_db_helper.sql
   20260916104500_phase1a_rbac_compatibility_completion.sql
+  20260924120000_task_approval_gates.sql
+  20260924130000_task_assignment_semantics.sql
   20261001090000_quick_report_task_v1.sql
   20261001100000_admin_quick_report_permission_management.sql
   20261001110000_user_specific_permission_grants.sql
