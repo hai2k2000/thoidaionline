@@ -1,8 +1,8 @@
 # RBAC V2 Rollout Blocker Closure
 
-Date: 2026-10-13  
-Repository: `hai2k2000/thoidaionline`  
-Target: `vps-aylaspa`  
+Date: 2026-10-13
+Repository: `hai2k2000/thoidaionline`
+Target: `vps-aylaspa`
 Checkpoint: no merge, migration, deploy, restart, or production grant change
 
 ## Decision
