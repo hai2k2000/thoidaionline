@@ -1,5 +1,29 @@
 # Thoidai Work3 PR #6 Final Review & Fix
 
+## RBAC V2 SQL Scope Ambiguity Hotfix
+
+Current Phase: hotfix complete; owner merge review pending
+Current Task: PR #18 `codex/rbac-v2-scope-hotfix`
+
+Completed:
+- Added `20261015110000_rbac_v2_scope_ambiguity_fix.sql` without modifying the historical RBAC V2 migration.
+- Disposable PostgreSQL 17 + PostgREST regression reproduced `42702` before the hotfix and verified HTTP 200, scope values, deny precedence, ACL/owner, invalid actor rejection, and safe-runner `ALREADY_APPLIED` after it.
+- Updated standalone migration references, verifier, packaging regression, workflow, and migration-first runbook.
+- Opened PR #18: https://github.com/hai2k2000/thoidaionline/pull/18
+
+Production safety:
+- Production database, grants, users, releases, service and symlinks unchanged.
+- PR #16 remains open and is not modified by this hotfix.
+
+Validation:
+- Local focused tests: 34/34 PASS; syntax and `git diff --check`: PASS.
+- GitHub push CI `38393856284`: PASS.
+- GitHub PR CI `38394385427`: PASS, including disposable PostgreSQL/PostgREST regression, packaging, TypeScript, ESLint, route manifest, and artifact round-trip.
+- Migration SHA-256: `57A364FDC845C31740518530BB801CD53DEA2B4E12CD2753CEB92E58FC19578A`.
+
+Next:
+- Owner review and separate approval to merge PR #18; do not apply migration or deploy production.
+
 ## RBAC V2 Role Matrix and User Overrides
 
 Current Phase: implementation complete; pre-production owner review

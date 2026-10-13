@@ -88,6 +88,7 @@ await writeFile(join(output, "MIGRATION_REFERENCE"), [
   "supabase/migrations/20261004100000_department_plan_saturday_friday.sql",
   "supabase/migrations/20261004110000_department_plan_friday_friday.sql",
   "supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql",
+  "supabase/migrations/20261015110000_rbac_v2_scope_ambiguity_fix.sql",
   "",
 ].join("\n"));
 await writeFile(join(output, "package.json"), `${JSON.stringify({ name: "thoidai-work-runtime", version: "0.1.0", private: true, scripts: { start: "node start-standalone.mjs" } }, null, 2)}\n`);
@@ -111,7 +112,7 @@ await writeFile(join(output, ".release-meta"), [
   `canonical_baseline=${canonicalBaseline}`,
   `artifact_bytes=${artifactBytes}`,
   "rbac_v2=supported",
-  "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260926140000_department_plans_v2.sql,supabase/migrations/20260926150000_department_plan_to_task_v1.sql,supabase/migrations/20260926160000_department_plan_assignment_v2.sql,supabase/migrations/20260925100000_journalism_self_registration.sql,supabase/migrations/20260928140000_tbt_any_assignee.sql,supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql,supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql,supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql,supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql,supabase/migrations/20261003100000_department_period_plan_v2.sql,supabase/migrations/20261003120000_department_plan_duplicate_guard.sql,supabase/migrations/20261004100000_department_plan_saturday_friday.sql,supabase/migrations/20261004110000_department_plan_friday_friday.sql,supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql",
+  "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260926140000_department_plans_v2.sql,supabase/migrations/20260926150000_department_plan_to_task_v1.sql,supabase/migrations/20260926160000_department_plan_assignment_v2.sql,supabase/migrations/20260925100000_journalism_self_registration.sql,supabase/migrations/20260928140000_tbt_any_assignee.sql,supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql,supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql,supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql,supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql,supabase/migrations/20261003100000_department_period_plan_v2.sql,supabase/migrations/20261003120000_department_plan_duplicate_guard.sql,supabase/migrations/20261004100000_department_plan_saturday_friday.sql,supabase/migrations/20261004110000_department_plan_friday_friday.sql,supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql,supabase/migrations/20261015110000_rbac_v2_scope_ambiguity_fix.sql",
   `env_model=${runtimeEnvModel}`,
   `build_config=${buildConfig}`,
   "build_verification=production-like-env-build-pass",
