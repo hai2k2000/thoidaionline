@@ -84,6 +84,7 @@ const withoutManager = adminRole.modules.flatMap((module) => module.permissions)
   .filter((permission) => permission.code !== "permission.manage" && permission.scopes.length)
   .map((permission) => ({ permissionCode: permission.code, scopes: permission.scopes }));
 const lastManager = await request("/api/permissions", { method: "POST", headers: { origin: baseUrl, host: new URL(baseUrl).host }, body: JSON.stringify({ action: "replace_role_permissions", roleId: adminRole.id, grants: withoutManager }) }, admin);
+if (lastManager.status !== 403) console.error(`::error title=Last manager response::${JSON.stringify(await json(lastManager))}`);
 expectStatus(lastManager, 403, "last permission manager protection");
 
 const override = async (effect) => {
