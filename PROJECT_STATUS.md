@@ -1,5 +1,31 @@
 # Thoidai Work3 PR #6 Final Review & Fix
 
+## RBAC V2 Role Matrix and User Overrides
+
+Current Phase: implementation complete; pre-production owner review
+Current Task: feature branch validation and PR handoff
+
+Completed:
+- Added catalog-driven role matrix and per-user inherit/allow/deny management on top of the existing RBAC tables.
+- Centralized effective permission resolution with inactive-user, inactive-role, deny precedence, scope, audit, self-elevation, and last-manager protections.
+- Added additive migration and idempotent RPC contracts without creating new permissions or grants.
+- Preserved legacy Quick Report and asset compatibility wrappers while enforcing the canonical resolver server-side.
+
+Validation:
+- Focused RBAC/UI/route: 45/45 PASS; broad RBAC/permission subset: 85/85 PASS.
+- Migration runner: 24/24 PASS; local embedded PostgreSQL full-chain rehearsal and second RBAC V2 migration application: PASS.
+- TypeScript, changed-file ESLint, route manifest, git diff check, and production-like build: PASS.
+- Local disk gate: 27,792,584,704 free bytes against a 21,474,836,480-byte floor.
+
+Production safety:
+- Production changed: NO.
+- Database/grants changed: NO.
+- Migration applied: NO.
+- Production deployed/restarted: NO.
+
+Next:
+- Push the feature branch and open the owner-review PR targeting `integration/production`; stop before merge, migration, or deployment.
+
 Current Phase: COMPLETE; owner merge review
 Current Task: Asset UI permission management final review
 

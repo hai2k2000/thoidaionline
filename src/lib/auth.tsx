@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRoleAccessPolicy } from "@/components/appNavState";
+import { isCatalogPermission } from "@/lib/rbac/permissionCatalog";
 import type { PermissionKey, PermissionSet } from "@/lib/permissions";
 import type { AccountPreferences } from "@/lib/accountPreferences";
 
@@ -116,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasPermission = (key: PermissionKey | string) => {
     if (!user) return false;
+    if (isCatalogPermission(key)) return user.rbacPermissions?.includes(key) === true;
     if (user.rbacPermissions?.includes(key)) return true;
     if (PHASE2_PERMISSION_KEYS.has(key)) {
       return user.permissions[key as PermissionKey] === true;

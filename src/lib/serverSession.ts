@@ -60,12 +60,11 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   const session = verifySessionToken(token);
   if (!session) return null;
 
-  const roleLifecycleEnabled = process.env.ROLE_LIFECYCLE_ENABLED === "true";
   const { data, error } = await serverSupabase
     .from("staff_users")
     .select(
       "id,full_name,email,phone,username,department_id,job_title_id,active,session_version,must_change_password,avatar_path,preferences,departments!staff_users_department_id_fkey(code)," +
-      `roles(code,name,level${roleLifecycleEnabled ? ",active" : ""},role_permissions(` +
+      "roles(code,name,level,active,role_permissions(" +
       "can_manage_users,can_manage_permissions,can_create_task," +
       "can_edit_all_tasks,can_comment,can_assign_task," +
       "can_view_department_tasks,can_evaluate_step1," +
@@ -94,12 +93,12 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
       code: string;
       name: string;
       level: number;
-      active?: boolean;
+      active: boolean;
       role_permissions: Partial<PermissionSet> | null;
     } | null;
   };
   if (session.sessionVersion !== row.session_version) return null;
-  if (!row.roles || (roleLifecycleEnabled && row.roles.active !== true)) return null;
+  if (!row.roles) return null;
   const isDepartmentManager = row.job_titles?.code === "truong_phong";
   const avatarResult = row.avatar_path
     ? await serverSupabase.storage.from("profile-avatars").createSignedUrl(row.avatar_path, 3600)
@@ -121,7 +120,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     session_version: row.session_version,
     must_change_password: row.must_change_password,
     is_department_manager: isDepartmentManager,
-    permissions: normalizePermissions(row.roles.role_permissions),
+    permissions: normalizePermissions(row.roles.active ? row.roles.role_permissions : null),
     avatar_url: avatarResult?.data?.signedUrl ?? null,
     preferences: normalizeAccountPreferences(row.preferences),
     rbacPermissions: [...new Set(rbacActor.grants.map((grant) => grant.permissionCode))],

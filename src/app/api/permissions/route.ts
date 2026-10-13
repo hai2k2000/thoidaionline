@@ -1,20 +1,33 @@
 import { serverSupabase } from "@/lib/serverSupabase";
 import { hasPermission } from "@/lib/rbac/authorization";
-import { loadRbacActor, setAssetManageUserPermission, setQuickReportUserPermission } from "@/lib/rbac/repository";
 import {
-  buildPermissionMatrix,
+  loadRbacActor,
+  loadEffectivePermissionCatalog,
+  replaceRolePermissions,
+  restoreUserPermissionInheritance,
+  clearUserPermissionOverride,
+  setAssetManageUserPermission,
+  setQuickReportUserPermission,
+  setUserPermissionOverride,
+} from "@/lib/rbac/repository";
+import {
   buildPermissionUsers,
   buildQuickReportUserPermissions,
+  buildPermissionManagementPayload,
   type PermissionMatrixGrantRow,
   type PermissionMatrixPermissionRow,
   type PermissionMatrixRoleRow,
   type PermissionMatrixUserRow,
   type UserPermissionGrantRow,
 } from "@/lib/permissionMatrix";
+import { isCatalogPermission, supportedScopesForPermission } from "@/lib/rbac/permissionCatalog";
 import { apiError, apiJson, asUuid, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+// Legacy clients are limited to the two existing catalog mutations:
+// permissionCode !== "task.quick_report.create" && permissionCode !== "asset.manage" is rejected.
 
 export async function GET() {
   const guard = await requireReadActor();
@@ -29,33 +42,28 @@ export async function GET() {
     serverSupabase.from("roles").select("id,code,name,level,active").order("level", { ascending: false }).order("name"),
     serverSupabase.from("permissions").select("id,code,name,module,description").order("module").order("code"),
     serverSupabase.from("role_permission_grants").select("role_id,permission_id,scope").order("role_id").order("permission_id").order("scope"),
-    serverSupabase.from("staff_users").select("id,username,full_name,active,role_id,roles(code,name,active)").order("full_name"),
-    serverSupabase.from("user_permission_grants").select("user_id,permission_id").order("user_id").order("permission_id"),
+    serverSupabase.from("staff_users").select("id,username,full_name,active,role_id,roles(code,name,active),departments(name)").order("full_name"),
+    serverSupabase.from("user_permission_grants").select("user_id,permission_id,effect,scope").order("user_id").order("permission_id"),
   ]);
   const error = rolesResult.error ?? permissionsResult.error ?? grantsResult.error ?? usersResult.error ?? userGrantsResult.error;
   if (error) return rpcFailure(error);
   const permissions = (permissionsResult.data ?? []) as PermissionMatrixPermissionRow[];
   const roleGrants = (grantsResult.data ?? []) as PermissionMatrixGrantRow[];
   const userGrants = (userGrantsResult.data ?? []) as UserPermissionGrantRow[];
+  const payload = buildPermissionManagementPayload({
+    roles: (rolesResult.data ?? []) as PermissionMatrixRoleRow[],
+    permissions,
+    roleGrants,
+    users: ((usersResult.data ?? []) as unknown as Array<PermissionMatrixUserRow & { departments?: { name: string }[] | null }>).map((entry) => ({ ...entry, department_name: entry.departments?.[0]?.name ?? null })),
+    userGrants,
+  });
   return apiJson({
-    roles: buildPermissionMatrix(
-      (rolesResult.data ?? []) as PermissionMatrixRoleRow[],
-      permissions,
-      roleGrants,
-    ),
-    users: buildQuickReportUserPermissions(
-      (usersResult.data ?? []) as PermissionMatrixUserRow[],
-      permissions,
-      roleGrants,
-      userGrants,
-    ),
-    assetUsers: buildPermissionUsers(
-      (usersResult.data ?? []) as PermissionMatrixUserRow[],
-      permissions,
-      roleGrants,
-      userGrants,
-      "asset.manage",
-    ),
+    ...payload,
+    roleCatalog: payload.roles,
+    effectiveCatalog: await loadEffectivePermissionCatalog(guard.actor),
+    users: payload.users,
+    assetUsers: buildPermissionUsers((usersResult.data ?? []) as PermissionMatrixUserRow[], permissions, roleGrants, userGrants, "asset.manage"),
+    quickReportUsers: buildQuickReportUserPermissions((usersResult.data ?? []) as PermissionMatrixUserRow[], permissions, roleGrants, userGrants),
   });
 }
 
@@ -66,11 +74,32 @@ export async function POST(request: Request) {
   const roleId = asUuid(body?.roleId);
   const userId = asUuid(body?.userId);
   const action = body?.action;
-  const permissionCode = body?.permissionCode ?? "task.quick_report.create";
-  if ((!roleId && !userId) || (roleId && userId) || (action !== "grant" && action !== "revoke") || (permissionCode !== "task.quick_report.create" && permissionCode !== "asset.manage")) return apiError("invalid_request", 400);
+  const permissionCode = typeof body?.permissionCode === "string" ? body.permissionCode : null;
   try {
     const actor = await loadRbacActor(guard.actor);
     if (!hasPermission(actor, "permission.manage")) return apiError("forbidden", 403);
+    if (body?.action === "replace_role_permissions") {
+      if (!roleId || !Array.isArray(body.grants)) return apiError("invalid_request", 400);
+      const rawGrants = body.grants;
+      const grants = rawGrants.filter((grant): grant is { permissionCode: string; scopes: string[] } => Boolean(grant) && typeof grant === "object" && typeof (grant as { permissionCode?: unknown }).permissionCode === "string" && Array.isArray((grant as { scopes?: unknown }).scopes));
+      if (grants.length !== rawGrants.length || grants.some((grant) => !isCatalogPermission(grant.permissionCode) || grant.scopes.some((scope) => !supportedScopesForPermission(grant.permissionCode).includes(scope as never)))) return apiError("invalid_request", 400);
+      return apiJson({ result: await replaceRolePermissions(actor, roleId, grants) });
+    }
+    if (body?.action === "set_user_override") {
+      const effect = body.effect;
+      const scope = body.scope;
+      if (!userId || !permissionCode || !isCatalogPermission(permissionCode) || (effect !== "allow" && effect !== "deny") || typeof scope !== "string" || !supportedScopesForPermission(permissionCode).includes(scope as never)) return apiError("invalid_request", 400);
+      return apiJson({ result: await setUserPermissionOverride(actor, userId, permissionCode, effect, scope as "self" | "assigned" | "department" | "all") });
+    }
+    if (body?.action === "restore_user_inheritance") {
+      if (!userId) return apiError("invalid_request", 400);
+      return apiJson({ result: await restoreUserPermissionInheritance(actor, userId) });
+    }
+    if (body?.action === "clear_user_override") {
+      if (!userId || !permissionCode || !isCatalogPermission(permissionCode)) return apiError("invalid_request", 400);
+      return apiJson({ result: await clearUserPermissionOverride(actor, userId, permissionCode) });
+    }
+    if ((!roleId && !userId) || (roleId && userId) || (action !== "grant" && action !== "revoke") || (permissionCode !== "task.quick_report.create" && permissionCode !== "asset.manage")) return apiError("invalid_request", 400);
     if (userId) {
       const data = permissionCode === "asset.manage"
         ? await setAssetManageUserPermission(actor, userId, action === "grant")

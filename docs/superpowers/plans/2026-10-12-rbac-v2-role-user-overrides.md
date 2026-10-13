@@ -41,7 +41,7 @@
 - Produce `resolveEffectivePermission(input: { active: boolean; roleActive: boolean; roleScopes: readonly RbacScope[]; userEffect: RbacGrantEffect | null; userScope: RbacScope | null; }): EffectivePermission`.
 - Preserve `hasPermission`, `scopesFor`, and `can` call compatibility by making them consume normalized effective grants.
 
-- [ ] **Step 1: Write failing unit tests for the precedence matrix.**
+- [x] **Step 1: Write failing unit tests for the precedence matrix.**
   - Assert role grant works for an active user with an active role.
   - Assert direct allow works without a role grant.
   - Assert active user plus inactive role keeps direct allow and drops role scopes.
@@ -50,19 +50,19 @@
   - Assert inactive user returns no scopes even with direct allow.
   - Assert duplicate scopes normalize and resource scope checks remain unchanged.
 
-- [ ] **Step 2: Run the focused test and verify it fails for the missing resolver.**
+- [x] **Step 2: Run the focused test and verify it fails for the missing resolver.**
   - Run: `node --test src/lib/rbac/effectivePermissions.test.mjs`
   - Expected: failure because the new resolver contract is not implemented.
 
-- [ ] **Step 3: Implement the smallest pure resolver and effective-grant normalization.**
+- [x] **Step 3: Implement the smallest pure resolver and effective-grant normalization.**
   - Keep deny out of `RbacGrant[]` effective scopes so existing `can()` remains allow-only.
   - Preserve `RbacActor` fields used by current callers and add optional source metadata rather than replacing the existing shape.
 
-- [ ] **Step 4: Run the focused test and existing RBAC tests.**
+- [x] **Step 4: Run the focused test and existing RBAC tests.**
   - Run: `node --test src/lib/rbac/effectivePermissions.test.mjs src/lib/rbacAuthorization.test.mjs src/lib/userPermissionMatrix.test.mjs`
   - Expected: PASS with no behavior change for existing allow-only fixtures.
 
-- [ ] **Step 5: Commit the contract and unit tests.**
+- [x] **Step 5: Commit the contract and unit tests.**
   - Commit: `test: define RBAC v2 effective permission precedence`
 
 ---
@@ -81,7 +81,7 @@
 - Create `public.api_restore_user_permission_inheritance(p_actor_id uuid, p_user_id uuid)`.
 - All mutation RPCs return `changed`, target identifiers, and an effective-permission summary.
 
-- [ ] **Step 1: Write migration contract tests before SQL implementation.**
+- [x] **Step 1: Write migration contract tests before SQL implementation.**
   - Assert `effect` exists, defaults to `allow`, accepts only `allow|deny`, and old rows remain present.
   - Assert direct allow survives an inactive role, while role scopes disappear.
   - Assert deny wins over both sources.
@@ -89,22 +89,22 @@
   - Assert replacing one role does not alter another role.
   - Assert concurrent last-manager mutations serialize and at least one manager remains.
 
-- [ ] **Step 2: Run the migration contract tests to confirm RED.**
+- [x] **Step 2: Run the migration contract tests to confirm RED.**
   - Run: `node --test src/lib/rbacV2Migration.test.mjs`
   - Expected: failure because the migration file and SQL contracts are absent.
 
-- [ ] **Step 3: Add schema changes without data widening.**
+- [x] **Step 3: Add schema changes without data widening.**
   - Add `user_permission_grants.effect text not null default 'allow'` with a check constraint.
   - Keep the existing unique `(user_id, permission_id)`, scope constraint, RLS, and service-role-only table grants.
   - Do not insert new permissions, role grants, or user grants.
 
-- [ ] **Step 4: Implement the canonical read resolver.**
+- [x] **Step 4: Implement the canonical read resolver.**
   - Return all catalog permissions for the actor.
   - Apply inactive-user and inactive-role rules exactly as the spec states.
   - Compute user deny before user allow before role grant.
   - Normalize scopes in SQL and return `source` for UI/session consumers.
 
-- [ ] **Step 5: Implement role replacement with concurrency-safe last-manager protection.**
+- [x] **Step 5: Implement role replacement with concurrency-safe last-manager protection.**
   - Start a transaction and acquire `pg_advisory_xact_lock(hashtextextended('rbac.permission.manage', 0))`.
   - Lock the target role and all active users currently holding effective `permission.manage` with `FOR UPDATE`.
   - Validate actor authority, target role state, complete grant payload, no duplicates, known catalog codes, and supported scopes.
@@ -112,18 +112,18 @@
   - Apply the exact role grant delta, recompute active effective managers, and reject if the count becomes zero.
   - Write one audit row per changed permission with old/new scope state.
 
-- [ ] **Step 6: Implement user override, restore, and last-manager checks.**
+- [x] **Step 6: Implement user override, restore, and last-manager checks.**
   - Acquire the same advisory lock for every mutation that can change `permission.manage`.
   - Reject actor self-targeting, inactive allow targets, invalid effects/scopes, and unknown users.
   - Upsert/delete only the targeted override row.
   - Recompute effective managers after the proposed change and reject lockout.
   - Write old/new override state to `audit_logs`; restore deletes all target overrides in one transaction.
 
-- [ ] **Step 7: Add SQL assertions and idempotence checks.**
+- [x] **Step 7: Add SQL assertions and idempotence checks.**
   - Run: `psql ... -f supabase/tests/rbac_v2_role_user_overrides.sql` through the existing disposable migration harness.
   - Run the migration twice and assert the second run is clean and data-preserving.
 
-- [ ] **Step 8: Run migration tests and commit.**
+- [x] **Step 8: Run migration tests and commit.**
   - Run: `node --test src/lib/rbacV2Migration.test.mjs scripts/production/safe-apply-migration.test.mjs`
   - Commit: `feat: add RBAC v2 override and role management RPCs`
 
@@ -146,30 +146,30 @@
 - Add `isCatalogPermission(code)` and `supportedScopesForPermission(code)`.
 - Keep `PermissionSet` and legacy `can_*` keys unchanged for unmapped behavior.
 
-- [ ] **Step 1: Write failing tests for session and client precedence.**
+- [x] **Step 1: Write failing tests for session and client precedence.**
   - Assert `rbacPermissions` excludes denied codes.
   - Assert direct allow appears for active users with inactive roles.
   - Assert legacy fallback remains for unmapped `can_*` keys.
   - Assert mapped catalog codes do not regain access through role-name fallback.
   - Assert scope metadata is shared rather than duplicated in UI code.
 
-- [ ] **Step 2: Run the focused compatibility tests and verify RED.**
+- [x] **Step 2: Run the focused compatibility tests and verify RED.**
 
-- [ ] **Step 3: Replace raw grant loading with the canonical effective RPC.**
+- [x] **Step 3: Replace raw grant loading with the canonical effective RPC.**
   - Preserve request-scoped caching.
   - Map only effective allow scopes into `RbacActor.grants`.
   - Preserve source/effect metadata for permission management and session diagnostics.
 
-- [ ] **Step 4: Update `serverSession.ts` and `auth.tsx`.**
+- [x] **Step 4: Update `serverSession.ts` and `auth.tsx`.**
   - Session returns effective catalog codes only.
   - Client `hasPermission` trusts catalog results first, then legacy normalized permissions.
   - Remove role-name fallback only for codes proven equivalent by the catalog; leave unrelated module policy unchanged.
 
-- [ ] **Step 5: Update direct feature authorization consumers.**
+- [x] **Step 5: Update direct feature authorization consumers.**
   - Replace raw union checks in Quick Report and asset permission RPC paths with the effective resolver.
   - Preserve existing workflow/RPC guards and scope checks.
 
-- [ ] **Step 6: Run tests and commit.**
+- [x] **Step 6: Run tests and commit.**
   - Run: `node --test src/lib/rbacCompatibilityV2.test.mjs src/lib/rbacAuthorization.test.mjs src/lib/authorization.test.mjs src/lib/adminQuickReportPermissionManagement.test.mjs src/lib/assetPermissionManagement.test.mjs`
   - Commit: `feat: unify RBAC v2 server and legacy compatibility`
 
@@ -186,20 +186,20 @@
 - Add `buildPermissionManagementPayload(rows)` which preserves module order, roles, users, role grants, direct overrides, effective scopes, source, and affected-user counts.
 - Replace special-purpose `buildQuickReportUserPermissions`/asset-only transformations with compatibility adapters until consumers migrate.
 
-- [ ] **Step 1: Write failing tests for complete catalog payloads.**
+- [x] **Step 1: Write failing tests for complete catalog payloads.**
   - Assert every database permission appears exactly once.
   - Assert modules include permissions with no current grants.
   - Assert role scope arrays preserve multiple scopes.
   - Assert user entries show inherit/allow/deny, effective scopes, source, role/department/status.
   - Assert affected-user counts include active users assigned to the selected role.
 
-- [ ] **Step 2: Run the test and verify RED.**
+- [x] **Step 2: Run the test and verify RED.**
 
-- [ ] **Step 3: Implement pure payload builders and adapters.**
+- [x] **Step 3: Implement pure payload builders and adapters.**
   - Keep data transformation independent of fetch/RPC logic.
   - Use literal fixtures covering inactive role, inactive user, direct allow, direct deny, and role-only access.
 
-- [ ] **Step 4: Run focused matrix tests and commit.**
+- [x] **Step 4: Run focused matrix tests and commit.**
   - Commit: `feat: generalize permission matrix contracts`
 
 ---
@@ -222,21 +222,21 @@
   - `set_user_override`: `{ userId, permissionCode, effect, scope }`
   - `restore_user_inheritance`: `{ userId }`
 
-- [ ] **Step 1: Write failing route contract tests.**
+- [x] **Step 1: Write failing route contract tests.**
   - Assert unauthenticated, invalid-origin, and non-`permission.manage` requests fail.
   - Assert GET returns all catalog entries and source/effect data.
   - Assert malformed action, UUID, permission code, effect, and scope fail before RPC.
   - Assert successful actions call only the corresponding RPC and return effective summary.
   - Assert direct POST cannot bypass last-manager/self-elevation errors.
 
-- [ ] **Step 2: Run route tests and verify RED.**
+- [x] **Step 2: Run route tests and verify RED.**
 
-- [ ] **Step 3: Implement strict request parsing and RPC delegation.**
+- [x] **Step 3: Implement strict request parsing and RPC delegation.**
   - Keep `requireReadActor`/`requireMutationActor`.
   - Do not trust client actor, role, department, or effective values.
   - Map SQL error codes through existing `rpcFailure`.
 
-- [ ] **Step 4: Run route tests and commit.**
+- [x] **Step 4: Run route tests and commit.**
   - Commit: `feat: expose catalog-driven permission management API`
 
 ---
@@ -253,21 +253,21 @@
 - Send `replace_role_permissions` with the complete desired grant set.
 - Render one selected database role at a time; never mutate other roles.
 
-- [ ] **Step 1: Write failing UI contract tests for role selection and save payload.**
+- [x] **Step 1: Write failing UI contract tests for role selection and save payload.**
   - Assert all modules and permissions render, including permissions with no grants.
   - Assert checkbox state maps to scopes and supports multiple scopes.
   - Assert selected-role user count is visible before save.
   - Assert dirty state and `Lưu thay đổi` use the complete selected-role payload.
   - Assert inactive roles are inspectable but not editable.
 
-- [ ] **Step 2: Run UI contract tests and verify RED.**
+- [x] **Step 2: Run UI contract tests and verify RED.**
 
-- [ ] **Step 3: Implement the role tab using existing page styling.**
+- [x] **Step 3: Implement the role tab using existing page styling.**
   - Keep the orange/slate visual language.
   - Use module sections, compact permission rows, explicit scope controls, affected-user summary, and one save action.
   - Add keyboard-visible focus, mobile stacking, disabled pending state, and clear error/success messages.
 
-- [ ] **Step 4: Run focused UI tests and changed-file ESLint.**
+- [x] **Step 4: Run focused UI tests and changed-file ESLint.**
   - Commit: `feat: add complete role permission matrix UI`
 
 ---
@@ -283,22 +283,22 @@
 - Send `set_user_override` and `restore_user_inheritance`.
 - Render `inherit | allow | deny`, inherited scopes, effective scopes, and source.
 
-- [ ] **Step 1: Write failing UI contract tests for override behavior.**
+- [x] **Step 1: Write failing UI contract tests for override behavior.**
   - Assert user search/selection displays role, department, and active state.
   - Assert each permission shows default role decision, override state, effective result, and source.
   - Assert deny is visible as a deliberate destructive state and takes precedence.
   - Assert restore sends the inheritance action and returns to role behavior.
   - Assert inactive users cannot receive allow overrides but can be inspected/restored.
 
-- [ ] **Step 2: Run UI tests and verify RED.**
+- [x] **Step 2: Run UI tests and verify RED.**
 
-- [ ] **Step 3: Implement the user tab and effective-result presentation.**
+- [x] **Step 3: Implement the user tab and effective-result presentation.**
   - Use a three-state control with explicit labels.
   - Show source badges `Vai trò`, `Cấp riêng`, `Chặn riêng`, or `Không có`.
   - Keep permission descriptions and scope controls catalog-driven.
   - Do not add client-only authorization logic.
 
-- [ ] **Step 4: Run focused UI tests and changed-file ESLint.**
+- [x] **Step 4: Run focused UI tests and changed-file ESLint.**
   - Commit: `feat: add per-user RBAC override UI`
 
 ---
@@ -312,7 +312,7 @@
 - Create: `src/lib/rbacV2SecurityRegression.test.mjs`
 - Modify: `supabase/tests/phase1a_rbac_core.sql` only for additive assertions if required
 
-- [ ] **Step 1: Write failing security regression tests.**
+- [x] **Step 1: Write failing security regression tests.**
   - Direct Quick Report call denied by user deny despite role allow.
   - Direct asset-management call denied by user deny despite role allow.
   - Non-manager API and direct RPC calls fail with 403/42501.
@@ -321,13 +321,13 @@
   - Inactive role drops inherited access but direct allow remains.
   - Rollback compatibility fixture fails closed when an old resolver would widen a denied permission.
 
-- [ ] **Step 2: Run focused security tests and verify RED.**
+- [x] **Step 2: Run focused security tests and verify RED.**
 
-- [ ] **Step 3: Update feature consumers and test fixtures only where the canonical resolver requires it.**
+- [x] **Step 3: Update feature consumers and test fixtures only where the canonical resolver requires it.**
   - Do not rewrite unrelated workflow authorization.
   - Preserve existing audit/status-history and task scope guards.
 
-- [ ] **Step 4: Run focused security suite and commit.**
+- [x] **Step 4: Run focused security suite and commit.**
   - Commit: `test: cover RBAC v2 server deny and rollback safety`
 
 ---
@@ -339,40 +339,40 @@
 - Modify: `docs/superpowers/plans/2026-10-12-rbac-v2-role-user-overrides.md` to mark completed steps only after evidence
 - Create: `RBAC_V2_IMPLEMENTATION_REPORT.md`
 
-- [ ] **Step 1: Run focused Node tests once after source stabilization.**
+- [x] **Step 1: Run focused Node tests once after source stabilization.**
   - Run the complete RBAC/permission subset:
     `node --test src/lib/rbac/*.test.mjs src/lib/*Permission*.test.mjs src/lib/*Rbac*.test.mjs src/lib/permission*test.mjs`
   - Record exact pass/fail counts and pre-existing failures separately.
 
-- [ ] **Step 2: Run disposable PostgreSQL rehearsal.**
+- [x] **Step 2: Run disposable PostgreSQL rehearsal.**
   - Run `npm run migration:disposable` with the RBAC V2 migration included.
   - Apply the migration twice, run `supabase/tests/rbac_v2_role_user_overrides.sql`, and verify old role/user grant row counts and effective decisions.
   - Run rollback compatibility checks without touching production.
 
-- [ ] **Step 3: Run static validation.**
+- [x] **Step 3: Run static validation.**
   - `npm exec tsc --noEmit`
   - `npx eslint <changed TypeScript files>`
   - `npm run check:routes`
   - `git diff --check`
   - Scan for secrets, `.env`, backups, build outputs, and untracked artifacts.
 
-- [ ] **Step 4: Run the disk budget gate before the production-like build.**
+- [x] **Step 4: Run the disk budget gate before the production-like build.**
   - Use the existing host profile and storage guard; require free bytes >= `21,474,836,480`.
   - Create a bounded build workspace with `build-workspace.sh create`; clean only that build workspace after validation according to its lifecycle state.
   - Do not delete unrelated VPS data to make the build pass.
 
-- [ ] **Step 5: Run production-like build and standalone checks.**
+- [x] **Step 5: Run production-like build and standalone checks.**
   - `npm run check:baseline`
   - `npm run build`
   - `npm run package:standalone`
   - `npm run verify:standalone`
   - Record disk before/after and ensure no production service state changes.
 
-- [ ] **Step 6: Update project status with evidence.**
+- [x] **Step 6: Update project status with evidence.**
   - Record current phase, completed tasks, validation outputs, migration-not-applied status, production unchanged status, and remaining rollout blockers.
   - Do not claim production readiness until migration compatibility and live approval gates are separately completed.
 
-- [ ] **Step 7: Commit validation/status artifacts.**
+- [x] **Step 7: Commit validation/status artifacts.**
   - Commit: `chore: validate RBAC v2 implementation`
 
 ---
@@ -382,29 +382,29 @@
 **Files:**
 - No source changes beyond validated implementation/status artifacts.
 
-- [ ] **Step 1: Verify branch cleanliness and ancestry.**
+- [x] **Step 1: Verify branch cleanliness and ancestry.**
   - Run `git status --short --branch`.
   - Verify branch contains canonical baseline and all intended commits only.
   - Verify no production migration/deploy command was run.
 
-- [ ] **Step 2: Push the feature branch.**
+- [x] **Step 2: Push the feature branch.**
   - Run `git push origin codex/rbac-v2-role-user-overrides`.
   - Confirm the remote branch SHA.
 
-- [ ] **Step 3: Create a PR targeting `integration/production`.**
+- [x] **Step 3: Create a PR targeting `integration/production`.**
   - Title: `feat: RBAC v2 role matrix and user overrides`.
   - Body must include architecture, permission precedence, migration/data impact, last-manager locking, test/build evidence, rollback compatibility gate, and explicit statement: no production migration or deployment.
   - Stop after PR creation and report branch, commit SHA, PR URL, tests, and rollout blockers.
 
 ## Definition of Done
 
-- [ ] Complete catalog-driven role matrix and user override UI are implemented.
-- [ ] Effective permission resolver enforces inactive-user, inactive-role, allow, deny, and scope rules consistently on server and client.
-- [ ] Direct feature RPCs honor explicit deny.
-- [ ] Last-manager protection is serialized and tested under concurrent updates.
-- [ ] Existing grants are preserved; no new permissions are auto-created.
-- [ ] Audit rows capture every real permission change.
-- [ ] Focused tests, migration rehearsal, TypeScript, ESLint, route manifest, disk gate, and production-like build pass.
-- [ ] Feature branch is pushed and PR targets `integration/production`.
-- [ ] No production migration, grant change, restart, merge, or deployment occurs.
+- [x] Complete catalog-driven role matrix and user override UI are implemented.
+- [x] Effective permission resolver enforces inactive-user, inactive-role, allow, deny, and scope rules consistently on server and client.
+- [x] Direct feature RPCs honor explicit deny.
+- [x] Last-manager protection is serialized and tested under concurrent updates.
+- [x] Existing grants are preserved; no new permissions are auto-created.
+- [x] Audit rows capture every real permission change.
+- [x] Focused tests, migration rehearsal, TypeScript, ESLint, route manifest, disk gate, and production-like build pass.
+- [x] Feature branch is pushed and PR targets `integration/production`.
+- [x] No production migration, grant change, restart, merge, or deployment occurs.
 
