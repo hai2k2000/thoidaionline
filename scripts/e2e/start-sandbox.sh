@@ -77,6 +77,7 @@ files=(
   20260318101500_baseline.sql
   20260318132500_add_username_to_staff_users.sql
   20260320114500_hr_assets_documents_performance_mvp.sql
+  20260813110000_task_evaluation_checkpoints.sql
   20260813210000_password_reset_security.sql
   20260814070000_job_titles.sql
   20260814160000_employee_password_reset_admin.sql
