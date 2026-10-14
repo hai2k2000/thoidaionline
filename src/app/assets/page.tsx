@@ -14,6 +14,7 @@ type AssetRow = Asset & {
   assignee_name?: string | null;
 };
 type DepartmentOption = { id: string; name: string };
+type LocationOption = { id: string; code: string; name: string };
 type UserOption = { id: string; full_name: string; department_id: string | null };
 
 const quickFilters: { value: AssetQuickFilter; label: string }[] = [
@@ -58,9 +59,11 @@ export default function AssetsPage() {
   const [message, setMessage] = useState("Đang tải danh sách tài sản...");
   const [loaded, setLoaded] = useState(false);
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [qName, setQName] = useState("");
   const [qDepartment, setQDepartment] = useState("");
+  const [qLocation, setQLocation] = useState("");
   const [qCondition, setQCondition] = useState("");
   const [qUsage, setQUsage] = useState("");
   const [quickFilter, setQuickFilter] = useState<AssetQuickFilter>("all");
@@ -83,10 +86,11 @@ export default function AssetsPage() {
 
     if (hasPermission("asset.manage")) {
       const response = await fetch("/api/assets?options=1", { cache: "no-store" });
-      const payload = await response.json().catch(() => null) as { departments?: DepartmentOption[]; users?: UserOption[] } | null;
+      const payload = await response.json().catch(() => null) as { departments?: DepartmentOption[]; users?: UserOption[]; locations?: LocationOption[] } | null;
       if (response.ok) {
         setDepartments(payload?.departments ?? []);
         setUsers(payload?.users ?? []);
+        setLocations(payload?.locations ?? []);
       }
     }
   }, [hasPermission]);
@@ -108,8 +112,8 @@ export default function AssetsPage() {
   }, []);
 
   const filteredRows = useMemo(
-    () => filterAssetList(rows, { name: qName, category: "", conditionStatus: qCondition, usageState: qUsage as "assigned" | "unassigned" | "liquidated" | "", quick: quickFilter, departmentId: qDepartment, assigneeId: qAssignee }),
-    [rows, qName, qCondition, qUsage, quickFilter, qAssignee, qDepartment],
+    () => filterAssetList(rows, { name: qName, category: "", conditionStatus: qCondition, usageState: qUsage as "assigned" | "unassigned" | "liquidated" | "", quick: quickFilter, departmentId: qDepartment, assigneeId: qAssignee }).filter((row) => !qLocation || row.location_id === qLocation),
+    [rows, qName, qCondition, qUsage, quickFilter, qAssignee, qDepartment, qLocation],
   );
   const summary = useMemo(() => summarizeAssetList(rows), [rows]);
   const departmentById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments]);
@@ -127,6 +131,7 @@ export default function AssetsPage() {
   const clearFilters = () => {
     setQName("");
     setQDepartment("");
+    setQLocation("");
     setQCondition("");
     setQUsage("");
     setQuickFilter("all");
@@ -136,7 +141,7 @@ export default function AssetsPage() {
     setEmployeeActiveIndex(0);
   };
 
-  const hasActiveFilters = Boolean(qName || qDepartment || qCondition || qUsage || qAssignee || quickFilter !== "all");
+  const hasActiveFilters = Boolean(qName || qDepartment || qLocation || qCondition || qUsage || qAssignee || quickFilter !== "all");
 
   return (
     <main className="min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6">
@@ -151,7 +156,7 @@ export default function AssetsPage() {
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-700">Quản lý tài sản</p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight">Danh sách tài sản</h1>
             </div>
-            {loaded && !message ? <p className="text-sm text-slate-600"><span className="font-bold text-slate-900">{summary.total} tài sản</span><span className="mx-2 text-slate-300">·</span>{summary.assigned} đã phân công<span className="mx-2 text-slate-300">·</span><span className="font-semibold text-amber-800">{summary.unassigned} chưa phân công</span></p> : null}
+            <div className="flex flex-wrap items-center gap-3">{loaded && !message ? <p className="text-sm text-slate-600"><span className="font-bold text-slate-900">{summary.total} tài sản</span><span className="mx-2 text-slate-300">·</span>{summary.assigned} đã phân công<span className="mx-2 text-slate-300">·</span><span className="font-semibold text-amber-800">{summary.unassigned} chưa phân công</span></p> : null}{hasPermission("asset.manage") ? <Link href="/assets/new" className="inline-flex min-h-11 items-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300">+ Thêm tài sản</Link> : null}</div>
           </header>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -159,6 +164,7 @@ export default function AssetsPage() {
             <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 xl:grid-cols-5 items-start">
               <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-slate-700"><span>Tên tài sản</span><input className="min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200" placeholder="Tìm tên tài sản..." value={qName} onChange={(event) => setQName(event.target.value)} /></label>
               <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-slate-700"><span>Phòng ban</span><select className="min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200" value={qDepartment} onChange={(event) => { setQDepartment(event.target.value); setQAssignee(""); setQEmployeeSearch(""); setEmployeeActiveIndex(0); setEmployeeOpen(false); }}><option value="">Tất cả phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
+              <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-slate-700"><span>Vị trí tài sản</span><select aria-label="Lọc theo vị trí tài sản" className="min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200" value={qLocation} onChange={(event) => setQLocation(event.target.value)}><option value="">Tất cả vị trí</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
               <div ref={employeeFilterRef} className="relative grid min-w-0 gap-1.5 text-sm font-semibold text-slate-700">
                 <span>Nhân viên</span>
                 {qAssignee === "__shared" ? <button type="button" aria-label="Xóa lọc tài sản dùng chung của phòng" onClick={() => { setQAssignee(""); setQEmployeeSearch(""); setEmployeeOpen(false); }} className="flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 text-left text-sm font-semibold text-orange-900 focus:outline-none focus:ring-2 focus:ring-orange-200"><span className="truncate">Dùng chung của phòng</span><span aria-hidden="true" className="text-base">×</span></button> : <input role="combobox" aria-controls="employee-filter-options" aria-expanded={employeeOpen} disabled={!qDepartment} className="min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500" placeholder={qDepartment ? "Tìm nhân viên..." : "Chọn phòng trước"} value={qAssignee ? (users.find((person) => person.id === qAssignee)?.full_name ?? "") : qEmployeeSearch} onFocus={() => { if (qDepartment) setEmployeeOpen(true); }} onChange={(event) => { setQAssignee(""); setQEmployeeSearch(event.target.value); setEmployeeActiveIndex(0); setEmployeeOpen(true); }} onKeyDown={(event) => { const matches = users.filter((person) => person.department_id === qDepartment && normalizeVietnamese(person.full_name).includes(normalizeVietnamese(qEmployeeSearch))).slice(0, 8); if (event.key === "Escape") { event.preventDefault(); setEmployeeOpen(false); } if (event.key === "ArrowDown") { event.preventDefault(); setEmployeeOpen(true); setEmployeeActiveIndex((index) => Math.min(index + 1, Math.max(matches.length - 1, 0))); } if (event.key === "ArrowUp") { event.preventDefault(); setEmployeeOpen(true); setEmployeeActiveIndex((index) => Math.max(index - 1, 0)); } if (event.key === "Enter") { const match = matches[employeeActiveIndex] ?? matches[0]; if (match) { setQAssignee(match.id); setQEmployeeSearch(""); setEmployeeOpen(false); } } }} />}

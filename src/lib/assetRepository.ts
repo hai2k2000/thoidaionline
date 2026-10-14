@@ -39,6 +39,7 @@ export type AssetRepositoryAsset = {
   status?: string | null;
   condition_status?: string | null;
   assigned_department_id?: string | null;
+  location_id?: string | null;
   note?: string | null;
   tracking_mode?: AssetTrackingMode;
   quantity?: number;
@@ -89,6 +90,7 @@ export type AssetCreateInput = {
   note?: string | null;
   tracking_mode?: AssetTrackingMode;
   quantity?: number;
+  location_id?: string | null;
 };
 
 export type AssetUpdateInput = Partial<AssetCreateInput>;
@@ -200,6 +202,7 @@ export function createAssetRepository(database: AssetRepositoryDb) {
       note: input.note || null,
       tracking_mode: trackingMode,
       quantity,
+      location_id: input.location_id || null,
     }).select("*").single();
     if (result.error) return fail(errorText(result.error, "asset_create_failed"));
     if (!result.data) return fail("asset_create_failed");

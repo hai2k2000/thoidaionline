@@ -20,6 +20,9 @@ export async function GET(request: Request) {
   const result = await repository.listAssetsForActor(actor, mine ? "mine" : "visible");
   if (!result.ok) return json({ error: result.error }, { status: result.error === "forbidden" ? 403 : 500 });
   const response: Record<string, unknown> = result.data;
+  const locationsResult = await serverSupabase.from("asset_locations").select("id,code,name,active").eq("active", true).order("name");
+  if (locationsResult.error) return json({ error: "asset_options_failed" }, { status: 500 });
+  response.locations = locationsResult.data ?? [];
   if (new URL(request.url).searchParams.get("options") === "1") {
     if (!canManageAssets(actor)) return json({ error: "forbidden" }, { status: 403 });
     const [users, departments] = await Promise.all([
@@ -70,6 +73,7 @@ export async function POST(request: Request) {
     note: typeof body?.note === "string" ? body.note : null,
     tracking_mode: body?.tracking_mode === "lot" ? "lot" : "individual",
     quantity: typeof body?.quantity === "number" ? body.quantity : 1,
+    location_id: typeof body?.location_id === "string" ? body.location_id : null,
   });
   if (!result.ok) return json({ error: result.error }, { status: result.error === "forbidden" ? 403 : 400 });
   const asset = result.data as { id?: string };

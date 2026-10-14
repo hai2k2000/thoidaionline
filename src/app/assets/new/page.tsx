@@ -10,6 +10,7 @@ import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
 type StaffUser = { id: string; full_name: string; username?: string | null; department_id?: string | null; active?: boolean };
 type Department = { id: string; name: string; active?: boolean };
+type Location = { id: string; code: string; name: string; active?: boolean };
 type AssetStatus = "available" | "in_use" | "maintenance" | "broken" | "liquidated";
 
 export default function AssetCreatePage() {
@@ -31,6 +32,8 @@ export default function AssetCreatePage() {
   const [message, setMessage] = useState("");
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [locationId, setLocationId] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -39,13 +42,14 @@ export default function AssetCreatePage() {
 
     const t = setTimeout(async () => {
       const response = await fetch("/api/assets?options=1", { cache: "no-store" });
-      const payload = await response.json().catch(() => null) as { error?: string; users?: StaffUser[]; departments?: Department[] } | null;
+      const payload = await response.json().catch(() => null) as { error?: string; users?: StaffUser[]; departments?: Department[]; locations?: Location[] } | null;
       if (!response.ok) {
         setMessage(`⚠️ ${payload?.error || "Không thể tải danh mục."}`);
         return;
       }
       setUsers(payload?.users ?? []);
       setDepartments(payload?.departments ?? []);
+      setLocations(payload?.locations ?? []);
     }, 0);
 
     return () => clearTimeout(t);
@@ -68,6 +72,7 @@ export default function AssetCreatePage() {
         serial_number: serialNumber || undefined,
         status,
         note: note || undefined,
+        location_id: locationId || undefined,
         tracking_mode: trackingMode,
         quantity,
       },
@@ -101,6 +106,7 @@ export default function AssetCreatePage() {
     setQuantity(1);
     setAssigneeId("");
     setDepartmentId("");
+    setLocationId("");
     } catch (error) { const text = errorMessage(error, "Không thể thêm tài sản."); notify("error", text); setMessage(`❌ ${text}`); }
     finally { setBusy(false); }
   };
@@ -132,6 +138,7 @@ export default function AssetCreatePage() {
                 <option value="liquidated">Thanh lý</option>
               </select></label>
               <label className="grid gap-1.5 text-sm font-semibold">Ghi chú<input aria-label="Ghi chú tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={note} onChange={(e) => setNote(e.target.value)} /></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Vị trí tài sản<select aria-label="Vị trí tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={locationId} onChange={(e) => setLocationId(e.target.value)}><option value="">Chọn vị trí (không bắt buộc)</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
               <label className="grid gap-1.5 text-sm font-semibold">Kiểu theo dõi<select aria-label="Kiểu theo dõi tài sản" className="min-h-11 rounded-lg border px-3 py-2 font-normal" value={trackingMode} onChange={(e) => { const next = e.target.value as "individual" | "lot"; setTrackingMode(next); if (next === "individual") setQuantity(1); }}><option value="individual">Cá thể</option><option value="lot">Lô</option></select></label>
               <label className="grid gap-1.5 text-sm font-semibold">Số lượng<input aria-label="Số lượng tài sản" type="number" min={1} step={1} disabled={trackingMode === "individual"} className="min-h-11 rounded-lg border px-3 py-2 font-normal disabled:bg-slate-100" value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} /></label>
 
