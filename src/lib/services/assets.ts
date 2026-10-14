@@ -15,6 +15,7 @@ export type Asset = {
   status?: AssetStatus;
   condition_status?: AssetConditionStatus;
   assigned_department_id?: string | null;
+  location_id?: string | null;
   note?: string | null;
   tracking_mode?: AssetTrackingMode;
   quantity?: number;
