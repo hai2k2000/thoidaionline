@@ -75,7 +75,7 @@ for (const relativePath of authenticatedSmokeFiles) {
   await cp(join(root, ...relativePath.split("/")), destination);
 }
 await mkdir(join(output, "scripts", "production"), { recursive: true });
-for (const name of ["build-standalone-release.sh", "mark-release-success.sh", "release-retention.sh", "controlled-deploy-exception.mjs"]) {
+for (const name of ["build-standalone-release.sh", "mark-release-success.sh", "release-retention.sh", "controlled-deploy-exception.mjs", "produce-rbac-readiness.mjs", "verify-rbac-disposable-restore.sh"]) {
   await cp(join(root, "scripts", "production", name), join(output, "scripts", "production", name));
 }
 await rm(join(output, "scripts", "check-required-routes.mjs"), { force: true });

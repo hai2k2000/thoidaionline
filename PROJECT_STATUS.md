@@ -1,5 +1,27 @@
 # Thoidai Work3 PR #6 Final Review & Fix
 
+## Trusted RBAC V2 readiness evidence producer
+
+Current Phase: bounded implementation complete; owner review pending
+Current Task: close the G1 trusted-producer blocker without consuming the activation waiver
+
+Completed:
+- Added a root-only, fail-closed producer for fresh backup integrity, disposable restore, migration ledger, schema/RPC, grants parity, and last permission manager evidence.
+- Bound readiness output to the exact canonical commit, approved migration checksums, a private root-owned output directory, and a 30-minute expiry.
+- Refused list-only restore claims and missing database connectivity; packaged and verified the producer in the standalone artifact.
+- Corrected the last-manager `RETURNS void` invocation, exact protected-RPC signature/ACL checking, and disposable restore verification against a real PostgreSQL 17 target with application data and migration-ledger comparison.
+
+Validation:
+- Producer contract tests: 2/2 PASS.
+- Standalone packaging tests: 12/12 PASS.
+- Node syntax and `git diff --check`: PASS.
+
+Production safety:
+- No production database, grants, users, releases, service, symlinks, timers, or waiver registry changed.
+
+Next:
+- Run the complete local focused validation, push one bounded PR, and wait for owner merge approval before generating fresh production readiness evidence.
+
 ## Controlled RBAC V2 deployment exception
 
 Current Phase: bounded implementation complete; owner review pending
