@@ -18,6 +18,7 @@ touch "$root/artifact/verify-standalone-artifact.mjs" "$root/artifact/server.js"
 
 cat > "$bin/node" <<'EOF'
 #!/usr/bin/env bash
+[[ "$1" == -e ]] && exit 0
 case "$(basename "$1")" in
   verify-standalone-artifact.mjs) exit 0 ;;
   controlled-deploy-exception.mjs) echo "RBAC readiness evidence is required" >&2; exit 1 ;;
