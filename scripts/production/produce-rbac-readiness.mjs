@@ -79,7 +79,12 @@ if (!restoreRunner || !restoreRunner.startsWith("/")) throw new Error("trusted d
 const restoreRunnerStat = await lstat(restoreRunner);
 if (!restoreRunnerStat.isFile() || restoreRunnerStat.uid !== 0 || (restoreRunnerStat.mode & 0o077) !== 0 || (restoreRunnerStat.mode & 0o111) === 0) throw new Error("disposable restore runner must be a private root-owned executable");
 let restoreResult;
-try { restoreResult = JSON.parse(run(restoreRunner, [backupPath, canonicalCommit], { env: { ...process.env, THOIDAI_RBAC_RESTORE_DB_URL: dbUrl, THOIDAI_RBAC_RESTORE_PSQL_BIN: process.env.THOIDAI_RBAC_PSQL_BIN || "psql" } })); } catch { throw new Error("disposable restore runner returned invalid evidence"); }
+try {
+  restoreResult = JSON.parse(run(restoreRunner, [backupPath, canonicalCommit], { env: { ...process.env, THOIDAI_RBAC_RESTORE_DB_URL: dbUrl, THOIDAI_RBAC_RESTORE_PSQL_BIN: process.env.THOIDAI_RBAC_PSQL_BIN || "psql" } }));
+} catch (error) {
+  const detail = String(error?.stderr || error?.message || "unknown runner failure").replace(/[\r\n]+/g, " ").slice(0, 300);
+  throw new Error(`disposable restore runner failed: ${detail}`);
+}
 validateRestoreResult(restoreResult, expectedBackupSha, canonicalCommit);
 checks.disposable_restore = await proof("disposable_restore", ["postgres_major=17", `backup_sha256=${expectedBackupSha}`, "data_assertions=PASS", "migration_ledger=PASS", `extension_limits=${restoreResult.supabase_extension_limits}`]);
 

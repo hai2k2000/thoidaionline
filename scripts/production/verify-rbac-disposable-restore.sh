@@ -18,6 +18,7 @@ trap cleanup EXIT
 docker run -d --name "$name" --network none -e POSTGRES_PASSWORD=restore-only "$image" >/dev/null
 for _ in $(seq 1 90); do docker exec "$name" pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
 docker exec "$name" pg_isready -U postgres >/dev/null
+docker exec "$name" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'create role anon nologin; create role authenticated nologin; create role service_role nologin;' >/dev/null
 docker exec "$name" createdb -U postgres restored >/dev/null
 docker cp "$backup" "$name:/tmp/verified.dump"
 docker exec "$name" pg_restore --exit-on-error --no-owner --no-privileges --schema=public --schema=supabase_migrations -d restored /tmp/verified.dump >/dev/null
