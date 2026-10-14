@@ -20,6 +20,7 @@ for _ in $(seq 1 90); do docker exec "$name" pg_isready -U postgres >/dev/null 2
 docker exec "$name" pg_isready -U postgres >/dev/null
 docker exec "$name" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'create role anon nologin; create role authenticated nologin; create role service_role nologin;' >/dev/null
 docker exec "$name" createdb -U postgres restored >/dev/null
+docker exec "$name" psql -U postgres -d restored -v ON_ERROR_STOP=1 -c 'create schema supabase_migrations;' >/dev/null
 docker cp "$backup" "$name:/tmp/verified.dump"
 docker exec "$name" pg_restore -U postgres --exit-on-error --no-owner --no-privileges --schema=public --schema=supabase_migrations -d restored /tmp/verified.dump >/dev/null
 tables=$(docker exec "$name" psql -U postgres -d restored -Atqc "select case when to_regclass('public.staff_users') is not null and to_regclass('public.roles') is not null and to_regclass('public.permissions') is not null and to_regclass('supabase_migrations.schema_migrations') is not null then 'PASS' else 'FAIL' end")
