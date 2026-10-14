@@ -84,13 +84,14 @@ export default function AssetsPage() {
     setMessage("");
     setLoaded(true);
 
-    if (hasPermission("asset.manage")) {
-      const response = await fetch("/api/assets?options=1", { cache: "no-store" });
-      const payload = await response.json().catch(() => null) as { departments?: DepartmentOption[]; users?: UserOption[]; locations?: LocationOption[] } | null;
-      if (response.ok) {
+    const canManage = hasPermission("asset.manage");
+    const response = await fetch(canManage ? "/api/assets?options=1" : "/api/assets", { cache: "no-store" });
+    const payload = await response.json().catch(() => null) as { departments?: DepartmentOption[]; users?: UserOption[]; locations?: LocationOption[] } | null;
+    if (response.ok) {
+      setLocations(payload?.locations ?? []);
+      if (canManage) {
         setDepartments(payload?.departments ?? []);
         setUsers(payload?.users ?? []);
-        setLocations(payload?.locations ?? []);
       }
     }
   }, [hasPermission]);
