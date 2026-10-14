@@ -68,6 +68,8 @@ test("controlled deployment exception validator is packaged for the activation g
   const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");
   assert.match(packager, /controlled-deploy-exception\.mjs/);
   assert.match(packager, /produce-rbac-readiness\.mjs/);
+  assert.match(packager, /verify-rbac-disposable-restore\.sh/);
   assert.match(verifier, /controlled-deploy-exception\.mjs/);
   assert.match(verifier, /produce-rbac-readiness\.mjs/);
+  assert.match(verifier, /verify-rbac-disposable-restore\.sh/);
 });

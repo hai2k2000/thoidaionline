@@ -83,6 +83,8 @@ jobs:
         run: bash scripts/production/rbac-rollback-gate-fixture.test.sh
       - name: RBAC V2 scope ambiguity disposable regression
         run: bash scripts/production/rbac-v2-scope-hotfix.disposable.sh
+      - name: RBAC readiness producer PostgreSQL integration regression
+        run: bash scripts/production/produce-rbac-readiness.integration.sh
       - name: TypeScript
         run: npx tsc --noEmit
       - name: ESLint

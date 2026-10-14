@@ -9,6 +9,7 @@ Completed:
 - Added a root-only, fail-closed producer for fresh backup integrity, disposable restore, migration ledger, schema/RPC, grants parity, and last permission manager evidence.
 - Bound readiness output to the exact canonical commit, approved migration checksums, a private root-owned output directory, and a 30-minute expiry.
 - Refused list-only restore claims and missing database connectivity; packaged and verified the producer in the standalone artifact.
+- Corrected the last-manager `RETURNS void` invocation, exact protected-RPC signature/ACL checking, and disposable restore verification against a real PostgreSQL 17 target with application data and migration-ledger comparison.
 
 Validation:
 - Producer contract tests: 2/2 PASS.

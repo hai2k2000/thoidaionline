@@ -11,9 +11,13 @@ test("readiness producer is fail-closed and exact-commit bound", () => {
   assert.match(source, /produced_by: PRODUCER/);
   assert.match(source, /expires_at: new Date\(now\.getTime\(\) \+ 30 \* 60 \* 1000\)/);
   assert.match(source, /must run as root/);
-  assert.match(source, /disposable restore command is required/);
+  assert.match(source, /trusted disposable restore runner is required/);
+  assert.match(source, /validateRestoreResult/);
+  assert.match(source, /rbac_v2_assert_manager_survives/);
+  assert.match(source, /to_regprocedure\(e\.signature\)/);
   assert.match(source, /backup checksum does not match/);
   assert.match(source, /migration checksum missing or mismatched/);
+  assert.doesNotMatch(source, /THOIDAI_RBAC_DISPOSABLE_RESTORE_COMMAND/);
 });
 
 test("readiness output contract stays private and contains all six checks", async () => {
