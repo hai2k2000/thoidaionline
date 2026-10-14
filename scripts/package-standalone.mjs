@@ -100,7 +100,7 @@ await writeFile(join(output, "MIGRATION_REFERENCE"), [
   "supabase/migrations/20261004110000_department_plan_friday_friday.sql",
   "supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql",
   "supabase/migrations/20261015110000_rbac_v2_scope_ambiguity_fix.sql",
-  "supabase/migrations/20261015120000_quick_report_rpc_payload_compatibility.sql,supabase/migrations/20261016100000_asset_locations.sql",
+  "supabase/migrations/20261015120000_quick_report_rpc_payload_compatibility.sql",
   "supabase/migrations/20261016100000_asset_locations.sql",
   "",
 ].join("\n"));
