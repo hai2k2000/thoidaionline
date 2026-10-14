@@ -11,6 +11,8 @@ ln_bin=${THOIDAI_LN_BIN:-ln}
 mv_bin=${THOIDAI_MV_BIN:-mv}
 install_bin=${THOIDAI_INSTALL_BIN:-install}
 chown_bin=${THOIDAI_CHOWN_BIN:-chown}
+chmod_bin=${THOIDAI_CHMOD_BIN:-chmod}
+runuser_bin=${THOIDAI_RUNUSER_BIN:-runuser}
 cp_bin=${THOIDAI_CP_BIN:-cp}
 service=${THOIDAI_SERVICE:-thoidai-work.service}
 health_url=${THOIDAI_HEALTH_URL:-http://127.0.0.1:3001/login}
@@ -55,16 +57,46 @@ else
 fi
 "$cp_bin" -a -- "$artifact" "$new_release"
 "$node_bin" "$new_release/verify-standalone-artifact.mjs" "$new_release"
-"$install_bin" -d -o "${THOIDAI_SERVICE_USER:-thoidai-work}" -g "${THOIDAI_SERVICE_GROUP:-thoidai-work}" -m 0750 -- "$new_release/.next/cache"
-"$chown_bin" "${THOIDAI_SERVICE_USER:-thoidai-work}:${THOIDAI_SERVICE_GROUP:-thoidai-work}" -- "$new_release/.next/cache"
+service_user=${THOIDAI_SERVICE_USER:-thoidai-work}
+service_group=${THOIDAI_SERVICE_GROUP:-thoidai-work}
+if [[ -L "$new_release" || ! -d "$new_release" ]]; then
+  echo "DEPLOY ABORTED: release directory is not a regular directory" >&2
+  exit 1
+fi
+# The ZIP/extraction boundary can preserve a root-only top-level mode. Normalize
+# only that directory; application files stay immutable and secrets stay private.
+"$chown_bin" "root:${service_group}" -- "$new_release"
+"$chmod_bin" 0750 -- "$new_release"
+cache_path="$new_release/.next/cache"
+[[ ! -L "$cache_path" ]] || { echo "DEPLOY ABORTED: runtime cache path must not be a symlink" >&2; exit 1; }
+"$install_bin" -d -o "$service_user" -g "$service_group" -m 0750 -- "$cache_path"
+"$chown_bin" "$service_user:$service_group" -- "$cache_path"
 env_model=$(awk -F= '$1=="env_model" {print $2; exit}' "$new_release/.release-meta")
 if [[ "$env_model" == runtime-injected ]]; then
   shared_root=${THOIDAI_SHARED_ROOT:-/opt/thoidai-work}
   for name in .env.local .env.production; do
     [[ -f "$shared_root/$name" ]] || { echo "runtime environment file missing: $shared_root/$name" >&2; exit 1; }
+    [[ ! -e "$new_release/$name" && ! -L "$new_release/$name" ]] || { echo "DEPLOY ABORTED: runtime environment path already exists" >&2; exit 1; }
     ln -s -- "$shared_root/$name" "$new_release/$name"
   done
 fi
+permission_check() {
+  local expression=$1 path=$2
+  "$runuser_bin" -u "$service_user" -- test "$expression" "$path"
+}
+parent=$new_release
+while [[ "$parent" != / ]]; do
+  permission_check -x "$parent" || { echo "DEPLOY ABORTED: service user cannot traverse $parent" >&2; exit 1; }
+  parent=$(dirname "$parent")
+done
+for required_dir in .next .next/server node_modules; do
+  permission_check -x "$new_release/$required_dir" || { echo "DEPLOY ABORTED: service user cannot traverse runtime path $required_dir" >&2; exit 1; }
+done
+for required_file in server.js .next/BUILD_ID .env.local .env.production; do
+  permission_check -r "$new_release/$required_file" || { echo "DEPLOY ABORTED: service user cannot read runtime path $required_file" >&2; exit 1; }
+done
+permission_check -w "$cache_path" || { echo "DEPLOY ABORTED: service user cannot write runtime cache" >&2; exit 1; }
+"$runuser_bin" -u "$service_user" -- "$node_bin" -e 'require.resolve("next/package.json", { paths: [process.argv[1]] })' "$new_release" || { echo "DEPLOY ABORTED: service user cannot resolve standalone runtime modules" >&2; exit 1; }
 
 read_pointer() {
   local name=$1 target
