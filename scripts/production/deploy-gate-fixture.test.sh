@@ -95,7 +95,7 @@ op=$2
 path=$3
 mode=$(stat -c %a "$path" 2>/dev/null || echo 000)
 case "$op" in
-  -x) [[ "$mode" == 750 || "$mode" == 755 ]] ;;
+  -x) [[ "$mode" == 750 || "$mode" == 755 || "$mode" == 1777 ]] ;;
   -r) [[ "$mode" != 700 && "$mode" != 710 ]] ;;
   -w) [[ "$mode" == 750 || "$mode" == 770 || "$mode" == 775 ]] ;;
   *) exit 1 ;;
