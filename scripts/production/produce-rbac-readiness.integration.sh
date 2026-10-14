@@ -63,11 +63,14 @@ chmod 600 "$backup"
 backup_sha=$(sha256sum "$backup" | awk '{print $1}')
 printf 'backup_sha256=%s\n' "$backup_sha" > "$tmp/backup-meta.txt"
 chmod 600 "$tmp/backup-meta.txt"
+sha_migration_1=$(sha256sum "$root/supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql" | awk '{print $1}')
+sha_migration_2=$(sha256sum "$root/supabase/migrations/20261015110000_rbac_v2_scope_ambiguity_fix.sql" | awk '{print $1}')
+sha_migration_3=$(sha256sum "$root/supabase/migrations/20261015120000_quick_report_rpc_payload_compatibility.sql" | awk '{print $1}')
 cat > "$tmp/migration-checksums.txt" <<EOF
 canonical_sha=1cc9d346ef49235b9365132a22469ce9a15a5ab1
-20261015100000_rbac_v2_role_user_overrides.sql 6755059e92c145d60582e1b1e3a483690ddf6d770cc13fcc7eb44785554ac20c
-20261015110000_rbac_v2_scope_ambiguity_fix.sql 57a364fdc845c31740518530bb801cd53dea2b4e12cd2753ceb92e58fc19578a
-20261015120000_quick_report_rpc_payload_compatibility.sql 166a00b769e819fae7e3888926fd65dbca6225ef1c6c8b4292648cc5b621a89
+20261015100000_rbac_v2_role_user_overrides.sql $sha_migration_1
+20261015110000_rbac_v2_scope_ambiguity_fix.sql $sha_migration_2
+20261015120000_quick_report_rpc_payload_compatibility.sql $sha_migration_3
 EOF
 chmod 600 "$tmp/migration-checksums.txt"
 cat > "$tmp/psql-wrapper" <<EOF
