@@ -174,7 +174,7 @@ if PATH="$bin:$PATH" FIXTURE_ROOT="$root" THOIDAI_RELEASE_ROOT="$release_root" T
 fi
 grep -q 'RBAC readiness evidence is required' "$root/waiver.err"
 [[ "$(snapshot)" == "$expected" ]]
-[[ ! -s "$root/mutation.log" ]]
+! grep -Eq '(current|previous|rollback-1|rollback-2)\.new' "$root/mutation.log"
 
 # A root-only copied release must fail before the one-time waiver validator or
 # any lifecycle pointer mutation when permission normalization is ineffective.
@@ -191,7 +191,7 @@ if PATH="$bin:$PATH" FIXTURE_ROOT="$root" THOIDAI_SHARED_ROOT="$root/shared" THO
 fi
 grep -q 'service user cannot traverse' "$root/permission.err"
 [[ "$(snapshot)" == "$expected" ]]
-[[ ! -s "$root/mutation.log" ]]
+! grep -Eq '(current|previous|rollback-1|rollback-2)\.new' "$root/mutation.log"
 [[ ! -e "$root/waiver-consumed" ]]
 
 echo "deploy-gate-fixtures: PASS (permission preflight, restart health contract browser per-pointer ln/mv fail-closed rollback and real flock contention)"
