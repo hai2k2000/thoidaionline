@@ -31,6 +31,6 @@ test("asset creation remains server-authorized by effective asset.manage", () =>
 
 test("asset filters use six columns on wide desktop and collapse responsively", () => {
   const page = read("../app/assets/page.tsx");
-  assert.match(page, /grid-cols-1[^\n]*sm:grid-cols-2[^\n]*lg:grid-cols-3[^\n]*2xl:grid-cols-6/);
+  assert.match(page, /grid-cols-1[^\n]*sm:grid-cols-2[^\n]*lg:grid-cols-3[^\n]*xl:grid-cols-6/);
   assert.match(page, /className="grid min-w-0 gap-1\.5 text-sm font-semibold text-slate-700"/);
 });
