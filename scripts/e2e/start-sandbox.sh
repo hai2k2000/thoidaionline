@@ -105,6 +105,8 @@ files=(
   20261014100000_asset_manage_permission_management.sql
   20261015100000_rbac_v2_role_user_overrides.sql
   20261015110000_rbac_v2_scope_ambiguity_fix.sql
+  20261016100000_asset_locations.sql
+  20261016110000_asset_locations_expansion.sql
   20261015120000_quick_report_rpc_payload_compatibility.sql
 )
 
