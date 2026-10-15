@@ -82,7 +82,7 @@ await rm(join(output, "scripts", "check-required-routes.mjs"), { force: true });
 await cp(join(root, "scripts", "check-release-baseline.mjs"), join(output, "scripts", "check-release-baseline.mjs"));
 await writeFile(join(output, "RELEASE_BASELINE_COMMIT"), `${canonicalBaseline}\n`);
 await writeFile(join(output, "required-route-manifest.json"), `${JSON.stringify(REQUIRED_PRODUCTION_ROUTES, null, 2)}\n`);
-await writeFile(join(output, "MIGRATION_REFERENCE"), [
+const migrationReference = [
   "supabase/migrations/20260924120000_task_approval_gates.sql",
   "supabase/migrations/20260924130000_task_assignment_semantics.sql",
   "supabase/migrations/20260926140000_department_plans_v2.sql",
@@ -103,8 +103,8 @@ await writeFile(join(output, "MIGRATION_REFERENCE"), [
   "supabase/migrations/20261015120000_quick_report_rpc_payload_compatibility.sql",
   "supabase/migrations/20261016100000_asset_locations.sql",
   "supabase/migrations/20261016110000_asset_locations_expansion.sql",
-  "",
-].join("\n"));
+];
+await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");
 await writeFile(join(output, "package.json"), `${JSON.stringify({ name: "thoidai-work-runtime", version: "0.1.0", private: true, scripts: { start: "node start-standalone.mjs" } }, null, 2)}\n`);
 const artifactBytes = execFileSync("du", ["-sb", output], { encoding: "utf8" }).trim().split(/\s+/, 1)[0];
 await writeFile(join(output, ".release-meta"), [
@@ -126,8 +126,7 @@ await writeFile(join(output, ".release-meta"), [
   `canonical_baseline=${canonicalBaseline}`,
   `artifact_bytes=${artifactBytes}`,
   "rbac_v2=supported",
-  "migration_reference=supabase/migrations/20260924120000_task_approval_gates.sql,supabase/migrations/20260924130000_task_assignment_semantics.sql,supabase/migrations/20260926140000_department_plans_v2.sql,supabase/migrations/20260926150000_department_plan_to_task_v1.sql,supabase/migrations/20260926160000_department_plan_assignment_v2.sql,supabase/migrations/20260925100000_journalism_self_registration.sql,supabase/migrations/20260928140000_tbt_any_assignee.sql,supabase/migrations/20260928140100_tbt_recurrence_without_manager.sql,supabase/migrations/20260929110000_creator_only_task_edit_cancel.sql,supabase/migrations/20261001120000_department_plan_quick_assign_v1.sql,supabase/migrations/20261002130000_department_plan_real_multi_assignment_v2.sql,supabase/migrations/20261003100000_department_period_plan_v2.sql,supabase/migrations/20261003120000_department_plan_duplicate_guard.sql,supabase/migrations/20261004100000_department_plan_saturday_friday.sql,supabase/migrations/20261004110000_department_plan_friday_friday.sql,supabase/migrations/20261015100000_rbac_v2_role_user_overrides.sql,supabase/migrations/20261015110000_rbac_v2_scope_ambiguity_fix.sql,supabase/migrations/20261015120000_quick_report_rpc_payload_compatibility.sql,supabase/migrations/20261016100000_asset_locations.sql",
-  "supabase/migrations/20261016110000_asset_locations_expansion.sql",
+  "migration_reference=" + migrationReference.join(","),
   `env_model=${runtimeEnvModel}`,
   `build_config=${buildConfig}`,
   "build_verification=production-like-env-build-pass",
