@@ -18,3 +18,10 @@ test("quick report repository calls only the hardened RPC", () => {
   assert.match(repository, /createQuickReportBatch/);
   assert.doesNotMatch(repository, /from\("tasks"\)\.insert/);
 });
+
+test("quick report repository payload matches the legacy RPC compatibility contract", () => {
+  assert.match(repository, /work_date: row\.startDate/);
+  assert.match(repository, /started_time: "00:00"/);
+  assert.match(repository, /completed_time: row\.status === "done" \? "00:00" : null/);
+  assert.doesNotMatch(repository, /start_date: row\.startDate/);
+});

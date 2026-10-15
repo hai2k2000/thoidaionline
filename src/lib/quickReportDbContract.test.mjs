@@ -4,6 +4,7 @@ import test from "node:test";
 
 const migration = readFileSync(new URL("../../supabase/migrations/20261001090000_quick_report_task_v1.sql", import.meta.url), "utf8");
 const uxMigration = readFileSync(new URL("../../supabase/migrations/20261002150000_quick_report_ux_v2.sql", import.meta.url), "utf8");
+const compatibilityFix = readFileSync(new URL("../../supabase/migrations/20261016120000_quick_report_rpc_payload_compatibility_fix.sql", import.meta.url), "utf8");
 const catalog = readFileSync(new URL("./rbac/permissionCatalog.ts", import.meta.url), "utf8");
 
 test("quick report migration is additive and explicit", () => {
@@ -27,4 +28,11 @@ test("UX migration keeps the hardened RPC and validates date-only ranges", () =>
   assert.match(uxMigration, /start_date date,completion_date date/);
   assert.match(uxMigration, /completion_date < v_row\.start_date/);
   assert.match(uxMigration, /grant execute on function/);
+});
+
+
+test("compatibility wrapper forwards legacy quick report field names", () => {
+  assert.ok(compatibilityFix.includes("'work_date', coalesce(item->>'work_date', item->>'start_date')"));
+  assert.ok(compatibilityFix.includes("'started_time', coalesce"));
+  assert.match(compatibilityFix, /api_create_quick_report_v1_legacy/);
 });
