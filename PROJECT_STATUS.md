@@ -961,3 +961,25 @@ Decision:
 
 Next:
 - Commit and push only the E2E harness/workflow/status changes, then wait for PR and disposable Phase 3B.1 workflow runs. Do not merge PR #16 or proceed to production migration/activation without owner approval.
+
+## Asset Locations & Single-Row Filter
+
+Current Phase: implementation complete; CI/artifact handoff
+Current Task: additive location seed and responsive asset filter
+
+Completed:
+- Added additive migration  for six missing stable asset locations; existing location rows and asset values are untouched.
+- Updated standalone artifact migration provenance for both location migrations.
+- Changed asset filter layout to 1/2/3/6 columns across mobile/tablet/desktop widths.
+
+Validation:
+- Focused asset/API/UI tests: 35/35 PASS.
+- PostgreSQL 17 disposable migration rehearsal: PASS; 9 locations, idempotent rerun, existing asset location values preserved.
+- TypeScript, changed-file lint, route check, and git diff check: PASS.
+
+Production safety:
+- Production database, releases, service, RBAC, and secrets: unchanged.
+- Production deployment: not started.
+
+Next:
+- Commit and push feature branch, open one PR, wait for CI artifact, then run the approved migration-first deployment gates.

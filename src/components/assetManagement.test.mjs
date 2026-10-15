@@ -51,7 +51,7 @@ test("asset filters use a balanced responsive grid and separate quick-filter chi
   const tableStart = list.indexOf('<section className="mt-4 rounded-2xl', filterStart);
   const filters = list.slice(filterStart, tableStart);
 
-  assert.match(filters, /grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 xl:grid-cols-5 items-start/);
+  assert.match(filters, /grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 items-start/);
   assert.match(filters, /aria-label="Bộ lọc nhanh"/);
   assert.match(filters, /aria-pressed={quickFilter === filter.value}/);
   assert.match(filters, /border-t border-slate-100 pt-3/);
