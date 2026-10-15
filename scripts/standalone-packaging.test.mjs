@@ -73,3 +73,13 @@ test("controlled deployment exception validator is packaged for the activation g
   assert.match(verifier, /produce-rbac-readiness\.mjs/);
   assert.match(verifier, /verify-rbac-disposable-restore\.sh/);
 });
+
+test("release metadata uses the complete ordered migration reference", () => {
+  const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+  const migrationBlock = packager.match(/const migrationReference = \[([\s\S]*?)\];/);
+  assert.ok(migrationBlock, "migration reference list is defined");
+  const migrations = [...migrationBlock[1].matchAll(/"(supabase\/migrations\/[^"\n]+\.sql)"/g)].map((match) => match[1]);
+  assert.equal(migrations.at(-1), "supabase/migrations/20261016110000_asset_locations_expansion.sql");
+  assert.match(packager, /"migration_reference=" \+ migrationReference\.join\(\",\"\)/);
+  assert.doesNotMatch(packager, /20261016110000_asset_locations_expansion\.sql",\s*\n\s*"migration_reference=/);
+});
