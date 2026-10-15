@@ -885,9 +885,8 @@ export const taskRepository: TaskRepository = {
       p_rows: input.rows.map((row) => ({
         title: row.title,
         category: row.category,
-        work_date: row.startDate,
-        started_time: "00:00",
-        completed_time: row.status === "done" ? "00:00" : null,
+        start_date: row.startDate,
+        completion_date: row.status === "done" ? row.completionDate : null,
         status: row.status,
         notes: row.notes,
       })),
