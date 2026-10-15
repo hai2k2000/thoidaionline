@@ -28,3 +28,23 @@ test("UX migration keeps the hardened RPC and validates date-only ranges", () =>
   assert.match(uxMigration, /completion_date < v_row\.start_date/);
   assert.match(uxMigration, /grant execute on function/);
 });
+
+const payloadFixMigration = readFileSync(new URL("../../supabase/migrations/20261016120000_quick_report_rpc_payload_compatibility_fix.sql", import.meta.url), "utf8");
+const repository = readFileSync(new URL("./taskRepository.ts", import.meta.url), "utf8");
+const originalLegacyMigration = readFileSync(new URL("../../supabase/migrations/20261001090000_quick_report_task_v1.sql", import.meta.url), "utf8");
+
+test("quick report compatibility wrapper restores the active legacy field contract", () => {
+  assert.match(originalLegacyMigration, /work_date date,[\\s\\S]*started_time text,[\\s\\S]*completed_time text/);
+  assert.match(repository, /work_date: row\\.startDate/);
+  assert.match(repository, /started_time: "00:00"/);
+  assert.match(repository, /completed_time: row\\.status === "done" \\? "00:00" : null/);
+  assert.match(payloadFixMigration, /create or replace function public\\.api_create_quick_report_v1\\(/);
+  assert.match(payloadFixMigration, /rbac_v2_has_effective_scope/);
+  assert.match(payloadFixMigration, /'work_date', coalesce\\(item->>'work_date', item->>'start_date'\\)/);
+  assert.match(payloadFixMigration, /'started_time', coalesce\\(nullif\\(item->>'started_time'/);
+  assert.match(payloadFixMigration, /'completed_time', case/);
+  assert.match(payloadFixMigration, /jsonb_agg\\([\\s\\S]*order by ordinal/);
+  assert.match(payloadFixMigration, /return public\\.api_create_quick_report_v1_legacy\\(/);
+  assert.match(payloadFixMigration, /grant execute on function public\\.api_create_quick_report_v1\\(uuid, uuid, jsonb\\) to service_role/);
+  assert.doesNotMatch(payloadFixMigration, /(?:drop table|truncate table|supabase db push)/i);
+});
