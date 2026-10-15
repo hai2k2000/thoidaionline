@@ -36,6 +36,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261015120000_quick_report_rpc_payload_compatibility.sql",
   "supabase/migrations/20261016100000_asset_locations.sql",
   "supabase/migrations/20261016110000_asset_locations_expansion.sql",
+  "supabase/migrations/20261016120000_quick_report_rpc_payload_compatibility_fix.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);
@@ -46,6 +47,7 @@ assert.match(releaseMeta, /^rbac_v2=(?:supported|legacy)$/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261015110000_rbac_v2_scope_ambiguity_fix\.sql(?:,|$)/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261015120000_quick_report_rpc_payload_compatibility\.sql(?:,|$)/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261016100000_asset_locations\.sql(?:,|$)/m);
+assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261016120000_quick_report_rpc_payload_compatibility_fix\.sql(?:,|$)/m);
 for (const field of ["build_id=", "commit=", "branch=", "created_at=", "source_worktree=", "local_head=", "remote_head=", "artifact_source_commit=", "metadata_commit=", "current_production_parent=", "integration_branch=", "integration_baseline=", "contract_suite="]) assert.match(releaseMeta, new RegExp(`^${field}[^\\n]+`, "m"));
 const routes = JSON.parse(readFileSync(join(root, "required-route-manifest.json"), "utf8"));
 const appPaths = JSON.parse(readFileSync(join(root, ".next/server/app-paths-manifest.json"), "utf8"));

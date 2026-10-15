@@ -79,7 +79,8 @@ test("release metadata uses the complete ordered migration reference", () => {
   const migrationBlock = packager.match(/const migrationReference = \[([\s\S]*?)\];/);
   assert.ok(migrationBlock, "migration reference list is defined");
   const migrations = [...migrationBlock[1].matchAll(/"(supabase\/migrations\/[^"\n]+\.sql)"/g)].map((match) => match[1]);
-  assert.equal(migrations.at(-1), "supabase/migrations/20261016110000_asset_locations_expansion.sql");
+  assert.ok(migrations.includes("supabase/migrations/20261016110000_asset_locations_expansion.sql"));
+  assert.equal(migrations.at(-1), "supabase/migrations/20261016120000_quick_report_rpc_payload_compatibility_fix.sql");
   assert.match(packager, /"migration_reference=" \+ migrationReference\.join\(\",\"\)/);
   assert.doesNotMatch(packager, /20261016110000_asset_locations_expansion\.sql",\s*\n\s*"migration_reference=/);
 });
