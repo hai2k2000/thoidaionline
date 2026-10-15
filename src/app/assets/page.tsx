@@ -145,7 +145,7 @@ export default function AssetsPage() {
   const hasActiveFilters = Boolean(qName || qDepartment || qLocation || qCondition || qUsage || qAssignee || quickFilter !== "all");
 
   return (
-    <main className="min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6">
+    <main className="mobile-page-shell min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6">
       <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
         <div className="mb-4 lg:mb-0">
           <AppNav currentPath="/assets" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />

@@ -61,7 +61,7 @@ function ChevronIcon({ open }: { open?: boolean }) {
 }
 
 const linkClass = (active: boolean) =>
-  `group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-semibold transition-all ${
+  `group relative flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-semibold transition-all lg:min-h-0 ${
     active
       ? "bg-gradient-to-r from-orange-100 to-orange-50 text-orange-950 shadow-sm ring-1 ring-orange-200 before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r-full before:bg-orange-500"
       : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
@@ -262,13 +262,21 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
         <NotificationBell />
       </div>
       <HelpBot />
+      <div className="mobile-app-bar mb-3 lg:hidden">
+        <div className="min-w-0">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-orange-700">Thời Đại Work</p>
+          <p data-testid="mobile-nav-title" className="truncate text-sm font-bold text-slate-900">{labels[(navigation.primary.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.configuration.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.account[0])?.id ?? "tasks"]}</p>
+        </div>
+      </div>
       <button
+        data-testid="mobile-nav-trigger"
         ref={menuButtonRef}
         type="button"
+        aria-label="Mở menu chức năng"
         aria-expanded={mobileOpen}
         aria-controls="phase2-mobile-navigation"
         onClick={() => setMobileOpen(true)}
-        className="mb-2 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800 shadow-sm lg:hidden"
+        className="mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-orange-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800 shadow-sm transition active:scale-[0.99] lg:hidden"
       >
         <span>Menu chức năng</span><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-orange-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
@@ -298,7 +306,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu chính"
-            className="fixed inset-y-0 left-0 z-50 w-[min(280px,calc(100vw-32px))] overflow-y-auto border-r bg-white shadow-2xl lg:hidden"
+            className="fixed inset-y-0 left-0 z-50 w-[min(320px,calc(100vw-24px))] max-w-[calc(100vw-24px)] overflow-y-auto border-r border-orange-100 bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden"
           >
             <NavContent
               currentPath={currentPath}
