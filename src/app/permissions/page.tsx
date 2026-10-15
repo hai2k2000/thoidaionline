@@ -124,7 +124,7 @@ export default function PermissionsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#fff7ed,_#f8fafc_38%)] p-4 text-slate-900 sm:p-6">
+    <main className="mobile-page-shell min-h-screen bg-[radial-gradient(circle_at_top_right,_#fff7ed,_#f8fafc_38%)] p-3 text-slate-900 sm:p-6">
       <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-5">
         <div className="mb-4 lg:mb-0">
           <AppNav currentPath="/permissions" userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} avatarUrl={user?.avatar_url} onLogout={logout} />

@@ -401,7 +401,7 @@ export default function AttendancePage() {
   }, [isOrganizationView, recentRows, rows]);
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
+    <main className="mobile-page-shell min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6">
       <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
         <div className="mb-4 lg:mb-0">
           <AppNav currentPath={pathname} userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />

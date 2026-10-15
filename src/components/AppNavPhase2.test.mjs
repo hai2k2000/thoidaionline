@@ -76,3 +76,21 @@ test("shared desktop and mobile content renders one scoped Journalism section af
   const detail = fs.readFileSync(new URL('./TaskDetailShell.tsx', import.meta.url), 'utf8');
   assert.match(detail, /currentPath=\{task\.journalism/);
 });
+
+test("mobile shell keeps primary controls touch-friendly and context-rich", () => {
+  assert.match(navSource, /data-testid="mobile-nav-trigger"/);
+  assert.match(navSource, /min-h-\[48px\]/);
+  assert.match(navSource, /data-testid="mobile-nav-title"/);
+  assert.match(navSource, /aria-label="Mở menu chức năng"/);
+  assert.match(navSource, /max-w-\[calc\(100vw-24px\)\]/);
+  assert.match(navSource, /pb-\[env\(safe-area-inset-bottom\)\]/);
+});
+
+test("shared responsive primitives protect mobile content without changing desktop tables", () => {
+  const styles = fs.readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(styles, /--mobile-gutter/);
+  assert.match(styles, /\.mobile-page-shell/);
+  assert.match(styles, /@media \(max-width: 1023px\)/);
+  assert.match(styles, /touch-action: manipulation/);
+  assert.match(styles, /\.data-table\s*\{[\s\S]*min-width: 680px/);
+});

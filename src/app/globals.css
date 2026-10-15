@@ -11,6 +11,7 @@
   --brand: #f97316;
   --brand-strong: #ea580c;
   --brand-ink: #9a3412;
+  --mobile-gutter: 0.875rem;
 }
 
 @theme inline {
@@ -26,6 +27,33 @@ body {
   font-family: var(--font-vietnam-sans), "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.5;
+}
+
+.mobile-app-bar {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid #fed7aa;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 72%);
+  padding: 0.65rem var(--mobile-gutter);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.mobile-page-shell {
+  min-width: 0;
+}
+
+button, a, summary {
+  touch-action: manipulation;
+}
+
+@media (max-width: 1023px) {
+  main { overflow-x: clip; }
+  main :where(input, select, textarea) { font-size: 16px; }
+  main :where(button, a, summary) { min-height: 2.75rem; }
 }
 
 button,

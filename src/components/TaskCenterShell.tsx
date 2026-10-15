@@ -200,7 +200,7 @@ export default function TaskCenterShell(props: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
+    <div className="mobile-page-shell min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
         <AppNav currentPath={basePath === "/tasks" && query.journalism === "only" ? "/tasks?journalism=only" : basePath} userLabel={userLabel} onLogout={onLogout} />
         <main className="min-w-0 flex-1">
