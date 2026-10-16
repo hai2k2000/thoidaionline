@@ -77,6 +77,9 @@ release_id="${build_id}-${candidate:0:12}-direct"
 new_release="$release_root/$release_id"
 [[ ! -e "$new_release" && ! -L "$new_release" ]] || { echo "release already exists: $new_release" >&2; exit 1; }
 cp -a -- "$artifact_dir" "$new_release"
+if [[ -f /opt/thoidai-work/.env.production ]]; then
+  ln -s /opt/thoidai-work/.env.production "$new_release/.env.production"
+fi
 chown -R root:thoidai-work "$new_release"
 chmod 0750 "$new_release"
 install -d -o thoidai-work -g thoidai-work -m 0750 "$new_release/.next/cache"
