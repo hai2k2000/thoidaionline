@@ -23,7 +23,8 @@ export async function GET(request: Request) {
   const locationsResult = await serverSupabase.from("asset_locations").select("id,code,name,active").eq("active", true).order("name");
   if (locationsResult.error) return json({ error: "asset_options_failed" }, { status: 500 });
   response.locations = locationsResult.data ?? [];
-  if (new URL(request.url).searchParams.get("options") === "1") {
+  const optionsRequested = new URL(request.url).searchParams.get("options") === "1";
+  if (optionsRequested) {
     if (!canManageAssets(actor)) return json({ error: "forbidden" }, { status: 403 });
     const [users, departments] = await Promise.all([
       serverSupabase.from("staff_users").select("id,full_name,username,department_id,active").eq("active", true).order("full_name"),
@@ -32,6 +33,15 @@ export async function GET(request: Request) {
     if (users.error || departments.error) return json({ error: "asset_options_failed" }, { status: 500 });
     response.users = users.data ?? [];
     response.departments = departments.data ?? [];
+  } else {
+    const departmentIds = [...new Set((result.data.assignments ?? []).map((assignment) => assignment.department_id).filter((id): id is string => Boolean(id)))];
+    if (departmentIds.length) {
+      const departments = await serverSupabase.from("departments").select("id,name,active").eq("active", true).in("id", departmentIds).order("name");
+      if (departments.error) return json({ error: "asset_options_failed" }, { status: 500 });
+      response.departments = departments.data ?? [];
+    } else {
+      response.departments = [];
+    }
   }
   return json(response);
 }

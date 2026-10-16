@@ -33,6 +33,7 @@ allowed=(
   scripts/direct-vps-deploy.sh
   src/lib/taskRepository.ts
   src/app/assets/page.tsx
+  src/app/api/assets/route.ts
   src/lib/assetLocationUi.test.mjs
 )
 for file in $(git diff --name-only "$base_commit" "$candidate"); do
