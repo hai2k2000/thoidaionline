@@ -165,7 +165,7 @@ begin
     'started_time', coalesce(nullif(item->>'started_time', ''), '00:00'),
     'completed_time', case
       when item ? 'completed_time' then item->'completed_time'
-      when nullif(item->>'completed_date', '') is not null then to_jsonb('00:00'::text)
+      when nullif(item->>'completed_date', '') is not null or nullif(item->>'completion_date', '') is not null then to_jsonb(coalesce(nullif(item->>'started_time', ''), '00:00'))
       else 'null'::jsonb
     end,
     'status', item->>'status', 'notes', item->>'notes'

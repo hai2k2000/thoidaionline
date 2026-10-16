@@ -67,5 +67,6 @@ test("completion-date migration preserves old and new payload contracts", () => 
     "'completed_date', case",
     "return public.api_create_quick_report_v1_legacy(",
   ]) assert.ok(completionDateMigration.includes(token), `migration contract missing ${token}`);
+  assert.match(completionDateMigration, /item->>'completion_date'[\s\S]*coalesce\(nullif\(item->>'started_time'/);
   assert.doesNotMatch(completionDateMigration, /drop table|truncate table|supabase db push/i);
 });
