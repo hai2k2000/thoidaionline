@@ -18,6 +18,8 @@ test("asset management exposes persisted locations without changing HR departmen
   assert.match(route, /from\("asset_locations"\)/);
   assert.match(route, /location_id/);
   assert.match(page, /\+ Thêm tài sản/);
+  assert.match(page, /Vị trí/);
+  assert.match(page, /locationById/);
   assert.match(page, /hasPermission\("asset\.manage"\)/);
   assert.match(create, /aria-label="Vị trí tài sản"/);
 });

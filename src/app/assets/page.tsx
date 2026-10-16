@@ -119,6 +119,7 @@ export default function AssetsPage() {
   const summary = useMemo(() => summarizeAssetList(rows), [rows]);
   const departmentById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments]);
   const userById = useMemo(() => new Map(users.map((person) => [person.id, person.full_name])), [users]);
+  const locationById = useMemo(() => new Map(locations.map((location) => [location.id, location.name])), [locations]);
 
   const custody = (row: AssetRow) => {
     const assignment = row.currentAssignment;
@@ -192,6 +193,7 @@ export default function AssetsPage() {
                     <col className="w-[68px]" />
                     <col className="w-[140px]" />
                     <col className="w-[124px]" />
+                    <col className="w-[18%]" />
                     <col className="w-[20%]" />
                     <col className="min-w-[170px]" />
                   </colgroup>
@@ -202,6 +204,7 @@ export default function AssetsPage() {
                       <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Trạng thái sử dụng</th>
                       <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Tình trạng</th>
                       <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Người sử dụng</th>
+                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Vị trí</th>
                       <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Ghi chú</th>
                     </tr>
                   </thead>
@@ -214,6 +217,7 @@ export default function AssetsPage() {
                         <td className="px-3 py-3"><StatusBadge row={row} /></td>
                         <td className="px-3 py-3"><ConditionBadge row={row} /></td>
                         <td className="px-3 py-3"><p className={`break-words font-medium leading-5 ${owner.unassigned ? "text-amber-900" : "text-slate-900"}`}>{owner.person}</p></td>
+                        <td className="px-3 py-3"><p className="break-words leading-5 text-slate-700">{row.location_id ? locationById.get(row.location_id) ?? "Không xác định" : "—"}</p></td>
                         <td className="px-3 py-3"><p className="line-clamp-2 break-words leading-5 text-slate-600" title={row.note ?? undefined}>{row.note || "—"}</p></td>
                       </tr>;
                     })}
@@ -229,7 +233,7 @@ export default function AssetsPage() {
                 return <Link key={row.id ?? row.asset_code} href={`/assets/${row.id}`} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-orange-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-300">
                   <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-semibold leading-5 text-slate-950">{row.asset_name}</h2>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</div><div className="flex flex-wrap justify-end gap-1"><StatusBadge row={row} /><ConditionBadge row={row} /></div></div>
                   <div className="mt-3 flex flex-wrap gap-2"><MetadataBadge>{row.category || "Chưa rõ"}</MetadataBadge><MetadataBadge tone={row.tracking_mode === "lot" ? "sky" : "slate"}>{row.tracking_mode === "lot" ? "Theo lô" : "Cá thể"}</MetadataBadge><MetadataBadge>SL: {row.quantity ?? 1}</MetadataBadge></div>
-                  <dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người sử dụng</dt><dd className={`mt-1 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-600"}`}>{owner.person}</dd></div>{row.note ? <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú</dt><dd className="mt-1 line-clamp-2 leading-5 text-slate-600" title={row.note}>{row.note}</dd></div> : null}</dl>
+                  <dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người sử dụng</dt><dd className={`mt-1 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-600"}`}>{owner.person}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vị trí</dt><dd className="mt-1 text-slate-600">{row.location_id ? locationById.get(row.location_id) ?? "Không xác định" : "—"}</dd></div>{row.note ? <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú</dt><dd className="mt-1 line-clamp-2 leading-5 text-slate-600" title={row.note}>{row.note}</dd></div> : null}</dl>
                 </Link>;
               })}
               {loaded && !message && filteredRows.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</p> : null}
