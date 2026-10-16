@@ -80,7 +80,7 @@ install -d -o thoidai-work -g thoidai-work -m 0750 "$new_release/.next/cache"
 
 read_pointer() { local name=$1 target; [[ -L "$release_root/$name" ]] || return 1; target=$(readlink -f -- "$release_root/$name"); [[ "$target" == "$release_root"/* && -d "$target" ]] || return 1; printf '%s' "$target"; }
 current_target=$(read_pointer current); previous_target=$(read_pointer previous); rollback1_target=$(read_pointer rollback-1); rollback2_target=$(read_pointer rollback-2)
-atomic_pointer() { local target=$1 name=$2 tmp="$release_root/$name.new"; rm -f -- "$tmp"; ln -s -- "$target" "$tmp"; mv -Tf -- "$tmp" "$release_root/$name"; }
+atomic_pointer() { local target="$1"; local name="$2"; local tmp="$release_root/${name}.new"; rm -f -- "$tmp"; ln -s -- "$target" "$tmp"; mv -Tf -- "$tmp" "$release_root/$name"; }
 restore() {
   set +e
   atomic_pointer "$current_target" current
