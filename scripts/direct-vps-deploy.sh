@@ -97,7 +97,16 @@ atomic_pointer "$rollback1_target" rollback-2
 atomic_pointer "$current_target" rollback-1
 atomic_pointer "$current_target" previous
 atomic_pointer "$new_release" current
-if ! systemctl restart "$service" || ! systemctl is-active --quiet "$service" || ! curl -fsS --max-time 15 -o /dev/null "$health_url"; then
+systemctl restart "$service"
+health_ok=0
+for attempt in $(seq 1 30); do
+  if systemctl is-active --quiet "$service" && curl -fsS --max-time 15 -o /dev/null "$health_url"; then
+    health_ok=1
+    break
+  fi
+  sleep 1
+done
+if (( health_ok == 0 )); then
   echo "health failed; restoring previous release" >&2
   restore
   exit 1
