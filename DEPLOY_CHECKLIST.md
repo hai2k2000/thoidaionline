@@ -34,3 +34,8 @@
 - [ ] Test phân quyền: admin/manager/ops/reporter
 - [ ] Xác nhận UX với người dùng thật và chốt vòng cải tiến tiếp theo
  vòng cải tiến tiếp theo
+
+
+## Direct VPS owner-approved workflow
+
+`direct-vps-deploy.sh` is the project-approved VPS-local workflow. It builds from a clean non-production worktree, checks the 20 GiB hard floor, verifies the Quick Report allowlist and source ancestry, packages an immutable runtime, preserves `current/previous/rollback-1/rollback-2`, atomically activates the release, restarts the service, and checks `/login`. Small Quick Report hotfixes stop after HTTP health for owner manual acceptance; no cookie or waiver is required. Database, security, and large changes remain blocked without their dedicated gates.

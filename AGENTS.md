@@ -21,6 +21,17 @@
 - Không force-push, không rewrite history và không đưa file môi trường, credential, backup, build output hoặc runtime artifact vào Git.
 - Nếu push thất bại, phải báo blocker cùng bằng chứng; không được mô tả dự án là đã đồng bộ Git.
 
+## QUY TRÌNH VPS TRỰC TIẾP DO OWNER PHÊ DUYỆT
+
+- GitHub chỉ lưu trữ source; không dùng GitHub Actions cho build/test/deploy của dự án này.
+- Luồng chính thức: workspace sạch trên VPS -> test/build local trên VPS -> release immutable -> activate atomic -> service/HTTP health -> giữ rollback -> push source lên GitHub.
+- Workspace phát triển không được là `/opt/thoidai-work` và không được sửa active release trực tiếp.
+- Hard floor filesystem là 20 GiB; trước và sau build phải còn hard floor cộng headroom cấu hình.
+- Hotfix nhỏ chỉ được dùng branch `codex/direct-vps-*`, phải descend từ production đang chạy, có approval flag và allowlist file; không được chứa migration/database, security hoặc thay đổi lớn.
+- Hotfix nhỏ không bắt buộc authenticated smoke; owner nghiệm thu thủ công sau khi HTTP health PASS. Database, bảo mật và thay đổi lớn vẫn giữ gate kiểm tra tương ứng.
+- Activation phải có lock, backup/rollback pointers, symlink atomic, restart có kiểm soát và health check; lỗi health phải tự động khôi phục pointer cũ.
+- Không xóa worktree, backup, release hoặc dữ liệu trong lệnh deploy.
+
 ## EXTERNAL ARTIFACT BUILD VÀ RELEASE LIFECYCLE
 
 - Build/test/package production chạy trên GitHub Actions; không chạy `npm ci` hoặc `next build` trên VPS trong quy trình external-artifact.

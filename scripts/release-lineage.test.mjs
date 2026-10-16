@@ -35,6 +35,24 @@ test("rejects artifacts built from a feature branch", () => {
   }), /integration\/production/);
 });
 
+test("accepts an explicitly approved direct VPS hotfix", () => {
+  assert.doesNotThrow(() => assertReleaseLineage({
+    candidateCommit: "c".repeat(40), currentProductionCommit: "a".repeat(40), integrationCommit: "b".repeat(40),
+    candidateBranch: "codex/direct-vps-quick-report", candidateDescendsFromProduction: true, integrationContainsProduction: true,
+    directVpsApproved: true, directVpsBaseCommit: "a".repeat(40), changedFiles: ["src/lib/taskRepository.ts"],
+    directVpsAllowedFiles: ["src/lib/taskRepository.ts"],
+  }));
+});
+
+test("rejects direct VPS hotfix changes outside its allowlist", () => {
+  assert.throws(() => assertReleaseLineage({
+    candidateCommit: "c".repeat(40), currentProductionCommit: "a".repeat(40), integrationCommit: "b".repeat(40),
+    candidateBranch: "codex/direct-vps-quick-report", candidateDescendsFromProduction: true, integrationContainsProduction: true,
+    directVpsApproved: true, directVpsBaseCommit: "a".repeat(40), changedFiles: ["src/lib/taskRepository.ts", "src/app/assets/page.tsx"],
+    directVpsAllowedFiles: ["src/lib/taskRepository.ts"],
+  }), /outside allowlist/);
+});
+
 test("parses lineage metadata without accepting secret values", () => {
   assert.deepEqual(parseReleaseLineage([
     "commit=abc",

@@ -14,7 +14,11 @@ export function assertReleaseLineage({
   candidateBranch,
   candidateDescendsFromProduction,
   integrationContainsProduction,
-}) {
+  directVpsApproved = false,
+  directVpsBaseCommit = "",
+  changedFiles = [],
+  directVpsAllowedFiles = [],
+) {
   for (const [name, value] of Object.entries({ candidateCommit, currentProductionCommit, integrationCommit })) {
     if (!SHA.test(String(value || ""))) throw new Error(`${name} must be a 40-character commit SHA`);
   }
@@ -25,7 +29,18 @@ export function assertReleaseLineage({
     throw new Error(`integration/production must contain current production ${currentProductionCommit}`);
   }
   if (candidateBranch !== "integration/production") {
-    throw new Error(`candidate must be built from integration/production, got ${candidateBranch || "unknown"}`);
+    const isDirectVpsBranch = /^codex\/direct-vps-[A-Za-z0-9._-]+$/.test(candidateBranch || "");
+    if (!isDirectVpsBranch || !directVpsApproved) {
+      throw new Error(`candidate must be built from integration/production, got ${candidateBranch || "unknown"}`);
+    }
+    if (currentProductionCommit !== directVpsBaseCommit) {
+      throw new Error(`direct VPS base mismatch: expected ${currentProductionCommit}, got ${directVpsBaseCommit || "missing"}`);
+    }
+    const allowed = new Set(directVpsAllowedFiles);
+    const unexpectedFiles = changedFiles.filter((file) => !allowed.has(file));
+    if (unexpectedFiles.length > 0) {
+      throw new Error(`direct VPS change outside allowlist: ${unexpectedFiles.join(", ")}`);
+    }
   }
   return true;
 }

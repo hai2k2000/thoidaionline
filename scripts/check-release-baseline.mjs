@@ -17,6 +17,7 @@ let integrationCommit = "";
 let candidateBranch = "";
 let candidateDescendsFromProduction = false;
 let integrationContainsProduction = false;
+let changedFiles = [];
 
 try {
   if (hasGit) {
@@ -28,6 +29,10 @@ try {
     candidateDescendsFromProduction = true;
     execFileSync("git", ["merge-base", "--is-ancestor", currentProductionCommit, integrationCommit], { stdio: "ignore" });
     integrationContainsProduction = true;
+    changedFiles = git(["diff", "--name-only", currentProductionCommit, candidateCommit]).split(/\r?\n/).filter(Boolean);
+    const directVpsApproved = readValue("THOIDAI_DIRECT_VPS_APPROVED") === "1";
+    const directVpsBaseCommit = readValue("THOIDAI_DIRECT_VPS_BASE_COMMIT");
+    const directVpsAllowedFiles = (readValue("THOIDAI_DIRECT_VPS_ALLOWED_FILES") || "").split(",").filter(Boolean);
     assertReleaseLineage({
       candidateCommit,
       currentProductionCommit,
@@ -35,6 +40,10 @@ try {
       candidateBranch,
       candidateDescendsFromProduction,
       integrationContainsProduction,
+      directVpsApproved,
+      directVpsBaseCommit,
+      changedFiles,
+      directVpsAllowedFiles,
     });
     console.log("release-lineage: PASS (production=" + currentProductionCommit + ", integration=" + integrationCommit + ", branch=" + candidateBranch + ")");
   } else {

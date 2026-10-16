@@ -886,6 +886,7 @@ export const taskRepository: TaskRepository = {
         title: row.title,
         category: row.category,
         work_date: row.startDate,
+        completed_date: row.status === "done" ? row.completionDate : null,
         started_time: "00:00",
         completed_time: row.status === "done" ? "00:00" : null,
         status: row.status,
