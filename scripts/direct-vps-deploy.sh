@@ -22,6 +22,10 @@ candidate=$(git rev-parse HEAD)
 [[ "$branch" =~ ^codex/direct-vps-[A-Za-z0-9._-]+$ ]] || { echo "invalid direct VPS branch: $branch" >&2; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || { echo "source workspace must be clean" >&2; exit 1; }
 git merge-base --is-ancestor "$base_commit" "$candidate" || { echo "candidate does not descend from production base" >&2; exit 1; }
+if ! git rev-parse --verify integration/production >/dev/null 2>&1; then
+  git fetch --no-tags origin integration/production:refs/remotes/origin/integration/production
+  git branch integration/production refs/remotes/origin/integration/production
+fi
 
 allowed=(
   AGENTS.md DEPLOY_CHECKLIST.md
