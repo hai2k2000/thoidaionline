@@ -48,6 +48,15 @@ test("quick report single request uses actor-owned request id and row", async ()
   assert.equal(h.calls[0][1].rows[0].status, "done");
 });
 
+test("quick report preserves a completion date different from the start date", async () => {
+  const h = harness();
+  const response = await h.app.quickReport(new Request("https://example.test/api/tasks/quick-report", {
+    method: "POST", body: JSON.stringify({ requestId: uuid("43"), rows: [validRow({ startDate: "2026-10-07", completionDate: "2026-10-09" })] }),
+  }));
+  assert.equal(response.status, 201);
+  assert.equal(h.calls[0][1].rows[0].completionDate, "2026-10-09");
+});
+
 test("quick report rejects unauthorized actor before repository mutation", async () => {
   const h = harness({ rbacPermissions: [] });
   const response = await h.app.quickReport(new Request("https://example.test/api/tasks/quick-report", {
