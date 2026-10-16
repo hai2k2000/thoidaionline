@@ -37,6 +37,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     note: typeof body?.note === "string" ? body.note : null,
     tracking_mode: body?.tracking_mode === "lot" ? "lot" : body?.tracking_mode === "individual" ? "individual" : undefined,
     quantity: typeof body?.quantity === "number" ? body.quantity : undefined,
+    location_id: typeof body?.location_id === "string" ? body.location_id : body?.location_id === null ? null : undefined,
   });
   if (!result.ok) return json({ error: result.error }, { status: result.error === "asset_not_found" ? 404 : 400 });
   await logServerAudit({ actorId: actor.id, module: "assets", entityType: "assets", entityId: id, action: "update", newData: result.data });

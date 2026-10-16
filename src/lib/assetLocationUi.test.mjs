@@ -9,6 +9,8 @@ test("asset management exposes persisted locations without changing HR departmen
   const page = read("../app/assets/page.tsx");
   const create = read("../app/assets/new/page.tsx");
   const route = read("../app/api/assets/route.ts");
+  const detail = read("../app/assets/[id]/page.tsx");
+  const detailRoute = read("../app/api/assets/[id]/route.ts");
 
   for (const label of ["Phòng Tổng biên tập", "Phòng Phó Tổng biên tập", "Phòng họp"]) {
     assert.match(migration, new RegExp(label));
@@ -22,6 +24,11 @@ test("asset management exposes persisted locations without changing HR departmen
   assert.match(page, /locationById/);
   assert.match(page, /hasPermission\("asset\.manage"\)/);
   assert.match(create, /aria-label="Vị trí tài sản"/);
+  assert.match(detail, /aria-label="Vị trí tài sản"/);
+  assert.match(detail, /tracking_mode/);
+  assert.match(detail, /quantity/);
+  assert.match(detail, /Phòng đang quản lý/);
+  assert.match(detailRoute, /location_id/);
 });
 
 test("asset creation remains server-authorized by effective asset.manage", () => {

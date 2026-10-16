@@ -32,6 +32,8 @@ allowed=(
   scripts/check-release-baseline.mjs scripts/release-lineage.mjs scripts/release-lineage.test.mjs
   scripts/direct-vps-deploy.sh
   src/lib/taskRepository.ts
+  src/app/assets/[id]/page.tsx
+  src/app/api/assets/[id]/route.ts
   src/app/assets/page.tsx
   src/app/api/assets/route.ts
   src/lib/assetLocationUi.test.mjs

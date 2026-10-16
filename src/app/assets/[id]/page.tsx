@@ -5,15 +5,17 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { type Asset, type AssetAssignment, type AssetConditionStatus } from "@/lib/services";
+import { type Asset, type AssetAssignment, type AssetConditionStatus, type AssetStatus, type AssetTrackingMode } from "@/lib/services";
 import { errorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import AssetServiceHistory from "@/components/AssetServiceHistory";
 
 const conditionLabel: Record<AssetConditionStatus, string> = { normal: "Bình thường", needs_maintenance: "Cần bảo trì", under_service: "Đang sửa chữa", broken: "Hỏng" };
 const trackingModeLabel: Record<string, string> = { individual: "Cá thể", lot: "Theo lô" };
+const statusLabel: Record<AssetStatus, string> = { available: "Chưa phân công", in_use: "Đang sử dụng", maintenance: "Đang bảo trì", broken: "Hỏng", liquidated: "Đã thanh lý" };
 type DepartmentOption = { id: string; name: string };
 type UserOption = { id: string; full_name: string; department_id: string | null };
+type LocationOption = { id: string; code?: string | null; name: string };
 
 const formatDateTime = (value?: string | null) => value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "—";
 function assignmentDepartment(assignment: AssetAssignment, asset: Asset) { return assignment.assigned_department_name ?? (assignment.id === asset.currentAssignment?.id ? asset.assigned_department_name : null) ?? "Phòng đã phân công"; }
@@ -46,6 +48,7 @@ export default function AssetDetailPage() {
   const [assigneeId, setAssigneeId] = useState("");
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
   const currentAssignment = asset?.currentAssignment ?? null;
 
   const load = async (id: string) => {
@@ -68,7 +71,7 @@ export default function AssetDetailPage() {
     }
     setSaving(true);
     try {
-      const response = await fetch(`/api/assets/${encodeURIComponent(asset.id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ asset_name: asset.asset_name, category: asset.category, serial_number: asset.serial_number ?? null, status: asset.status ?? "available", condition_status: asset.condition_status ?? "normal", note: asset.note ?? null }) });
+      const response = await fetch(`/api/assets/${encodeURIComponent(asset.id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ asset_name: asset.asset_name, category: asset.category, serial_number: asset.serial_number ?? null, status: asset.status ?? "available", condition_status: asset.condition_status ?? "normal", note: asset.note ?? null, tracking_mode: asset.tracking_mode ?? "individual", quantity: asset.quantity ?? 1, location_id: asset.location_id ?? null }) });
       const payload = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) throw new Error(payload?.error || "Không thể cập nhật tài sản.");
       notify("success", "Đã cập nhật thông tin tài sản."); setMessage("✅ Đã cập nhật thông tin tài sản.");
@@ -98,11 +101,10 @@ export default function AssetDetailPage() {
     if (!user) return void router.push("/login");
     if (!hasPermission("asset.view") && !canManage) return void router.push("/");
     if (!params?.id) return;
-    const timer = setTimeout(() => { void load(params.id); if (canManage) void fetch("/api/assets?options=1", { cache: "no-store" }).then((response) => response.json()).then((payload: { departments?: DepartmentOption[]; users?: UserOption[] }) => { setDepartments(payload.departments ?? []); setUsers(payload.users ?? []); }); }, 0);
+    const timer = setTimeout(() => { void load(params.id); if (canManage) void fetch("/api/assets?options=1", { cache: "no-store" }).then((response) => response.json()).then((payload: { departments?: DepartmentOption[]; users?: UserOption[]; locations?: LocationOption[] }) => { setDepartments(payload.departments ?? []); setUsers(payload.users ?? []); setLocations(payload.locations ?? []); }); }, 0);
     return () => clearTimeout(timer);
   }, [authLoading, user, params?.id, router, hasPermission, canManage]);
 
-  const currentDepartment = currentAssignment ? assignmentDepartment(currentAssignment, asset as Asset) : "Chưa phân công";
   const currentPerson = currentAssignment ? assignmentPerson(currentAssignment, asset as Asset) : "—";
   const history = useMemo(() => asset ? buildHistoryEvents(asset.assignmentHistory ?? [], asset) : [], [asset]);
   const setAssetField = (patch: Partial<Asset>) => setAsset((current) => current ? { ...current, ...patch } : current);
@@ -117,11 +119,12 @@ export default function AssetDetailPage() {
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Mã tài sản<input readOnly className="min-h-11 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-normal" value={asset?.asset_code ?? "—"} /></label>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Nhóm<input readOnly={!canManage} className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal read-only:bg-slate-50" value={asset?.category ?? ""} onChange={(event) => setAssetField({ category: event.target.value })} /></label>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Số sê-ri<input readOnly={!canManage} className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal read-only:bg-slate-50" value={asset?.serial_number ?? ""} onChange={(event) => setAssetField({ serial_number: event.target.value || null })} /></label>
-            <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Kiểu theo dõi</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{trackingModeLabel[asset?.tracking_mode ?? "individual"] ?? "—"}</p></div>
-            <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Số lượng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal tabular-nums">{asset?.quantity ?? 1}</p></div>
-            <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Trạng thái sử dụng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{currentAssignment ? "Đang sử dụng" : "Chưa phân công"}</p></div>
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Kiểu theo dõi<select disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.tracking_mode ?? "individual"} onChange={(event) => setAssetField({ tracking_mode: event.target.value as AssetTrackingMode, quantity: event.target.value === "individual" ? 1 : asset?.quantity ?? 1 })}>{Object.entries(trackingModeLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Số lượng<input disabled={!canManage || asset?.tracking_mode === "individual"} type="number" min={1} step={1} className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal tabular-nums disabled:bg-slate-50" value={asset?.quantity ?? 1} onChange={(event) => setAssetField({ quantity: Math.max(1, Number(event.target.value) || 1) })} /></label>
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Trạng thái sử dụng<select disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.status ?? "available"} onChange={(event) => setAssetField({ status: event.target.value as AssetStatus })}>{Object.entries(statusLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>{currentAssignment ? <span className="text-xs font-normal text-slate-500">Đang có phân công; chọn “Chưa phân công” cần Thu hồi trước.</span> : null}</label>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Tình trạng tài sản<select disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.condition_status ?? "normal"} onChange={(event) => setAssetField({ condition_status: event.target.value as AssetConditionStatus })}>{Object.entries(conditionLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Phòng đang quản lý<input readOnly className="min-h-11 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-normal" value={currentDepartment} /></label>
+            <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Phòng đang quản lý</span><div className="flex gap-2"><select disabled={!canManage} aria-label="Phòng đang quản lý" value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setAssigneeId(""); }} className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50"><option value="">Chưa phân công</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select>{canManage ? <button type="button" onClick={() => setTransferOpen(true)} className="min-h-11 shrink-0 rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800 hover:bg-sky-100">Cập nhật</button> : null}</div><span className="text-xs font-normal text-slate-500">Thay đổi phòng sẽ tạo lịch sử chuyển giao/cấp phát.</span></div>
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Vị trí tài sản<select disabled={!canManage} aria-label="Vị trí tài sản" className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.location_id ?? ""} onChange={(event) => setAssetField({ location_id: event.target.value || null })}><option value="">Chưa xác định</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.code ? `${location.code} — ` : ""}{location.name}</option>)}</select></label>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Người đang sử dụng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{currentPerson}</p></div>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Ngày cấp phát</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{formatDateTime(currentAssignment?.assigned_at)}</p></div>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700 md:col-span-2">Ghi chú<textarea readOnly={!canManage} className="min-h-28 rounded-lg border border-slate-300 px-3 py-2 font-normal read-only:bg-slate-50" value={asset?.note ?? ""} onChange={(event) => setAssetField({ note: event.target.value || null })} /></label>
