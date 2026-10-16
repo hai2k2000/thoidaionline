@@ -18,7 +18,7 @@ export function assertReleaseLineage({
   directVpsBaseCommit = "",
   changedFiles = [],
   directVpsAllowedFiles = [],
-) {
+}) {
   for (const [name, value] of Object.entries({ candidateCommit, currentProductionCommit, integrationCommit })) {
     if (!SHA.test(String(value || ""))) throw new Error(`${name} must be a 40-character commit SHA`);
   }
