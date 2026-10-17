@@ -6,6 +6,9 @@ config=${THOIDAI_DISK_GUARD_CONFIG:-$script_dir/../../deploy/disk-guard.conf}
 [[ -r "$config" ]] || { echo "DISK_GUARD=BLOCKED reason=config-missing path=$config" >&2; return 1 2>/dev/null || exit 1; }
 # shellcheck disable=SC1090
 source "$config"
+THOIDAI_DISK_HARD_MIN_KB=${THOIDAI_DISK_HARD_MIN_KB//$'\r'/}
+THOIDAI_DISK_WARNING_KB=${THOIDAI_DISK_WARNING_KB//$'\r'/}
+THOIDAI_DISK_DEFAULT_HEADROOM_KB=${THOIDAI_DISK_DEFAULT_HEADROOM_KB//$'\r'/}
 [[ "${THOIDAI_DISK_HARD_MIN_KB:-}" =~ ^[0-9]+$ && "${THOIDAI_DISK_WARNING_KB:-}" =~ ^[0-9]+$ && "${THOIDAI_DISK_DEFAULT_HEADROOM_KB:-}" =~ ^[0-9]+$ ]] || { echo "DISK_GUARD=BLOCKED reason=invalid-config" >&2; return 1 2>/dev/null || exit 1; }
 
 disk_guard_require() {

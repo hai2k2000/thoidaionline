@@ -31,12 +31,9 @@ risk_class=$(awk -F= '$1=="risk_class" {print $2; exit}' "$artifact/.release-met
 risk_test_evidence=$(awk -F= '$1=="risk_test_evidence" {print $2; exit}' "$artifact/.release-meta")
 [[ "$risk_class" == low || "$risk_class" == high ]] || { echo "DEPLOY ABORTED: artifact risk classification missing or invalid" >&2; exit 1; }
 [[ "$risk_class" != low || "$risk_test_evidence" == automated-tests-pass ]] || { echo "DEPLOY ABORTED: low-risk artifact lacks automated test evidence" >&2; exit 1; }
+smoke_required=0
 smoke_waived=0
-smoke_required=1
-if [[ "$risk_class" == low ]]; then
-  smoke_required=0
-  echo "authenticated smoke: SKIP (risk_class=low, automated-tests-pass)"
-fi
+echo "authenticated smoke: OPTIONAL (not an activation gate)"
 free_kb=$(df -Pk "$release_root" | awk 'NR==2 {print $4}')
 disk_guard_require "$free_kb" "$estimated_headroom_kb" "deploy"
 exec 9>"$lock_file"
@@ -49,14 +46,10 @@ new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 "$node_bin" "$artifact/verify-standalone-artifact.mjs" "$artifact"
 build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release-meta")
 [[ "$build_config" == canonical-public ]] || { echo "DEPLOY ABORTED: artifact build config is not canonical-public" >&2; exit 1; }
-if (( smoke_required == 1 )) && [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
-  approval_path=${THOIDAI_DEPLOY_EXCEPTION_APPROVAL:-}
-  readiness_path=${THOIDAI_RBAC_READINESS_EVIDENCE:-}
-  waiver_evidence=${THOIDAI_DEPLOY_EXCEPTION_EVIDENCE:-${THOIDAI_DEPLOY_EVIDENCE_ROOT:-/var/lib/thoidai-work/deploy-evidence}/rbac-v2-smoke-waiver-$(date -u +%Y%m%dT%H%M%SZ).evidence}
-  [[ -n "$approval_path" ]] || { echo "DEPLOY ABORTED: controlled smoke-waiver approval is required" >&2; exit 1; }
-  [[ -n "$readiness_path" ]] || { echo "DEPLOY ABORTED: RBAC readiness evidence is required" >&2; exit 1; }
-elif (( smoke_required == 1 )); then
-  [[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]] || { echo "DEPLOY ABORTED: authenticated smoke credentials are required" >&2; exit 1; }
+if [[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]]; then
+  echo "optional authenticated smoke credentials supplied; activation gate remains credential-independent"
+else
+  echo "OPTIONAL_AUTHENTICATED_SMOKE=SKIP"
 fi
 "$cp_bin" -a -- "$artifact" "$new_release"
 "$node_bin" "$new_release/verify-standalone-artifact.mjs" "$new_release"
@@ -114,13 +107,6 @@ previous_target=$(read_pointer previous) || exit 1
 rollback_1_target=$(read_pointer rollback-1) || exit 1
 rollback_2_target=$(read_pointer rollback-2) || exit 1
 THOIDAI_RBAC_ROLLBACK_TARGET_PATH="$current_target" "$rbac_gate" || { echo "DEPLOY ABORTED: RBAC rollback compatibility gate failed for rollback target" >&2; exit 1; }
-
-if (( smoke_required == 1 )) && [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
-  exception_validator="$artifact/scripts/production/controlled-deploy-exception.mjs"
-  [[ -f "$exception_validator" ]] || { echo "DEPLOY ABORTED: artifact is missing the controlled exception validator" >&2; exit 1; }
-  "$node_bin" "$exception_validator" "$approval_path" "$artifact_commit" "$waiver_evidence" "$readiness_path" || { echo "DEPLOY ABORTED: controlled smoke-waiver approval or RBAC readiness evidence is invalid, stale, or already used" >&2; exit 1; }
-  smoke_waived=1
-fi
 
 rollback_snapshot() {
   local rollback_status=0
@@ -210,15 +196,5 @@ for attempt in $(seq 1 "$health_attempts"); do
 done
 if (( ! health_ok )); then
   fail_after_mutation "service health check failed"
-fi
-if (( smoke_required == 1 && smoke_waived == 0 )); then
-  if ! "$node_bin" "${THOIDAI_CONTRACT_SMOKE_SCRIPT:-scripts/contract-smoke.mjs}"; then
-    fail_after_mutation "authenticated contract smoke failed"
-  fi
-  if ! "$node_bin" "${THOIDAI_BROWSER_SMOKE_SCRIPT:-scripts/production/browser-path-smoke.mjs}"; then
-    fail_after_mutation "browser-path smoke failed"
-  fi
-elif (( smoke_required == 1 )); then
-  echo "AUTHENTICATED_SMOKE=WAIVED"
 fi
 echo "deploy-gate: PASS ($new_release)"

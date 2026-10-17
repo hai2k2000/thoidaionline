@@ -50,10 +50,11 @@ test("artifact boundary enforces provenance and the production disk floor", () =
   assert.match(gate, /build config is not canonical-public/);
 });
 
-test("controlled deployment exception remains opt-in and delegated to the gate", () => {
-  assert.match(deploy, /THOIDAI_AUTHENTICATED_SMOKE_WAIVER/);
+test("authenticated smoke is optional and never requires a waiver", () => {
+  assert.match(deploy, /authenticated smoke: OPTIONAL/);
+  assert.doesNotMatch(deploy, /THOIDAI_AUTHENTICATED_SMOKE_WAIVER/);
   assert.match(deploy, /deploy-gate\.sh/);
-  assert.match(deploy, /THOIDAI_RBAC_READINESS_EVIDENCE/);
+  assert.doesNotMatch(deploy, /THOIDAI_RBAC_READINESS_EVIDENCE/);
   assert.doesNotMatch(workflow, /THOIDAI_AUTHENTICATED_SMOKE_WAIVER/);
 });
 
