@@ -7,7 +7,7 @@ on:
       source_sha:
         description: "Feature source SHA to validate"
         required: true
-        default: "c568a351cc7aab7da3e11e666a4ba09f0e994ca3"
+        default: "6423b8eb22cef26428b10fe396c60fb6470c9f81"
         type: string
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
         shell: bash
         env:
           EXPECTED_BRANCH: main
-          EXPECTED_SHA: c568a351cc7aab7da3e11e666a4ba09f0e994ca3
+          EXPECTED_SHA: 6423b8eb22cef26428b10fe396c60fb6470c9f81
           SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
