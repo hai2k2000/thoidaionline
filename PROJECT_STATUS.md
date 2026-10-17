@@ -1003,11 +1003,11 @@ Validation:
 - Production-like build with build-only local placeholders: PASS; no production secrets used.
 
 Blockers:
-- Full local Supabase startup/reset is blocked by a pre-existing historical migration at 20260826190000_direct_assignment_in_progress.sql: its fixture inserts a null actor_id into task_status_events. No database was modified outside the local disposable attempt; no production database was accessed.
+- Full local Supabase startup/reset reaches the historical September duty-roster seed but remains blocked by legacy fixture incompatibility. The original `actor_id` failure is reproduced and locally unblocked in a disposable bootstrap: baseline demo tasks omit `created_by`, `20260817050000_phase3_additive_task_schema.sql` maps one to `assigned`, and `20260826200000_harden_direct_assignment.sql` inserts that NULL into NOT NULL `task_status_events.actor_id`. The bootstrap also documents the next legacy roster fixture mismatch without changing historical migrations. No database was modified outside disposable attempts; no production database was accessed.
 
 Production safety:
 - Production database, VPS, releases, service and canonical branch: unchanged.
 
 Next:
-- Resolve or isolate the historical local fixture blocker before claiming full-chain migration acceptance, then rerun the local database verification. Do not deploy or apply production migration.
+- `scripts/local-database-bootstrap.mjs` provides a disposable local-only compatibility copy and preserves the production migration set. Migration chain is still FAIL at the legacy September roster fixture (`ineligible duty assignee`) after the actor compatibility fix; do not claim full-chain or runtime E2E PASS. Do not deploy or apply production migration.
 - Branch pushed: `codex/database-management-v1-foundation` (`3bf06b3`, includes `9a304c0`, `ab62181`, `c7856e8`).

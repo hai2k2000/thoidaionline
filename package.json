@@ -17,6 +17,8 @@
     "migration:dry-run": "bash scripts/production/safe-apply-migration.sh --dry-run",
     "migration:test": "node --test scripts/production/safe-apply-migration.test.mjs",
     "migration:disposable": "bash scripts/production/safe-apply-migration.disposable.sh",
+    "database:local-bootstrap": "node scripts/local-database-bootstrap.mjs",
+    "database:local-bootstrap:test": "node --test scripts/local-database-bootstrap.test.mjs",
     "check:release": "npm run check:baseline && npm run check:routes",
     "check:baseline": "node scripts/check-release-baseline.mjs",
     "package:standalone": "node scripts/package-standalone.mjs",
