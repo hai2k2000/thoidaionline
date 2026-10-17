@@ -2,12 +2,13 @@ import "server-only";
 
 import { serverSupabase } from "@/lib/serverSupabase";
 import { canAccessDatabaseRecord, defaultDatabaseRecordAccess, type DatabaseAclActor, type DatabaseAclRow } from "./acl";
+import { validateDatabaseMetadata } from "./validation";
 import type { DatabaseRecordAclInput, DatabaseRecordInput, DatabaseRecordUpdateInput } from "./types";
 
 type RecordRow = {
   id: string; category_id: string; record_type_id: string; record_code: string; title: string;
   summary: string | null; status: string; department_id: string | null; owner_id: string | null;
-  created_by: string; metadata: Record<string, unknown>; created_at: string; updated_at: string;
+  created_by: string; metadata: Record<string, unknown>; form_definition_id?: string | null; deleted_at?: string | null; created_at: string; updated_at: string;
 };
 
 export type DatabaseRecordActor = { id: string; department_id: string | null; role_code: string; rbacPermissions: string[] };
@@ -21,14 +22,14 @@ async function actorContext(actor: DatabaseRecordActor): Promise<DatabaseAclActo
 async function aclForRecord(recordId: string) {
   const { data, error } = await serverSupabase.from("db_record_acl").select("record_id,principal_type,principal_id,capability,effect,expires_at").eq("record_id", recordId);
   if (error) throw error;
-  return (data ?? []) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>;
+  const now = Date.now();
+  return (data ?? []).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>;
 }
 
 async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
   if (!actor.rbacPermissions.includes(`record.${capability}`)) return false;
   const context = await actorContext(actor);
-  const now = Date.now();
-  const rows = (await aclForRecord(recordId)).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now);
+  const rows = await aclForRecord(recordId);
   const explicitDeny = rows.some((row) => row.capability === capability && row.effect === "deny" && (
     row.principal_type === "user" && row.principal_id === actor.id
     || row.principal_type === "role" && row.principal_id === context.roleId
@@ -36,6 +37,14 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ow
   ));
   if (explicitDeny) return false;
   return canAccessDatabaseRecord(context, rows, capability) || defaultDatabaseRecordAccess(context, capability, record.owner_id, record.department_id);
+}
+
+function hasExplicitDeny(actor: DatabaseAclActor, rows: readonly DatabaseAclRow[], capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
+  return rows.some((row) => row.capability === capability && row.effect === "deny" && (
+    row.principal_type === "user" && row.principal_id === actor.id
+    || row.principal_type === "role" && row.principal_id === actor.roleId
+    || row.principal_type === "department" && row.principal_id === actor.departmentId
+  ));
 }
 
 export async function canAccessDatabaseRecordForActor(actor: DatabaseRecordActor, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
@@ -47,6 +56,14 @@ async function getRecord(recordId: string) {
   const { data, error } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,form_definition_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at,deleted_at").eq("id", recordId).maybeSingle();
   if (error) throw error;
   return data as (RecordRow & { form_definition_id: string | null; deleted_at: string | null }) | null;
+}
+
+async function validateFormMetadata(formDefinitionId: string | null | undefined, metadata: Record<string, unknown>) {
+  if (!formDefinitionId) return;
+  const { data, error } = await serverSupabase.from("db_form_fields").select("field_key,data_type,required,options,validation").eq("form_definition_id", formDefinitionId);
+  if (error) throw error;
+  const errors = validateDatabaseMetadata(metadata, data ?? []);
+  if (errors.length) throw new Error(`invalid_metadata:${JSON.stringify(errors)}`);
 }
 
 export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recordId: string) {
@@ -78,63 +95,84 @@ export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeI
 export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, filters: DatabaseRecordListQuery = {}) {
   const context = await actorContext(actor);
   const limit = Math.min(Math.max(filters.limit ?? 200, 1), 200);
-  let request = serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").neq("status", "deleted").order("updated_at", { ascending: false }).limit(limit);
-  if (filters.q?.trim()) {
-    const query = filters.q.trim().replace(/[%_,()]/g, " ");
-    request = request.or(`title.ilike.%${query}%,record_code.ilike.%${query}%,summary.ilike.%${query}%`);
+  const rows: RecordRow[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    let request = serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").neq("status", "deleted").order("updated_at", { ascending: false }).range(offset, offset + 999);
+    if (filters.q?.trim()) {
+      const query = filters.q.trim().replace(/[%_,()]/g, " ");
+      request = request.or(`title.ilike.%${query}%,record_code.ilike.%${query}%,summary.ilike.%${query}%`);
+    }
+    if (filters.status) request = request.eq("status", filters.status);
+    if (filters.recordTypeId) request = request.eq("record_type_id", filters.recordTypeId);
+    if (filters.categoryId) request = request.eq("category_id", filters.categoryId);
+    const { data, error } = await request;
+    if (error) throw error;
+    rows.push(...((data ?? []) as RecordRow[]));
+    if ((data ?? []).length < 1000) break;
   }
-  if (filters.status) request = request.eq("status", filters.status);
-  if (filters.recordTypeId) request = request.eq("record_type_id", filters.recordTypeId);
-  if (filters.categoryId) request = request.eq("category_id", filters.categoryId);
-  const { data, error } = await request;
-  if (error) throw error;
-  const rows = (data ?? []) as RecordRow[];
   if (!rows.length) return [];
-  const { data: acl, error: aclError } = await serverSupabase.from("db_record_acl").select("record_id,principal_type,principal_id,capability,effect").in("record_id", rows.map((row) => row.id));
-  if (aclError) throw aclError;
   const byRecord = new Map<string, DatabaseAclRow[]>();
-  for (const row of (acl ?? []) as Array<DatabaseAclRow & { record_id: string }>) byRecord.set(row.record_id, [...(byRecord.get(row.record_id) ?? []), row]);
-  return (await Promise.all(rows.map(async (row) => {
+  for (let offset = 0; offset < rows.length; offset += 500) {
+    const { data: acl, error: aclError } = await serverSupabase.from("db_record_acl").select("record_id,principal_type,principal_id,capability,effect,expires_at").in("record_id", rows.slice(offset, offset + 500).map((row) => row.id));
+    if (aclError) throw aclError;
+    for (const row of (acl ?? []) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>) {
+      if (row.expires_at && Date.parse(row.expires_at) <= Date.now()) continue;
+      byRecord.set(row.record_id, [...(byRecord.get(row.record_id) ?? []), row]);
+    }
+  }
+  const visible = (await Promise.all(rows.map(async (row) => {
     const aclRows = byRecord.get(row.id) ?? [];
-    const explicitDiscoverDeny = aclRows.some((aclRow) => aclRow.capability === "discover" && aclRow.effect === "deny" && (
-      aclRow.principal_type === "user" && aclRow.principal_id === actor.id
-      || aclRow.principal_type === "role" && aclRow.principal_id === context.roleId
-      || aclRow.principal_type === "department" && aclRow.principal_id === context.departmentId
-    ));
-    if (explicitDiscoverDeny) return null;
+    if (hasExplicitDeny(context, aclRows, "discover")) return null;
     const visible = canAccessDatabaseRecord(context, aclRows, "discover") || defaultDatabaseRecordAccess(context, "discover", row.owner_id, row.department_id);
     if (!visible) return null;
-    const metadataVisible = canAccessDatabaseRecord(context, aclRows, "metadata.view") || defaultDatabaseRecordAccess(context, "metadata.view", row.owner_id, row.department_id);
+    const metadataVisible = !hasExplicitDeny(context, aclRows, "metadata.view") && (canAccessDatabaseRecord(context, aclRows, "metadata.view") || defaultDatabaseRecordAccess(context, "metadata.view", row.owner_id, row.department_id));
     return metadataVisible ? row : { ...row, summary: null, metadata: {} };
   }))).filter((row): row is RecordRow => row !== null);
+  return visible.slice(0, limit);
 }
 
 export async function createDatabaseRecord(actor: DatabaseRecordActor, input: DatabaseRecordInput) {
   if (!actor.rbacPermissions.includes("record.create")) throw new Error("permission_denied");
-  const { data: form } = await serverSupabase.from("db_form_definitions").select("id").eq("record_type_id", input.recordTypeId).eq("status", "published").order("version", { ascending: false }).limit(1).maybeSingle();
+  if (!actor.department_id) throw new Error("department_required");
+  const { data: category, error: categoryError } = await serverSupabase.from("db_categories").select("id,department_id,active").eq("id", input.categoryId).eq("active", true).maybeSingle();
+  if (categoryError) throw categoryError;
+  const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("id,category_id,active").eq("id", input.recordTypeId).eq("active", true).maybeSingle();
+  if (typeError) throw typeError;
+  if (!category || !type || type.category_id !== category.id || (category.department_id && category.department_id !== actor.department_id)) throw new Error("record_scope_forbidden");
+  const { data: form, error: formError } = await serverSupabase.from("db_form_definitions").select("id").eq("record_type_id", input.recordTypeId).eq("status", "published").order("version", { ascending: false }).limit(1).maybeSingle();
+  if (formError) throw formError;
+  await validateFormMetadata(form?.id, { ...input.metadata, record_code: input.recordCode, title: input.title, summary: input.summary ?? "", status: "draft" });
   const { data, error } = await serverSupabase.from("db_records").insert({
     category_id: input.categoryId,
     record_type_id: input.recordTypeId,
     record_code: input.recordCode,
     title: input.title,
     summary: input.summary ?? null,
-    department_id: input.departmentId ?? actor.department_id,
-    owner_id: input.ownerId ?? actor.id,
+    department_id: actor.department_id,
+    owner_id: actor.id,
     created_by: actor.id,
-    status: input.status ?? "draft",
+    status: "draft",
     metadata: input.metadata,
     form_definition_id: form?.id ?? null,
   }).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").single();
   if (error) throw error;
   if (input.keywords?.length) {
     const { error: keywordError } = await serverSupabase.from("db_record_keywords").insert(input.keywords.map((keyword) => ({ record_id: data.id, keyword: keyword.trim() })));
-    if (keywordError) throw keywordError;
+    if (keywordError) { await cleanupNewRecord(data.id); throw keywordError; }
   }
   if (input.externalLinks?.length) {
     const { error: linkError } = await serverSupabase.from("db_record_external_links").insert(input.externalLinks.map((link) => ({ record_id: data.id, provider: link.provider, url: link.url, media_kind: link.mediaKind ?? null, created_by: actor.id })));
-    if (linkError) throw linkError;
+    if (linkError) { await cleanupNewRecord(data.id); throw linkError; }
   }
+  const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: data.id, actor_id: actor.id, action: "create", old_data: null, new_data: data });
+  if (historyError) { await cleanupNewRecord(data.id); throw historyError; }
   return data as RecordRow;
+}
+
+async function cleanupNewRecord(recordId: string) {
+  await serverSupabase.from("db_record_keywords").delete().eq("record_id", recordId);
+  await serverSupabase.from("db_record_external_links").delete().eq("record_id", recordId);
+  await serverSupabase.from("db_records").delete().eq("id", recordId);
 }
 
 export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId: string, input: DatabaseRecordUpdateInput) {
@@ -145,14 +183,14 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
   if (input.recordCode !== undefined) patch.record_code = input.recordCode;
   if (input.title !== undefined) patch.title = input.title;
   if (input.summary !== undefined) patch.summary = input.summary;
-  if (input.departmentId !== undefined) patch.department_id = input.departmentId;
-  if (input.ownerId !== undefined) patch.owner_id = input.ownerId;
-  if (input.status !== undefined) patch.status = input.status;
-  if (input.metadata !== undefined) patch.metadata = input.metadata;
+  if (input.metadata !== undefined) {
+    await validateFormMetadata(current.form_definition_id, { ...input.metadata, record_code: input.recordCode ?? current.record_code, title: input.title ?? current.title, summary: input.summary ?? current.summary ?? "", status: current.status });
+    patch.metadata = input.metadata;
+  }
   const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").single();
   if (error) throw error;
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "update", old_data: current, new_data: data });
-  if (historyError) throw historyError;
+  if (historyError) { await serverSupabase.from("db_records").update({ record_code: current.record_code, title: current.title, summary: current.summary, metadata: current.metadata }).eq("id", recordId); throw historyError; }
   return data as RecordRow;
 }
 
@@ -164,7 +202,10 @@ export async function setDatabaseRecordStatus(actor: DatabaseRecordActor, record
   const { data, error } = await serverSupabase.from("db_records").update({ status, deleted_at: status === "deleted" ? new Date().toISOString() : null }).eq("id", recordId).select("id,status,deleted_at,updated_at").single();
   if (error) throw error;
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: status === "deleted" ? "soft_delete" : "restore", old_data: current, new_data: data });
-  if (historyError) throw historyError;
+  if (historyError) {
+    await serverSupabase.from("db_records").update({ status: current.status, deleted_at: current.deleted_at ?? null }).eq("id", recordId);
+    throw historyError;
+  }
   return data;
 }
 
@@ -172,10 +213,16 @@ export async function upsertDatabaseRecordAcl(actor: DatabaseRecordActor, record
   const current = await getRecord(recordId);
   if (!current) throw new Error("record_not_found");
   if (!(await canRecord(actor, current, recordId, "acl.manage"))) throw new Error("permission_denied");
-  const { data, error } = await serverSupabase.from("db_record_acl").upsert({ record_id: recordId, principal_type: input.principalType, principal_id: input.principalId, capability: input.capability, effect: input.effect, granted_by: actor.id }).select("id,record_id,principal_type,principal_id,capability,effect,expires_at,created_at").single();
+  const { data: previous, error: previousError } = await serverSupabase.from("db_record_acl").select("id,record_id,principal_type,principal_id,capability,effect,granted_by,expires_at,created_at").eq("record_id", recordId).eq("principal_type", input.principalType).eq("principal_id", input.principalId).eq("capability", input.capability).maybeSingle();
+  if (previousError) throw previousError;
+  const { data, error } = await serverSupabase.from("db_record_acl").upsert({ record_id: recordId, principal_type: input.principalType, principal_id: input.principalId, capability: input.capability, effect: input.effect, granted_by: actor.id, expires_at: input.expiresAt ?? null }).select("id,record_id,principal_type,principal_id,capability,effect,expires_at,created_at").single();
   if (error) throw error;
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "acl_update", old_data: null, new_data: data });
-  if (historyError) throw historyError;
+  if (historyError) {
+    if (previous) await serverSupabase.from("db_record_acl").update({ effect: previous.effect, granted_by: previous.granted_by, expires_at: previous.expires_at }).eq("id", previous.id);
+    else await serverSupabase.from("db_record_acl").delete().eq("id", data.id);
+    throw historyError;
+  }
   return data;
 }
 

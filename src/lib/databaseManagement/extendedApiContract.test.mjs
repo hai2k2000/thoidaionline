@@ -26,4 +26,7 @@ test("private file routes use server storage and verify integrity", () => {
   assert.match(download, /readDatabaseRecordFile/);
   assert.match(download, /file_integrity_failed/);
   assert.match(repository, /canRecord\(actor, current, recordId, "download"\)/);
+  assert.match(repository, /historyError/);
+  assert.match(repository, /previous/);
+  assert.match(repository, /expires_at: input.expiresAt/);
 });

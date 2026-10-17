@@ -49,6 +49,17 @@ update public.staff_users u
 set active=true
 from (values ('admin'),('thuphuong'),('thithuy'),('ngocanh'),('minhduc'),('ducanh'),('bachduong'),('quangthien'),('hongninh'),('leson'),('triduong'),('thihung'),('dinhhai'),('thily'),('maianh'),('thidoan')) f(username)
 where lower(u.username)=f.username;
+-- The historical September roster is a fixture contract: publishers must have
+-- an editorial-lead title and reporters must belong to the editorial department.
+update public.staff_users u
+set job_title_id = jt.id
+from public.job_titles jt
+where lower(u.username) = 'dinhhai' and jt.code = 'pho_tong_bien_tap';
+update public.staff_users u
+set department_id = d.id
+from public.departments d
+where lower(u.username) in ('hongninh','thily','maianh','thidoan')
+  and d.code = 'editorial';
 do $block$
 declare
   v_actor uuid;

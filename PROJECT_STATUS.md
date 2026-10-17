@@ -1011,3 +1011,15 @@ Production safety:
 Next:
 - `scripts/local-database-bootstrap.mjs` provides a disposable local-only compatibility copy and preserves the production migration set. Migration chain is still FAIL at the legacy September roster fixture (`ineligible duty assignee`) after the actor compatibility fix; do not claim full-chain or runtime E2E PASS. Do not deploy or apply production migration.
 - Branch pushed: `codex/database-management-v1-foundation` (`3bf06b3`, includes `9a304c0`, `ab62181`, `c7856e8`).
+
+## Database Management V1 — local integration recovery checkpoint (2026-10-17)
+
+- `HISTORICAL_FULL_CHAIN: FAIL`. The original `actor_id = NULL` failure is reproduced and handled only in the disposable bootstrap. A bounded compatibility fixture also resolves the September duty roster mismatch, but the historical chain then reaches additional legacy online-work/leave fixture dependencies; no historical migration was changed.
+- `CSDL_ISOLATED_SCHEMA: PASS`. A disposable copy of official migrations through the verified backend/RBAC baseline plus the two Database V1 migrations validates 12 V1 tables, RLS on `db_records`, service-role grants, 44 active record types and 44 published forms.
+- `CSDL_RUNTIME_E2E: BLOCKED`. Unauthenticated HTTP contract checks return 401 as expected. Authenticated runtime could not be completed because the legacy fixture chain stops at `20260911110000_enable_deputy_department_assignment.sql` when `leave_requests` is absent; continuing to patch historical fixture dependencies is out of scope.
+- Security hardening: server forces actor department/ownership and draft status on create; validates dynamic metadata types/options/rules; ignores expired ACLs; preserves explicit deny precedence; filters ACL before final list limit; compensates best-effort on history failure; supports ACL expiry timestamps.
+- Form progress: `44/44` catalog definitions and `44/44` published baseline forms verified. Specialized business metadata remains unverified because the catalog currently supplies a shared skeleton only.
+- Local pages: source routes exist for list, search, create and detail; browser acceptance was not claimed without an authenticated runtime.
+- Local runtime URL used: `http://localhost:3107` (stopped after unauthenticated checks). Production/VPS/database: `UNCHANGED`.
+- Supabase warning retained for owner review: legacy `public.task_completion_scores` has RLS disabled in the isolated baseline. No remediation was applied because enabling RLS without approved policies could block existing access.
+- Focused tests after hardening: `14/14` Database Management tests PASS; TypeScript PASS; required routes PASS; diff check PASS. Isolated runner contract test PASS. No deployment or production migration performed.

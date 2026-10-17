@@ -24,8 +24,9 @@ export type DatabaseRecordAclInput = {
   principalId: string;
   capability: DatabaseAclCapability;
   effect: DatabaseAclEffect;
+  expiresAt?: string | null;
 };
 
 export type DatabaseRecordUpdateInput = Partial<Pick<DatabaseRecordInput,
-  "recordCode" | "title" | "summary" | "departmentId" | "ownerId" | "status" | "metadata" | "keywords" | "externalLinks"
+  "recordCode" | "title" | "summary" | "metadata" | "keywords" | "externalLinks"
 >>;

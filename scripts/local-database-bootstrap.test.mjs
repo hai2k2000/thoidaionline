@@ -11,6 +11,8 @@ describe("local database bootstrap", () => {
     assert.match(source, /cpSync\(sourceSupabase/);
     assert.match(source, /20260826195000_local_bootstrap_task_actor_compatibility\.sql/);
     assert.match(source, /created_by is null/);
+    assert.match(source, /dinhhai.*pho_tong_bien_tap/);
+    assert.match(source, /hongninh.*thily.*maianh.*thidoan/);
   });
 
   it("does not alter the historical migration or disable integrity controls", () => {

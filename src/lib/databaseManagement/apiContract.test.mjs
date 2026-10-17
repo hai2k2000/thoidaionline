@@ -19,4 +19,6 @@ test("record list applies ACL before returning rows and create requires record.c
   assert.match(repository, /defaultDatabaseRecordAccess/);
   assert.match(repository, /record\.create/);
   assert.match(route, /logServerAudit/);
+  assert.match(repository, /record_scope_forbidden/);
+  assert.match(repository, /cleanupNewRecord/);
 });
