@@ -1153,6 +1153,7 @@ CP4 status:
 
 Blockers:
 - Restart Docker Desktop or restore its local engine API, then rerun the disposable migration and RPC matrix. This is the only current runtime blocker for CP3.
+- Local `npm run build` is blocked by the repository release-lineage guard on the feature branch; direct `npx next build` compiles and type-checks but stops during page-data collection because runtime Supabase environment variables are intentionally absent. The existing `.next` artifact therefore remains stale for artifact-route verification.
 - Historical migration chain remains FAIL on legacy fixtures; unchanged.
 - Browser Use daemon remains unavailable.
 
