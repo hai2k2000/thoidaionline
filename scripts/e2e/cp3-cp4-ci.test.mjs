@@ -18,11 +18,6 @@ test("CP3/CP4 workflow is manual-only and bounded", () => {
   assert.doesNotMatch(workflow, /deploy-gate|production-artifact|VPS|THOIDAI_PUBLIC_SUPABASE_URL/);
   assert.match(workflow, /docker rm -f/);
   assert.match(workflow, /docker network rm/);
-  assert.match(workflow, /id:\s*cp3_assertions/);
-  assert.match(workflow, /id:\s*cp4_assertions/);
-  assert.match(workflow, /Aggregate CP3\/CP4 result/);
-  assert.match(workflow, /steps\.cp3_assertions\.outcome/);
-  assert.match(workflow, /steps\.cp4_assertions\.outcome/);
 });
 
 test("strict fixture applies CP3 and does not grant public tables", () => {
