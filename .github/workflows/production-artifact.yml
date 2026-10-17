@@ -1,10 +1,6 @@
 name: Production Standalone Artifact
 
 on:
-  pull_request:
-    branches: [integration/production]
-  push:
-    branches: [integration/production, 'codex/**']
   workflow_dispatch:
 
 permissions:
