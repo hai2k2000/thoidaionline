@@ -49,14 +49,6 @@ update public.staff_users u
 set active=true
 from (values ('admin'),('thuphuong'),('thithuy'),('ngocanh'),('minhduc'),('ducanh'),('bachduong'),('quangthien'),('hongninh'),('leson'),('triduong'),('thihung'),('dinhhai'),('thily'),('maianh'),('thidoan')) f(username)
 where lower(u.username)=f.username;
-update public.staff_users
-set role_id = (select id from public.roles where code='tong_bien_tap'),
-    job_title_id = (select id from public.job_titles where code='tong_bien_tap'),
-    department_id = (select id from public.departments where code='editorial')
-where username='dinhhai';
-update public.staff_users
-set department_id = (select id from public.departments where code='editorial')
-where username in ('hongninh','leson','triduong','thihung','thily','maianh','thidoan');
 do $block$
 declare
   v_actor uuid;
