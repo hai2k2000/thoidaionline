@@ -119,6 +119,9 @@ export default function AssetsPage() {
   const summary = useMemo(() => summarizeAssetList(rows), [rows]);
   const departmentById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments]);
   const userById = useMemo(() => new Map(users.map((person) => [person.id, person.full_name])), [users]);
+  const locationById = useMemo(() => new Map(locations.map((location) => [location.id, location.name])), [locations]);
+
+  const locationLabel = (row: AssetRow) => row.location_id ? locationById.get(row.location_id) ?? "Vị trí đã lưu" : "Chưa cập nhật";
 
   const custody = (row: AssetRow) => {
     const assignment = row.currentAssignment;
@@ -186,38 +189,41 @@ export default function AssetsPage() {
 
             <div className="hidden md:block">
               <div className="table-scroll max-h-[72vh] rounded-xl border border-slate-200" tabIndex={0} aria-label="Danh sách tài sản; có thể cuộn ngang trên màn hình hẹp">
-                <table className="data-table table-fixed min-w-[900px] text-left text-sm">
+                <table className="data-table table-fixed min-w-[1080px] text-left text-sm">
                   <colgroup>
-                    <col className="w-[30%]" />
-                    <col className="w-[68px]" />
-                    <col className="w-[140px]" />
+                    <col className="w-[25%]" />
+                    <col className="w-[72px]" />
+                    <col className="w-[142px]" />
                     <col className="w-[124px]" />
-                    <col className="w-[20%]" />
-                    <col className="min-w-[170px]" />
+                    <col className="w-[17%]" />
+                    <col className="w-[17%]" />
+                    <col className="w-[16%]" />
                   </colgroup>
-                  <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
+                  <thead className="sticky top-0 z-10 bg-slate-50/95 text-slate-500 backdrop-blur">
                     <tr>
-                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide">Tài sản</th>
-                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide">Số lượng</th>
-                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Trạng thái sử dụng</th>
-                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Tình trạng</th>
-                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Người sử dụng</th>
-                      <th scope="col" className="whitespace-nowrap border-b border-slate-200 px-3 py-3 text-xs font-semibold uppercase tracking-wide">Ghi chú</th>
+                      <th scope="col" className="border-b border-slate-200 px-4 py-3 text-xs font-bold uppercase tracking-[0.08em]">Tài sản</th>
+                      <th scope="col" className="border-b border-slate-200 px-2 py-3 text-center text-xs font-bold uppercase tracking-[0.08em]">SL</th>
+                      <th scope="col" className="border-b border-slate-200 px-3 py-3 text-xs font-bold uppercase tracking-[0.08em]">Sử dụng</th>
+                      <th scope="col" className="border-b border-slate-200 px-3 py-3 text-xs font-bold uppercase tracking-[0.08em]">Tình trạng</th>
+                      <th scope="col" className="border-b border-slate-200 px-3 py-3 text-xs font-bold uppercase tracking-[0.08em]">Vị trí</th>
+                      <th scope="col" className="border-b border-slate-200 px-3 py-3 text-xs font-bold uppercase tracking-[0.08em]">Người sử dụng</th>
+                      <th scope="col" className="border-b border-slate-200 px-3 py-3 text-xs font-bold uppercase tracking-[0.08em]">Ghi chú</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredRows.map((row) => {
                       const owner = custody(row);
-                      return <tr key={row.id ?? row.asset_code} className="h-[72px] cursor-pointer transition-colors hover:bg-slate-50/90" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) return; router.push(`/assets/${row.id}`); }}>
-                        <td className="px-4 py-3"><Link href={`/assets/${row.id}`} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"><p className="line-clamp-2 break-words font-semibold leading-5 text-slate-950" title={row.asset_name}>{row.asset_name}</p>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</Link></td>
-                        <td className="px-2 py-3 text-center text-base font-bold tabular-nums text-slate-900">{row.quantity ?? 1}</td>
-                        <td className="px-3 py-3"><StatusBadge row={row} /></td>
-                        <td className="px-3 py-3"><ConditionBadge row={row} /></td>
-                        <td className="px-3 py-3"><p className={`break-words font-medium leading-5 ${owner.unassigned ? "text-amber-900" : "text-slate-900"}`}>{owner.person}</p></td>
-                        <td className="px-3 py-3"><p className="line-clamp-2 break-words leading-5 text-slate-600" title={row.note ?? undefined}>{row.note || "—"}</p></td>
+                      return <tr key={row.id ?? row.asset_code} className="group cursor-pointer transition-colors hover:bg-orange-50/45" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) return; router.push(`/assets/${row.id}`); }}>
+                        <td className="px-4 py-4 align-top"><Link href={`/assets/${row.id}`} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"><p className="line-clamp-2 break-words font-bold leading-5 text-slate-950 group-hover:text-orange-800" title={row.asset_name}>{row.asset_name}</p>{row.asset_code ? <p className="mt-1 text-xs font-medium tracking-wide text-slate-500">{row.asset_code}</p> : null}</Link></td>
+                        <td className="px-2 py-4 text-center align-top text-base font-bold tabular-nums text-slate-900">{row.quantity ?? 1}</td>
+                        <td className="px-3 py-4 align-top"><StatusBadge row={row} /></td>
+                        <td className="px-3 py-4 align-top"><ConditionBadge row={row} /></td>
+                        <td className="px-3 py-4 align-top"><span className={`inline-flex max-w-full items-center rounded-lg border px-2.5 py-1.5 text-xs font-semibold leading-4 ${row.location_id ? "border-sky-200 bg-sky-50 text-sky-800" : "border-dashed border-slate-300 bg-slate-50 text-slate-500"}`}>{locationLabel(row)}</span></td>
+                        <td className="px-3 py-4 align-top"><p className={`break-words font-medium leading-5 ${owner.unassigned ? "text-amber-900" : "text-slate-900"}`}>{owner.person}</p>{owner.department !== "Không áp dụng" ? <p className="mt-1 text-xs text-slate-500">{owner.department}</p> : null}</td>
+                        <td className="px-3 py-4 align-top"><p className="line-clamp-2 break-words leading-5 text-slate-600" title={row.note ?? undefined}>{row.note || "—"}</p></td>
                       </tr>;
                     })}
-                    {loaded && !message && filteredRows.length === 0 ? <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</td></tr> : null}
+                    {loaded && !message && filteredRows.length === 0 ? <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</td></tr> : null}
                   </tbody>
                 </table>
               </div>
@@ -229,7 +235,7 @@ export default function AssetsPage() {
                 return <Link key={row.id ?? row.asset_code} href={`/assets/${row.id}`} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-orange-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-300">
                   <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-semibold leading-5 text-slate-950">{row.asset_name}</h2>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</div><div className="flex flex-wrap justify-end gap-1"><StatusBadge row={row} /><ConditionBadge row={row} /></div></div>
                   <div className="mt-3 flex flex-wrap gap-2"><MetadataBadge>{row.category || "Chưa rõ"}</MetadataBadge><MetadataBadge tone={row.tracking_mode === "lot" ? "sky" : "slate"}>{row.tracking_mode === "lot" ? "Theo lô" : "Cá thể"}</MetadataBadge><MetadataBadge>SL: {row.quantity ?? 1}</MetadataBadge></div>
-                  <dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người sử dụng</dt><dd className={`mt-1 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-600"}`}>{owner.person}</dd></div>{row.note ? <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú</dt><dd className="mt-1 line-clamp-2 leading-5 text-slate-600" title={row.note}>{row.note}</dd></div> : null}</dl>
+                  <dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vị trí</dt><dd className={`mt-1 font-medium ${row.location_id ? "text-slate-800" : "text-slate-500"}`}>{locationLabel(row)}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người sử dụng</dt><dd className={`mt-1 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-600"}`}>{owner.person}</dd></div>{row.note ? <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú</dt><dd className="mt-1 line-clamp-2 leading-5 text-slate-600" title={row.note}>{row.note}</dd></div> : null}</dl>
                 </Link>;
               })}
               {loaded && !message && filteredRows.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</p> : null}
