@@ -1,0 +1,138 @@
+name: CP3/CP4 Isolated Runtime Validation
+
+# Manual-only preparation. This file must not be enabled by push or pull request.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Feature source SHA to validate"
+        required: true
+        default: "a061544bff8122e96fad3b8f09d9dd81069b33b8"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  cp3-cp4:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      E2E_STRICT_GRANTS: "1"
+      THOIDAI_BUILD_CONFIG: sandbox-e2e
+      THOIDAI_RUNTIME_ENV_MODEL: runtime-injected
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-placeholder
+    steps:
+      - name: Checkout approved source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+
+      - name: Enforce approved validation ref and source SHA
+        shell: bash
+        env:
+          EXPECTED_BRANCH: main
+          EXPECTED_SHA: a061544bff8122e96fad3b8f09d9dd81069b33b8
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "${EXPECTED_BRANCH}"
+          test "${SOURCE_SHA}" = "${EXPECTED_SHA}"
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate CP3/CP4 harness contracts
+        run: node --test scripts/e2e/cp3-cp4-ci.test.mjs
+
+      - name: Start strict disposable PostgreSQL/PostgREST
+        shell: bash
+        run: |
+          bash scripts/e2e/start-sandbox.sh
+          set -a
+          source "$RUNNER_TEMP/thoidai-e2e.env"
+          set +a
+          echo "E2E_POSTGREST_URL=$E2E_POSTGREST_URL" >> "$GITHUB_ENV"
+          echo "E2E_DB_URL=$E2E_DB_URL" >> "$GITHUB_ENV"
+          echo "E2E_SERVICE_ROLE_KEY=$E2E_SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          echo "E2E_SESSION_SECRET=$E2E_SESSION_SECRET" >> "$GITHUB_ENV"
+          echo "E2E_ADMIN_USERNAME=$E2E_ADMIN_USERNAME" >> "$GITHUB_ENV"
+          echo "E2E_PASSWORD=$E2E_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Apply CP3 runtime assertions
+        run: PGPASSWORD=e2e-postgres-only psql "$E2E_DB_URL" -f scripts/e2e/cp3-runtime.sql
+
+      - name: Build local application against sandbox gateway
+        shell: bash
+        run: |
+          gateway_port=$((21000 + (GITHUB_RUN_ID % 500)))
+          E2E_GATEWAY_PORT="$gateway_port" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/cp3-gateway.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/cp3-gateway.pid"
+          for _ in $(seq 1 30); do curl -fsS "http://127.0.0.1:${gateway_port}/health" >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS "http://127.0.0.1:${gateway_port}/health" >/dev/null
+          export NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
+          export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
+          export SESSION_SECRET="$E2E_SESSION_SECRET"
+          # This is a disposable runtime build, not a release artifact. The
+          # release-lineage guard remains mandatory for production packaging.
+          npx next build
+          cp -a .next/static .next/standalone/.next/static
+          test ! -e .env.production
+
+      - name: Run CP4 HTTP runtime assertions
+        shell: bash
+        run: |
+          gateway_port=$((21000 + (GITHUB_RUN_ID % 500)))
+          export NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:${gateway_port}"
+          export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
+          export SESSION_SECRET="$E2E_SESSION_SECRET"
+          export DATABASE_RECORD_STORAGE_ROOT="$RUNNER_TEMP/database-records"
+          PORT=3105 nohup node .next/standalone/server.js > "$RUNNER_TEMP/cp3-app.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/cp3-app.pid"
+          for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3105/login >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS http://127.0.0.1:3105/login >/dev/null
+          E2E_BASE_URL=http://127.0.0.1:3105 node scripts/e2e/cp4-runtime.mjs
+
+      - name: Redact bounded diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          for file in "$RUNNER_TEMP/cp3-app.log" "$RUNNER_TEMP/cp3-gateway.log"; do
+            if [ -f "$file" ]; then
+              sed -E 's/(cookie|authorization|bearer|token|secret|password)[=:][^[:space:]]+/\1=[REDACTED]/Ig; s/[A-Za-z0-9_-]{48,}/[REDACTED]/g' "$file" > "$file.redacted"
+              mv "$file.redacted" "$file"
+            fi
+          done
+
+      - name: Upload bounded diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cp3-cp4-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/cp3-app.log
+            ${{ runner.temp }}/cp3-gateway.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Cleanup disposable runtime
+        if: always()
+        shell: bash
+        run: |
+          kill "$(cat "$RUNNER_TEMP/cp3-app.pid" 2>/dev/null)" 2>/dev/null || true
+          kill "$(cat "$RUNNER_TEMP/cp3-gateway.pid" 2>/dev/null)" 2>/dev/null || true
+          if [ -f "$RUNNER_TEMP/thoidai-e2e.env" ]; then
+            network=$(sed -n 's/^E2E_NETWORK=//p' "$RUNNER_TEMP/thoidai-e2e.env")
+            postgres=$(sed -n 's/^E2E_POSTGRES_CONTAINER=//p' "$RUNNER_TEMP/thoidai-e2e.env")
+            postgrest=$(sed -n 's/^E2E_POSTGREST_CONTAINER=//p' "$RUNNER_TEMP/thoidai-e2e.env")
+            docker rm -f "$postgrest" "$postgres" >/dev/null 2>&1 || true
+            docker network rm "$network" >/dev/null 2>&1 || true
+          fi
