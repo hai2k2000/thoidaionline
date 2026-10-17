@@ -55,6 +55,9 @@ test("CP3 runtime checks cover authorization, search operators and side-channel 
   assert.match(sql, /denied metadata side-channel/);
   assert.match(sql, /allowed metadata search/);
   assert.match(sql, /denied summary side-channel/);
+  assert.match(sql, /is distinct from array/);
+  for (const token of ["restricted-ho-so-dang", "restricted-chi-hoi-nha-bao", "restricted-doan-thanh-nien", "restricted-giay-phep-quan-ly-bao-chi"]) assert.match(sql, new RegExp(token));
+  assert.match(sql, /invalid actor was accepted/);
   assert.match(sql, /pagination failed/);
   assert.match(sql, /service-role execute grant missing/);
   assert.match(sql, /public table grant unexpectedly present/);

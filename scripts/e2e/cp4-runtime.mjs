@@ -25,12 +25,17 @@ await expectStatus(login, 200, "login");
 const cookie = cookieFrom(login);
 if (!cookie) throw new Error("login did not return a session cookie");
 
+await expectStatus(await request("/api/database/catalog"), 401, "unauthenticated catalog");
+await expectStatus(await request("/api/database/records"), 401, "unauthenticated records");
+
 const catalogResponse = await request("/api/database/catalog", {}, cookie);
 await expectStatus(catalogResponse, 200, "catalog");
 const catalog = await json(catalogResponse);
 const category = catalog.categories?.find((item) => item.code === "tong_hop") ?? catalog.categories?.[0];
 const type = catalog.recordTypes?.find((item) => item.code === "bao_cao") ?? catalog.recordTypes?.[0];
 if (!category?.id || !type?.id) throw new Error("catalog did not provide a synthetic record type");
+
+await expectStatus(await request("/api/database/records", { method: "POST", body: JSON.stringify({ categoryId: category.id, recordTypeId: type.id }) }, cookie), 400, "invalid create validation");
 
 const create = await request("/api/database/records", { method: "POST", body: JSON.stringify({
   categoryId: category.id, recordTypeId: type.id, recordCode: `CP4-${Date.now()}`, title: "CP4 runtime record", summary: "runtime", metadata: {}, keywords: ["cp4"], externalLinks: [{ provider: "google_drive", url: "https://example.invalid/cp4" }],

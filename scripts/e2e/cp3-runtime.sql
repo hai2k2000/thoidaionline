@@ -33,6 +33,22 @@ cross join (values
 ) as v(id, record_code, title, summary, other_department, sensitive, owner_id, metadata)
 on conflict (id) do update set title = excluded.title, summary = excluded.summary, metadata = excluded.metadata, status = excluded.status;
 
+insert into public.db_records (id, category_id, record_type_id, form_definition_id, record_code, title, summary, status, department_id, owner_id, created_by, metadata)
+select v.id, c.id, t.id, f.id, v.record_code, v.title, 'sensitive summary', 'approved',
+  '10000000-0000-4000-8000-000000000001'::uuid,
+  '30000000-0000-4000-8000-000000000001'::uuid,
+  '30000000-0000-4000-8000-000000000001'::uuid,
+  '{}'::jsonb
+from (values
+  ('chi_hoi_nha_bao', '60000000-0000-4000-8000-000000000007'::uuid, 'CP3-SENSITIVE-CHI-HOI', 'restricted-chi-hoi-nha-bao'),
+  ('doan_thanh_nien', '60000000-0000-4000-8000-000000000008'::uuid, 'CP3-SENSITIVE-DOAN', 'restricted-doan-thanh-nien'),
+  ('giay_phep_quan_ly_bao_chi', '60000000-0000-4000-8000-000000000009'::uuid, 'CP3-SENSITIVE-GIAY-PHEP', 'restricted-giay-phep-quan-ly-bao-chi')
+) as v(type_code, id, record_code, title)
+join public.db_categories as c on c.code = 'doan_the_quan_ly'
+join public.db_record_types as t on t.code = v.type_code and t.active = true
+join public.db_form_definitions as f on f.record_type_id = t.id and f.version = 1 and f.status = 'published'
+on conflict (id) do update set title = excluded.title, summary = excluded.summary, status = excluded.status;
+
 insert into public.db_record_acl (record_id, principal_type, principal_id, capability, effect, granted_by, expires_at)
 values
   ('60000000-0000-4000-8000-000000000002', 'user', '30000000-0000-4000-8000-000000000002', 'discover', 'deny', '30000000-0000-4000-8000-000000000001', null),
@@ -49,6 +65,7 @@ declare
   v_total_count bigint;
   visible_ids uuid[];
   search_ids uuid[];
+  token text;
 begin
   select count(*), max(sr.total_count), array_agg(sr.id order by sr.id)
     into row_count, v_total_count, visible_ids
@@ -59,11 +76,11 @@ begin
 
   select array_agg(sr.id order by sr.id) into search_ids
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha -hidden', null, null, null, 10, 0) as sr;
-  if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 NOT search failed'; end if;
+  if search_ids is distinct from array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 NOT search failed'; end if;
 
   select array_agg(sr.id order by sr.id) into search_ids
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha OR gamma', null, null, null, 10, 0) as sr;
-  if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 OR/expired search failed'; end if;
+  if search_ids is distinct from array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 OR/expired search failed'; end if;
 
   select count(*), coalesce(max(sr.total_count), 0) into row_count, v_total_count
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'deny_only_token', null, null, null, 10, 0) as sr;
@@ -71,7 +88,7 @@ begin
 
   select array_agg(sr.id order by sr.id), coalesce(max(sr.total_count), 0) into search_ids, v_total_count
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'allow_only_token', null, null, null, 10, 0) as sr;
-  if search_ids <> array['60000000-0000-4000-8000-000000000006'::uuid] or v_total_count <> 1 then raise exception 'CP3 allowed metadata search failed'; end if;
+  if search_ids is distinct from array['60000000-0000-4000-8000-000000000006'::uuid] or v_total_count <> 1 then raise exception 'CP3 allowed metadata search failed'; end if;
 
   select count(*), coalesce(max(sr.total_count), 0) into row_count, v_total_count
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'summaryhidden', null, null, null, 1, 0) as sr;
@@ -82,6 +99,19 @@ begin
   if row_count <> 1 then raise exception 'CP3 pagination failed'; end if;
 
   if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'restricted', null, null, null, 10, 0) as sr) then raise exception 'CP3 sensitive record leaked'; end if;
+
+  for token in select unnest(array['restricted-ho-so-dang', 'restricted-chi-hoi-nha-bao', 'restricted-doan-thanh-nien', 'restricted-giay-phep-quan-ly-bao-chi']) loop
+    if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', token, null, null, null, 10, 0) as sr) then
+      raise exception 'CP3 sensitive record leaked for token %', token;
+    end if;
+  end loop;
+
+  begin
+    perform public.api_search_database_records('00000000-0000-4000-8000-000000000099', null, null, null, null, 10, 0);
+    raise exception 'CP3 invalid actor was accepted';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $$;
 
 do $$

@@ -16,7 +16,7 @@ test("foundation migration is additive, indexed, server-only and ACL-capable", (
 });
 
 test("catalog migration does not invent a thirteenth top-level group", () => {
-  assert.equal((catalog.match(/values\n\s*\('tong_hop'/)?.length ?? 0), 1);
+  assert.equal((catalog.match(/values\r?\n\s*\('tong_hop'/)?.length ?? 0), 1);
   assert.match(catalog, /'doan_the_quan_ly'/);
   assert.match(catalog, /db_form_definitions/);
   assert.match(catalog, /db_form_fields/);
