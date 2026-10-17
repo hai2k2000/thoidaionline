@@ -10,7 +10,6 @@ test("risk classifier is fail-closed without sealed test evidence", () => {
   assert.match(output, /risk_class=high/);
   assert.match(output, /risk_test_evidence=missing-or-invalid/);
 });
-
 test("risk classifier accepts only commit-bound PASS evidence", () => {
   const dir = mkdtempSync(join(tmpdir(), "thoidai-risk-"));
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -22,3 +21,4 @@ test("risk classifier accepts only commit-bound PASS evidence", () => {
   });
   assert.match(output, /risk_test_evidence=automated-tests-pass/);
 });
+
