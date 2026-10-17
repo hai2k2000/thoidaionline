@@ -28,6 +28,8 @@ test("external deploy is verify-only by default and delegates activation to the 
   assert.match(packager, /env_model=\$\{runtimeEnvModel\}/);
   assert.match(packager, /build_config=\$\{buildConfig\}/);
   assert.match(deploy, /production activation rejects non-canonical public build config/);
+  assert.match(deploy, /risk_class/);
+  assert.match(deploy, /risk_test_evidence/);
 });
 
 test("CI placeholder artifacts are verification-only and cannot activate", () => {
@@ -53,4 +55,9 @@ test("controlled deployment exception remains opt-in and delegated to the gate",
   assert.match(deploy, /deploy-gate\.sh/);
   assert.match(deploy, /THOIDAI_RBAC_READINESS_EVIDENCE/);
   assert.doesNotMatch(workflow, /THOIDAI_AUTHENTICATED_SMOKE_WAIVER/);
+});
+
+test("risk policy remains fail-closed", () => {
+  assert.match(deploy, /risk classification is missing or invalid/);
+  assert.match(deploy, /low-risk artifact lacks automated test evidence/);
 });

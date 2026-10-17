@@ -50,7 +50,7 @@ assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261015120000_quick_rep
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261016100000_asset_locations\.sql(?:,|$)/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261016120000_quick_report_rpc_payload_compatibility_fix\.sql(?:,|$)/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261016130000_quick_report_completion_date_compatibility\.sql(?:,|$)/m);
-for (const field of ["build_id=", "commit=", "branch=", "created_at=", "source_worktree=", "local_head=", "remote_head=", "artifact_source_commit=", "metadata_commit=", "current_production_parent=", "integration_branch=", "integration_baseline=", "contract_suite="]) assert.match(releaseMeta, new RegExp(`^${field}[^\\n]+`, "m"));
+for (const field of ["build_id=", "commit=", "branch=", "created_at=", "source_worktree=", "local_head=", "remote_head=", "artifact_source_commit=", "metadata_commit=", "current_production_parent=", "integration_branch=", "integration_baseline=", "contract_suite=", "risk_class=", "risk_test_evidence=", "risk_reason="]) assert.match(releaseMeta, new RegExp(`^${field}[^\\n]+`, "m"));
 const routes = JSON.parse(readFileSync(join(root, "required-route-manifest.json"), "utf8"));
 const appPaths = JSON.parse(readFileSync(join(root, ".next/server/app-paths-manifest.json"), "utf8"));
 for (const { routePath, sourcePath } of routes) assert.ok(Object.hasOwn(appPaths, `${routePath}/${sourcePath?.endsWith("/route.ts") ? "route" : "page"}`), `missing artifact route: ${routePath}`);
@@ -85,6 +85,9 @@ const metadata = Object.fromEntries(releaseMeta.split(/\r?\n/).filter(Boolean).m
   const index = line.indexOf("=");
   return [line.slice(0, index), line.slice(index + 1)];
 }));
+assert.ok(["low", "high"].includes(metadata.risk_class), "invalid artifact risk class");
+assert.ok(["automated-tests-pass", "missing-or-invalid"].includes(metadata.risk_test_evidence), "invalid artifact risk evidence");
+if (metadata.risk_class === "low") assert.equal(metadata.risk_test_evidence, "automated-tests-pass", "low-risk artifact lacks automated test evidence");
 for (const field of ["commit", "local_head", "remote_head", "artifact_source_commit", "metadata_commit", "integration_baseline"]) {
   assert.match(metadata[field] || "", /^[0-9a-f]{40}$/i, `invalid provenance SHA: ${field}`);
 }

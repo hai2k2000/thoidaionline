@@ -107,6 +107,17 @@ const migrationReference = [
   "supabase/migrations/20261016130000_quick_report_completion_date_compatibility.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");
+const riskOutput = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", root], {
+  cwd: root,
+  encoding: "utf8",
+  env: { ...process.env, THOIDAI_RISK_BASE: process.env.THOIDAI_RISK_BASE || currentProductionParent },
+});
+const risk = Object.fromEntries(riskOutput.trim().split(/\r?\n/).map((line) => {
+  const index = line.indexOf("=");
+  return [line.slice(0, index), line.slice(index + 1)];
+}));
+if (!["low", "high"].includes(risk.risk_class)) throw new Error("risk classifier did not return a valid risk class");
+if (!["automated-tests-pass", "missing-or-invalid"].includes(risk.risk_test_evidence)) throw new Error("risk classifier did not return valid test evidence");
 await writeFile(join(output, "package.json"), `${JSON.stringify({ name: "thoidai-work-runtime", version: "0.1.0", private: true, scripts: { start: "node start-standalone.mjs" } }, null, 2)}\n`);
 const artifactBytes = execFileSync("du", ["-sb", output], { encoding: "utf8" }).trim().split(/\s+/, 1)[0];
 await writeFile(join(output, ".release-meta"), [
@@ -133,6 +144,9 @@ await writeFile(join(output, ".release-meta"), [
   `build_config=${buildConfig}`,
   "build_verification=production-like-env-build-pass",
   `contract_suite=${process.env.THOIDAI_CONTRACT_SUITE_RESULT || "pending"}`,
+  `risk_class=${risk.risk_class}`,
+  `risk_test_evidence=${risk.risk_test_evidence}`,
+  `risk_reason=${risk.risk_reason || "unknown"}`,
   "protection=managed",
   "rollback_eligible=yes",
   "health_status=pending",

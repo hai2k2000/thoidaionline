@@ -31,6 +31,7 @@ jobs:
       THOIDAI_REMOTE_HEAD: pending
       THOIDAI_INTEGRATION_COMMIT: ${{ github.sha }}
       THOIDAI_CONTRACT_SUITE_RESULT: ci-not-run-without-production-session
+      THOIDAI_RISK_TEST_EVIDENCE: ${{ github.workspace }}/risk-tests.evidence
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,6 +76,10 @@ jobs:
           scripts/standalone-packaging.test.mjs
           scripts/external-artifact-contract.test.mjs
           scripts/artifact-roundtrip.test.mjs
+          scripts/classify-release-risk.test.mjs
+      - name: Seal automated test evidence for risk classification
+        run: |
+          printf 'commit=%s\nstatus=PASS\n' "$GITHUB_SHA" > risk-tests.evidence
       - name: Retention regression
         run: bash scripts/production/release-retention-managed.test.sh
       - name: Deployment rollback fixture regression

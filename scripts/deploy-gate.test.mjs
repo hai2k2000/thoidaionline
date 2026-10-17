@@ -12,12 +12,20 @@ test("deploy gate exposes browser-path and proxy-buffer gates", () => {
   assert.ok(source.includes("nginx-supa-buffer-guard.sh"), "Supabase proxy buffer guard missing");
 });
 
-test("production activation requires authenticated smoke and restores the full pointer snapshot on failure", () => {
+test("high-risk production activation requires authenticated smoke and restores the full pointer snapshot on failure", () => {
   assert.match(source, /authenticated smoke credentials are required/);
   assert.match(source, /contract-smoke\.mjs/);
   assert.match(source, /browser-path-smoke\.mjs/);
   assert.doesNotMatch(source, /flock -u 9/);
   assert.doesNotMatch(source, /rollback-application\.sh/);
+});
+
+test("low-risk artifacts can skip authenticated smoke only with sealed automated evidence", () => {
+  assert.match(source, /risk_class/);
+  assert.match(source, /risk_test_evidence/);
+  assert.match(source, /risk_class=low, automated-tests-pass/);
+  assert.match(source, /smoke_required=0/);
+  assert.match(source, /smoke_required == 1/);
 });
 
 test("automatic rollback checks RBAC compatibility before restoring an older target", () => {

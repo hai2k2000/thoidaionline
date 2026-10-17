@@ -27,7 +27,16 @@ estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-$THOIDAI_DISK_DEFAULT_HEA
 
 [[ -d "$artifact" && -f "$artifact/.release-meta" ]] || { echo "artifact missing metadata" >&2; exit 1; }
 artifact_commit=$(awk -F= '$1=="commit" {print $2; exit}' "$artifact/.release-meta")
+risk_class=$(awk -F= '$1=="risk_class" {print $2; exit}' "$artifact/.release-meta")
+risk_test_evidence=$(awk -F= '$1=="risk_test_evidence" {print $2; exit}' "$artifact/.release-meta")
+[[ "$risk_class" == low || "$risk_class" == high ]] || { echo "DEPLOY ABORTED: artifact risk classification missing or invalid" >&2; exit 1; }
+[[ "$risk_class" != low || "$risk_test_evidence" == automated-tests-pass ]] || { echo "DEPLOY ABORTED: low-risk artifact lacks automated test evidence" >&2; exit 1; }
 smoke_waived=0
+smoke_required=1
+if [[ "$risk_class" == low ]]; then
+  smoke_required=0
+  echo "authenticated smoke: SKIP (risk_class=low, automated-tests-pass)"
+fi
 free_kb=$(df -Pk "$release_root" | awk 'NR==2 {print $4}')
 disk_guard_require "$free_kb" "$estimated_headroom_kb" "deploy"
 exec 9>"$lock_file"
@@ -40,13 +49,13 @@ new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 "$node_bin" "$artifact/verify-standalone-artifact.mjs" "$artifact"
 build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release-meta")
 [[ "$build_config" == canonical-public ]] || { echo "DEPLOY ABORTED: artifact build config is not canonical-public" >&2; exit 1; }
-if [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
+if (( smoke_required == 1 )) && [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
   approval_path=${THOIDAI_DEPLOY_EXCEPTION_APPROVAL:-}
   readiness_path=${THOIDAI_RBAC_READINESS_EVIDENCE:-}
   waiver_evidence=${THOIDAI_DEPLOY_EXCEPTION_EVIDENCE:-${THOIDAI_DEPLOY_EVIDENCE_ROOT:-/var/lib/thoidai-work/deploy-evidence}/rbac-v2-smoke-waiver-$(date -u +%Y%m%dT%H%M%SZ).evidence}
   [[ -n "$approval_path" ]] || { echo "DEPLOY ABORTED: controlled smoke-waiver approval is required" >&2; exit 1; }
   [[ -n "$readiness_path" ]] || { echo "DEPLOY ABORTED: RBAC readiness evidence is required" >&2; exit 1; }
-else
+elif (( smoke_required == 1 )); then
   [[ -n "${THOIDAI_SMOKE_COOKIE:-}" || -n "${THOIDAI_SMOKE_BEARER:-}" ]] || { echo "DEPLOY ABORTED: authenticated smoke credentials are required" >&2; exit 1; }
 fi
 "$cp_bin" -a -- "$artifact" "$new_release"
@@ -106,7 +115,7 @@ rollback_1_target=$(read_pointer rollback-1) || exit 1
 rollback_2_target=$(read_pointer rollback-2) || exit 1
 THOIDAI_RBAC_ROLLBACK_TARGET_PATH="$current_target" "$rbac_gate" || { echo "DEPLOY ABORTED: RBAC rollback compatibility gate failed for rollback target" >&2; exit 1; }
 
-if [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
+if (( smoke_required == 1 )) && [[ "${THOIDAI_AUTHENTICATED_SMOKE_WAIVER:-0}" == 1 ]]; then
   exception_validator="$artifact/scripts/production/controlled-deploy-exception.mjs"
   [[ -f "$exception_validator" ]] || { echo "DEPLOY ABORTED: artifact is missing the controlled exception validator" >&2; exit 1; }
   "$node_bin" "$exception_validator" "$approval_path" "$artifact_commit" "$waiver_evidence" "$readiness_path" || { echo "DEPLOY ABORTED: controlled smoke-waiver approval or RBAC readiness evidence is invalid, stale, or already used" >&2; exit 1; }
@@ -202,14 +211,14 @@ done
 if (( ! health_ok )); then
   fail_after_mutation "service health check failed"
 fi
-if (( smoke_waived == 0 )); then
+if (( smoke_required == 1 && smoke_waived == 0 )); then
   if ! "$node_bin" "${THOIDAI_CONTRACT_SMOKE_SCRIPT:-scripts/contract-smoke.mjs}"; then
     fail_after_mutation "authenticated contract smoke failed"
   fi
   if ! "$node_bin" "${THOIDAI_BROWSER_SMOKE_SCRIPT:-scripts/production/browser-path-smoke.mjs}"; then
     fail_after_mutation "browser-path smoke failed"
   fi
-else
+elif (( smoke_required == 1 )); then
   echo "AUTHENTICATED_SMOKE=WAIVED"
 fi
 echo "deploy-gate: PASS ($new_release)"
