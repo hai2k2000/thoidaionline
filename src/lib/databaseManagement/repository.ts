@@ -29,6 +29,12 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ow
   const context = await actorContext(actor);
   const now = Date.now();
   const rows = (await aclForRecord(recordId)).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now);
+  const explicitDeny = rows.some((row) => row.capability === capability && row.effect === "deny" && (
+    row.principal_type === "user" && row.principal_id === actor.id
+    || row.principal_type === "role" && row.principal_id === context.roleId
+    || row.principal_type === "department" && row.principal_id === context.departmentId
+  ));
+  if (explicitDeny) return false;
   return canAccessDatabaseRecord(context, rows, capability) || defaultDatabaseRecordAccess(context, capability, record.owner_id, record.department_id);
 }
 
@@ -81,6 +87,12 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, que
   for (const row of (acl ?? []) as Array<DatabaseAclRow & { record_id: string }>) byRecord.set(row.record_id, [...(byRecord.get(row.record_id) ?? []), row]);
   return (await Promise.all(rows.map(async (row) => {
     const aclRows = byRecord.get(row.id) ?? [];
+    const explicitDiscoverDeny = aclRows.some((aclRow) => aclRow.capability === "discover" && aclRow.effect === "deny" && (
+      aclRow.principal_type === "user" && aclRow.principal_id === actor.id
+      || aclRow.principal_type === "role" && aclRow.principal_id === context.roleId
+      || aclRow.principal_type === "department" && aclRow.principal_id === context.departmentId
+    ));
+    if (explicitDiscoverDeny) return null;
     const visible = canAccessDatabaseRecord(context, aclRows, "discover") || defaultDatabaseRecordAccess(context, "discover", row.owner_id, row.department_id);
     if (!visible) return null;
     const metadataVisible = canAccessDatabaseRecord(context, aclRows, "metadata.view") || defaultDatabaseRecordAccess(context, "metadata.view", row.owner_id, row.department_id);

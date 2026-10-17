@@ -22,3 +22,8 @@ test("record owner fallback never bypasses missing catalog permission", () => {
   assert.equal(defaultDatabaseRecordAccess({ id: "u1", permissionCodes: [] }, "download", "u1", null), false);
   assert.equal(defaultDatabaseRecordAccess({ id: "u1", permissionCodes: ["record.download"] }, "download", "u1", null), true);
 });
+
+test("record ACL deny also overrides owner fallback", () => {
+  const actor = { id: "u1", roleId: null, departmentId: null, permissionCodes: ["record.download"] };
+  assert.equal(canAccessDatabaseRecord(actor, [{ principal_type: "user", principal_id: "u1", capability: "download", effect: "deny" }], "download"), false);
+});
