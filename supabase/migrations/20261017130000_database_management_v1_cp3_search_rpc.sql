@@ -1,5 +1,9 @@
 begin;
 
+insert into public.permissions(code, name, module, description)
+values ('record.sensitive.access', 'Truy cập hồ sơ nhạy cảm', 'database', 'Quyền owner phê duyệt riêng cho bốn loại hồ sơ nhạy cảm.')
+on conflict (code) do update set name = excluded.name, module = excluded.module, description = excluded.description, updated_at = now();
+
 create or replace function public.api_search_database_records(
   p_actor_id uuid,
   p_q text default null,
