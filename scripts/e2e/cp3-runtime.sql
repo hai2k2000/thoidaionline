@@ -24,12 +24,12 @@ select v.id, r.category_id, case when v.sensitive then r.sensitive_type_id else 
   v.record_code, v.title, v.summary, 'approved', case when v.other_department then r.other_department else r.employee_department end, v.owner_id, '30000000-0000-4000-8000-000000000001'::uuid, v.metadata
 from refs r
 cross join (values
-  ('60000000-0000-4000-8000-000000000001'::uuid, 'CP3-ALLOW', 'alpha visible', 'summaryhidden summary', false, false, '30000000-0000-4000-8000-000000000002'::uuid, '{"subject":"alpha beta"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000001'::uuid, 'CP3-ALLOW', 'alpha visible', 'summaryhidden summary', false, false, '30000000-0000-4000-8000-000000000002'::uuid, '{"subject":"deny_only_token"}'::jsonb),
   ('60000000-0000-4000-8000-000000000002'::uuid, 'CP3-DENY', 'alpha denied', 'secret summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha hidden"}'::jsonb),
   ('60000000-0000-4000-8000-000000000003'::uuid, 'CP3-EXPIRED', 'gamma expired', 'expired summary', true, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"gamma"}'::jsonb),
   ('60000000-0000-4000-8000-000000000004'::uuid, 'CP3-SENSITIVE', 'sensitive hidden', 'sensitive summary', false, true, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"restricted"}'::jsonb),
   ('60000000-0000-4000-8000-000000000005'::uuid, 'CP3-DEPT', 'alpha department', 'department summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha department"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000006'::uuid, 'CP3-META', 'metadata visible', 'public summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"beta metadata"}'::jsonb)
+  ('60000000-0000-4000-8000-000000000006'::uuid, 'CP3-META', 'metadata visible', 'public summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"allow_only_token"}'::jsonb)
 ) as v(id, record_code, title, summary, other_department, sensitive, owner_id, metadata)
 on conflict (id) do update set title = excluded.title, summary = excluded.summary, metadata = excluded.metadata, status = excluded.status;
 
@@ -65,13 +65,13 @@ begin
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha OR gamma', null, null, null, 10, 0);
   if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 OR/expired search failed'; end if;
 
-  select (summary is null)::int, (metadata = '{}'::jsonb)::int into row_count, total_count
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'beta', null, null, null, 1, 0);
-  if row_count <> 0 or coalesce(total_count, 0) <> 0 then raise exception 'CP3 denied metadata side-channel leaked'; end if;
+  select count(*), coalesce(max(total_count), 0) into row_count, total_count
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'deny_only_token', null, null, null, 10, 0);
+  if row_count <> 0 or total_count <> 0 then raise exception 'CP3 denied metadata side-channel leaked'; end if;
 
-  select count(*), max(total_count) into row_count, total_count
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'beta', null, null, null, 1, 0);
-  if row_count <> 1 or total_count <> 1 then raise exception 'CP3 allowed metadata search failed'; end if;
+  select array_agg(id order by id), coalesce(max(total_count), 0) into search_ids, total_count
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'allow_only_token', null, null, null, 10, 0);
+  if search_ids <> array['60000000-0000-4000-8000-000000000006'::uuid] or total_count <> 1 then raise exception 'CP3 allowed metadata search failed'; end if;
 
   select count(*), max(total_count) into row_count, total_count
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'summaryhidden', null, null, null, 1, 0);
