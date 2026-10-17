@@ -12,11 +12,12 @@
   canManageJournalismStructures?: boolean;
   canViewAssets?: boolean;
   canManageAssets?: boolean;
+  canViewDatabase?: boolean;
 };
 
 export type Phase2NavigationItem = {
   id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "assets" | "my-assets" | "asset-status-requests" | "evaluations" | "account" | "users" | "departments"
-    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "work-report" | "weekly-report" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar";
+    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "work-report" | "weekly-report" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar" | "database";
   href: string;
 };
 
@@ -62,6 +63,7 @@ export function getPhase2Navigation(
       { id: "my-assets", href: "/my-assets" },
       ...((access.canViewAssets || access.canManageAssets) ? [{ id: "assets", href: "/assets" } as const] : []),
       ...(access.canManageAssets ? [{ id: "asset-status-requests", href: "/assets/status-requests" } as const] : []),
+      ...(access.canViewDatabase ? [{ id: "database", href: "/database/records" } as const] : []),
     ],
     journalism: canAccessJournalism ? [
       { id: "journalism-tasks", href: "/journalism/tasks" },

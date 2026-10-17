@@ -983,3 +983,28 @@ Production safety:
 
 Next:
 - Commit and push feature branch, open one PR, wait for CI artifact, then run the approved migration-first deployment gates.
+## Database Management V1 — local foundation continuation
+
+Current Phase: Phase 1 foundation implementation; local validation
+Current Task: complete server API contracts and local migration verification
+
+Completed:
+- Added additive catalog/schema migrations for 5 top-level groups and 47 record types.
+- Added server-only record repository, dynamic form catalog API, ACL resolver and private local file adapter.
+- Added detail/update/soft-delete/restore/ACL/file upload/download routes with no-store responses and checksum verification.
+- Added functional local pages for record entry, search, list and detail; added database navigation entry.
+
+Validation:
+- Database management focused tests: 9/9 PASS before extended route coverage; extended contract tests added.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS with only existing AppNav warnings.
+- git diff --check: PASS.
+
+Blockers:
+- Full local Supabase startup/reset is blocked by a pre-existing historical migration at 20260826190000_direct_assignment_in_progress.sql: its fixture inserts a null actor_id into task_status_events. No database was modified outside the local disposable attempt; no production database was accessed.
+
+Production safety:
+- Production database, VPS, releases, service and canonical branch: unchanged.
+
+Next:
+- Resolve or isolate the historical local fixture blocker before claiming full-chain migration acceptance, then rerun the local database verification. Do not deploy or apply production migration.

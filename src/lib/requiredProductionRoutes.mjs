@@ -2,6 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const REQUIRED_PRODUCTION_ROUTES = [
+  { sourcePath: "src/app/api/database/records/route.ts", routePath: "/api/database/records" },
+  { sourcePath: "src/app/api/database/records/[id]/route.ts", routePath: "/api/database/records/[id]" },
+  { sourcePath: "src/app/api/database/records/[id]/files/route.ts", routePath: "/api/database/records/[id]/files" },
+  { sourcePath: "src/app/api/database/records/[id]/files/[fileId]/route.ts", routePath: "/api/database/records/[id]/files/[fileId]" },
+  { sourcePath: "src/app/api/database/records/[id]/acl/route.ts", routePath: "/api/database/records/[id]/acl" },
   { sourcePath: "src/app/api/work-schedule/personal/route.ts", routePath: "/api/work-schedule/personal" },
   { sourcePath: "src/app/api/work-schedule/route.ts", routePath: "/api/work-schedule" },
   { sourcePath: "src/app/api/online-work/route.ts", routePath: "/api/online-work" },
