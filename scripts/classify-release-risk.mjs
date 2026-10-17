@@ -6,9 +6,14 @@ const root = resolve(process.argv[2] || process.cwd());
 const commit = process.env.THOIDAI_RISK_COMMIT || execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
 const base = process.env.THOIDAI_RISK_BASE || process.env.THOIDAI_CURRENT_PRODUCTION_COMMIT || "";
 const evidencePath = process.env.THOIDAI_RISK_TEST_EVIDENCE || "";
-const files = base && /^[0-9a-f]{40}$/i.test(base)
-  ? execFileSync("git", ["diff", "--name-only", `${base}..${commit}`], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean)
-  : [];
+let files = [];
+if (base && /^[0-9a-f]{40}$/i.test(base)) {
+  try {
+    files = execFileSync("git", ["diff", "--name-only", `${base}..${commit}`], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean);
+  } catch {
+    files = [];
+  }
+}
 
 const highRisk = /(^|\/)(api|auth|security|rbac|permission|permissions|session|middleware|supabase|migration|migrations|deploy|scripts)(\/|$)|route\.(m?[jt]sx?|ts)$|repository|package(-lock)?\.json$|next\.config|\.env/i;
 const lowRisk = /^(public\/|src\/content\/|src\/components\/|src\/app\/[^/]+\/page\.(?:tsx?|jsx?))|\.(css|scss|md|txt|svg|png|jpe?g|webp)$/i;
