@@ -34,3 +34,9 @@
 - [ ] Test phân quyền: admin/manager/ops/reporter
 - [ ] Xác nhận UX với người dùng thật và chốt vòng cải tiến tiếp theo
  vòng cải tiến tiếp theo
+
+## VPS disk guard
+- [ ] Load the centralized `deploy/disk-guard.conf` policy.
+- [ ] Require projected free disk >= 10 GiB after estimated build/release headroom.
+- [ ] Emit a warning when free disk is below 20 GiB.
+- [ ] Keep rollback, backup, atomic activation and production health gates enabled.

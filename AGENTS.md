@@ -20,3 +20,9 @@
 - Không được báo hoàn thành khi source đã triển khai nhưng vẫn còn commit local chưa push hoặc file thuộc phạm vi còn dirty/untracked.
 - Không force-push, không rewrite history và không đưa file môi trường, credential, backup, build output hoặc runtime artifact vào Git.
 - Nếu push thất bại, phải báo blocker cùng bằng chứng; không được mô tả dự án là đã đồng bộ Git.
+
+## VPS DISK GUARD
+
+- Build and deploy use `deploy/disk-guard.conf` through `scripts/production/disk-guard.sh`.
+- The hard minimum is 10 GiB free after estimated build/release headroom. The warning threshold is 20 GiB.
+- Free disk below 10 GiB, or projected free disk below 10 GiB after estimated writes, is blocked. The guard must not be disabled or bypassed.

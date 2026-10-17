@@ -3,13 +3,12 @@ set -Eeuo pipefail
 artifact=${1:?usage: $0 <artifact>}
 release_root=${THOIDAI_RELEASE_ROOT:-/opt/releases/thoidai-work}
 lock_file=${THOIDAI_DEPLOY_LOCK:-/run/lock/thoidai-work-deploy.lock}
-hard_min_free_kb=${THOIDAI_HARD_MIN_FREE_KB:-5242880}
-estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-1048576}
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$script_dir/disk-guard.sh"
+estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-$THOIDAI_DISK_DEFAULT_HEADROOM_KB}
 [[ -d "$artifact" && -f "$artifact/.release-meta" ]] || { echo "artifact missing metadata" >&2; exit 1; }
 free_kb=$(df -Pk "$release_root" | awk 'NR==2 {print $4}')
-if (( free_kb < hard_min_free_kb || free_kb - estimated_headroom_kb < hard_min_free_kb )); then
-  echo "DEPLOY ABORTED"; echo "Free space: ${free_kb}KB"; echo "Required minimum: ${hard_min_free_kb}KB"; echo "Estimated build headroom: ${estimated_headroom_kb}KB"; exit 1
-fi
+disk_guard_require "$free_kb" "$estimated_headroom_kb" "deploy"
 exec 9>"$lock_file"
 flock -n 9 || { echo "DEPLOY ABORTED: deploy lock unavailable" >&2; exit 1; }
 if [[ "${THOIDAI_CANARY_ONLY:-0}" == 1 ]]; then echo "canary gate: PASS"; exit 0; fi
