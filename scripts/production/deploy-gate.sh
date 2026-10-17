@@ -25,6 +25,12 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$script_dir/disk-guard.sh"
 estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-$THOIDAI_DISK_DEFAULT_HEADROOM_KB}
 
+resolve_path() { readlink -f -- "$1" 2>/dev/null || realpath -m -- "$1"; }
+artifact_path=$(resolve_path "$artifact")
+release_root_path=$(resolve_path "$release_root")
+[[ -d "$artifact" && ! -L "$artifact" ]] || { echo "DEPLOY ABORTED: artifact staging must be a regular directory" >&2; exit 1; }
+[[ "$artifact_path" != "$release_root_path" && "$artifact_path" != "$release_root_path"/* ]] || { echo "DEPLOY ABORTED: artifact staging must be outside release root" >&2; exit 1; }
+
 [[ -d "$artifact" && -f "$artifact/.release-meta" ]] || { echo "artifact missing metadata" >&2; exit 1; }
 artifact_commit=$(awk -F= '$1=="commit" {print $2; exit}' "$artifact/.release-meta")
 risk_class=$(awk -F= '$1=="risk_class" {print $2; exit}' "$artifact/.release-meta")
@@ -43,6 +49,8 @@ if [[ "${THOIDAI_CANARY_ONLY:-0}" == 1 ]]; then echo "canary gate: PASS"; exit 0
 
 new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
 [[ ! -e "$new_release" && ! -L "$new_release" ]] || { echo "release target already exists" >&2; exit 1; }
+new_release_path=$(resolve_path "$new_release")
+[[ "$new_release_path" != "$artifact_path" ]] || { echo "DEPLOY ABORTED: release target aliases artifact staging" >&2; exit 1; }
 "$node_bin" "$artifact/verify-standalone-artifact.mjs" "$artifact"
 build_config=$(awk -F= '$1=="build_config" {print $2; exit}' "$artifact/.release-meta")
 [[ "$build_config" == canonical-public ]] || { echo "DEPLOY ABORTED: artifact build config is not canonical-public" >&2; exit 1; }

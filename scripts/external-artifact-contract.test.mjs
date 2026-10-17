@@ -5,6 +5,7 @@ import test from "node:test";
 const workflow = readFileSync(".github/workflows/production-artifact.yml", "utf8");
 const deploy = readFileSync("scripts/production/deploy-external-artifact.sh", "utf8");
 const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+const gate = readFileSync("scripts/production/deploy-gate.sh", "utf8");
 
 test("external artifact workflow builds without production secrets or deploy activation", () => {
   assert.match(workflow, /npm ci --no-audit --no-fund/);
@@ -61,4 +62,14 @@ test("authenticated smoke is optional and never requires a waiver", () => {
 test("risk policy remains fail-closed", () => {
   assert.match(deploy, /risk classification is missing or invalid/);
   assert.match(deploy, /low-risk artifact lacks automated test evidence/);
+});
+
+test("staging cleanup is fail-closed and protected from release paths", () => {
+  const external = deploy;
+  assert.match(external, /staging safety: BLOCK/);
+  assert.match(external, /codex-staging-owner/);
+  assert.match(external, /staging cleanup: BLOCK/);
+  assert.match(external, /rm -rf -- \"\$staging_path\"/);
+  assert.match(gate, /artifact staging must be outside release root/);
+  assert.match(gate, /release target aliases artifact staging/);
 });

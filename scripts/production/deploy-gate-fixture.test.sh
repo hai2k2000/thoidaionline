@@ -123,6 +123,24 @@ snapshot() {
 }
 expected=$(snapshot)
 
+# Staging must never be accepted from inside the immutable release namespace.
+inside_stage="$release_root/stage-inside"
+cp -a "$root/artifact" "$inside_stage"
+if PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/inside.lock" THOIDAI_NEW_RELEASE_PATH="$release_root/new-inside" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" bash scripts/production/deploy-gate.sh "$inside_stage" >"$root/inside.out" 2>"$root/inside.err"; then
+  echo "release-root staging was accepted" >&2
+  exit 1
+fi
+grep -q 'artifact staging must be outside release root' "$root/inside.err"
+
+symlink_stage="$root/stage-symlink"
+ln -s "$release_root" "$symlink_stage"
+if PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/symlink.lock" THOIDAI_NEW_RELEASE_PATH="$release_root/new-symlink" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" bash scripts/production/deploy-gate.sh "$symlink_stage" >"$root/symlink.out" 2>"$root/symlink.err"; then
+  echo "symlink staging was accepted" >&2
+  exit 1
+fi
+grep -q 'artifact staging must be a regular directory' "$root/symlink.err"
+[[ "$(snapshot)" == "$expected" ]]
+
 run_failure() {
   local kind=$1
   local expected_result=${2:-pass}
