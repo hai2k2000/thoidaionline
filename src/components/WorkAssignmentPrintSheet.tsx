@@ -29,7 +29,7 @@ export default function WorkAssignmentPrintSheet({ task }: { task: TaskDetailDto
   return <main className="min-h-screen bg-slate-100 px-3 py-6 text-slate-900 sm:px-6 print:min-h-0 print:bg-white print:p-0">
     <div className="mx-auto mb-3 flex max-w-[210mm] items-center justify-between gap-3 print:hidden">
       <a href={`/tasks/${task.id}`} className="text-sm font-semibold text-orange-700 hover:underline">← Quay lại công việc</a>
-      <PrintActions documentTitle={model.title} />
+      <PrintActions documentTitle={model.title} docxHref={`/api/tasks/${task.id}/print/docx`} />
     </div>
     <article className="print-sheet mx-auto max-w-[210mm] bg-white px-[16mm] py-[14mm] shadow-lg print:max-w-none print:shadow-none">
       <header className="print-header print-header-compact pb-4 text-center">
