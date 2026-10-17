@@ -995,10 +995,12 @@ Completed:
 - Added functional local pages for record entry, search, list and detail; added database navigation entry.
 
 Validation:
-- Database management focused tests: 9/9 PASS before extended route coverage; extended contract tests added.
+- Database management focused tests: 12/12 PASS.
 - TypeScript: PASS.
 - Touched-file ESLint: PASS with only existing AppNav warnings.
 - git diff --check: PASS.
+- Route manifest: PASS.
+- Production-like build with build-only local placeholders: PASS; no production secrets used.
 
 Blockers:
 - Full local Supabase startup/reset is blocked by a pre-existing historical migration at 20260826190000_direct_assignment_in_progress.sql: its fixture inserts a null actor_id into task_status_events. No database was modified outside the local disposable attempt; no production database was accessed.
@@ -1008,3 +1010,4 @@ Production safety:
 
 Next:
 - Resolve or isolate the historical local fixture blocker before claiming full-chain migration acceptance, then rerun the local database verification. Do not deploy or apply production migration.
+- Branch pushed: `codex/database-management-v1-foundation` (`ab62181`).
