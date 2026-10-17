@@ -68,5 +68,8 @@ test("task list exposes multi-select DOCX export", () => {
   const shell = read("../components/TaskCenterShell.tsx");
   assert.match(shell, /Xuất phiếu giao việc hàng loạt/);
   assert.match(shell, /bulk-print\/docx\?ids=/);
+  assert.match(shell, /const ids = \[\.\.\.new Set\(selectedTaskIds\)\]/);
+  assert.ok(shell.includes("fetch(`/api/tasks/bulk-print/docx?ids="));
+  assert.match(shell, /useEffect\(\(\) => \{ setSelectedTaskIds\(\[\]\); \}, \[querySelectionKey\]\)/);
   assert.match(shell, /bulkPrintEnabled/);
 });

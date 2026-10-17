@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import JSZip from "jszip";
-import { exportTaskPrintDocx, exportTaskPrintDocxBatch, taskPrintDocxFilename } from "./taskPrintDocxExport.ts";
+import { exportTaskPrintDocx, exportTaskPrintDocxBatch, exportTaskPrintDocxZip, taskPrintDocxFilename } from "./taskPrintDocxExport.ts";
 
 const model = { id: "task-1", assignedDate: "2026-10-17T00:00:00Z", taskType: "Công việc thường", department: "Phòng Nội dung", assignmentSourceLabel: "Được giao", assignerLabel: "NGƯỜI GIAO VIỆC", assigner: "Nguyễn Văn A", primaryAssignee: "Trần Văn B", collaborators: ["Lê Văn C"], title: "Tổng hợp tin tuần", description: "Tổng hợp nội dung", requirements: ["Đúng hạn"], deadline: "2026-10-20", priority: "Cao", notes: "—", journalism: null };
 
@@ -33,6 +33,16 @@ test("batch DOCX route validates selection and checks each task through printabl
   const source = readFileSync(new URL("../app/api/tasks/bulk-print/docx/route.ts", import.meta.url), "utf8");
   assert.match(source, /loadPrintableTask/);
   assert.match(source, /ids\.length > 50/);
-  assert.match(source, /exportTaskPrintDocxBatch/);
-  assert.ok(source.includes("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+  assert.match(source, /exportTaskPrintDocxZip/);
+  assert.ok(source.includes("application/zip"));
+});
+
+test("bulk export creates one DOCX file per selected task and disambiguates duplicate titles", async () => {
+  const archive = await JSZip.loadAsync(await exportTaskPrintDocxZip([model, { ...model, title: model.title }]));
+  const names = Object.keys(archive.files).filter((name) => name.endsWith(".docx"));
+  assert.deepEqual(names, ["Tổng_hợp_tin_tuần.docx", "Tổng_hợp_tin_tuần_2.docx"]);
+  for (const name of names) {
+    const docx = await JSZip.loadAsync(await archive.file(name).async("nodebuffer"));
+    assert.match(await docx.file("word/document.xml").async("string"), /PHIẾU GIAO VIỆC/);
+  }
 });

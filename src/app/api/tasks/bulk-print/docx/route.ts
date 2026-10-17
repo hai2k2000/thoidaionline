@@ -1,4 +1,4 @@
-import { exportTaskPrintDocxBatch } from "@/lib/taskPrintDocxExport";
+import { exportTaskPrintDocxZip } from "@/lib/taskPrintDocxExport";
 import { asUuid } from "@/lib/serverApi";
 import { getSessionUser } from "@/lib/serverSession";
 import { taskRepository } from "@/lib/taskRepository";
@@ -21,9 +21,10 @@ export async function GET(request: Request) {
   const models = [];
   for (const taskId of ids) {
     const result = await loadPrintableTask({ actor, taskId, loadAccess: (id) => taskRepository.access(id), loadDetail: (id, repositoryActor) => taskRepository.detail(id, repositoryActor), canView: (viewer, access) => canTaskAction(viewer, access, "view") });
-    if (result.ok) models.push(buildWorkAssignmentPrintModel(result.task));
+    if (!result.ok) return new Response("One or more selected tasks are not printable", { status: result.reason === "not_found" ? 404 : 403 });
+    models.push(buildWorkAssignmentPrintModel(result.task));
   }
   if (!models.length) return new Response("No printable tasks", { status: 404 });
-  const buffer = await exportTaskPrintDocxBatch(models);
-  return new Response(new Uint8Array(buffer), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": "attachment; filename=phieu-giao-viec-hang-loat.docx", "Cache-Control": "no-store" } });
+  const buffer = await exportTaskPrintDocxZip(models);
+  return new Response(new Uint8Array(buffer), { status: 200, headers: { "Content-Type": "application/zip", "Content-Disposition": "attachment; filename=phieu-giao-viec-hang-loat.zip", "Cache-Control": "no-store" } });
 }

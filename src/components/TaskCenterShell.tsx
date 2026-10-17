@@ -175,19 +175,31 @@ export default function TaskCenterShell(props: Props) {
   const activeFilters = countTaskListFilters(query);
   const listHref = (patch: Partial<TaskListQuery>) => { const href = taskListHref(query, patch).replace(/^\/tasks/, basePath); if (!taskMode) return href; const url = new URL(href, "http://local"); url.searchParams.set("scope", "personal"); return `${url.pathname}?${url.searchParams.toString()}`; };
   useEffect(() => { const close = (event: PointerEvent) => { if (tableRef.current && !tableRef.current.contains(event.target as Node)) setExpandedId(null); }; document.addEventListener("pointerdown", close); return () => document.removeEventListener("pointerdown", close); }, []);
-  useEffect(() => { setSelectedTaskIds([]); }, [query]);
+  // Reset selection only when filter values actually change; object identity can
+  // change during unrelated renders and would otherwise drop multi-select state.
+  const querySelectionKey = JSON.stringify(query);
+  useEffect(() => { setSelectedTaskIds([]); }, [querySelectionKey]);
   const adminBulk = currentUserRole === "admin" && !taskMode && !query.approvalQueue;
   const bulkPrintEnabled = !taskMode && !query.approvalQueue;
   const currentPageOnly = tasks.items.map((task) => task.id);
   const selectAll = currentPageOnly.length > 0 && currentPageOnly.every((id) => selectedTaskIds.includes(id));
   const toggleTask = (taskId: string) => setSelectedTaskIds((current) => current.includes(taskId) ? current.filter((id) => id !== taskId) : [...current, taskId]);
   const toggleAll = () => setSelectedTaskIds(selectAll ? [] : currentPageOnly);
-  const bulkPrint = () => {
+  const bulkPrint = async () => {
     if (!selectedTaskIds.length) return;
-    const link = document.createElement("a");
-    link.href = `/api/tasks/bulk-print/docx?ids=${encodeURIComponent(selectedTaskIds.join(","))}`;
-    link.download = "phieu-giao-viec-hang-loat.docx";
-    link.click();
+    setBulkBusy(true);
+    try {
+      const ids = [...new Set(selectedTaskIds)].filter(Boolean);
+      const response = await fetch(`/api/tasks/bulk-print/docx?ids=${encodeURIComponent(ids.join(","))}`, { cache: "no-store" });
+      if (!response.ok) { window.alert("Không thể xuất các phiếu đã chọn."); return; }
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      const downloadUrl = URL.createObjectURL(blob);
+      link.href = downloadUrl;
+      link.download = "phieu-giao-viec-hang-loat.zip";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    } finally { setBulkBusy(false); }
   };
   const bulkCancel = async () => {
     const selectedTasks = tasks.items.filter((task) => selectedTaskIds.includes(task.id));
@@ -241,7 +253,7 @@ export default function TaskCenterShell(props: Props) {
                 <FilterFields key={JSON.stringify([query.journalism, query.assignmentSource, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} departments={departments} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} />
               </form>
 
-              {bulkPrintEnabled && selectedTaskIds.length ? <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3"><span className="text-sm font-semibold text-orange-900">Đã chọn: {selectedTaskIds.length} công việc</span><button type="button" disabled={bulkBusy} onClick={bulkPrint} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Xuất phiếu giao việc hàng loạt</button>{adminBulk ? <><button type="button" disabled={bulkBusy} onClick={() => void bulkCancel()} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Huỷ công việc</button><span className="text-xs text-slate-600">Xoá công việc: ADMIN DELETE CONTRACT NOT FOUND</span></> : null}</div> : null}
+              {bulkPrintEnabled && selectedTaskIds.length ? <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3"><span className="text-sm font-semibold text-orange-900">Đã chọn: {selectedTaskIds.length} công việc</span><button type="button" disabled={bulkBusy} onClick={() => void bulkPrint()} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Xuất phiếu giao việc hàng loạt (ZIP)</button>{adminBulk ? <><button type="button" disabled={bulkBusy} onClick={() => void bulkCancel()} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Huỷ công việc</button><span className="text-xs text-slate-600">Xoá công việc: ADMIN DELETE CONTRACT NOT FOUND</span></> : null}</div> : null}
                 <section className="mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
                 {canReviewTaskApprovals && query.approvalQueue ? <ApprovalQueue queue={query.approvalQueue} data={approvalQueue?.[query.approvalQueue] ?? { items: [], total: 0, page: 1, pageSize: 100 }} onRefresh={() => router.refresh()} /> : null}
                 {!taskMode ? <div className="mb-3 flex flex-wrap items-center gap-2 border-b pb-3"><span className="text-sm font-semibold text-slate-600">Xem công việc theo:</span>{([['day','Ngày'],['week','Tuần'],['month','Tháng']] as const).map(([period, label]) => <Link key={period} href={listHref(periodRange(period))} className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-800">{label}</Link>)}</div> : null}
