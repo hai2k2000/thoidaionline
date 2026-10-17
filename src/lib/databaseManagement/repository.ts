@@ -215,7 +215,7 @@ export async function upsertDatabaseRecordAcl(actor: DatabaseRecordActor, record
   if (!(await canRecord(actor, current, recordId, "acl.manage"))) throw new Error("permission_denied");
   const { data: previous, error: previousError } = await serverSupabase.from("db_record_acl").select("id,record_id,principal_type,principal_id,capability,effect,granted_by,expires_at,created_at").eq("record_id", recordId).eq("principal_type", input.principalType).eq("principal_id", input.principalId).eq("capability", input.capability).maybeSingle();
   if (previousError) throw previousError;
-  const { data, error } = await serverSupabase.from("db_record_acl").upsert({ record_id: recordId, principal_type: input.principalType, principal_id: input.principalId, capability: input.capability, effect: input.effect, granted_by: actor.id, expires_at: input.expiresAt ?? null }).select("id,record_id,principal_type,principal_id,capability,effect,expires_at,created_at").single();
+  const { data, error } = await serverSupabase.from("db_record_acl").upsert({ record_id: recordId, principal_type: input.principalType, principal_id: input.principalId, capability: input.capability, effect: input.effect, granted_by: actor.id, expires_at: input.expiresAt ?? null }, { onConflict: "record_id,principal_type,principal_id,capability" }).select("id,record_id,principal_type,principal_id,capability,effect,expires_at,created_at").single();
   if (error) throw error;
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "acl_update", old_data: null, new_data: data });
   if (historyError) {
