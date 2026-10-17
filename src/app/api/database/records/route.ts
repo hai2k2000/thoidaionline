@@ -18,6 +18,7 @@ export async function GET(request: Request) {
       recordTypeId: params.get("recordTypeId") ?? undefined,
       categoryId: params.get("categoryId") ?? undefined,
       limit: Number(params.get("limit") ?? 200),
+      offset: Number(params.get("offset") ?? 0),
     }) });
   } catch {
     return json({ error: "record_read_failed" }, 500);

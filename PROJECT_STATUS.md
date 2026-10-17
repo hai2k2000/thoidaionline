@@ -1127,3 +1127,38 @@ Production safety:
 Next:
 - Owner can manually accept the local UI at `http://localhost:3107` after starting the disposable runtime and Next.js with local-only credentials supplied by the fixture runner.
 - Separate owner approval is required before applying the Quick Report grant hardening or any sensitive record permission.
+
+## Database Management V1 — CP3 + CP4 advanced search and record management (2026-10-17)
+
+Current Phase: CP3/CP4 implementation and disposable validation
+Current Task: PostgreSQL authorization-predicate search and record-management acceptance
+
+Completed:
+- Added additive migration `20261017130000_database_management_v1_cp3_search_rpc.sql` with `api_search_database_records(...)`.
+- Search authorization now executes in PostgreSQL before count/window pagination, preserving explicit deny, ACL expiry, owner/department fallback and the four-type sensitive deny policy.
+- Repository list/search no longer performs the prior unbounded batch scan and in-memory ACL filter; it calls the service-role RPC with bounded limit/offset.
+- Search query complexity is bounded and the RPC is unavailable to `public`, `anon` and `authenticated` roles.
+- Isolated runner allowlist and contract tests include the CP3 migration.
+
+Validation:
+- Database Management and CP3 contract tests: 21/21 PASS.
+- Source-only TypeScript: PASS.
+- Touched-file ESLint: PASS (no errors).
+- `git diff --check`: PASS.
+- Docker/disposable migration replay: BLOCKED by Docker Desktop `DockerLifecycleInspectError` while inspecting the isolated database container; no SQL runtime PASS is claimed for CP3.
+
+CP4 status:
+- Existing server routes for detail, update, soft-delete/restore, ACL and private file upload/download remain in place and covered by contract tests.
+- Full UI acceptance for edit, file/link/history/ACL/export controls and advanced filter persistence remains pending; no browser E2E was claimed.
+
+Blockers:
+- Restart Docker Desktop or restore its local engine API, then rerun the disposable migration and RPC matrix. This is the only current runtime blocker for CP3.
+- Historical migration chain remains FAIL on legacy fixtures; unchanged.
+- Browser Use daemon remains unavailable.
+
+Production safety:
+- Production/VPS/database/release/policy: UNCHANGED. No production migration, grant/RLS change, deploy, merge, restart or canonical branch update performed.
+
+Next:
+- After Docker health returns, run the CP3 RPC matrix with interleaved denied/allowed fixture rows, count/pagination checks and expired/explicit deny regressions.
+- Then complete CP4 UI controls and local manual acceptance without exposing the development server publicly.

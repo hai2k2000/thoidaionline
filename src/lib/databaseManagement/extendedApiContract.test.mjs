@@ -9,6 +9,7 @@ const download = read("src/app/api/database/records/[id]/files/[fileId]/route.ts
 const repository = read("src/lib/databaseManagement/repository.ts");
 const acl = read("src/app/api/database/records/[id]/acl/route.ts");
 const restore = read("src/app/api/database/records/[id]/restore/route.ts");
+const exportRoute = read("src/app/api/database/records/[id]/export/route.ts");
 
 test("record lifecycle routes enforce session, origin and server authorization", () => {
   for (const source of [detail, files, acl, restore]) {
@@ -29,4 +30,10 @@ test("private file routes use server storage and verify integrity", () => {
   assert.match(repository, /historyError/);
   assert.match(repository, /previous/);
   assert.match(repository, /expires_at: input.expiresAt/);
+});
+
+test("metadata export is authenticated and capability-gated", () => {
+  assert.match(exportRoute, /getSessionUser/);
+  assert.match(exportRoute, /canAccessDatabaseRecordForActor[\s\S]*[\"']export[\"']/);
+  assert.match(exportRoute, /Content-Disposition/);
 });

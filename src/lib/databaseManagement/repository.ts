@@ -42,14 +42,6 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ow
   return canAccessDatabaseRecord(context, rows, capability) || defaultDatabaseRecordAccess(context, capability, record.owner_id, record.department_id);
 }
 
-function hasExplicitDeny(actor: DatabaseAclActor, rows: readonly DatabaseAclRow[], capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
-  return rows.some((row) => row.capability === capability && row.effect === "deny" && (
-    row.principal_type === "user" && row.principal_id === actor.id
-    || row.principal_type === "role" && row.principal_id === actor.roleId
-    || row.principal_type === "department" && row.principal_id === actor.departmentId
-  ));
-}
-
 export async function canAccessDatabaseRecordForActor(actor: DatabaseRecordActor, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
   const record = await getRecord(recordId);
   return Boolean(record && record.status !== "deleted" && canAccessRecordType(actor, record.record_type_code) && await canRecord(actor, record, recordId, capability));
@@ -97,50 +89,20 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   };
 }
 
-export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; limit?: number };
+export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; limit?: number; offset?: number };
 
 export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, filters: DatabaseRecordListQuery = {}) {
-  const context = await actorContext(actor);
-  const limit = Math.min(Math.max(filters.limit ?? 200, 1), 200);
-  const { data: typeRows, error: typeError } = await serverSupabase.from("db_record_types").select("id,code").eq("active", true);
-  if (typeError) throw typeError;
-  const allowedTypeIds = (typeRows ?? []).filter((type) => canAccessRecordType(actor, type.code)).map((type) => type.id);
-  if (!allowedTypeIds.length) return [];
-  const rows: RecordRow[] = [];
-  const maxRowsToScan = Math.max(limit * 10, 1000);
-  for (let offset = 0; rows.length < maxRowsToScan; offset += 200) {
-    let request = serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").neq("status", "deleted").in("record_type_id", allowedTypeIds).order("updated_at", { ascending: false }).range(offset, offset + 199);
-    if (filters.q?.trim()) {
-      const query = filters.q.trim().replace(/[%_,()]/g, " ");
-      request = request.or(`title.ilike.%${query}%,record_code.ilike.%${query}%,summary.ilike.%${query}%`);
-    }
-    if (filters.status) request = request.eq("status", filters.status);
-    if (filters.recordTypeId) request = request.eq("record_type_id", filters.recordTypeId);
-    if (filters.categoryId) request = request.eq("category_id", filters.categoryId);
-    const { data, error } = await request;
-    if (error) throw error;
-    rows.push(...((data ?? []) as RecordRow[]));
-    if ((data ?? []).length < 200) break;
-  }
-  if (!rows.length) return [];
-  const byRecord = new Map<string, DatabaseAclRow[]>();
-  for (let offset = 0; offset < rows.length; offset += 500) {
-    const { data: acl, error: aclError } = await serverSupabase.from("db_record_acl").select("record_id,principal_type,principal_id,capability,effect,expires_at").in("record_id", rows.slice(offset, offset + 500).map((row) => row.id));
-    if (aclError) throw aclError;
-    for (const row of (acl ?? []) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>) {
-      if (row.expires_at && Date.parse(row.expires_at) <= Date.now()) continue;
-      byRecord.set(row.record_id, [...(byRecord.get(row.record_id) ?? []), row]);
-    }
-  }
-  const visible = (await Promise.all(rows.map(async (row) => {
-    const aclRows = byRecord.get(row.id) ?? [];
-    if (hasExplicitDeny(context, aclRows, "discover")) return null;
-    const visible = canAccessDatabaseRecord(context, aclRows, "discover") || defaultDatabaseRecordAccess(context, "discover", row.owner_id, row.department_id);
-    if (!visible) return null;
-    const metadataVisible = !hasExplicitDeny(context, aclRows, "metadata.view") && (canAccessDatabaseRecord(context, aclRows, "metadata.view") || defaultDatabaseRecordAccess(context, "metadata.view", row.owner_id, row.department_id));
-    return metadataVisible ? row : { ...row, summary: null, metadata: {} };
-  }))).filter((row): row is RecordRow => row !== null);
-  return visible.slice(0, limit);
+  const { data, error } = await serverSupabase.rpc("api_search_database_records", {
+    p_actor_id: actor.id,
+    p_q: filters.q?.trim() || null,
+    p_status: filters.status ?? null,
+    p_record_type_id: filters.recordTypeId ?? null,
+    p_category_id: filters.categoryId ?? null,
+    p_limit: Math.min(Math.max(filters.limit ?? 200, 1), 100),
+    p_offset: Math.max(filters.offset ?? 0, 0),
+  });
+  if (error) throw error;
+  return (data ?? []) as RecordRow[];
 }
 
 export async function createDatabaseRecord(actor: DatabaseRecordActor, input: DatabaseRecordInput) {
