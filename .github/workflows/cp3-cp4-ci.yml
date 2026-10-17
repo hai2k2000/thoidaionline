@@ -7,7 +7,7 @@ on:
       source_sha:
         description: "Feature source SHA to validate"
         required: true
-        default: "9c9135b6c4e434b565c5f73451fdccb9ee95d9da"
+        default: "b5ba9ed32e6d3a0d01fd4c55a5a7c219fcfc77f6"
         type: string
 
 permissions:
@@ -28,6 +28,17 @@ jobs:
         with:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 1
+
+      - name: Enforce approved validation ref and source SHA
+        shell: bash
+        env:
+          EXPECTED_BRANCH: validation/cp3-cp4-runtime-20261017
+          EXPECTED_SHA: b5ba9ed32e6d3a0d01fd4c55a5a7c219fcfc77f6
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "${EXPECTED_BRANCH}"
+          test "${{ inputs.source_sha }}" = "${EXPECTED_SHA}"
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
 
       - name: Setup Node
         uses: actions/setup-node@v4
