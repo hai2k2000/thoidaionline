@@ -112,6 +112,17 @@ files=(
   20261016130000_quick_report_completion_date_compatibility.sql
 )
 
+# CP3-CI opts into the current Database V1 migrations without changing the
+# legacy Phase 3B migration set used by the existing RBAC workflow.
+if [[ "${E2E_STRICT_GRANTS:-0}" == "1" ]]; then
+  files+=(
+    20261017100000_database_management_v1_foundation.sql
+    20261017101000_database_management_v1_catalog.sql
+    20261017110000_database_management_v1_cp2b_optional_fields.sql
+    20261017130000_database_management_v1_cp3_search_rpc.sql
+  )
+fi
+
 # The first RBAC migration expects the admin role to exist. Seed the role and
 # its legacy capability row immediately after the baseline migration.
 for file in "${files[@]}"; do
@@ -177,12 +188,20 @@ on conflict (id) do nothing;
 SQL
 
 docker exec -i "$postgres" psql -v ON_ERROR_STOP=1 -U postgres -d thoidai_e2e <<'SQL' >/dev/null
-grant select on all tables in schema public to anon, authenticated;
 grant select, insert, update, delete on all tables in schema public to service_role;
 grant usage, select, update on all sequences in schema public to service_role;
 grant select, insert, update, delete on all tables in schema storage to service_role;
 grant execute on all functions in schema public to service_role;
 SQL
+
+if [[ "${E2E_STRICT_GRANTS:-0}" == "1" ]]; then
+  # The CP3 fixture must not inherit broad anonymous/authenticated table grants.
+  docker exec -i "$postgres" psql -v ON_ERROR_STOP=1 -U postgres -d thoidai_e2e <<'SQL' >/dev/null
+revoke all on all tables in schema public from anon, authenticated;
+revoke all on all sequences in schema public from anon, authenticated;
+revoke all on all functions in schema public from anon, authenticated;
+SQL
+fi
 
 jwt_secret=$(node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))")
 make_jwt() {
@@ -216,6 +235,7 @@ mkdir -p "$(dirname "$env_file")"
 umask 077
 cat >"$env_file" <<EOF
 E2E_POSTGREST_URL=http://127.0.0.1:${api_port}
+E2E_DB_URL=${db_url}
 E2E_ANON_KEY=${anon_key}
 E2E_SERVICE_ROLE_KEY=${service_key}
 E2E_SESSION_SECRET=${session_secret}
