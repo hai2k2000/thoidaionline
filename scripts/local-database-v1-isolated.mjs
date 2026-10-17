@@ -48,6 +48,7 @@ const currentAppMigrations = new Set([
 const v1Migrations = new Set([
   "20261017100000_database_management_v1_foundation.sql",
   "20261017101000_database_management_v1_catalog.sql",
+  "20261017110000_database_management_v1_cp2b_optional_fields.sql",
 ]);
 const selectedMigrations = new Set([...currentAppMigrations, ...v1Migrations]);
 const compatibilityName = "20260826195000_local_bootstrap_task_actor_compatibility.sql";

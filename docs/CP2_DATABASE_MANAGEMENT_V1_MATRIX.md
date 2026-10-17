@@ -57,3 +57,9 @@ The catalog has 44 active types and 44 published forms. Every type has the commo
 - Specialized form implementation: `3/44` have source-backed CP2 fields; `41/44` intentionally remain common-only pending an approved business-field contract.
 - Browser E2E: not claimed. The browser daemon was unavailable; no credentials were printed or stored.
 - This matrix does not authorize production migration, merge, VPS deployment, or changes to historical migrations.
+
+## CP2-B classification
+
+- `SOURCE_CONFIRMED`: 3/44 (`van_ban_den`, `hop_dong_nghiep_vu`, `ho_so_su_kien`), based directly on the CP2 acceptance brief.
+- `PROPOSED_OPTIONAL`: 37/44. The CP2-B additive catalog migration exposes bounded, searchable, non-required fields by business group; these fields never widen permissions and can be revised after owner feedback.
+- `OWNER_REQUIRED`: 4/44 (`ho_so_dang`, `chi_hoi_nha_bao`, `doan_thanh_nien`, `giay_phep_quan_ly_bao_chi`). Sensitive/legal fields remain unseeded beyond the common skeleton.

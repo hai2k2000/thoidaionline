@@ -1063,3 +1063,33 @@ Production safety:
 Next:
 - Push the three existing verified commits plus CP2 changes to the feature branch only after final owner review.
 - Browser/manual acceptance can use the existing local URL when the isolated runtime is started.
+
+## Database Management V1 — CP2-B business forms and local acceptance (2026-10-17)
+
+Current Phase: CP2-B local business-form completion
+Current Task: optional metadata groups, 44-type classification, and disposable RLS security proposal
+
+Completed:
+- Added additive migration `20261017110000_database_management_v1_cp2b_optional_fields.sql`.
+- Added bounded optional metadata groups for 40 record types; all fields are non-required and do not widen permissions.
+- Kept 4 sensitive/legal record types on the common skeleton with `OWNER_REQUIRED` status.
+- Added the RLS hardening proposal for `task_quick_report_idempotency`; no grant/RLS remediation was applied.
+
+Validation:
+- CP2-B contract and Database Management tests: 22/22 PASS.
+- Catalog/forms: 44/44 remain published.
+- Disposable CP2-B migration replay: PASS; 40 distinct record types received optional field groups.
+- Source-only TypeScript check excluding generated `.next` types: PASS.
+- Required routes and diff check: PASS.
+
+Blockers:
+- Browser E2E remains BLOCKED because Browser Use has no active daemon connection; no heavy browser install was attempted.
+- Historical full-chain fixture failure remains unchanged.
+- `task_quick_report_idempotency` hardening is OWNER_REQUIRED; proposal only.
+
+Production safety:
+- Production/VPS/database: UNCHANGED. No production migration, grant change, deploy, merge, or restart.
+
+Next:
+- Push CP2-B commit to the feature branch only.
+- Owner may approve the separate RLS hardening proposal and provide source confirmation for sensitive forms.
