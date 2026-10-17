@@ -12,7 +12,16 @@ const files = base && /^[0-9a-f]{40}$/i.test(base)
 
 const highRisk = /(^|\/)(api|auth|security|rbac|permission|permissions|session|middleware|supabase|migration|migrations|deploy|scripts)(\/|$)|route\.(m?[jt]sx?|ts)$|repository|package(-lock)?\.json$|next\.config|\.env/i;
 const lowRisk = /^(public\/|src\/content\/|src\/components\/|src\/app\/[^/]+\/page\.(?:tsx?|jsx?))|\.(css|scss|md|txt|svg|png|jpe?g|webp)$/i;
-const lowRiskCandidate = files.length > 0 && files.every((file) => lowRisk.test(file) && !highRisk.test(file));
+const highRiskContent = /\b(authentication|authorization|rbac|permission|session|cookie|bearer|token|secret|supabase|database|migration|schema|fetch\s*\(\s*["'`]\/api)/i;
+const hasHighRiskContent = files.some((file) => {
+  try {
+    const content = readFileSync(resolve(root, file), "utf8");
+    return highRiskContent.test(content);
+  } catch {
+    return true;
+  }
+});
+const lowRiskCandidate = files.length > 0 && !hasHighRiskContent && files.every((file) => lowRisk.test(file) && !highRisk.test(file));
 const evidence = evidencePath && existsSync(resolve(root, evidencePath)) ? readFileSync(resolve(root, evidencePath), "utf8") : "";
 const testsPass = evidence.includes(`commit=${commit}`) && evidence.includes("status=PASS");
 const riskClass = lowRiskCandidate && testsPass ? "low" : "high";
