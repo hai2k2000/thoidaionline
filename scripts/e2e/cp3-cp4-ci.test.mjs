@@ -45,6 +45,11 @@ test("CP3 runtime checks cover authorization, search operators and side-channel 
   assert.match(sql, /null, null, 100, 0/);
   assert.match(sql, /anon_select/);
   assert.match(sql, /authenticated_select/);
+  assert.match(sql, /v_total_count bigint/);
+  assert.match(sql, /max\(sr\.total_count\)/);
+  assert.doesNotMatch(sql, /\btotal_count bigint/);
+  assert.doesNotMatch(sql, /max\(total_count\)/);
+  assert.match(sql, /from public\.api_search_database_records\([\s\S]*\) as sr/);
 });
 
 test("CP4 runtime checks cover CRUD, private file integrity and lifecycle", () => {

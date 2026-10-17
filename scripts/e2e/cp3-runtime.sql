@@ -46,42 +46,42 @@ on conflict (record_id, principal_type, principal_id, capability) do update set 
 do $$
 declare
   row_count integer;
-  total_count bigint;
+  v_total_count bigint;
   visible_ids uuid[];
   search_ids uuid[];
 begin
-  select count(*), max(total_count), array_agg(id order by id)
-    into row_count, total_count, visible_ids
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0);
-  if row_count <> 3 or total_count <> 3 then
-    raise exception 'CP3 ACL visibility failed: %, %, %', row_count, total_count, visible_ids;
+  select count(*), max(sr.total_count), array_agg(sr.id order by sr.id)
+    into row_count, v_total_count, visible_ids
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0) as sr;
+  if row_count <> 3 or v_total_count <> 3 then
+    raise exception 'CP3 ACL visibility failed: %, %, %', row_count, v_total_count, visible_ids;
   end if;
 
-  select array_agg(id order by id) into search_ids
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha -hidden', null, null, null, 10, 0);
+  select array_agg(sr.id order by sr.id) into search_ids
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha -hidden', null, null, null, 10, 0) as sr;
   if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 NOT search failed'; end if;
 
-  select array_agg(id order by id) into search_ids
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha OR gamma', null, null, null, 10, 0);
+  select array_agg(sr.id order by sr.id) into search_ids
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha OR gamma', null, null, null, 10, 0) as sr;
   if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 OR/expired search failed'; end if;
 
-  select count(*), coalesce(max(total_count), 0) into row_count, total_count
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'deny_only_token', null, null, null, 10, 0);
-  if row_count <> 0 or total_count <> 0 then raise exception 'CP3 denied metadata side-channel leaked'; end if;
+  select count(*), coalesce(max(sr.total_count), 0) into row_count, v_total_count
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'deny_only_token', null, null, null, 10, 0) as sr;
+  if row_count <> 0 or v_total_count <> 0 then raise exception 'CP3 denied metadata side-channel leaked'; end if;
 
-  select array_agg(id order by id), coalesce(max(total_count), 0) into search_ids, total_count
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'allow_only_token', null, null, null, 10, 0);
-  if search_ids <> array['60000000-0000-4000-8000-000000000006'::uuid] or total_count <> 1 then raise exception 'CP3 allowed metadata search failed'; end if;
+  select array_agg(sr.id order by sr.id), coalesce(max(sr.total_count), 0) into search_ids, v_total_count
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'allow_only_token', null, null, null, 10, 0) as sr;
+  if search_ids <> array['60000000-0000-4000-8000-000000000006'::uuid] or v_total_count <> 1 then raise exception 'CP3 allowed metadata search failed'; end if;
 
-  select count(*), max(total_count) into row_count, total_count
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'summaryhidden', null, null, null, 1, 0);
-  if row_count <> 0 or coalesce(total_count, 0) <> 0 then raise exception 'CP3 denied summary side-channel leaked'; end if;
+  select count(*), coalesce(max(sr.total_count), 0) into row_count, v_total_count
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'summaryhidden', null, null, null, 1, 0) as sr;
+  if row_count <> 0 or v_total_count <> 0 then raise exception 'CP3 denied summary side-channel leaked'; end if;
 
   select count(*) into row_count
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 1, 1);
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 1, 1) as sr;
   if row_count <> 1 then raise exception 'CP3 pagination failed'; end if;
 
-  if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'restricted', null, null, null, 10, 0)) then raise exception 'CP3 sensitive record leaked'; end if;
+  if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'restricted', null, null, null, 10, 0) as sr) then raise exception 'CP3 sensitive record leaked'; end if;
 end $$;
 
 do $$
