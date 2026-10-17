@@ -6,6 +6,7 @@ const workflow = readFileSync(new URL("../../.github/workflows/cp3-cp4-ci.yml", 
 const fixture = readFileSync(new URL("./start-sandbox.sh", import.meta.url), "utf8");
 const sql = readFileSync(new URL("./cp3-runtime.sql", import.meta.url), "utf8");
 const cp4 = readFileSync(new URL("./cp4-runtime.mjs", import.meta.url), "utf8");
+const searchFix = readFileSync(new URL("../../supabase/migrations/20261018100000_database_management_v1_cp3_search_rpc_identifier_fix.sql", import.meta.url), "utf8");
 
 test("CP3/CP4 workflow is manual-only and bounded", () => {
   assert.match(workflow, /workflow_dispatch:/);
@@ -25,8 +26,24 @@ test("strict fixture applies CP3 and does not grant public tables", () => {
   assert.match(fixture, /20261017110000_database_management_v1_cp2b_optional_fields\.sql/);
   assert.match(fixture, /20261017130000_database_management_v1_cp3_search_rpc\.sql/);
   assert.match(fixture, /20261017140000_database_management_v1_cp3_search_security_fix\.sql/);
+  assert.match(fixture, /20261018100000_database_management_v1_cp3_search_rpc_identifier_fix\.sql/);
   assert.match(fixture, /E2E_STRICT_GRANTS/);
   assert.match(fixture, /revoke all on all tables in schema public from anon, authenticated/);
+});
+
+test("CP3 Search RPC identifier fix is additive and preserves security boundaries", () => {
+  assert.match(searchFix, /create or replace function public\.api_search_database_records\(/i);
+  assert.match(searchFix, /returns table\s*\([\s\S]*total_count bigint\s*\)/i);
+  assert.match(searchFix, /language plpgsql security definer set search_path = public, pg_temp/i);
+  assert.match(searchFix, /from public\.staff_users as su\s+where su\.id = p_actor_id/i);
+  assert.doesNotMatch(searchFix, /from public\.staff_users\s+where\s+id\s*=/i);
+  assert.doesNotMatch(searchFix, /#variable_conflict\s+use_column/i);
+  assert.doesNotMatch(searchFix, /\bwhere\s+id\s*=/i);
+  assert.doesNotMatch(searchFix, /\bmax\s*\(\s*total_count\s*\)/i);
+  assert.match(searchFix, /revoke all on function public\.api_search_database_records\([^;]+\) from public, anon, authenticated;/i);
+  assert.match(searchFix, /grant execute on function public\.api_search_database_records\([^;]+\) to service_role;/i);
+  assert.doesNotMatch(searchFix, /grant execute[^;]+\b(?:anon|authenticated)\b/i);
+  assert.doesNotMatch(searchFix, /record\.sensitive\.access[^;]+grant/i);
 });
 
 test("CP3 runtime checks cover authorization, search operators and side-channel safety", () => {
