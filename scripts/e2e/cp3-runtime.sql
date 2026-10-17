@@ -14,8 +14,8 @@ with refs as (
     (select id from public.db_categories where code = 'tong_hop') as category_id,
     (select id from public.db_record_types where code = 'bao_cao') as normal_type_id,
     (select id from public.db_record_types where code = 'ho_so_dang') as sensitive_type_id,
-    (select id from public.db_form_definitions f join public.db_record_types t on t.id = f.record_type_id where t.code = 'bao_cao' and f.version = 1) as normal_form_id,
-    (select id from public.db_form_definitions f join public.db_record_types t on t.id = f.record_type_id where t.code = 'ho_so_dang' and f.version = 1) as sensitive_form_id,
+    (select f.id from public.db_form_definitions f join public.db_record_types t on t.id = f.record_type_id where t.code = 'bao_cao' and f.version = 1) as normal_form_id,
+    (select f.id from public.db_form_definitions f join public.db_record_types t on t.id = f.record_type_id where t.code = 'ho_so_dang' and f.version = 1) as sensitive_form_id,
     '10000000-0000-4000-8000-000000000001'::uuid as employee_department,
     '10000000-0000-4000-8000-000000000002'::uuid as other_department
 )
