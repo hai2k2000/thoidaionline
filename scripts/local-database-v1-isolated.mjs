@@ -8,22 +8,48 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const sourceSupabase = join(root, "supabase");
 const baselineCutoff = "20260901095000_backend_security_hardening.sql";
-const v1Migrations = new Set([
-  "20260911083000_fix_first_login_default_password.sql",
+// Keep the runtime baseline source-derived but bounded. The historical chain is
+// intentionally tested separately because its legacy data fixtures are not a
+// prerequisite for the current Database V1 application.
+const currentAppMigrations = new Set([
+  "20260318101500_baseline.sql",
+  "20260318132500_add_username_to_staff_users.sql",
+  "20260320114500_hr_assets_documents_performance_mvp.sql",
+  "20260320141500_employee_profile_file.sql",
+  "20260813110000_task_evaluation_checkpoints.sql",
+  "20260813172000_task_plans_recipients_self_claim.sql",
+  "20260813210000_password_reset_security.sql",
+  "20260814070000_job_titles.sql",
+  "20260814160000_employee_password_reset_admin.sql",
+  "20260814190000_phase1_authorization_facade.sql",
+  "20260819123000_role_lifecycle_and_tbt_direct.sql",
+  "20260817050000_phase3_additive_task_schema.sql",
+  "20260825180000_task_completion_scoring.sql",
+  "20260820090000_task_assignment_reviewer_daily_due_time.sql",
+  "20260821130000_user_notification_reads.sql",
+  "20260822200000_account_personalization.sql",
+  "20260910090000_leave_requests.sql",
+  "20260910150000_long_leave_tbt_approval.sql",
   "20260911110000_enable_deputy_department_assignment.sql",
   "20260911133000_scope_leave_review_to_department.sql",
   "20260911150000_lock_task_completion_scores.sql",
-  "20260911170000_atomic_attendance_completion.sql",
-  "20260911180000_align_deputy_assignment_reviewer.sql",
   "20260911190000_enforce_first_login_password_change.sql",
-  "20260911230000_atomic_attendance_log_merge.sql",
-  "20260915120000_personal_work_plans.sql",
   "20260916100000_phase1a_rbac_core.sql",
   "20260916103000_phase1a_rbac_db_helper.sql",
   "20260916104500_phase1a_rbac_compatibility_completion.sql",
+  "20261001090000_quick_report_task_v1.sql",
+  "20261001100000_admin_quick_report_permission_management.sql",
+  "20261001110000_user_specific_permission_grants.sql",
+  "20261009100000_asset_management_v2.sql",
+  "20261014100000_asset_manage_permission_management.sql",
+  "20261015100000_rbac_v2_role_user_overrides.sql",
+  "20261015110000_rbac_v2_scope_ambiguity_fix.sql",
+]);
+const v1Migrations = new Set([
   "20261017100000_database_management_v1_foundation.sql",
   "20261017101000_database_management_v1_catalog.sql",
 ]);
+const selectedMigrations = new Set([...currentAppMigrations, ...v1Migrations]);
 const compatibilityName = "20260826195000_local_bootstrap_task_actor_compatibility.sql";
 const compatibilitySql = `begin;
 insert into public.roles(code,name,level,active) values ('admin','Local administrator',99,true) on conflict (code) do update set active=true;
@@ -48,16 +74,6 @@ select f.full_name,f.username,f.email,'local-only-password',extensions.crypt('lo
 from fixture f cross join public.roles r cross join public.job_titles j cross join public.departments d
 where r.code='phong_vien' and j.code='phong_vien' and d.code='content'
   and not exists (select 1 from public.staff_users u where lower(u.username)=f.username);
-do $block$
-declare v_actor uuid;
-begin
-  select id into v_actor from public.staff_users where active = true order by created_at, id limit 1;
-  if v_actor is null then raise exception 'isolated baseline requires an active staff actor'; end if;
-  update public.tasks set created_by = v_actor, updated_at = coalesce(updated_at, now())
-  where task_type = 'assigned' and coalesce(self_claimable, false) = false
-    and status = 'new' and coalesce(task_category, '') <> 'duty' and created_by is null;
-end
-$block$;
 commit;`;
 const verificationSql = `select
   case when (select count(*) from public.db_record_types where active)=44
@@ -70,7 +86,15 @@ const verificationSql = `select
     and has_table_privilege('service_role','public.db_records','insert')
   then 'CSDL_ISOLATED_SCHEMA PASS' else 'CSDL_ISOLATED_SCHEMA FAIL' end as result,
   (select count(*) from public.db_record_types where active) as active_record_types,
-  (select count(*) from public.db_form_definitions where status='published') as published_forms;`;
+  (select count(*) from public.db_form_definitions where status='published') as published_forms,
+  to_regprocedure('public.api_list_effective_permissions(uuid)') is not null as rbac_v2_rpc,
+  to_regclass('public.leave_requests') is not null as leave_schema,
+  to_regclass('public.audit_logs') is not null as audit_schema,
+  coalesce((select relrowsecurity from pg_class where oid='public.task_completion_scores'::regclass), false) as task_score_rls,
+  has_table_privilege('service_role','public.task_completion_scores','select') as task_score_service_select,
+  has_function_privilege('service_role','public.api_list_effective_permissions(uuid)','execute') as rbac_v2_service_execute,
+  to_regclass('public.user_permission_grants') is not null as user_permission_overrides,
+  exists (select 1 from information_schema.columns where table_schema='public' and table_name='staff_users' and column_name='must_change_password') as session_password_lifecycle;`;
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32", ...options });
@@ -84,15 +108,16 @@ export function prepare() {
   cpSync(sourceSupabase, targetSupabase, { recursive: true });
   const migrationDir = join(targetSupabase, "migrations");
   for (const name of readdirSync(migrationDir)) {
-    if (name.endsWith(".sql") && (name > baselineCutoff && !v1Migrations.has(name))) rmSync(join(migrationDir, name), { force: true });
+    if (name.endsWith(".sql") && !selectedMigrations.has(name)) rmSync(join(migrationDir, name), { force: true });
   }
   writeFileSync(join(migrationDir, compatibilityName), compatibilitySql, "utf8");
   let config = readFileSync(join(targetSupabase, "config.toml"), "utf8");
   const projectId = `thoidai-csdl-v1-${target.split(/[\\\\/]/).pop()?.toLowerCase() ?? "local"}`.replace(/[^a-z0-9-]/g, "-");
   config = config.replace('project_id = "thoidai-work"', `project_id = "${projectId}"`);
+  config = config.replace(/\[db\.seed\][\s\S]*?sql_paths[^\n]*/, "[db.seed]\nenabled = false\nsql_paths = []");
   config = config.replace(/\[db\.seed\][\s\S]*?sql_paths = \["\.\/seeds\/.*?\"\]/, "[db.seed]\nenabled = false\n");
   writeFileSync(join(targetSupabase, "config.toml"), config, "utf8");
-  writeFileSync(join(target, ".thoidai-csdl-v1-isolated"), JSON.stringify({ baselineCutoff, v1Migrations: [...v1Migrations], compatibilityName, projectId }), "utf8");
+  writeFileSync(join(target, ".thoidai-csdl-v1-isolated"), JSON.stringify({ baselineCutoff, currentAppMigrations: [...currentAppMigrations], v1Migrations: [...v1Migrations], compatibilityName, projectId }), "utf8");
   return target;
 }
 

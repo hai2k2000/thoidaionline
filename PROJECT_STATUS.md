@@ -1023,3 +1023,12 @@ Next:
 - Local runtime URL used: `http://localhost:3107` (stopped after unauthenticated checks). Production/VPS/database: `UNCHANGED`.
 - Supabase warning retained for owner review: legacy `public.task_completion_scores` has RLS disabled in the isolated baseline. No remediation was applied because enabling RLS without approved policies could block existing access.
 - Focused tests after hardening: `14/14` Database Management tests PASS; TypeScript PASS; required routes PASS; diff check PASS. Isolated runner contract test PASS. No deployment or production migration performed.
+
+## Database Management V1 — authenticated local runtime recovery (2026-10-17)
+
+- `HISTORICAL_FULL_CHAIN: FAIL` remains unchanged. Legacy September fixture incompatibilities are not rewritten or bypassed.
+- `CURRENT_APP_CSDL_RUNTIME: PASS` on a disposable PostgreSQL/Supabase baseline built from an explicit allowlist of official migrations, including account personalization, leave/audit dependencies, `20260911150000_lock_task_completion_scores.sql`, RBAC V2 (`20261015100000` plus scope fix), and Database V1 migrations.
+- Baseline verification: 44 active record types, 44 published forms, `api_list_effective_permissions(uuid)`, service-role execute grant, `leave_requests`, audit, password lifecycle, `db_records` RLS, and `task_completion_scores` RLS/service-role select all verified.
+- Authenticated HTTP runtime: PASS for synthetic local login/session/RBAC, catalog, create/read/update/search, private file upload, soft-delete and restore. Browser E2E was not claimed because the local browser daemon was unavailable on this Windows host.
+- Disposable RLS assessment: `task_completion_scores` is protected by the lock migration. Ten unrelated legacy tables remain RLS-disabled in the disposable baseline; no remediation was applied without approved policies. This is not evidence of production state.
+- Production/VPS/database: `UNCHANGED`. No production credentials, data, migration, deployment, restart, or activation used.

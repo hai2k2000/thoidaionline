@@ -18,6 +18,6 @@ export function canAccessDatabaseRecord(actor: DatabaseAclActor, rows: readonly 
 
 export function defaultDatabaseRecordAccess(actor: DatabaseAclActor, capability: DatabaseAclCapability, ownerId: string | null, departmentId: string | null): boolean {
   if (!actor.permissionCodes.includes(capabilityPermission(capability))) return false;
-  if (actor.id === ownerId && ["discover", "metadata.view", "preview", "download", "edit", "export"].includes(capability)) return true;
+  if (actor.id === ownerId && ["discover", "metadata.view", "preview", "download", "edit", "delete", "restore", "export", "acl.manage"].includes(capability)) return true;
   return Boolean(actor.departmentId && departmentId && actor.departmentId === departmentId && capability === "discover");
 }
