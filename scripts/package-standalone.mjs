@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { REQUIRED_PRODUCTION_ROUTES } from "../src/lib/requiredProductionRoutes.mjs";
 
 const root = process.cwd();
@@ -154,6 +155,6 @@ await writeFile(join(output, ".release-meta"), [
   "rollback_role=unassigned",
   "",
 ].join("\n"));
-await import(join(output, "artifact-manifest.mjs")).then(({ writeManifest }) => writeManifest(output));
+await import(pathToFileURL(join(output, "artifact-manifest.mjs")).href).then(({ writeManifest }) => writeManifest(output));
 execFileSync(process.execPath, [join(output, "verify-standalone-artifact.mjs"), output], { stdio: "inherit" });
 console.log(`standalone-artifact: ${output}`);
