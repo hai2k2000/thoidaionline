@@ -7,7 +7,7 @@ on:
       source_sha:
         description: "Feature source SHA to validate"
         required: true
-        default: "b5ba9ed32e6d3a0d01fd4c55a5a7c219fcfc77f6"
+        default: "0dd892dee8fd7ba4b50a8a6de06791d1eb5c2470"
         type: string
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
         shell: bash
         env:
           EXPECTED_BRANCH: validation/cp3-cp4-runtime-20261017
-          EXPECTED_SHA: b5ba9ed32e6d3a0d01fd4c55a5a7c219fcfc77f6
+          EXPECTED_SHA: 0dd892dee8fd7ba4b50a8a6de06791d1eb5c2470
         run: |
           set -euo pipefail
           test "${GITHUB_REF_NAME}" = "${EXPECTED_BRANCH}"
