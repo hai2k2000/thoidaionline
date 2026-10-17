@@ -1,0 +1,24 @@
+{
+  "description": "Close completed Codex worktrees through the existing fail-closed cleanup script.",
+  "hooks": {
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/worktree-auto-close.py\"",
+        "commandWindows": "py -3 -c \"import sys,subprocess; root=subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip(); subprocess.run(['py','-3',root+'/.codex/worktree-auto-close.py'], stdin=sys.stdin)\"",
+        "timeout": 30,
+        "statusMessage": "Checking completed worktree lifecycle"
+      }]
+    }],
+    "SessionStart": [{
+      "matcher": "startup|resume",
+      "hooks": [{
+        "type": "command",
+        "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/worktree-auto-close.py\"",
+        "commandWindows": "py -3 -c \"import sys,subprocess; root=subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip(); subprocess.run(['py','-3',root+'/.codex/worktree-auto-close.py'], stdin=sys.stdin)\"",
+        "timeout": 30,
+        "statusMessage": "Checking one pending worktree cleanup"
+      }]
+    }]
+  }
+}
