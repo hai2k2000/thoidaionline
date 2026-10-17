@@ -1010,4 +1010,4 @@ Production safety:
 
 Next:
 - Resolve or isolate the historical local fixture blocker before claiming full-chain migration acceptance, then rerun the local database verification. Do not deploy or apply production migration.
-- Branch pushed: `codex/database-management-v1-foundation` (`ab62181`).
+- Branch pushed: `codex/database-management-v1-foundation` (`3bf06b3`, includes `9a304c0`, `ab62181`, `c7856e8`).
