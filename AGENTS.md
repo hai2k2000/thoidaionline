@@ -29,3 +29,10 @@
 - `scripts/production/deploy-external-artifact.sh` mặc định verify-only; activation phải có owner approval và ủy quyền rõ ràng, sau đó delegate cho `deploy-gate.sh`.
 - Lifecycle mới giữ current/previous/rollback-1/rollback-2, bảo vệ `.keep`, evidence, references và UNKNOWN; retention chỉ dry-run cho đến khi có phê duyệt APPLY riêng.
 - Mọi build/worktree mới phải có metadata và kiểm tra hard floor disk 20 GiB. Không backfill metadata legacy trong Phase 1.
+
+## VPS DISK GUARD
+
+- Build and deploy use `deploy/disk-guard.conf` through `scripts/production/disk-guard.sh`.
+- The hard minimum is 10 GiB free after estimated build/release headroom. The warning threshold is 20 GiB.
+- Free disk below 10 GiB, or projected free disk below 10 GiB after estimated writes, is blocked. The guard must not be disabled or bypassed.
+

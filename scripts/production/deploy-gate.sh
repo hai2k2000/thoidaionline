@@ -21,21 +21,15 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 nginx_guard=${THOIDAI_NGINX_GUARD_SCRIPT:-$script_dir/nginx-supa-buffer-guard.sh}
 rbac_gate=${THOIDAI_RBAC_ROLLBACK_GATE:-$script_dir/check-rbac-rollback-compatibility.sh}
 
-hard_min_free_kb=${THOIDAI_HARD_MIN_FREE_KB:-20971520}
-estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-1048576}
-[[ "$hard_min_free_kb" =~ ^[0-9]+$ && "$estimated_headroom_kb" =~ ^[0-9]+$ ]] || { echo "DEPLOY ABORTED: invalid disk gate values" >&2; exit 1; }
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$script_dir/disk-guard.sh"
+estimated_headroom_kb=${THOIDAI_ESTIMATED_HEADROOM_KB:-$THOIDAI_DISK_DEFAULT_HEADROOM_KB}
+
 [[ -d "$artifact" && -f "$artifact/.release-meta" ]] || { echo "artifact missing metadata" >&2; exit 1; }
 artifact_commit=$(awk -F= '$1=="commit" {print $2; exit}' "$artifact/.release-meta")
 smoke_waived=0
 free_kb=$(df -Pk "$release_root" | awk 'NR==2 {print $4}')
-if (( free_kb < hard_min_free_kb || free_kb - estimated_headroom_kb < hard_min_free_kb )); then
-  echo "DEPLOY ABORTED"
-  echo "Free space: ${free_kb}KB"
-  echo "Required minimum: ${hard_min_free_kb}KB"
-  echo "Estimated build headroom: ${estimated_headroom_kb}KB"
-  exit 1
-fi
-
+disk_guard_require "$free_kb" "$estimated_headroom_kb" "deploy"
 exec 9>"$lock_file"
 flock -n 9 || { echo "DEPLOY ABORTED: deploy lock unavailable" >&2; exit 1; }
 if [[ "${THOIDAI_CANARY_ONLY:-0}" == 1 ]]; then echo "canary gate: PASS"; exit 0; fi
