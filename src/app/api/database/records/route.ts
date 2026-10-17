@@ -11,8 +11,14 @@ export async function GET(request: Request) {
   const actor = await getSessionUser();
   if (!actor) return json({ error: "unauthenticated" }, 401);
   try {
-    const q = new URL(request.url).searchParams.get("q") ?? "";
-    return json({ records: await listVisibleDatabaseRecords(actor, q) });
+    const params = new URL(request.url).searchParams;
+    return json({ records: await listVisibleDatabaseRecords(actor, {
+      q: params.get("q") ?? "",
+      status: params.get("status") ?? undefined,
+      recordTypeId: params.get("recordTypeId") ?? undefined,
+      categoryId: params.get("categoryId") ?? undefined,
+      limit: Number(params.get("limit") ?? 200),
+    }) });
   } catch {
     return json({ error: "record_read_failed" }, 500);
   }

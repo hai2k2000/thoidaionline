@@ -73,10 +73,19 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   };
 }
 
-export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, query = "") {
+export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; limit?: number };
+
+export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, filters: DatabaseRecordListQuery = {}) {
   const context = await actorContext(actor);
-  let request = serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").neq("status", "deleted").order("updated_at", { ascending: false }).limit(200);
-  if (query.trim()) request = request.ilike("title", `%${query.trim().replace(/[%_]/g, "")}%`);
+  const limit = Math.min(Math.max(filters.limit ?? 200, 1), 200);
+  let request = serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").neq("status", "deleted").order("updated_at", { ascending: false }).limit(limit);
+  if (filters.q?.trim()) {
+    const query = filters.q.trim().replace(/[%_,()]/g, " ");
+    request = request.or(`title.ilike.%${query}%,record_code.ilike.%${query}%,summary.ilike.%${query}%`);
+  }
+  if (filters.status) request = request.eq("status", filters.status);
+  if (filters.recordTypeId) request = request.eq("record_type_id", filters.recordTypeId);
+  if (filters.categoryId) request = request.eq("category_id", filters.categoryId);
   const { data, error } = await request;
   if (error) throw error;
   const rows = (data ?? []) as RecordRow[];
