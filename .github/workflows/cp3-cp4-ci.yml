@@ -68,6 +68,8 @@ jobs:
           echo "E2E_PASSWORD=$E2E_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Apply CP3 runtime assertions
+        id: cp3_assertions
+        continue-on-error: true
         run: PGPASSWORD=e2e-postgres-only psql "$E2E_DB_URL" -f scripts/e2e/cp3-runtime.sql
 
       - name: Build local application against sandbox gateway
@@ -88,6 +90,8 @@ jobs:
           test ! -e .env.production
 
       - name: Run CP4 HTTP runtime assertions
+        id: cp4_assertions
+        continue-on-error: true
         shell: bash
         run: |
           gateway_port=$((21000 + (GITHUB_RUN_ID % 500)))
@@ -100,6 +104,16 @@ jobs:
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3105/login >/dev/null 2>&1 && break; sleep 1; done
           curl -fsS http://127.0.0.1:3105/login >/dev/null
           E2E_BASE_URL=http://127.0.0.1:3105 node scripts/e2e/cp4-runtime.mjs
+
+      - name: Aggregate CP3/CP4 result
+        if: always()
+        env:
+          CP3_OUTCOME: ${{ steps.cp3_assertions.outcome }}
+          CP4_OUTCOME: ${{ steps.cp4_assertions.outcome }}
+        run: |
+          set -euo pipefail
+          test "$CP3_OUTCOME" = success
+          test "$CP4_OUTCOME" = success
 
       - name: Redact bounded diagnostics
         if: failure()
