@@ -40,8 +40,11 @@ test("artifact boundary enforces provenance and the production disk floor", () =
   assert.match(deploy, /verify-standalone-artifact\.mjs/);
   assert.match(deploy, /artifact provenance does not match expected commit/);
   const gate = readFileSync("scripts/production/deploy-gate.sh", "utf8");
-  assert.match(gate, /hard_min_free_kb=\$\{THOIDAI_HARD_MIN_FREE_KB:-20971520\}/);
-  assert.match(gate, /free_kb - estimated_headroom_kb/);
+  assert.match(gate, /source "\$script_dir\/disk-guard\.sh"/);
+  assert.match(gate, /disk_guard_require/);
+  const policy = readFileSync("deploy/disk-guard.conf", "utf8");
+  assert.match(policy, /THOIDAI_DISK_HARD_MIN_KB=10485760/);
+  assert.match(policy, /THOIDAI_DISK_WARNING_KB=20971520/);
   assert.match(gate, /build config is not canonical-public/);
 });
 
