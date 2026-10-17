@@ -1093,3 +1093,37 @@ Production safety:
 Next:
 - Push CP2-B commit to the feature branch only.
 - Owner may approve the separate RLS hardening proposal and provide source confirmation for sensitive forms.
+
+## Database Management V1 — CP2-C runtime acceptance and security completion (2026-10-17)
+
+Current Phase: CP2-C local runtime acceptance
+Current Task: server-side sensitive policy, bounded search, source-backed form options, and disposable RLS verification
+
+Completed:
+- Added server-side default deny for the four sensitive/legal record types (`ho_so_dang`, `chi_hoi_nha_bao`, `doan_thanh_nien`, `giay_phep_quan_ly_bao_chi`). Technical admin permissions and per-record ACL cannot override this policy; an explicit `record.sensitive.access` permission is required and remains owner-controlled.
+- Filtered sensitive types from catalog/forms, list/search and detail access; create is rejected with HTTP 403.
+- Bounded list scanning to authorized record-type IDs and a finite window before ACL filtering; this removes the prior unbounded full-table scan behavior, while full database/RPC predicate pushdown remains a follow-up.
+- Catalog now supplies live department/person options and a bounded country option set; number inputs submit numbers and person fields use real staff options.
+
+Validation:
+- Database Management focused tests: 18/18 PASS.
+- Source-only TypeScript check excluding generated `.next/dev` types: PASS.
+- Touched-file ESLint: PASS.
+- `git diff --check`: PASS.
+- Disposable isolated schema: PASS (44 active record types, 44 published forms, RLS and service-role grants verified).
+- Authenticated local HTTP matrix: 40/40 non-sensitive types created, read, updated, searched, soft-deleted and restored successfully.
+- Sensitive policy runtime: PASS; technical admin catalog exposes 40/44, sensitive create returns 403.
+- Disposable Quick Report grant hardening: PASS; anon direct table access denied and service-role direct access succeeds. Proposal remains unapplied to production.
+
+Not claimed:
+- HTTP runtime coverage for the four `OWNER_REQUIRED` types: intentionally blocked by policy; disposable privileged fixtures were not used to claim business approval.
+- Browser E2E: not run; owner manual acceptance remains required because Browser Use daemon is unavailable.
+- Full AND/OR/NOT metadata query language and DB-side ACL predicate/RPC: not implemented in this bounded CP2-C patch.
+- Historical full migration chain: remains FAIL at legacy fixture incompatibilities and was not changed.
+
+Production safety:
+- Production/VPS/database/release/policy: UNCHANGED. No production migration, grant/RLS change, deploy, merge, restart or canonical branch update performed.
+
+Next:
+- Owner can manually accept the local UI at `http://localhost:3107` after starting the disposable runtime and Next.js with local-only credentials supplied by the fixture runner.
+- Separate owner approval is required before applying the Quick Report grant hardening or any sensitive record permission.

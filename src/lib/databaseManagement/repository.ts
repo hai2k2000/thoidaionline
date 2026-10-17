@@ -3,12 +3,14 @@ import "server-only";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { canAccessDatabaseRecord, defaultDatabaseRecordAccess, type DatabaseAclActor, type DatabaseAclRow } from "./acl";
 import { validateDatabaseMetadata } from "./validation";
+import { canAccessRecordType } from "./policy";
 import type { DatabaseRecordAclInput, DatabaseRecordInput, DatabaseRecordUpdateInput } from "./types";
 
 type RecordRow = {
   id: string; category_id: string; record_type_id: string; record_code: string; title: string;
   summary: string | null; status: string; department_id: string | null; owner_id: string | null;
   created_by: string; metadata: Record<string, unknown>; form_definition_id?: string | null; deleted_at?: string | null; created_at: string; updated_at: string;
+  record_type_code?: string | null;
 };
 
 export type DatabaseRecordActor = { id: string; department_id: string | null; role_code: string; rbacPermissions: string[] };
@@ -26,7 +28,8 @@ async function aclForRecord(recordId: string) {
   return (data ?? []).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>;
 }
 
-async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
+async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
+  if (!canAccessRecordType(actor, record.record_type_code)) return false;
   if (!actor.rbacPermissions.includes(`record.${capability}`)) return false;
   const context = await actorContext(actor);
   const rows = await aclForRecord(recordId);
@@ -49,13 +52,16 @@ function hasExplicitDeny(actor: DatabaseAclActor, rows: readonly DatabaseAclRow[
 
 export async function canAccessDatabaseRecordForActor(actor: DatabaseRecordActor, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
   const record = await getRecord(recordId);
-  return Boolean(record && record.status !== "deleted" && await canRecord(actor, record, recordId, capability));
+  return Boolean(record && record.status !== "deleted" && canAccessRecordType(actor, record.record_type_code) && await canRecord(actor, record, recordId, capability));
 }
 
 async function getRecord(recordId: string) {
   const { data, error } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,form_definition_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at,deleted_at").eq("id", recordId).maybeSingle();
   if (error) throw error;
-  return data as (RecordRow & { form_definition_id: string | null; deleted_at: string | null }) | null;
+  if (!data) return null;
+  const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("code").eq("id", data.record_type_id).maybeSingle();
+  if (typeError) throw typeError;
+  return { ...(data as RecordRow & { form_definition_id: string | null; deleted_at: string | null }), record_type_code: type?.code ?? null };
 }
 
 async function validateFormMetadata(formDefinitionId: string | null | undefined, metadata: Record<string, unknown>) {
@@ -69,6 +75,7 @@ async function validateFormMetadata(formDefinitionId: string | null | undefined,
 export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recordId: string) {
   const record = await getRecord(recordId);
   if (!record || record.status === "deleted") return null;
+  if (!canAccessRecordType(actor, record.record_type_code)) return null;
   const metadataAllowed = await canRecord(actor, record, recordId, "metadata.view");
   const discoverAllowed = await canRecord(actor, record, recordId, "discover");
   if (!metadataAllowed && !discoverAllowed) return null;
@@ -95,9 +102,14 @@ export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeI
 export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, filters: DatabaseRecordListQuery = {}) {
   const context = await actorContext(actor);
   const limit = Math.min(Math.max(filters.limit ?? 200, 1), 200);
+  const { data: typeRows, error: typeError } = await serverSupabase.from("db_record_types").select("id,code").eq("active", true);
+  if (typeError) throw typeError;
+  const allowedTypeIds = (typeRows ?? []).filter((type) => canAccessRecordType(actor, type.code)).map((type) => type.id);
+  if (!allowedTypeIds.length) return [];
   const rows: RecordRow[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    let request = serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").neq("status", "deleted").order("updated_at", { ascending: false }).range(offset, offset + 999);
+  const maxRowsToScan = Math.max(limit * 10, 1000);
+  for (let offset = 0; rows.length < maxRowsToScan; offset += 200) {
+    let request = serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").neq("status", "deleted").in("record_type_id", allowedTypeIds).order("updated_at", { ascending: false }).range(offset, offset + 199);
     if (filters.q?.trim()) {
       const query = filters.q.trim().replace(/[%_,()]/g, " ");
       request = request.or(`title.ilike.%${query}%,record_code.ilike.%${query}%,summary.ilike.%${query}%`);
@@ -108,7 +120,7 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, fil
     const { data, error } = await request;
     if (error) throw error;
     rows.push(...((data ?? []) as RecordRow[]));
-    if ((data ?? []).length < 1000) break;
+    if ((data ?? []).length < 200) break;
   }
   if (!rows.length) return [];
   const byRecord = new Map<string, DatabaseAclRow[]>();
@@ -136,9 +148,10 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
   if (!actor.department_id) throw new Error("department_required");
   const { data: category, error: categoryError } = await serverSupabase.from("db_categories").select("id,department_id,active").eq("id", input.categoryId).eq("active", true).maybeSingle();
   if (categoryError) throw categoryError;
-  const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("id,category_id,active").eq("id", input.recordTypeId).eq("active", true).maybeSingle();
+  const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("id,category_id,active,code").eq("id", input.recordTypeId).eq("active", true).maybeSingle();
   if (typeError) throw typeError;
   if (!category || !type || type.category_id !== category.id || (category.department_id && category.department_id !== actor.department_id)) throw new Error("record_scope_forbidden");
+  if (!canAccessRecordType(actor, type.code)) throw new Error("record_type_restricted");
   const { data: form, error: formError } = await serverSupabase.from("db_form_definitions").select("id").eq("record_type_id", input.recordTypeId).eq("status", "published").order("version", { ascending: false }).limit(1).maybeSingle();
   if (formError) throw formError;
   await validateFormMetadata(form?.id, { ...input.metadata, record_code: input.recordCode, title: input.title, summary: input.summary ?? "", status: "draft" });

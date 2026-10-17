@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     await logServerAudit({ actorId: actor.id, module: "database", entityType: "db_records", entityId: record.id, action: "create", newData: { record_code: record.record_code, record_type_id: record.record_type_id } });
     return json({ record }, 201);
   } catch (error) {
-    if (error instanceof Error && ["permission_denied", "record_scope_forbidden"].includes(error.message)) return json({ error: "forbidden" }, 403);
+    if (error instanceof Error && ["permission_denied", "record_scope_forbidden", "record_type_restricted"].includes(error.message)) return json({ error: "forbidden" }, 403);
     if (error instanceof Error && ["department_required"].includes(error.message) || error instanceof Error && error.message.startsWith("invalid_metadata:")) return json({ error: "invalid_request" }, 400);
     return json({ error: "record_create_failed" }, 500);
   }
