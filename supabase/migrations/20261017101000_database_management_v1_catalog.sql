@@ -89,4 +89,55 @@ begin
 end
 $forms$;
 
+-- CP2: only fields explicitly described by the approved acceptance brief are
+-- specialized here. Other record types keep the common skeleton until their
+-- business field contract is confirmed by the owner.
+do $specialized$
+declare
+  item record;
+  form_id uuid;
+begin
+  for item in
+    select t.code, f.id as form_id
+    from public.db_record_types t
+    join public.db_form_definitions f on f.record_type_id = t.id and f.version = 1 and f.status = 'published'
+    where t.code in ('van_ban_den', 'hop_dong_nghiep_vu', 'ho_so_su_kien')
+  loop
+    form_id := item.form_id;
+    if item.code = 'van_ban_den' then
+      insert into public.db_form_fields(form_definition_id, field_key, label, data_type, required, searchable, options, validation, sort_order) values
+        (form_id, 'document_number', 'Số / ký hiệu', 'text', false, true, '[]'::jsonb, '{"maxLength":120}'::jsonb, 100),
+        (form_id, 'sender_organization', 'Cơ quan gửi', 'text', false, true, '[]'::jsonb, '{"maxLength":240}'::jsonb, 110),
+        (form_id, 'received_date', 'Ngày nhận', 'date', false, true, '[]'::jsonb, '{}'::jsonb, 120),
+        (form_id, 'issued_date_source', 'Ngày ban hành', 'date', false, true, '[]'::jsonb, '{}'::jsonb, 130),
+        (form_id, 'handler', 'Người xử lý', 'person', false, true, '[]'::jsonb, '{}'::jsonb, 140),
+        (form_id, 'processing_deadline', 'Hạn xử lý', 'date', false, true, '[]'::jsonb, '{}'::jsonb, 150),
+        (form_id, 'original_location', 'Vị trí bản gốc', 'text', false, true, '[]'::jsonb, '{"maxLength":240}'::jsonb, 160)
+      on conflict (form_definition_id, field_key) do update set label = excluded.label, data_type = excluded.data_type, searchable = excluded.searchable, validation = excluded.validation, sort_order = excluded.sort_order;
+    elsif item.code = 'hop_dong_nghiep_vu' then
+      insert into public.db_form_fields(form_definition_id, field_key, label, data_type, required, searchable, options, validation, sort_order) values
+        (form_id, 'partner', 'Đối tác', 'text', false, true, '[]'::jsonb, '{"maxLength":240}'::jsonb, 100),
+        (form_id, 'contract_number', 'Số hợp đồng', 'text', false, true, '[]'::jsonb, '{"maxLength":120}'::jsonb, 110),
+        (form_id, 'signed_date', 'Ngày ký', 'date', false, true, '[]'::jsonb, '{}'::jsonb, 120),
+        (form_id, 'term_end_date', 'Thời hạn đến', 'date', false, true, '[]'::jsonb, '{}'::jsonb, 130),
+        (form_id, 'owner_person', 'Người phụ trách', 'person', false, true, '[]'::jsonb, '{}'::jsonb, 140),
+        (form_id, 'scope', 'Phạm vi công việc', 'long_text', false, true, '[]'::jsonb, '{"maxLength":5000}'::jsonb, 150),
+        (form_id, 'execution_status', 'Tình trạng thực hiện', 'select', false, true, '[{"value":"draft","label":"Dự thảo"},{"value":"active","label":"Đang thực hiện"},{"value":"completed","label":"Hoàn thành"},{"value":"terminated","label":"Chấm dứt"}]'::jsonb, '{}'::jsonb, 160)
+      on conflict (form_definition_id, field_key) do update set label = excluded.label, data_type = excluded.data_type, searchable = excluded.searchable, options = excluded.options, validation = excluded.validation, sort_order = excluded.sort_order;
+    else
+      insert into public.db_form_fields(form_definition_id, field_key, label, data_type, required, searchable, options, validation, sort_order) values
+        (form_id, 'event_name', 'Tên sự kiện', 'text', false, true, '[]'::jsonb, '{"maxLength":500}'::jsonb, 100),
+        (form_id, 'event_datetime', 'Thời gian', 'datetime', false, true, '[]'::jsonb, '{}'::jsonb, 110),
+        (form_id, 'event_location', 'Địa điểm', 'text', false, true, '[]'::jsonb, '{"maxLength":240}'::jsonb, 120),
+        (form_id, 'organizer_department', 'Đơn vị tổ chức', 'department', false, true, '[]'::jsonb, '{}'::jsonb, 130),
+        (form_id, 'related_country', 'Quốc gia liên quan', 'country', false, true, '[]'::jsonb, '{}'::jsonb, 140),
+        (form_id, 'participants', 'Nhân vật tham gia', 'multi_select', false, true, '[]'::jsonb, '{"maxItems":100}'::jsonb, 150),
+        (form_id, 'materials', 'Tư liệu / tài liệu', 'long_text', false, true, '[]'::jsonb, '{"maxLength":5000}'::jsonb, 160),
+        (form_id, 'related_activities', 'Hoạt động liên quan', 'long_text', false, true, '[]'::jsonb, '{"maxLength":5000}'::jsonb, 170)
+      on conflict (form_definition_id, field_key) do update set label = excluded.label, data_type = excluded.data_type, searchable = excluded.searchable, validation = excluded.validation, sort_order = excluded.sort_order;
+    end if;
+  end loop;
+end
+$specialized$;
+
 commit;

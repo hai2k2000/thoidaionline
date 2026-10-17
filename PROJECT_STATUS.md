@@ -1033,3 +1033,33 @@ Next:
 - ACL lifecycle correction: composite-key upsert now permits repeated deny/allow updates; local HTTP replay passed expired deny, active deny, repeated deny, allow, and owner delete/restore paths.
 - Disposable RLS assessment: `task_completion_scores` is protected by the lock migration. Ten unrelated legacy tables remain RLS-disabled in the disposable baseline; no remediation was applied without approved policies. This is not evidence of production state.
 - Production/VPS/database: `UNCHANGED`. No production credentials, data, migration, deployment, restart, or activation used.
+
+## Database Management V1 — CP2 functional completion and acceptance (2026-10-17)
+
+Current Phase: CP2 local functional completion and browser acceptance
+Current Task: source-backed specialized metadata, 44-type matrix, and read-only legacy RLS assessment
+
+Completed:
+- Added source-backed specialized fields for `van_ban_den`, `hop_dong_nghiep_vu`, and `ho_so_su_kien` only.
+- Added typed dynamic form controls for text, long text, date, datetime, number, URL, select, multi-select, country, department and person-compatible fields.
+- Added a 44-type matrix and disposable legacy RLS assessment report.
+
+Validation:
+- Database/API contract tests: 19/19 PASS.
+- 44-type matrix test: PASS; catalog/forms remain 44/44.
+- Isolated catalog migration replay: PASS; specialized field counts 16/16/17.
+- TypeScript source-only check (excluding generated `.next` types): PASS.
+- Required route manifest and diff check: PASS.
+- Browser E2E: BLOCKED; Browser Use daemon has no active connection and no browser package was installed under low RAM.
+
+Blockers:
+- Specialized business metadata for 41/44 types lacks an approved source contract; fields are intentionally not guessed.
+- Historical full migration chain remains FAIL for legacy fixtures; unchanged and out of CP2 scope.
+- Disposable RLS finding: `task_quick_report_idempotency` has anon/authenticated table grants; no remediation applied.
+
+Production safety:
+- Production/VPS/database: UNCHANGED. No merge, deploy, production migration, or infrastructure change.
+
+Next:
+- Push the three existing verified commits plus CP2 changes to the feature branch only after final owner review.
+- Browser/manual acceptance can use the existing local URL when the isolated runtime is started.
