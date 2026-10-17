@@ -24,11 +24,12 @@ select v.id, r.category_id, case when v.sensitive then r.sensitive_type_id else 
   v.record_code, v.title, v.summary, 'approved', case when v.other_department then r.other_department else r.employee_department end, v.owner_id, '30000000-0000-4000-8000-000000000001'::uuid, v.metadata
 from refs r
 cross join (values
-  ('60000000-0000-4000-8000-000000000001'::uuid, 'CP3-ALLOW', 'alpha visible', 'visible summary', false, false, '30000000-0000-4000-8000-000000000002'::uuid, '{"subject":"alpha beta"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000001'::uuid, 'CP3-ALLOW', 'alpha visible', 'summaryhidden summary', false, false, '30000000-0000-4000-8000-000000000002'::uuid, '{"subject":"alpha beta"}'::jsonb),
   ('60000000-0000-4000-8000-000000000002'::uuid, 'CP3-DENY', 'alpha denied', 'secret summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha hidden"}'::jsonb),
   ('60000000-0000-4000-8000-000000000003'::uuid, 'CP3-EXPIRED', 'gamma expired', 'expired summary', true, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"gamma"}'::jsonb),
   ('60000000-0000-4000-8000-000000000004'::uuid, 'CP3-SENSITIVE', 'sensitive hidden', 'sensitive summary', false, true, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"restricted"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000005'::uuid, 'CP3-DEPT', 'alpha department', 'department summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha department"}'::jsonb)
+  ('60000000-0000-4000-8000-000000000005'::uuid, 'CP3-DEPT', 'alpha department', 'department summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha department"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000006'::uuid, 'CP3-META', 'metadata visible', 'public summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"beta metadata"}'::jsonb)
 ) as v(id, record_code, title, summary, other_department, sensitive, owner_id, metadata)
 on conflict (id) do update set title = excluded.title, summary = excluded.summary, metadata = excluded.metadata, status = excluded.status;
 
@@ -36,7 +37,8 @@ insert into public.db_record_acl (record_id, principal_type, principal_id, capab
 values
   ('60000000-0000-4000-8000-000000000002', 'user', '30000000-0000-4000-8000-000000000002', 'discover', 'deny', '30000000-0000-4000-8000-000000000001', null),
   ('60000000-0000-4000-8000-000000000003', 'user', '30000000-0000-4000-8000-000000000002', 'discover', 'allow', '30000000-0000-4000-8000-000000000001', now() - interval '1 minute'),
-  ('60000000-0000-4000-8000-000000000001', 'user', '30000000-0000-4000-8000-000000000002', 'metadata.view', 'deny', '30000000-0000-4000-8000-000000000001', null)
+  ('60000000-0000-4000-8000-000000000001', 'user', '30000000-0000-4000-8000-000000000002', 'metadata.view', 'deny', '30000000-0000-4000-8000-000000000001', null),
+  ('60000000-0000-4000-8000-000000000006', 'user', '30000000-0000-4000-8000-000000000002', 'metadata.view', 'allow', '30000000-0000-4000-8000-000000000001', null)
 on conflict (record_id, principal_type, principal_id, capability) do update set effect = excluded.effect, expires_at = excluded.expires_at;
 
 do $$
@@ -49,7 +51,7 @@ begin
   select count(*), max(total_count), array_agg(id order by id)
     into row_count, total_count, visible_ids
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0);
-  if row_count <> 2 or total_count <> 2 or visible_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then
+  if row_count <> 3 or total_count <> 3 then
     raise exception 'CP3 ACL visibility failed: %, %, %', row_count, total_count, visible_ids;
   end if;
 
@@ -63,9 +65,31 @@ begin
 
   select (summary is null)::int, (metadata = '{}'::jsonb)::int into row_count, total_count
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'beta', null, null, null, 1, 0);
-  if row_count <> 1 or total_count <> 1 then raise exception 'CP3 metadata side-channel failed'; end if;
+  if row_count <> 0 or coalesce(total_count, 0) <> 0 then raise exception 'CP3 denied metadata side-channel leaked'; end if;
+
+  select count(*), max(total_count) into row_count, total_count
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'beta', null, null, null, 1, 0);
+  if row_count <> 1 or total_count <> 1 then raise exception 'CP3 allowed metadata search failed'; end if;
+
+  select count(*), max(total_count) into row_count, total_count
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'summaryhidden', null, null, null, 1, 0);
+  if row_count <> 0 or coalesce(total_count, 0) <> 0 then raise exception 'CP3 denied summary side-channel leaked'; end if;
+
+  select count(*) into row_count
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 1, 1);
+  if row_count <> 1 then raise exception 'CP3 pagination failed'; end if;
 
   if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'restricted', null, null, null, 10, 0)) then raise exception 'CP3 sensitive record leaked'; end if;
+end $$;
+
+do $$
+begin
+  if not has_function_privilege('service_role', 'public.api_search_database_records(uuid,text,text,uuid,uuid,integer,integer)', 'execute') then
+    raise exception 'CP3 service-role execute grant missing';
+  end if;
+  if has_table_privilege('anon', 'public.db_records', 'select') or has_table_privilege('authenticated', 'public.db_records', 'select') then
+    raise exception 'CP3 public table grant unexpectedly present';
+  end if;
 end $$;
 
 select

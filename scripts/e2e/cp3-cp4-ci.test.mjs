@@ -24,6 +24,7 @@ test("strict fixture applies CP3 and does not grant public tables", () => {
   assert.match(fixture, /20261017101000_database_management_v1_catalog\.sql/);
   assert.match(fixture, /20261017110000_database_management_v1_cp2b_optional_fields\.sql/);
   assert.match(fixture, /20261017130000_database_management_v1_cp3_search_rpc\.sql/);
+  assert.match(fixture, /20261017140000_database_management_v1_cp3_search_security_fix\.sql/);
   assert.match(fixture, /E2E_STRICT_GRANTS/);
   assert.match(fixture, /revoke all on all tables in schema public from anon, authenticated/);
 });
@@ -34,7 +35,12 @@ test("CP3 runtime checks cover authorization, search operators and side-channel 
   assert.match(sql, /now\(\) - interval '1 minute'/);
   assert.match(sql, /alpha -hidden/);
   assert.match(sql, /alpha OR gamma/);
-  assert.match(sql, /metadata side-channel/);
+  assert.match(sql, /denied metadata side-channel/);
+  assert.match(sql, /allowed metadata search/);
+  assert.match(sql, /denied summary side-channel/);
+  assert.match(sql, /pagination failed/);
+  assert.match(sql, /service-role execute grant missing/);
+  assert.match(sql, /public table grant unexpectedly present/);
   assert.match(sql, /CP3-SENSITIVE/);
   assert.match(sql, /null, null, 100, 0/);
   assert.match(sql, /anon_select/);
@@ -44,5 +50,9 @@ test("CP3 runtime checks cover authorization, search operators and side-channel 
 test("CP4 runtime checks cover CRUD, private file integrity and lifecycle", () => {
   for (const marker of ["/api/database/catalog", "/api/database/records", "/files", "/export", "/restore", "sha256", "soft delete", "history"]) assert.match(cp4, new RegExp(marker.replaceAll("/", "\\/")));
   assert.match(cp4, /application\/pdf/);
+  assert.match(cp4, /createHash/);
+  assert.match(cp4, /upload checksum metadata mismatch/);
+  assert.match(cp4, /download checksum mismatch/);
+  assert.match(cp4, /history action missing/);
   assert.match(cp4, /CP4_RUNTIME_PASS/);
 });

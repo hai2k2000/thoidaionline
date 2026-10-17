@@ -1,6 +1,7 @@
 const baseUrl = process.env.E2E_BASE_URL;
 const username = process.env.E2E_ADMIN_USERNAME;
 const password = process.env.E2E_PASSWORD;
+const { createHash } = await import("node:crypto");
 if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(baseUrl ?? "")) throw new Error("E2E_BASE_URL must be localhost-only");
 if (!username || !password) throw new Error("synthetic CP4 credentials are required");
 
@@ -43,15 +44,22 @@ await expectStatus(await request(`/api/database/records/${recordId}`, {}, cookie
 const update = await request(`/api/database/records/${recordId}`, { method: "PATCH", body: JSON.stringify({ title: "CP4 runtime record updated" }) }, cookie);
 await expectStatus(update, 200, "update");
 
+const uploadBytes = new TextEncoder().encode("cp4-runtime-payload");
+const checksum = (bytes) => createHash("sha256").update(Buffer.from(bytes)).digest("hex");
+const uploadSha256 = checksum(uploadBytes);
 const form = new FormData();
-form.set("file", new Blob(["cp4-runtime-payload"], { type: "application/pdf" }), "cp4-runtime.pdf");
+form.set("file", new Blob([uploadBytes], { type: "application/pdf" }), "cp4-runtime.pdf");
 const upload = await request(`/api/database/records/${recordId}/files`, { method: "POST", body: form }, cookie);
 await expectStatus(upload, 201, "upload");
-const fileId = (await json(upload)).file?.id;
+const uploadedFile = (await json(upload)).file;
+const fileId = uploadedFile?.id;
 if (!fileId) throw new Error("upload did not return a file id");
+if (uploadedFile.sha256 !== uploadSha256) throw new Error("upload checksum metadata mismatch");
 const download = await request(`/api/database/records/${recordId}/files/${fileId}`, {}, cookie);
 await expectStatus(download, 200, "download");
-if (await download.text() !== "cp4-runtime-payload") throw new Error("download payload mismatch");
+const downloadedBytes = new Uint8Array(await download.arrayBuffer());
+if (checksum(downloadedBytes) !== uploadSha256) throw new Error("download checksum mismatch");
+if (new TextDecoder().decode(downloadedBytes) !== "cp4-runtime-payload") throw new Error("download payload mismatch");
 
 const acl = await request(`/api/database/records/${recordId}/acl`, { method: "POST", body: JSON.stringify({ principalType: "user", principalId: "30000000-0000-4000-8000-000000000002", capability: "discover", effect: "allow" }) }, cookie);
 await expectStatus(acl, 201, "acl management");
@@ -64,5 +72,7 @@ await expectStatus(await request(`/api/database/records/${recordId}/restore`, { 
 const detail = await request(`/api/database/records/${recordId}`, {}, cookie);
 await expectStatus(detail, 200, "history read");
 const detailBody = await json(detail);
-if (!Array.isArray(detailBody.record?.history) && !Array.isArray(detailBody.history)) throw new Error("history was not returned");
+const history = detailBody.record?.history ?? detailBody.history;
+if (!Array.isArray(history) || history.length < 4) throw new Error("history entries were not returned");
+for (const action of ["create", "update", "soft_delete", "restore"]) if (!history.some((entry) => entry.action === action)) throw new Error(`history action missing: ${action}`);
 console.log("CP4_RUNTIME_PASS create/read/update/upload/download/sha256/export/acl/history/soft-delete/restore");
