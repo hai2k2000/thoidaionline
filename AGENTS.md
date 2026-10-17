@@ -28,7 +28,7 @@
 - Runtime secrets không được đóng gói. Artifact CI dùng `env_model=runtime-injected`; chỉ deployment gate được phép gắn runtime env tại thời điểm activation.
 - `scripts/production/deploy-external-artifact.sh` mặc định verify-only; activation phải có owner approval và ủy quyền rõ ràng, sau đó delegate cho `deploy-gate.sh`.
 - Lifecycle mới giữ current/previous/rollback-1/rollback-2, bảo vệ `.keep`, evidence, references và UNKNOWN; retention chỉ dry-run cho đến khi có phê duyệt APPLY riêng.
-- Mọi build/worktree mới phải có metadata và kiểm tra hard floor disk 20 GiB. Không backfill metadata legacy trong Phase 1.
+- Mọi build/worktree mới phải có metadata; disk guard dùng hard floor 10 GiB sau estimated headroom và warning threshold 20 GiB. Không backfill metadata legacy trong Phase 1.
 
 ## VPS DISK GUARD
 

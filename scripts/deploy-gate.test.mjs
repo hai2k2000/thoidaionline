@@ -4,7 +4,7 @@ import test from "node:test";
 
 const source = readFileSync("scripts/production/deploy-gate.sh", "utf8");
 test("deploy gate has disk guard, one lock, atomic activation, and post-health rollback", () => {
-  for (const pattern of ["hard_min_free_kb=${THOIDAI_HARD_MIN_FREE_KB:-20971520}", "invalid disk gate values", "verify-standalone-artifact.mjs", "exec 9>", "flock -n 9", "for attempt in $(seq 1 \"$health_attempts\")", "current_target=", "rollback-1", "rollback-2", "df -Pk", "mv_bin", "rollback_snapshot", "contract-smoke.mjs", "chown_bin", "chmod_bin", "runuser_bin", "permission_check", "install_bin"]) assert.ok(source.includes(pattern), pattern);
+  for (const pattern of ["source \"$script_dir/disk-guard.sh\"", "disk_guard_require", "verify-standalone-artifact.mjs", "exec 9>", "flock -n 9", "for attempt in $(seq 1 \"$health_attempts\")", "current_target=", "rollback-1", "rollback-2", "df -Pk", "mv_bin", "rollback_snapshot", "contract-smoke.mjs", "chown_bin", "chmod_bin", "runuser_bin", "permission_check", "install_bin"]) assert.ok(source.includes(pattern), pattern);
 });
 
 test("deploy gate exposes browser-path and proxy-buffer gates", () => {
