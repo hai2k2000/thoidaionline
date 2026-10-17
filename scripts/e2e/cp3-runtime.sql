@@ -27,7 +27,8 @@ cross join (values
   ('60000000-0000-4000-8000-000000000001'::uuid, 'CP3-ALLOW', 'alpha visible', 'visible summary', false, false, '30000000-0000-4000-8000-000000000002'::uuid, '{"subject":"alpha beta"}'::jsonb),
   ('60000000-0000-4000-8000-000000000002'::uuid, 'CP3-DENY', 'alpha denied', 'secret summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha hidden"}'::jsonb),
   ('60000000-0000-4000-8000-000000000003'::uuid, 'CP3-EXPIRED', 'gamma expired', 'expired summary', true, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"gamma"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000004'::uuid, 'CP3-SENSITIVE', 'sensitive hidden', 'sensitive summary', false, true, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"restricted"}'::jsonb)
+  ('60000000-0000-4000-8000-000000000004'::uuid, 'CP3-SENSITIVE', 'sensitive hidden', 'sensitive summary', false, true, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"restricted"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000005'::uuid, 'CP3-DEPT', 'alpha department', 'department summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha department"}'::jsonb)
 ) as v(id, record_code, title, summary, other_department, sensitive, owner_id, metadata)
 on conflict (id) do update set title = excluded.title, summary = excluded.summary, metadata = excluded.metadata, status = excluded.status;
 
@@ -48,20 +49,20 @@ begin
   select count(*), max(total_count), array_agg(id order by id)
     into row_count, total_count, visible_ids
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0);
-  if row_count <> 1 or total_count <> 1 or visible_ids <> array['60000000-0000-4000-8000-000000000001'::uuid] then
+  if row_count <> 2 or total_count <> 2 or visible_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then
     raise exception 'CP3 ACL visibility failed: %, %, %', row_count, total_count, visible_ids;
   end if;
 
   select array_agg(id order by id) into search_ids
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha -hidden', null, null, null, 10, 0);
-  if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid] then raise exception 'CP3 NOT search failed'; end if;
+  if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 NOT search failed'; end if;
 
   select array_agg(id order by id) into search_ids
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha OR gamma', null, null, null, 10, 0);
-  if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid] then raise exception 'CP3 OR/expired search failed'; end if;
+  if search_ids <> array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 OR/expired search failed'; end if;
 
   select (summary is null)::int, (metadata = '{}'::jsonb)::int into row_count, total_count
-  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 1, 0);
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'beta', null, null, null, 1, 0);
   if row_count <> 1 or total_count <> 1 then raise exception 'CP3 metadata side-channel failed'; end if;
 
   if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'restricted', null, null, null, 10, 0)) then raise exception 'CP3 sensitive record leaked'; end if;
