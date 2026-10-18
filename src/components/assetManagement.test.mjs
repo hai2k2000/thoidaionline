@@ -38,9 +38,9 @@ test("asset desktop table keeps the canonical responsive columns without categor
   assert.doesNotMatch(desktopTable, />Theo dõi<\/th>/);
   assert.doesNotMatch(desktopTable, /row\.category/);
   assert.doesNotMatch(desktopTable, /row\.tracking_mode/);
-  assert.match(desktopTable, /data-table table-fixed min-w-\[900px\]/);
+  assert.match(desktopTable, /data-table table-fixed min-w-\[1080px\]/);
   assert.doesNotMatch(desktopTable, /min-w-\[1220px\]/);
-  assert.match(desktopTable, /colSpan=\{6\}/);
+  assert.match(desktopTable, /colSpan=\{7\}/);
   assert.match(desktopTable, /<colgroup>/);
   assert.match(globals, /\.table-scroll\s*\{[^}]*overflow-x:\s*auto;/s);
 });
@@ -51,13 +51,15 @@ test("asset filters use a balanced responsive grid and separate quick-filter chi
   const tableStart = list.indexOf('<section className="mt-4 rounded-2xl', filterStart);
   const filters = list.slice(filterStart, tableStart);
 
-  assert.match(filters, /grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 items-start/);
+  assert.match(filters, /grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 items-start/);
   assert.match(filters, /aria-label="Bộ lọc nhanh"/);
   assert.match(filters, /aria-pressed={quickFilter === filter.value}/);
   assert.match(filters, /border-t border-slate-100 pt-3/);
   assert.match(filters, /Tài sản dùng chung của phòng/);
   assert.match(filters, /mt-0.5 leading-4/);
   assert.match(filters, /disabled:cursor-not-allowed disabled:bg-slate-100/);
+  assert.match(filters, /relative z-30 flex min-w-0 self-start gap-1\.5 h-fit flex-col/);
+  assert.match(filters, /absolute left-0 right-0 top-full z-40 mt-1 max-h-56 overflow-y-auto/);
   assert.doesNotMatch(filters, /<span>Lọc nhanh<\/span><select/);
 });
 
@@ -113,7 +115,7 @@ test("asset list rows navigate directly to editable details without a separate a
   assert.match(desktopTable, /<tr key=\{row\.id \?\? row\.asset_code\} className="[^\"]*cursor-pointer/);
   assert.match(desktopTable, /<Link href=\{`\/assets\/\$\{row\.id\}`\}/);
   assert.match(desktopTable, /aria-label=\{`Mở chi tiết tài sản \$\{row\.asset_name\}`\}/);
-  assert.match(desktopTable, /colSpan=\{6\}/);
+  assert.match(desktopTable, /colSpan=\{7\}/);
   assert.doesNotMatch(mobileCards, />Xem <span/);
   assert.match(mobileCards, /<Link[^>]*href=\{`\/assets\/\$\{row\.id\}`\}/);
   assert.match(mobileCards, /aria-label=\{`Mở chi tiết tài sản \$\{row\.asset_name\}`\}/);
