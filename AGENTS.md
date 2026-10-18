@@ -36,3 +36,4 @@
 - Build and deploy use `deploy/disk-guard.conf` through `scripts/production/disk-guard.sh`.
 - The hard minimum is 10 GiB free after estimated build/release headroom. The warning threshold is 20 GiB.
 - Free disk below 10 GiB, or projected free disk below 10 GiB after estimated writes, is blocked. The guard must not be disabled or bypassed.
+
