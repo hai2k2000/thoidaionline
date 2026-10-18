@@ -14,6 +14,7 @@ const conditionLabel: Record<AssetConditionStatus, string> = { normal: "Bình th
 const trackingModeLabel: Record<string, string> = { individual: "Cá thể", lot: "Theo lô" };
 type DepartmentOption = { id: string; name: string };
 type UserOption = { id: string; full_name: string; department_id: string | null };
+type LocationOption = { id: string; name: string };
 
 const formatDateTime = (value?: string | null) => value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "—";
 function assignmentDepartment(assignment: AssetAssignment, asset: Asset) { return assignment.assigned_department_name ?? (assignment.id === asset.currentAssignment?.id ? asset.assigned_department_name : null) ?? "Phòng đã phân công"; }
@@ -46,6 +47,7 @@ export default function AssetDetailPage() {
   const [assigneeId, setAssigneeId] = useState("");
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
   const currentAssignment = asset?.currentAssignment ?? null;
 
   const load = async (id: string) => {
@@ -68,7 +70,7 @@ export default function AssetDetailPage() {
     }
     setSaving(true);
     try {
-      const response = await fetch(`/api/assets/${encodeURIComponent(asset.id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ asset_name: asset.asset_name, category: asset.category, serial_number: asset.serial_number ?? null, status: asset.status ?? "available", condition_status: asset.condition_status ?? "normal", note: asset.note ?? null }) });
+      const response = await fetch(`/api/assets/${encodeURIComponent(asset.id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ asset_name: asset.asset_name, category: asset.category, serial_number: asset.serial_number ?? null, status: asset.status ?? "available", condition_status: asset.condition_status ?? "normal", note: asset.note ?? null, location_id: asset.location_id ?? null }) });
       const payload = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) throw new Error(payload?.error || "Không thể cập nhật tài sản.");
       notify("success", "Đã cập nhật thông tin tài sản."); setMessage("✅ Đã cập nhật thông tin tài sản.");
@@ -98,7 +100,7 @@ export default function AssetDetailPage() {
     if (!user) return void router.push("/login");
     if (!hasPermission("asset.view") && !canManage) return void router.push("/");
     if (!params?.id) return;
-    const timer = setTimeout(() => { void load(params.id); if (canManage) void fetch("/api/assets?options=1", { cache: "no-store" }).then((response) => response.json()).then((payload: { departments?: DepartmentOption[]; users?: UserOption[] }) => { setDepartments(payload.departments ?? []); setUsers(payload.users ?? []); }); }, 0);
+    const timer = setTimeout(() => { void load(params.id); if (canManage) void fetch("/api/assets?options=1", { cache: "no-store" }).then((response) => response.json()).then((payload: { departments?: DepartmentOption[]; users?: UserOption[]; locations?: LocationOption[] }) => { setDepartments(payload.departments ?? []); setUsers(payload.users ?? []); setLocations(payload.locations ?? []); }); }, 0);
     return () => clearTimeout(timer);
   }, [authLoading, user, params?.id, router, hasPermission, canManage]);
 
@@ -119,6 +121,7 @@ export default function AssetDetailPage() {
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Số sê-ri<input readOnly={!canManage} className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-normal read-only:bg-slate-50" value={asset?.serial_number ?? ""} onChange={(event) => setAssetField({ serial_number: event.target.value || null })} /></label>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Kiểu theo dõi</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{trackingModeLabel[asset?.tracking_mode ?? "individual"] ?? "—"}</p></div>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Số lượng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal tabular-nums">{asset?.quantity ?? 1}</p></div>
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Vị trí tài sản<select aria-label="Vị trí tài sản" disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.location_id ?? ""} onChange={(event) => setAssetField({ location_id: event.target.value || null })}><option value="">Chưa xác định</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Trạng thái sử dụng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{currentAssignment ? "Đang sử dụng" : "Chưa phân công"}</p></div>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Tình trạng tài sản<select disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.condition_status ?? "normal"} onChange={(event) => setAssetField({ condition_status: event.target.value as AssetConditionStatus })}>{Object.entries(conditionLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Phòng đang quản lý<input readOnly className="min-h-11 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-normal" value={currentDepartment} /></label>

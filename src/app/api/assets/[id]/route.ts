@@ -35,6 +35,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     status: typeof body?.status === "string" ? body.status : undefined,
     condition_status: body?.condition_status === "normal" || body?.condition_status === "needs_maintenance" || body?.condition_status === "under_service" || body?.condition_status === "broken" ? body.condition_status : undefined,
     note: typeof body?.note === "string" ? body.note : null,
+    location_id: typeof body?.location_id === "string" && body.location_id.trim() ? body.location_id.trim() : null,
     tracking_mode: body?.tracking_mode === "lot" ? "lot" : body?.tracking_mode === "individual" ? "individual" : undefined,
     quantity: typeof body?.quantity === "number" ? body.quantity : undefined,
   });
