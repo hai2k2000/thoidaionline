@@ -122,6 +122,7 @@ if [[ "${E2E_STRICT_GRANTS:-0}" == "1" ]]; then
     20261017130000_database_management_v1_cp3_search_rpc.sql
     20261017140000_database_management_v1_cp3_search_security_fix.sql
     20261018100000_database_management_v1_cp3_search_rpc_identifier_fix.sql
+    20261018120000_database_management_v1_cp3_search_scope_fix.sql
   )
 fi
 

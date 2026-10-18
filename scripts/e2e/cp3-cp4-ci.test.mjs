@@ -7,6 +7,7 @@ const fixture = readFileSync(new URL("./start-sandbox.sh", import.meta.url), "ut
 const sql = readFileSync(new URL("./cp3-runtime.sql", import.meta.url), "utf8");
 const cp4 = readFileSync(new URL("./cp4-runtime.mjs", import.meta.url), "utf8");
 const searchFix = readFileSync(new URL("../../supabase/migrations/20261018100000_database_management_v1_cp3_search_rpc_identifier_fix.sql", import.meta.url), "utf8");
+const scopeFix = readFileSync(new URL("../../supabase/migrations/20261018120000_database_management_v1_cp3_search_scope_fix.sql", import.meta.url), "utf8");
 
 test("CP3/CP4 workflow is manual-only and bounded", () => {
   assert.match(workflow, /workflow_dispatch:/);
@@ -27,8 +28,24 @@ test("strict fixture applies CP3 and does not grant public tables", () => {
   assert.match(fixture, /20261017130000_database_management_v1_cp3_search_rpc\.sql/);
   assert.match(fixture, /20261017140000_database_management_v1_cp3_search_security_fix\.sql/);
   assert.match(fixture, /20261018100000_database_management_v1_cp3_search_rpc_identifier_fix\.sql/);
+  assert.match(fixture, /20261018120000_database_management_v1_cp3_search_scope_fix\.sql/);
   assert.match(fixture, /E2E_STRICT_GRANTS/);
   assert.match(fixture, /revoke all on all tables in schema public from anon, authenticated/);
+});
+
+test("CP3 Search RPC scope fix is additive and preserves deny/default-deny boundaries", () => {
+  assert.match(scopeFix, /create or replace function public\.api_search_database_records\(/i);
+  assert.match(scopeFix, /permission_scope/);
+  assert.match(scopeFix, /'self' = any\(discover_perm\.effective_scopes\)/);
+  assert.match(scopeFix, /'assigned' = any\(discover_perm\.effective_scopes\)/);
+  assert.match(scopeFix, /'department' = any\(discover_perm\.effective_scopes\)/);
+  assert.match(scopeFix, /'all' = any\(discover_perm\.effective_scopes\)/);
+  assert.match(scopeFix, /and not c\.explicitly_denied/);
+  assert.match(scopeFix, /language plpgsql security definer set search_path = public, pg_temp/i);
+  assert.match(scopeFix, /revoke all on function public\.api_search_database_records\([^;]+\) from public, anon, authenticated;/i);
+  assert.match(scopeFix, /grant execute on function public\.api_search_database_records\([^;]+\) to service_role;/i);
+  assert.doesNotMatch(scopeFix, /grant execute[^;]+\b(?:anon|authenticated)\b/i);
+  assert.doesNotMatch(scopeFix, /record\.sensitive\.access[^;]+grant/i);
 });
 
 test("CP3 Search RPC identifier fix is additive and preserves security boundaries", () => {
@@ -70,6 +87,7 @@ test("CP3 runtime checks cover authorization, search operators and side-channel 
   assert.doesNotMatch(sql, /\btotal_count bigint/);
   assert.doesNotMatch(sql, /max\(total_count\)/);
   assert.match(sql, /from public\.api_search_database_records\([\s\S]*\) as sr/);
+  for (const marker of ["CP3 scope self", "CP3 scope assigned", "CP3 scope department", "CP3 scope all", "CP3 user deny scope"]) assert.match(sql, new RegExp(marker));
 });
 
 test("CP4 runtime checks cover CRUD, private file integrity and lifecycle", () => {

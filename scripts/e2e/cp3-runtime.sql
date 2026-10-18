@@ -101,6 +101,97 @@ end $$;
 
 do $$
 declare
+  v_visible text[];
+begin
+  insert into public.db_records (id, category_id, record_type_id, form_definition_id, record_code, title, summary, status, department_id, owner_id, created_by, metadata)
+  select v.id, c.id, t.id, f.id, v.record_code, v.title, v.title, 'approved', v.department_id, v.owner_id, v.owner_id, '{}'::jsonb
+  from (values
+    ('70000000-0000-4000-8000-000000000010'::uuid, 'CP3-SCOPE-SELF', 'scope own', '10000000-0000-4000-8000-000000000001'::uuid, '30000000-0000-4000-8000-000000000002'::uuid),
+    ('70000000-0000-4000-8000-000000000011'::uuid, 'CP3-SCOPE-DEPT', 'scope same department', '10000000-0000-4000-8000-000000000001'::uuid, '30000000-0000-4000-8000-000000000001'::uuid),
+    ('70000000-0000-4000-8000-000000000012'::uuid, 'CP3-SCOPE-OTHER', 'scope other department', '10000000-0000-4000-8000-000000000002'::uuid, '30000000-0000-4000-8000-000000000001'::uuid),
+    ('70000000-0000-4000-8000-000000000013'::uuid, 'CP3-SCOPE-ACL', 'scope explicit ACL', '10000000-0000-4000-8000-000000000002'::uuid, '30000000-0000-4000-8000-000000000001'::uuid)
+  ) as v(id, record_code, title, department_id, owner_id)
+  cross join lateral (select id from public.db_categories where code = 'tong_hop') as c
+  cross join lateral (select id from public.db_record_types where code = 'bao_cao') as t
+  cross join lateral (select f.id from public.db_form_definitions f join public.db_record_types rt on rt.id = f.record_type_id where rt.code = 'bao_cao' and f.version = 1) as f
+  on conflict (id) do update set title = excluded.title, department_id = excluded.department_id, owner_id = excluded.owner_id, created_by = excluded.created_by;
+  insert into public.db_record_acl (record_id, principal_type, principal_id, capability, effect, granted_by)
+  values ('70000000-0000-4000-8000-000000000013', 'user', '30000000-0000-4000-8000-000000000002', 'discover', 'allow', '30000000-0000-4000-8000-000000000001')
+  on conflict (record_id, principal_type, principal_id, capability) do update set effect = excluded.effect, expires_at = null;
+
+  delete from public.role_permission_grants
+  where role_id = '20000000-0000-4000-8000-000000000002'
+    and permission_id = (select id from public.permissions where code = 'record.discover');
+  insert into public.role_permission_grants (role_id, permission_id, scope)
+  values ('20000000-0000-4000-8000-000000000002', (select id from public.permissions where code = 'record.discover'), 'self');
+  select array_agg(sr.record_code order by sr.record_code) into v_visible
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0) as sr;
+  if v_visible is distinct from array['CP3-ALLOW', 'CP3-DEPT', 'CP3-META', 'CP3-SCOPE-ACL', 'CP3-SCOPE-SELF']::text[] then raise exception 'CP3 scope self leaked: %', v_visible; end if;
+  raise notice 'CP3 scope self: %', v_visible;
+
+  delete from public.role_permission_grants
+  where role_id = '20000000-0000-4000-8000-000000000002'
+    and permission_id = (select id from public.permissions where code = 'record.discover');
+  insert into public.role_permission_grants (role_id, permission_id, scope)
+  values ('20000000-0000-4000-8000-000000000002', (select id from public.permissions where code = 'record.discover'), 'assigned');
+  select array_agg(sr.record_code order by sr.record_code) into v_visible
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0) as sr;
+  if v_visible is distinct from array['CP3-ALLOW', 'CP3-DEPT', 'CP3-META', 'CP3-SCOPE-ACL', 'CP3-SCOPE-SELF']::text[] then raise exception 'CP3 scope assigned leaked: %', v_visible; end if;
+  raise notice 'CP3 scope assigned: %', v_visible;
+
+  delete from public.role_permission_grants
+  where role_id = '20000000-0000-4000-8000-000000000002'
+    and permission_id = (select id from public.permissions where code = 'record.discover');
+  insert into public.role_permission_grants (role_id, permission_id, scope)
+  values ('20000000-0000-4000-8000-000000000002', (select id from public.permissions where code = 'record.discover'), 'department');
+  select array_agg(sr.record_code order by sr.record_code) into v_visible
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0) as sr;
+  if v_visible is distinct from array['CP3-ALLOW', 'CP3-DEPT', 'CP3-META', 'CP3-SCOPE-ACL', 'CP3-SCOPE-DEPT', 'CP3-SCOPE-SELF']::text[] then raise exception 'CP3 scope department leaked: %', v_visible; end if;
+  raise notice 'CP3 scope department: %', v_visible;
+
+  delete from public.role_permission_grants
+  where role_id = '20000000-0000-4000-8000-000000000002'
+    and permission_id = (select id from public.permissions where code = 'record.discover');
+  insert into public.role_permission_grants (role_id, permission_id, scope)
+  values ('20000000-0000-4000-8000-000000000002', (select id from public.permissions where code = 'record.discover'), 'all');
+  select array_agg(sr.record_code order by sr.record_code) into v_visible
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0) as sr;
+  if v_visible is distinct from array['CP3-ALLOW', 'CP3-DEPT', 'CP3-EXPIRED', 'CP3-META', 'CP3-SCOPE-ACL', 'CP3-SCOPE-DEPT', 'CP3-SCOPE-OTHER', 'CP3-SCOPE-SELF']::text[] then raise exception 'CP3 scope all leaked: %', v_visible; end if;
+  raise notice 'CP3 scope all: %', v_visible;
+
+  insert into public.user_permission_grants (user_id, permission_id, effect, scope, created_by)
+  values ('30000000-0000-4000-8000-000000000002', (select id from public.permissions where code = 'record.discover'), 'deny', 'all', '30000000-0000-4000-8000-000000000001')
+  on conflict (user_id, permission_id) do update set effect = excluded.effect, scope = excluded.scope;
+  select array_agg(sr.record_code order by sr.record_code) into v_visible
+  from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0) as sr;
+  if v_visible is not null then raise exception 'CP3 user deny scope leaked: %', v_visible; end if;
+  raise notice 'CP3 user deny scope: none';
+  delete from public.user_permission_grants
+  where user_id = '30000000-0000-4000-8000-000000000002'
+    and permission_id = (select id from public.permissions where code = 'record.discover');
+  delete from public.role_permission_grants
+  where role_id = '20000000-0000-4000-8000-000000000002'
+    and permission_id = (select id from public.permissions where code = 'record.discover');
+  insert into public.role_permission_grants (role_id, permission_id, scope)
+  values ('20000000-0000-4000-8000-000000000002', (select id from public.permissions where code = 'record.discover'), 'all');
+  delete from public.db_record_acl
+  where record_id in (
+    '70000000-0000-4000-8000-000000000010'::uuid,
+    '70000000-0000-4000-8000-000000000011'::uuid,
+    '70000000-0000-4000-8000-000000000012'::uuid,
+    '70000000-0000-4000-8000-000000000013'::uuid
+  );
+  delete from public.db_records
+  where id in (
+    '70000000-0000-4000-8000-000000000010'::uuid,
+    '70000000-0000-4000-8000-000000000011'::uuid,
+    '70000000-0000-4000-8000-000000000012'::uuid,
+    '70000000-0000-4000-8000-000000000013'::uuid
+  );
+end $$;
+
+do $$
+declare
   row_count integer;
   v_total_count bigint;
   visible_ids uuid[];
@@ -110,7 +201,7 @@ begin
   select count(*), max(sr.total_count), array_agg(sr.id order by sr.id)
     into row_count, v_total_count, visible_ids
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', null, null, null, null, 100, 0) as sr;
-  if row_count <> 3 or v_total_count <> 3 then
+  if row_count <> 4 or v_total_count <> 4 then
     raise exception 'CP3 ACL visibility failed: %, %, %', row_count, v_total_count, visible_ids;
   end if;
 
@@ -120,7 +211,7 @@ begin
 
   select array_agg(sr.id order by sr.id) into search_ids
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'alpha OR gamma', null, null, null, 10, 0) as sr;
-  if search_ids is distinct from array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 OR/expired search failed'; end if;
+  if search_ids is distinct from array['60000000-0000-4000-8000-000000000001'::uuid, '60000000-0000-4000-8000-000000000003'::uuid, '60000000-0000-4000-8000-000000000005'::uuid] then raise exception 'CP3 OR/expired search failed'; end if;
 
   select count(*), coalesce(max(sr.total_count), 0) into row_count, v_total_count
   from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'deny_only_token', null, null, null, 10, 0) as sr;
