@@ -100,13 +100,13 @@ select
   s.record_type_id,
   s.form_definition_id,
   'CP6-BENCH-SENSITIVE-' || s.code,
-  'CP6 benchmark sensitive ' || s.code || ' cp6-sensitive-' || s.code,
-  'sensitive benchmark record cp6-sensitive-' || s.code,
+  'CP6 benchmark sensitive ' || s.code || ' cp6sensitive',
+  'sensitive benchmark record cp6sensitive',
   'approved',
   '10000000-0000-4000-8000-000000000001'::uuid,
   refs.admin_id,
   refs.admin_id,
-  jsonb_build_object('sensitive_keyword', 'cp6-sensitive-' || s.code)
+  jsonb_build_object('sensitive_keyword', 'cp6sensitive')
 from refs cross join sensitive_types s
 on conflict (id) do update set metadata = excluded.metadata, title = excluded.title;
 
@@ -167,10 +167,10 @@ declare
 begin
   select count(*) into v_missing
   from (values
-    ('ho_so_dang', 'cp6-sensitive-ho_so_dang'),
-    ('chi_hoi_nha_bao', 'cp6-sensitive-chi_hoi_nha_bao'),
-    ('doan_thanh_nien', 'cp6-sensitive-doan_thanh_nien'),
-    ('giay_phep_quan_ly_bao_chi', 'cp6-sensitive-giay_phep_quan_ly_bao_chi')
+    ('ho_so_dang', 'cp6sensitive'),
+    ('chi_hoi_nha_bao', 'cp6sensitive'),
+    ('doan_thanh_nien', 'cp6sensitive'),
+    ('giay_phep_quan_ly_bao_chi', 'cp6sensitive')
   ) as expected(type_code, token)
   where not exists (
     select 1
@@ -181,6 +181,106 @@ begin
       and position(expected.token in concat_ws(' ', r.record_code, r.title, r.summary, r.metadata::text)) > 0
   );
   if v_missing <> 0 then raise exception 'CP6 sensitive searchable precondition failed: % records missing tokens', v_missing; end if;
+  if (select count(*) from public.db_records as r
+      where r.record_code like 'CP6-BENCH-SENSITIVE-%'
+        and position('cp6sensitive' in lower(concat_ws(' ', r.record_code, r.title, r.summary, r.metadata::text))) > 0) <> 4
+  then raise exception 'CP6 sensitive searchable precondition failed: token must occur in exactly 4 records'; end if;
+  if exists (select 1 from public.db_records as r
+             where r.record_code not like 'CP6-BENCH-SENSITIVE-%'
+               and position('cp6sensitive' in lower(concat_ws(' ', r.record_code, r.title, r.summary, r.metadata::text))) > 0)
+  then raise exception 'CP6 sensitive searchable precondition failed: token leaked into non-sensitive records'; end if;
+end $$;
+
+do $$
+declare
+  v_admin_id uuid := (select admin_id from cp6_benchmark_config);
+  v_actor_id uuid := (select actor_id from cp6_benchmark_config);
+  v_admin_role_id uuid;
+  v_admin_department_id uuid;
+  v_admin_discover text[];
+  v_admin_sensitive text[];
+  v_actor_sensitive text[];
+  v_actor_no_keyword_rows integer;
+  v_actor_no_keyword_total bigint;
+  v_no_keyword_rows integer;
+  v_no_keyword_total bigint;
+  v_keyword_rows integer;
+  v_keyword_total bigint;
+begin
+  if (select count(*) from public.permissions as p where p.code = 'record.sensitive.access') <> 1 then
+    raise exception 'CP6 sensitive permission precondition failed';
+  end if;
+
+  select su.role_id, su.department_id into v_admin_role_id, v_admin_department_id
+  from public.staff_users as su
+  where su.id = v_admin_id and su.active = true;
+  if v_admin_role_id is null then raise exception 'CP6 sensitive admin actor precondition failed'; end if;
+
+  select ep.effective_scopes into v_admin_discover
+  from public.api_list_effective_permissions(v_admin_id) as ep
+  where ep.permission_code = 'record.discover';
+  select ep.effective_scopes into v_admin_sensitive
+  from public.api_list_effective_permissions(v_admin_id) as ep
+  where ep.permission_code = 'record.sensitive.access';
+  select ep.effective_scopes into v_actor_sensitive
+  from public.api_list_effective_permissions(v_actor_id) as ep
+  where ep.permission_code = 'record.sensitive.access';
+  if cardinality(coalesce(v_admin_discover, '{}'::text[])) = 0 then
+    raise exception 'CP6 sensitive admin discover precondition failed';
+  end if;
+  if cardinality(coalesce(v_admin_sensitive, '{}'::text[])) = 0 then
+    raise exception 'CP6 sensitive admin permission precondition failed';
+  end if;
+  if cardinality(coalesce(v_actor_sensitive, '{}'::text[])) <> 0 then
+    raise exception 'CP6 sensitive employee permission precondition failed';
+  end if;
+
+  select count(distinct sr.id), coalesce(sum(sr.total_count), 0)
+  into v_actor_no_keyword_rows, v_actor_no_keyword_total
+  from public.db_record_types as rt
+  cross join lateral public.api_search_database_records(v_actor_id, null, null, rt.id, null, 100, 0) as sr
+  where rt.code in ('ho_so_dang', 'chi_hoi_nha_bao', 'doan_thanh_nien', 'giay_phep_quan_ly_bao_chi');
+  if v_actor_no_keyword_rows <> 0 or v_actor_no_keyword_total <> 0 then
+    raise exception 'CP6 sensitive employee no-keyword deny failed: rows %, total %', v_actor_no_keyword_rows, v_actor_no_keyword_total;
+  end if;
+
+  if (select count(*)
+      from public.db_records as r
+      join public.db_record_types as t on t.id = r.record_type_id
+      where r.record_code like 'CP6-BENCH-SENSITIVE-%'
+        and t.code in ('ho_so_dang', 'chi_hoi_nha_bao', 'doan_thanh_nien', 'giay_phep_quan_ly_bao_chi')
+        and t.active = true
+        and r.status = 'approved'
+        and r.owner_id = v_admin_id
+        and not exists (
+          select 1 from public.db_record_acl as a
+          where a.record_id = r.id and a.capability = 'discover' and a.effect = 'deny'
+            and (a.expires_at is null or a.expires_at > now())
+            and ((a.principal_type = 'user' and a.principal_id = v_admin_id)
+              or (a.principal_type = 'role' and a.principal_id = v_admin_role_id)
+              or (a.principal_type = 'department' and a.principal_id = v_admin_department_id))
+        )) <> 4
+  then raise exception 'CP6 sensitive record state/ACL precondition failed'; end if;
+
+  if not (to_tsvector('simple', 'cp6sensitive') @@ websearch_to_tsquery('simple', 'cp6sensitive')) then
+    raise exception 'CP6 sensitive FTS token precondition failed';
+  end if;
+
+  select count(distinct sr.id), coalesce(sum(sr.total_count), 0)
+  into v_no_keyword_rows, v_no_keyword_total
+  from public.db_record_types as rt
+  cross join lateral public.api_search_database_records(v_admin_id, null, null, rt.id, null, 100, 0) as sr
+  where rt.code in ('ho_so_dang', 'chi_hoi_nha_bao', 'doan_thanh_nien', 'giay_phep_quan_ly_bao_chi');
+  if v_no_keyword_rows <> 4 or v_no_keyword_total <> 4 then
+    raise exception 'CP6 sensitive no-keyword positive control failed: rows %, total %', v_no_keyword_rows, v_no_keyword_total;
+  end if;
+
+  select count(distinct sr.id), coalesce(max(sr.total_count), 0)
+  into v_keyword_rows, v_keyword_total
+  from public.api_search_database_records(v_admin_id, 'cp6sensitive', null, null, null, 100, 0) as sr;
+  if v_keyword_rows <> 4 or v_keyword_total <> 4 then
+    raise exception 'CP6 sensitive keyword precondition failed: rows %, total %', v_keyword_rows, v_keyword_total;
+  end if;
 end $$;
 
 -- The outer Function Scan is diagnostic only; it is not index evidence for
@@ -336,12 +436,12 @@ declare
   v_allowed_total bigint;
 begin
   select count(*), coalesce(max(sr.total_count), 0) into v_denied_rows, v_denied_total
-  from public.api_search_database_records((select actor_id from cp6_benchmark_config), 'cp6-sensitive', null, null, null, 100, 0) as sr;
+  from public.api_search_database_records((select actor_id from cp6_benchmark_config), 'cp6sensitive', null, null, null, 100, 0) as sr;
   if v_denied_rows <> 0 or v_denied_total <> 0 then
     raise exception 'CP6 sensitive deny failed: rows %, total %', v_denied_rows, v_denied_total;
   end if;
   select count(distinct sr.id), coalesce(max(sr.total_count), 0) into v_allowed_rows, v_allowed_total
-  from public.api_search_database_records((select admin_id from cp6_benchmark_config), 'cp6-sensitive', null, null, null, 100, 0) as sr;
+  from public.api_search_database_records((select admin_id from cp6_benchmark_config), 'cp6sensitive', null, null, null, 100, 0) as sr;
   if v_allowed_rows <> 4 or v_allowed_total <> 4 then
     raise exception 'CP6 sensitive positive control failed: rows %, total %', v_allowed_rows, v_allowed_total;
   end if;

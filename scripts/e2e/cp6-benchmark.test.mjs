@@ -14,6 +14,13 @@ test("CP6 benchmark fixture is synthetic, bounded and covers required dimensions
   assert.match(sql, /generate_series\(1, 10000\)/);
   assert.match(sql, /generate_series\(1, 8\)/);
   assert.match(sql, /CP6-BENCH-SENSITIVE-/);
+  assert.match(sql, /cp6sensitive/);
+  assert.doesNotMatch(sql, /cp6-sensitive/);
+  assert.match(sql, /sensitive no-keyword positive control failed/);
+  assert.match(sql, /sensitive keyword precondition failed/);
+  assert.match(sql, /sensitive employee permission precondition failed/);
+  assert.match(sql, /sensitive employee no-keyword deny failed/);
+  assert.match(sql, /to_tsvector\('simple', 'cp6sensitive'\) @@ websearch_to_tsquery\('simple', 'cp6sensitive'\)/);
   assert.match(sql, /generate_series\(1, 20\)/);
   assert.match(sql, /generate_series\(1, 10\)/);
   assert.match(sql, /api_search_database_records/);
