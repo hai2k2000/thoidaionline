@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const optional = readFileSync(new URL("../supabase/migrations/20261017110000_database_management_v1_cp2b_optional_fields.sql", import.meta.url), "utf8");
+const optional = readFileSync(new URL("../supabase/migrations/20261017110000_database_management_v1_cp2b_optional_fields.sql", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 const source = readFileSync(new URL("../supabase/migrations/20261001090000_quick_report_task_v1.sql", import.meta.url), "utf8");
 const proposal = readFileSync(new URL("../docs/CP2B_RLS_HARDENING_PROPOSAL.md", import.meta.url), "utf8");
 

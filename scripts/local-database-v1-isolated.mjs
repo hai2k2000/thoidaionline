@@ -50,6 +50,10 @@ const v1Migrations = new Set([
   "20261017101000_database_management_v1_catalog.sql",
   "20261017110000_database_management_v1_cp2b_optional_fields.sql",
   "20261017130000_database_management_v1_cp3_search_rpc.sql",
+  "20261017140000_database_management_v1_cp3_search_security_fix.sql",
+  "20261018100000_database_management_v1_cp3_search_rpc_identifier_fix.sql",
+  "20261018120000_database_management_v1_cp3_search_scope_fix.sql",
+  "20261018130000_database_management_v1_cp6_audit_outbox.sql",
 ]);
 const selectedMigrations = new Set([...currentAppMigrations, ...v1Migrations]);
 const compatibilityName = "20260826195000_local_bootstrap_task_actor_compatibility.sql";

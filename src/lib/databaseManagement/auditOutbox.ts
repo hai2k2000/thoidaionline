@@ -1,7 +1,7 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
 import { serverSupabase } from "@/lib/serverSupabase";
+import { newAuditIdempotencyKey } from "./auditIdempotency.mjs";
 
 type AuditPayload = Record<string, unknown>;
 export type AuditOutboxInput = {
@@ -32,14 +32,14 @@ function payloadFor(input: AuditOutboxInput): AuditPayload {
   return { old_data: sanitize(input.oldData ?? null), new_data: sanitize(input.newData ?? null) };
 }
 
-function keyFor(input: AuditOutboxInput, payload: AuditPayload) {
-  if (input.idempotencyKey) return input.idempotencyKey;
-  return createHash("sha256").update(JSON.stringify({ actor: input.actorId, module: input.module, entity: input.entityId ?? null, action: input.action, payload })).digest("hex");
+function keyFor(input: AuditOutboxInput) {
+  // Each access is an independent audit event unless the caller supplies a retry key.
+  return newAuditIdempotencyKey(input.idempotencyKey);
 }
 
 export async function enqueueAndDeliverAudit(input: AuditOutboxInput) {
   const payload = payloadFor(input);
-  const idempotencyKey = keyFor(input, payload);
+  const idempotencyKey = keyFor(input);
   const { data: existing, error: existingError } = await serverSupabase.from("database_audit_outbox").select("id,status").eq("idempotency_key", idempotencyKey).maybeSingle();
   if (existingError) throw new Error("audit_outbox_unavailable");
   let outboxId = existing?.id;

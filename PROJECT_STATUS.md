@@ -1163,3 +1163,26 @@ Production safety:
 Next:
 - After Docker health returns, run the CP3 RPC matrix with interleaved denied/allowed fixture rows, count/pagination checks and expired/explicit deny regressions.
 - Then complete CP4 UI controls and local manual acceptance without exposing the development server publicly.
+
+## Database Management V1 — CP3–CP6 integration candidate (2026-10-18)
+
+Current Phase: COMPLETE; local integration candidate ready for owner review
+Current Task: migration-first integration and bounded validation
+
+Completed:
+- Candidate branch `review/database-v1-integration-20261018` is based on CP6 SHA `9bd37fb6e5583a3e806f28eae1ff9029f895654d`; canonical `integration/production` remains an ancestor.
+- CP3 search/RBAC/ACL/sensitive controls, CP4 CRUD/private files/history, CP5 backup and hardening, and CP6 audit outbox/benchmark changes are included without merging directly into `integration/production`.
+- Added CP6 audit outbox to strict sandbox, isolated migration, and standalone migration provenance in timestamp order.
+- Corrected audit event identity: independent download/export actions receive distinct keys; retries remain idempotent when callers provide an explicit key.
+- CP6 GitHub evidence reused from run `39110392819`: SUCCESS with SQL/security gates PASS and recorded evidence exceptions for HTTP average and exact post-run disk free.
+
+Validation:
+- Focused Database V1, CP3/CP4, audit outbox, migration, packaging-contract, and release compatibility tests: to be run on this candidate.
+- No benchmark rerun, production migration, build, push, merge, dispatch, deployment, or runtime cleanup APPLY performed.
+
+Blockers:
+- Production rollout remains NO-GO pending owner approval for migration/deploy, production backup/checkpoint, storage root, and immutable artifact gates.
+- Local C: free space is 16.78 GiB; build/packaging is intentionally not run under the 20 GiB warning budget.
+
+Next:
+- Owner review of this local candidate; push or PR creation requires separate approval.
