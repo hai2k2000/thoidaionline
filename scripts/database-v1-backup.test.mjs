@@ -25,3 +25,23 @@ test("synthetic database and private files round-trip with SHA-256 manifest", as
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("backup rejects existing destinations, checksum corruption and malformed manifests", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "db-v1-backup-negative-"));
+  try {
+    const storage = path.join(root, "storage");
+    const output = path.join(root, "backup");
+    await mkdir(storage, { recursive: true });
+    await writeFile(path.join(root, "database.dump"), "synthetic-db");
+    await createBackup({ databaseDump: path.join(root, "database.dump"), storageRoot: storage, outputRoot: output });
+    await assert.rejects(() => createBackup({ databaseDump: path.join(root, "database.dump"), storageRoot: storage, outputRoot: output }), /destination_exists/);
+    await writeFile(path.join(output, "database.dump"), "truncated");
+    await assert.rejects(() => verifyBackup(output), /backup_integrity_failed/);
+    await writeFile(path.join(output, "manifest.json"), JSON.stringify({ format: 1, source: "synthetic", members: [{ path: "../escape", sha256: "x", size: 1 }] }));
+    await assert.rejects(() => verifyBackup(output), /invalid_manifest_path/);
+    await writeFile(path.join(output, "manifest.json"), "{not-json");
+    await assert.rejects(() => verifyBackup(output));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -10,7 +10,7 @@
 
 ## CP5B - Performance plan
 
-The Search RPC has bounded `limit`/`offset`, a GIN index on `search_document`, type/status and department/owner indexes, and database-side ACL filtering. No N+1 database loop is used by list/search.
+The Search RPC has bounded `limit`/`offset`, database-side ACL filtering, and type/status plus department/owner indexes. The repository contains a GIN index on `search_document`; the RPC's `searchable_text` expression must be confirmed with PostgreSQL `EXPLAIN` before claiming that index is used. No N+1 database loop is used by list/search.
 
 Acceptance thresholds for a future synthetic benchmark:
 
