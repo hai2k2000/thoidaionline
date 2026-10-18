@@ -8,6 +8,8 @@ test("asset management exposes persisted locations without changing HR departmen
   const migration = read("../../supabase/migrations/20261016100000_asset_locations.sql") + read("../../supabase/migrations/20261016110000_asset_locations_expansion.sql");
   const page = read("../app/assets/page.tsx");
   const create = read("../app/assets/new/page.tsx");
+  const detail = read("../app/assets/[id]/page.tsx");
+  const detailRoute = read("../app/api/assets/[id]/route.ts");
   const route = read("../app/api/assets/route.ts");
 
   for (const label of ["Phòng Tổng biên tập", "Phòng Phó Tổng biên tập", "Phòng họp", "Phòng Truyền thông", "Phòng Nội dung", "Phòng Tổng hợp 1", "Phòng Tổng hợp 2", "Phòng Bảo vệ", "Phòng Kỹ thuật"]) {
@@ -20,6 +22,9 @@ test("asset management exposes persisted locations without changing HR departmen
   assert.match(page, /\+ Thêm tài sản/);
   assert.match(page, /hasPermission\("asset\.manage"\)/);
   assert.match(create, /aria-label="Vị trí tài sản"/);
+  assert.match(detail, /aria-label="Vị trí tài sản"/);
+  assert.match(detail, /location_id/);
+  assert.match(detailRoute, /location_id/);
 });
 
 test("asset creation remains server-authorized by effective asset.manage", () => {
