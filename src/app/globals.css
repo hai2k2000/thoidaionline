@@ -115,6 +115,57 @@ table {
   min-width: 680px;
 }
 
+/* Keep attendance identity/time columns readable on narrow screens; the
+   surrounding .table-scroll provides the intentional horizontal overflow. */
+.attendance-day-table {
+  table-layout: fixed;
+  min-width: 820px;
+}
+
+.attendance-day-table th:first-child,
+.attendance-day-table td:first-child {
+  width: 11rem;
+  min-width: 11rem;
+}
+
+.attendance-day-table th:nth-child(2),
+.attendance-day-table td:nth-child(2) {
+  width: 7.5rem;
+  min-width: 7.5rem;
+}
+
+.attendance-day-table th:nth-child(3),
+.attendance-day-table td:nth-child(3),
+.attendance-day-table th:nth-child(4),
+.attendance-day-table td:nth-child(4) {
+  width: 6.5rem;
+  min-width: 6.5rem;
+}
+
+.attendance-day-table th:nth-child(5),
+.attendance-day-table td:nth-child(5) {
+  width: 6rem;
+  min-width: 6rem;
+}
+
+.attendance-day-table th:nth-child(6),
+.attendance-day-table td:nth-child(6) {
+  width: 10rem;
+  min-width: 10rem;
+}
+
+.attendance-day-table th:nth-child(7),
+.attendance-day-table td:nth-child(7) {
+  width: 16rem;
+  min-width: 16rem;
+}
+
+.attendance-day-table th:nth-child(8),
+.attendance-day-table td:nth-child(8) {
+  width: 8rem;
+  min-width: 8rem;
+}
+
 /* Keep the schedule's identity columns readable while the day columns scroll. */
 .work-schedule-table {
   table-layout: fixed;

@@ -524,27 +524,27 @@ export default function AttendancePage() {
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}</h2>
           <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Bảng chấm công theo ngày, cuộn ngang để xem thêm">
-          <table className="data-table min-w-[820px] text-left text-sm">
+          <table className="data-table attendance-day-table min-w-[820px] text-left text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th scope="col" className="px-3 py-2">Nhân sự</th>
-                <th scope="col" className="px-3 py-2">Ngày</th>
-                <th scope="col" className="px-3 py-2">Giờ vào</th>
-                <th scope="col" className="px-3 py-2">Giờ ra</th>
-                <th scope="col" className="px-3 py-2 text-right">Ngày công</th>
-                <th scope="col" className="px-3 py-2">Trạng thái</th>
+                <th scope="col" className="whitespace-nowrap px-3 py-2">Nhân sự</th>
+                <th scope="col" className="whitespace-nowrap px-3 py-2">Ngày</th>
+                <th scope="col" className="whitespace-nowrap px-3 py-2">Giờ vào</th>
+                <th scope="col" className="whitespace-nowrap px-3 py-2">Giờ ra</th>
+                <th scope="col" className="whitespace-nowrap px-3 py-2 text-right">Ngày công</th>
+                <th scope="col" className="whitespace-nowrap px-3 py-2">Trạng thái</th>
                 <th scope="col" className="min-w-64 px-3 py-2">Ghi chú</th>
-                {isOrganizationView ? <th scope="col" className="px-3 py-2">Thao tác</th> : null}
+                {isOrganizationView ? <th scope="col" className="whitespace-nowrap px-3 py-2">Thao tác</th> : null}
               </tr>
             </thead>
             <tbody>
               {visibleAttendanceRows.map((r) => (
                 <tr key={r.id} className="border-t">
-                  <td className="px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
+                  <td className="whitespace-nowrap px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{formatAttendanceDate(r.work_date)}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_in ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
-                  <td className="px-3 py-2 text-right font-semibold">{r.workday ?? 0}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{r.workday ?? 0}</td>
                   <td className="px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception === "sudden_work" ? "Đi muộn do việc phát sinh" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
                   <td className="min-w-64 px-3 py-2"><div>{r.note ?? ""}{!isOrganizationView && canQuickReport && !r.late_exception && (r.note ?? "").includes("Đi muộn") ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Đánh dấu việc phát sinh</button> : null}</div>{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</td>
                   {isOrganizationView ? <td className="px-3 py-2"><button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="rounded border border-orange-300 px-2 py-1 text-xs font-semibold text-orange-800">{r.admin_note ? "Sửa ghi chú" : "Thêm ghi chú"}</button></td> : null}
