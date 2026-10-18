@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { databaseRecordStorageKey } from "./storageKey";
 
@@ -27,6 +27,9 @@ export async function writeDatabaseRecordFile(recordId: string, file: { name: st
   const target = path.resolve(root, key);
   if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error("invalid_storage_key");
   await mkdir(path.dirname(target), { recursive: true, mode: 0o750 });
+  const resolvedRoot = await realpath(root);
+  const resolvedParent = await realpath(path.dirname(target));
+  if (resolvedParent !== resolvedRoot && !resolvedParent.startsWith(`${resolvedRoot}${path.sep}`)) throw new Error("invalid_storage_key");
   await writeFile(target, bytes, { flag: "wx", mode: 0o640 });
   return { storageKey: key.replaceAll(path.sep, "/"), sizeBytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
 }
@@ -36,6 +39,9 @@ export async function readDatabaseRecordFile(storageKey: string) {
   const root = path.resolve(databaseRecordStorageRoot());
   const target = path.resolve(root, storageKey);
   if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error("invalid_storage_key");
+  const resolvedRoot = await realpath(root);
+  const resolvedTarget = await realpath(target);
+  if (resolvedTarget !== resolvedRoot && !resolvedTarget.startsWith(`${resolvedRoot}${path.sep}`)) throw new Error("invalid_storage_key");
   const bytes = await readFile(target);
   return { bytes, sha256: createHash("sha256").update(bytes).digest("hex") };
 }
@@ -45,5 +51,8 @@ export async function removeDatabaseRecordFile(storageKey: string) {
   const root = path.resolve(databaseRecordStorageRoot());
   const target = path.resolve(root, storageKey);
   if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error("invalid_storage_key");
+  const resolvedRoot = await realpath(root);
+  const resolvedTarget = await realpath(target).catch(() => target);
+  if (resolvedTarget !== resolvedRoot && !resolvedTarget.startsWith(`${resolvedRoot}${path.sep}`)) throw new Error("invalid_storage_key");
   await rm(target, { force: true });
 }

@@ -30,6 +30,12 @@ test("private file routes use server storage and verify integrity", () => {
   assert.match(repository, /historyError/);
   assert.match(repository, /previous/);
   assert.match(repository, /expires_at: input.expiresAt/);
+  assert.match(files, /MAX_MULTIPART_BYTES/);
+  assert.match(files, /file_too_large/);
+  assert.match(files, /file_upload/);
+  assert.match(download, /logServerAudit/);
+  assert.match(exportRoute, /logServerAudit/);
+  assert.match(restore, /action: "restore"/);
 });
 
 test("metadata export is authenticated and capability-gated", () => {
