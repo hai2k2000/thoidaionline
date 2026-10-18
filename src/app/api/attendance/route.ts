@@ -4,6 +4,7 @@ import { isForeignReporter } from "@/lib/onlineWorkLanguage.mjs";
 import { calculateAttendance } from "@/lib/attendanceWorkday";
 import { clampAttendanceEndDate, filterBusinessAttendanceRows, isAttendanceBusinessDate, recentAttendanceRange } from "@/lib/attendanceRecentRange.mjs";
 import { isAttendanceListedStaff, roleCodeFromRelation } from "@/lib/attendanceVisibility.mjs";
+import { approvedEventNotesFor } from "@/lib/attendanceApprovedEventNotes.mjs";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -181,16 +182,38 @@ export async function GET(request: Request) {
   const onlineQuery = serverSupabase.from("online_work_schedules")
     .select("work_date,staff:staff_users!online_work_schedules_staff_id_fkey(id,full_name)")
     .eq("status", "active").gte("work_date", contextStart).lte("work_date", contextEnd).limit(1000);
+  const eventQuery = serverSupabase.from("work_schedules")
+    .select("id,work_date,end_date,plan_type,title,location,event_type,event_status,approval_status,event_assignment_kind,participant_ids,event_assignments:work_schedule_event_assignments!work_schedule_event_assignments_event_id_fkey(staff_id)")
+    .eq("approval_status", "APPROVED")
+    .eq("event_assignment_kind", "leadership")
+    .eq("plan_type", "event")
+    .neq("event_status", "CANCELLED")
+    .lte("work_date", contextEnd).gte("end_date", contextStart)
+    .limit(500);
   if (!organizationScope) {
     leaveQuery.eq("requester_id", guard.actor.id);
     onlineQuery.eq("staff_id", guard.actor.id);
   }
-  const [dayAdminNotesResult, monthAdminNotesResult, leaveResult, onlineResult] = await Promise.all([dayAdminNotesQuery, monthAdminNotesQuery, leaveQuery, onlineQuery]);
-  if (dayAdminNotesResult.error || monthAdminNotesResult.error || leaveResult.error || onlineResult.error) return apiError("operation_failed", 500);
+  const [dayAdminNotesResult, monthAdminNotesResult, leaveResult, onlineResult, eventResult] = await Promise.all([dayAdminNotesQuery, monthAdminNotesQuery, leaveQuery, onlineQuery, eventQuery]);
+  if (dayAdminNotesResult.error || monthAdminNotesResult.error || leaveResult.error || onlineResult.error || eventResult.error) return apiError("operation_failed", 500);
   const dayAdminNotes = (dayAdminNotesResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; note: string; created_at: string; updated_at: string; staff_users: { full_name: string } | null }>;
   const monthAdminNotes = (monthAdminNotesResult.data ?? []) as unknown as typeof dayAdminNotes;
   const leaves = (leaveResult.data ?? []) as unknown as Array<{ start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; requester: { id: string; full_name: string } | null }>;
   const online = (onlineResult.data ?? []) as unknown as Array<{ work_date: string; staff: { id: string; full_name: string } | null }>;
+  const approvedEvents = (eventResult.data ?? []) as unknown as Array<{
+    id: string;
+    work_date: string;
+    end_date: string;
+    plan_type: string;
+    title: string | null;
+    location: string | null;
+    event_type: string | null;
+    event_status: string | null;
+    approval_status: string | null;
+    event_assignment_kind: string | null;
+    participant_ids: string[] | null;
+    event_assignments?: Array<{ staff_id: string }>;
+  }>;
   const staffResult = organizationScope
     ? await serverSupabase.from("staff_users").select("id,full_name,username,roles(code)").eq("active", true).order("full_name")
     : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
@@ -227,6 +250,7 @@ export async function GET(request: Request) {
     const onlineDay = online.some((x) => x.work_date === row.work_date && x.staff?.id === row.user_id);
     const extraNotes: string[] = [];
     if (leave) extraNotes.push(leaveLabel(leave, row.work_date));
+    extraNotes.push(...approvedEventNotesFor(approvedEvents, row.user_id, row.work_date));
     const leaveIsFull = !!leave && leavePeriodsForDate(leave, row.work_date).every((period) => period === "full");
     const leaveWorkday = leave ? (leaveIsFull ? 1 : 0.5) : 0;
     if (onlineDay && !leaveIsFull) extraNotes.push("Làm việc online");
@@ -292,6 +316,25 @@ export async function GET(request: Request) {
       result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name }, workday: 1 });
       existing.add(key);
     }
+    for (const event of approvedEvents) {
+      const participantIds = Array.from(new Set([
+        ...(event.participant_ids ?? []),
+        ...(event.event_assignments ?? []).map((assignment) => assignment.staff_id),
+      ]));
+      for (const participantId of participantIds) {
+        const staff = staffRows.find((item) => item.id === participantId);
+        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, role_code: "employee" }))) continue;
+        for (const workDate of dates(event.work_date < from ? from : event.work_date, event.end_date > to ? to : event.end_date)) {
+          if (!isAttendanceBusinessDate(workDate)) continue;
+          const key = `${participantId}:${workDate}`;
+          if (existing.has(key)) continue;
+          const eventNotes = approvedEventNotesFor([event], participantId, workDate);
+          if (!eventNotes.length) continue;
+          result.push({ id: `event-${event.id}-${participantId}-${workDate}`, user_id: participantId, work_date: workDate, check_in: null, check_out: null, note: eventNotes.join("; "), status: "present", staff_users: { full_name: staff.full_name }, workday: 1 });
+          existing.add(key);
+        }
+      }
+    }
     if (recent) {
       for (const staff of staffRows) {
         for (const workDate of dates(from, to)) {
@@ -303,6 +346,14 @@ export async function GET(request: Request) {
           existing.add(key);
         }
       }
+    }
+    // Event rows can be synthetic (no attendance log); enrich them after all
+    // leave/online/absence rows are materialized so approved events are visible.
+    for (const row of result) {
+      const eventNotes = approvedEventNotesFor(approvedEvents, row.user_id, row.work_date);
+      if (!eventNotes.length) continue;
+      const existingNotes = (row.note ?? "").split(";").map((part) => part.trim()).filter(Boolean);
+      row.note = [...existingNotes, ...eventNotes.filter((note) => !existingNotes.includes(note))].join("; ");
     }
     return result.sort((a, b) => {
       const byDate = b.work_date.localeCompare(a.work_date);
