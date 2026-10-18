@@ -347,4 +347,5 @@ select pg_size_pretty(pg_database_size(current_database())) as database_size,
        pg_database_size(current_database()) as database_size_bytes,
        'SQL RPC/search/detail metrics complete; HTTP detail follows separately' as sql_evidence;
 
+\echo CP6_SQL_BENCHMARK_COMPLETE
 commit;
