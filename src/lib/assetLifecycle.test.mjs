@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 test("warehouse and lifecycle migration preserves manage-only, atomic asset actions", () => {
-  const migration = read("../../supabase/migrations/20261018121000_asset_locations_reclaim_liquidation.sql");
+  const migration = read("../../supabase/migrations/20261016120001_asset_locations_reclaim_liquidation.sql");
   assert.match(migration, /\('kho',\s*'Kho'\)/);
   assert.match(migration, /\('kho_cho_xu_ly',\s*'Kho chờ xử lý'\)/);
   assert.match(migration, /api_asset_reclaim_unrepairable/);

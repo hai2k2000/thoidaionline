@@ -37,6 +37,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261016100000_asset_locations.sql",
   "supabase/migrations/20261016110000_asset_locations_expansion.sql",
   "supabase/migrations/20261016120000_quick_report_rpc_payload_compatibility_fix.sql",
+  "supabase/migrations/20261016120001_asset_locations_reclaim_liquidation.sql",
   "supabase/migrations/20261016130000_quick_report_completion_date_compatibility.sql",
   "supabase/migrations/20261017100000_database_management_v1_foundation.sql",
   "supabase/migrations/20261017101000_database_management_v1_catalog.sql",
@@ -45,7 +46,6 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261017140000_database_management_v1_cp3_search_security_fix.sql",
   "supabase/migrations/20261018100000_database_management_v1_cp3_search_rpc_identifier_fix.sql",
   "supabase/migrations/20261018120000_database_management_v1_cp3_search_scope_fix.sql",
-  "supabase/migrations/20261018121000_asset_locations_reclaim_liquidation.sql",
   "supabase/migrations/20261018130000_database_management_v1_cp6_audit_outbox.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
