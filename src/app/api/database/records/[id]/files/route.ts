@@ -3,6 +3,7 @@ import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { canAccessDatabaseRecordForActor } from "@/lib/databaseManagement/repository";
 import { removeDatabaseRecordFile, writeDatabaseRecordFile } from "@/lib/databaseManagement/storage";
+import { logServerAudit } from "@/lib/serverAudit";
 
 const MAX_MULTIPART_BYTES = 51 * 1024 * 1024;
 
@@ -65,11 +66,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
       throw historyError;
     }
-    return NextResponse.json({ file: data }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+    let auditStatus: "delivered" | "pending";
+    try { auditStatus = await logServerAudit({ actorId: actor.id, module: "database", entityType: "db_record_files", entityId: data.id, action: "upload", newData: { record_id: recordId, size_bytes: stored.sizeBytes, sha256: stored.sha256 } }); } catch { retainStorageForReconciliation = true; throw new Error("audit_reconciliation_required"); }
+    return NextResponse.json({ file: data, audit_status: auditStatus }, { status: 201, headers: { "Cache-Control": "private, no-store", "X-Audit-Status": auditStatus } });
   } catch (error) {
     if (storageKey && !retainStorageForReconciliation) await removeDatabaseRecordFile(storageKey).catch(() => undefined);
     const message = error instanceof Error ? error.message : "file_upload_failed";
-    if (message === "file_upload_reconciliation_required") return NextResponse.json({ error: message }, { status: 500 });
+    if (message === "file_upload_reconciliation_required" || message === "audit_reconciliation_required") return NextResponse.json({ error: message }, { status: 500 });
     return NextResponse.json({ error: message === "invalid_file" ? "invalid_file" : "file_upload_failed" }, { status: 400 });
   }
 }

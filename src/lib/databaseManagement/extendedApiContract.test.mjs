@@ -10,6 +10,7 @@ const repository = read("src/lib/databaseManagement/repository.ts");
 const acl = read("src/app/api/database/records/[id]/acl/route.ts");
 const restore = read("src/app/api/database/records/[id]/restore/route.ts");
 const exportRoute = read("src/app/api/database/records/[id]/export/route.ts");
+const auditOutbox = read("src/lib/databaseManagement/auditOutbox.ts");
 
 test("record lifecycle routes enforce session, origin and server authorization", () => {
   for (const source of [detail, files, acl, restore]) {
@@ -37,12 +38,14 @@ test("private file routes use server storage and verify integrity", () => {
   assert.match(files, /invalid_multipart/);
   assert.match(files, /file_upload/);
   assert.match(files, /file_upload_reconciliation_required/);
+  assert.match(files, /action: "upload"/);
   assert.match(download, /logServerAudit/);
-  assert.match(download, /X-Audit-Status/);
   assert.match(exportRoute, /logServerAudit/);
-  assert.match(exportRoute, /X-Audit-Status/);
+  assert.match(download, /audit_unavailable/);
+  assert.match(exportRoute, /audit_unavailable/);
   assert.match(restore, /action: "restore"/);
   assert.match(restore, /audit_status/);
+  assert.match(auditOutbox, /enqueueAndDeliverAudit/);
 });
 
 test("metadata export is authenticated and capability-gated", () => {

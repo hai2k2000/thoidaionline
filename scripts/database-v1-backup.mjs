@@ -5,7 +5,16 @@ import path from "node:path";
 export const HARD_MIN_FREE_BYTES = 10 * 1024 ** 3;
 export const WARNING_FREE_BYTES = 20 * 1024 ** 3;
 
-const sha256 = async (filePath) => createHash("sha256").update(await readFile(filePath)).digest("hex");
+const sha256 = async (filePath) => {
+  const digest = createHash("sha256");
+  const handle = await import("node:fs/promises").then(({ open }) => open(filePath, "r"));
+  try {
+    for await (const chunk of handle.readableWebStream()) digest.update(Buffer.from(chunk));
+  } finally {
+    await handle.close();
+  }
+  return digest.digest("hex");
+};
 
 const freeBytes = async (directory) => {
   const fs = await statfs(directory);
