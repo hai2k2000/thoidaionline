@@ -39,8 +39,11 @@ test("CP6 benchmark runner has a disk guard and disposable-only contract", () =>
   assert.match(runner, /E2E_DB_URL/);
   assert.match(runner, /scripts\/e2e\/cp6-benchmark\.sql/);
   assert.match(runner, /cp6-benchmark-evidence\.mjs/);
+  assert.match(runner, /CP6_HTTP_EVIDENCE_LOG/);
   assert.match(evidence, /CP6_HTTP_DETAIL_EVIDENCE measured/);
   assert.match(evidence, /CP6_QUERY_COUNT_EVIDENCE measured/);
+  assert.match(evidence, /CP6_SQL_BENCHMARK_COMPLETE/);
+  assert.match(evidence, /db_records_search_idx/);
   assert.doesNotMatch(runner, /docker push|deploy|production/i);
 });
 
