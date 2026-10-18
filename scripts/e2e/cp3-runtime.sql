@@ -27,7 +27,7 @@ cross join (values
   ('60000000-0000-4000-8000-000000000001'::uuid, 'CP3-ALLOW', 'alpha visible', 'summaryhidden summary', false, false, '30000000-0000-4000-8000-000000000002'::uuid, '{"keywords":"deny_only_token"}'::jsonb),
   ('60000000-0000-4000-8000-000000000002'::uuid, 'CP3-DENY', 'alpha denied', 'secret summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"alpha hidden"}'::jsonb),
   ('60000000-0000-4000-8000-000000000003'::uuid, 'CP3-EXPIRED', 'gamma expired', 'expired summary', true, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"gamma"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000004'::uuid, 'CP3-SENSITIVE', 'sensitive hidden', 'sensitive summary', false, true, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"restricted"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000004'::uuid, 'CP3-SENSITIVE', 'sensitive hidden', 'sensitive summary', false, true, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"restricted-ho-so-dang"}'::jsonb),
   ('60000000-0000-4000-8000-000000000005'::uuid, 'CP3-DEPT', 'alpha department', 'department summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"alpha department"}'::jsonb),
   ('60000000-0000-4000-8000-000000000006'::uuid, 'CP3-META', 'metadata visible', 'public summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"allow_only_token"}'::jsonb)
 ) as v(id, record_code, title, summary, other_department, sensitive, owner_id, metadata)
@@ -60,12 +60,52 @@ values
 on conflict (record_id, principal_type, principal_id, capability) do update set effect = excluded.effect, expires_at = excluded.expires_at;
 
 do $$
+begin
+  if (select count(*) from public.db_records where id in (
+    '60000000-0000-4000-8000-000000000004'::uuid,
+    '60000000-0000-4000-8000-000000000007'::uuid,
+    '60000000-0000-4000-8000-000000000008'::uuid,
+    '60000000-0000-4000-8000-000000000009'::uuid
+  )) <> 4 then
+    raise exception 'CP3 sensitive precondition failed: expected 4 record IDs';
+  end if;
+  if (select count(*) from public.db_records r join public.db_record_types t on t.id = r.record_type_id
+      where r.id in (
+        '60000000-0000-4000-8000-000000000004'::uuid,
+        '60000000-0000-4000-8000-000000000007'::uuid,
+        '60000000-0000-4000-8000-000000000008'::uuid,
+        '60000000-0000-4000-8000-000000000009'::uuid
+      ) and t.code in ('ho_so_dang', 'chi_hoi_nha_bao', 'doan_thanh_nien', 'giay_phep_quan_ly_bao_chi')) <> 4 then
+    raise exception 'CP3 sensitive precondition failed: expected 4 record type codes';
+  end if;
+  if exists (
+    select 1
+    from (values
+      ('60000000-0000-4000-8000-000000000004'::uuid, 'ho_so_dang', 'restricted-ho-so-dang'),
+      ('60000000-0000-4000-8000-000000000007'::uuid, 'chi_hoi_nha_bao', 'restricted-chi-hoi-nha-bao'),
+      ('60000000-0000-4000-8000-000000000008'::uuid, 'doan_thanh_nien', 'restricted-doan-thanh-nien'),
+      ('60000000-0000-4000-8000-000000000009'::uuid, 'giay_phep_quan_ly_bao_chi', 'restricted-giay-phep-quan-ly-bao-chi')
+    ) as expected(record_id, type_code, token)
+    where not exists (
+      select 1
+      from public.db_records r
+      join public.db_record_types t on t.id = r.record_type_id
+      where r.id = expected.record_id
+        and t.code = expected.type_code
+        and position(expected.token in concat_ws(' ', r.record_code, r.title, r.summary, r.metadata::text)) > 0
+    )
+  ) then
+    raise exception 'CP3 sensitive precondition failed: token does not match seeded record';
+  end if;
+end $$;
+
+do $$
 declare
   row_count integer;
   v_total_count bigint;
   visible_ids uuid[];
   search_ids uuid[];
-  token text;
+  sensitive_row record;
 begin
   select count(*), max(sr.total_count), array_agg(sr.id order by sr.id)
     into row_count, v_total_count, visible_ids
@@ -100,9 +140,14 @@ begin
 
   if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', 'restricted', null, null, null, 10, 0) as sr) then raise exception 'CP3 sensitive record leaked'; end if;
 
-  for token in select unnest(array['restricted-ho-so-dang', 'restricted-chi-hoi-nha-bao', 'restricted-doan-thanh-nien', 'restricted-giay-phep-quan-ly-bao-chi']) loop
-    if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', token, null, null, null, 10, 0) as sr) then
-      raise exception 'CP3 sensitive record leaked for token %', token;
+  for sensitive_row in select * from (values
+    ('60000000-0000-4000-8000-000000000004'::uuid, 'restricted-ho-so-dang'),
+    ('60000000-0000-4000-8000-000000000007'::uuid, 'restricted-chi-hoi-nha-bao'),
+    ('60000000-0000-4000-8000-000000000008'::uuid, 'restricted-doan-thanh-nien'),
+    ('60000000-0000-4000-8000-000000000009'::uuid, 'restricted-giay-phep-quan-ly-bao-chi')
+  ) as sensitive(record_id, token) loop
+    if exists (select 1 from public.api_search_database_records('30000000-0000-4000-8000-000000000002', sensitive_row.token, null, null, null, 10, 0) as sr where sr.id = sensitive_row.record_id) then
+      raise exception 'CP3 sensitive record leaked for record ID % and token %', sensitive_row.record_id, sensitive_row.token;
     end if;
   end loop;
 
