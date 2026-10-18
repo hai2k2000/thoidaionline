@@ -47,6 +47,7 @@ const labels = {
   "journalism-structures": "Chủ đề / Loạt bài",
   "journalism-reports": "Báo cáo nghiệp vụ báo chí",
   "journalism-calendar": "Lịch biên tập",
+  database: "Cơ sở dữ liệu",
 } as const;
 
 function NavIcon({ id, active }: { id: keyof typeof labels; active: boolean }) {
@@ -219,6 +220,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     canManageJournalismStructures: hasPermission("journalism.structure.manage"),
     canViewAssets: hasPermission("asset.view"),
     canManageAssets: hasPermission("asset.manage"),
+    canViewDatabase: hasPermission("record.discover"),
   });
 
   const restoreMenuFocus = useCallback(() => {

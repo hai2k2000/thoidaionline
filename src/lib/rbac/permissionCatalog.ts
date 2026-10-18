@@ -22,6 +22,17 @@ export const RBAC_PERMISSION_CODES = [
   "journalism.metadata.update",
   "journalism.publication.manage",
   "journalism.publication.verify",
+  "record.discover",
+  "record.metadata.view",
+  "record.preview",
+  "record.download",
+  "record.create",
+  "record.edit",
+  "record.approve",
+  "record.delete",
+  "record.restore",
+  "record.export",
+  "record.acl.manage",
 ] as const;
 
 export type RbacPermissionCode = (typeof RBAC_PERMISSION_CODES)[number];

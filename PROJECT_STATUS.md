@@ -983,3 +983,206 @@ Production safety:
 
 Next:
 - Commit and push feature branch, open one PR, wait for CI artifact, then run the approved migration-first deployment gates.
+## Database Management V1 — local foundation continuation
+
+Current Phase: Phase 1 foundation implementation; local validation
+Current Task: complete server API contracts and local migration verification
+
+Completed:
+- Added additive catalog/schema migrations for 5 top-level groups and 47 record types.
+- Added server-only record repository, dynamic form catalog API, ACL resolver and private local file adapter.
+- Added detail/update/soft-delete/restore/ACL/file upload/download routes with no-store responses and checksum verification.
+- Added functional local pages for record entry, search, list and detail; added database navigation entry.
+
+Validation:
+- Database management focused tests: 12/12 PASS.
+- TypeScript: PASS.
+- Touched-file ESLint: PASS with only existing AppNav warnings.
+- git diff --check: PASS.
+- Route manifest: PASS.
+- Production-like build with build-only local placeholders: PASS; no production secrets used.
+
+Blockers:
+- Full local Supabase startup/reset reaches the historical September duty-roster seed but remains blocked by legacy fixture incompatibility. The original `actor_id` failure is reproduced and locally unblocked in a disposable bootstrap: baseline demo tasks omit `created_by`, `20260817050000_phase3_additive_task_schema.sql` maps one to `assigned`, and `20260826200000_harden_direct_assignment.sql` inserts that NULL into NOT NULL `task_status_events.actor_id`. The bootstrap also documents the next legacy roster fixture mismatch without changing historical migrations. No database was modified outside disposable attempts; no production database was accessed.
+
+Production safety:
+- Production database, VPS, releases, service and canonical branch: unchanged.
+
+Next:
+- `scripts/local-database-bootstrap.mjs` provides a disposable local-only compatibility copy and preserves the production migration set. Migration chain is still FAIL at the legacy September roster fixture (`ineligible duty assignee`) after the actor compatibility fix; do not claim full-chain or runtime E2E PASS. Do not deploy or apply production migration.
+- Branch pushed: `codex/database-management-v1-foundation` (`3bf06b3`, includes `9a304c0`, `ab62181`, `c7856e8`).
+
+## Database Management V1 — local integration recovery checkpoint (2026-10-17)
+
+- `HISTORICAL_FULL_CHAIN: FAIL`. The original `actor_id = NULL` failure is reproduced and handled only in the disposable bootstrap. A bounded compatibility fixture also resolves the September duty roster mismatch, but the historical chain then reaches additional legacy online-work/leave fixture dependencies; no historical migration was changed.
+- `CSDL_ISOLATED_SCHEMA: PASS`. A disposable copy of official migrations through the verified backend/RBAC baseline plus the two Database V1 migrations validates 12 V1 tables, RLS on `db_records`, service-role grants, 44 active record types and 44 published forms.
+- `CSDL_RUNTIME_E2E: BLOCKED`. Unauthenticated HTTP contract checks return 401 as expected. Authenticated runtime could not be completed because the legacy fixture chain stops at `20260911110000_enable_deputy_department_assignment.sql` when `leave_requests` is absent; continuing to patch historical fixture dependencies is out of scope.
+- Security hardening: server forces actor department/ownership and draft status on create; validates dynamic metadata types/options/rules; ignores expired ACLs; preserves explicit deny precedence; filters ACL before final list limit; compensates best-effort on history failure; supports ACL expiry timestamps.
+- Form progress: `44/44` catalog definitions and `44/44` published baseline forms verified. Specialized business metadata remains unverified because the catalog currently supplies a shared skeleton only.
+- Local pages: source routes exist for list, search, create and detail; browser acceptance was not claimed without an authenticated runtime.
+- Local runtime URL used: `http://localhost:3107` (stopped after unauthenticated checks). Production/VPS/database: `UNCHANGED`.
+- Supabase warning retained for owner review: legacy `public.task_completion_scores` has RLS disabled in the isolated baseline. No remediation was applied because enabling RLS without approved policies could block existing access.
+- Focused tests after hardening: `14/14` Database Management tests PASS; TypeScript PASS; required routes PASS; diff check PASS. Isolated runner contract test PASS. No deployment or production migration performed.
+
+## Database Management V1 — authenticated local runtime recovery (2026-10-17)
+
+- `HISTORICAL_FULL_CHAIN: FAIL` remains unchanged. Legacy September fixture incompatibilities are not rewritten or bypassed.
+- `CURRENT_APP_CSDL_RUNTIME: PASS` on a disposable PostgreSQL/Supabase baseline built from an explicit allowlist of official migrations, including account personalization, leave/audit dependencies, `20260911150000_lock_task_completion_scores.sql`, RBAC V2 (`20261015100000` plus scope fix), and Database V1 migrations.
+- Baseline verification: 44 active record types, 44 published forms, `api_list_effective_permissions(uuid)`, service-role execute grant, `leave_requests`, audit, password lifecycle, `db_records` RLS, and `task_completion_scores` RLS/service-role select all verified.
+- Authenticated HTTP runtime: PASS for synthetic local login/session/RBAC, catalog, create/read/update/search, private file upload, soft-delete and restore. Browser E2E was not claimed because the local browser daemon was unavailable on this Windows host.
+- ACL lifecycle correction: composite-key upsert now permits repeated deny/allow updates; local HTTP replay passed expired deny, active deny, repeated deny, allow, and owner delete/restore paths.
+- Disposable RLS assessment: `task_completion_scores` is protected by the lock migration. Ten unrelated legacy tables remain RLS-disabled in the disposable baseline; no remediation was applied without approved policies. This is not evidence of production state.
+- Production/VPS/database: `UNCHANGED`. No production credentials, data, migration, deployment, restart, or activation used.
+
+## Database Management V1 — CP2 functional completion and acceptance (2026-10-17)
+
+Current Phase: CP2 local functional completion and browser acceptance
+Current Task: source-backed specialized metadata, 44-type matrix, and read-only legacy RLS assessment
+
+Completed:
+- Added source-backed specialized fields for `van_ban_den`, `hop_dong_nghiep_vu`, and `ho_so_su_kien` only.
+- Added typed dynamic form controls for text, long text, date, datetime, number, URL, select, multi-select, country, department and person-compatible fields.
+- Added a 44-type matrix and disposable legacy RLS assessment report.
+
+Validation:
+- Database/API contract tests: 19/19 PASS.
+- 44-type matrix test: PASS; catalog/forms remain 44/44.
+- Isolated catalog migration replay: PASS; specialized field counts 16/16/17.
+- TypeScript source-only check (excluding generated `.next` types): PASS.
+- Required route manifest and diff check: PASS.
+- Browser E2E: BLOCKED; Browser Use daemon has no active connection and no browser package was installed under low RAM.
+
+Blockers:
+- Specialized business metadata for 41/44 types lacks an approved source contract; fields are intentionally not guessed.
+- Historical full migration chain remains FAIL for legacy fixtures; unchanged and out of CP2 scope.
+- Disposable RLS finding: `task_quick_report_idempotency` has anon/authenticated table grants; no remediation applied.
+
+Production safety:
+- Production/VPS/database: UNCHANGED. No merge, deploy, production migration, or infrastructure change.
+
+Next:
+- Push the three existing verified commits plus CP2 changes to the feature branch only after final owner review.
+- Browser/manual acceptance can use the existing local URL when the isolated runtime is started.
+
+## Database Management V1 — CP2-B business forms and local acceptance (2026-10-17)
+
+Current Phase: CP2-B local business-form completion
+Current Task: optional metadata groups, 44-type classification, and disposable RLS security proposal
+
+Completed:
+- Added additive migration `20261017110000_database_management_v1_cp2b_optional_fields.sql`.
+- Added bounded optional metadata groups for 40 record types; all fields are non-required and do not widen permissions.
+- Kept 4 sensitive/legal record types on the common skeleton with `OWNER_REQUIRED` status.
+- Added the RLS hardening proposal for `task_quick_report_idempotency`; no grant/RLS remediation was applied.
+
+Validation:
+- CP2-B contract and Database Management tests: 22/22 PASS.
+- Catalog/forms: 44/44 remain published.
+- Disposable CP2-B migration replay: PASS; 40 distinct record types received optional field groups.
+- Source-only TypeScript check excluding generated `.next` types: PASS.
+- Required routes and diff check: PASS.
+
+Blockers:
+- Browser E2E remains BLOCKED because Browser Use has no active daemon connection; no heavy browser install was attempted.
+- Historical full-chain fixture failure remains unchanged.
+- `task_quick_report_idempotency` hardening is OWNER_REQUIRED; proposal only.
+
+Production safety:
+- Production/VPS/database: UNCHANGED. No production migration, grant change, deploy, merge, or restart.
+
+Next:
+- Push CP2-B commit to the feature branch only.
+- Owner may approve the separate RLS hardening proposal and provide source confirmation for sensitive forms.
+
+## Database Management V1 — CP2-C runtime acceptance and security completion (2026-10-17)
+
+Current Phase: CP2-C local runtime acceptance
+Current Task: server-side sensitive policy, bounded search, source-backed form options, and disposable RLS verification
+
+Completed:
+- Added server-side default deny for the four sensitive/legal record types (`ho_so_dang`, `chi_hoi_nha_bao`, `doan_thanh_nien`, `giay_phep_quan_ly_bao_chi`). Technical admin permissions and per-record ACL cannot override this policy; an explicit `record.sensitive.access` permission is required and remains owner-controlled.
+- Filtered sensitive types from catalog/forms, list/search and detail access; create is rejected with HTTP 403.
+- Bounded list scanning to authorized record-type IDs and a finite window before ACL filtering; this removes the prior unbounded full-table scan behavior, while full database/RPC predicate pushdown remains a follow-up.
+- Catalog now supplies live department/person options and a bounded country option set; number inputs submit numbers and person fields use real staff options.
+
+Validation:
+- Database Management focused tests: 18/18 PASS.
+- Source-only TypeScript check excluding generated `.next/dev` types: PASS.
+- Touched-file ESLint: PASS.
+- `git diff --check`: PASS.
+- Disposable isolated schema: PASS (44 active record types, 44 published forms, RLS and service-role grants verified).
+- Authenticated local HTTP matrix: 40/40 non-sensitive types created, read, updated, searched, soft-deleted and restored successfully.
+- Sensitive policy runtime: PASS; technical admin catalog exposes 40/44, sensitive create returns 403.
+- Disposable Quick Report grant hardening: PASS; anon direct table access denied and service-role direct access succeeds. Proposal remains unapplied to production.
+
+Not claimed:
+- HTTP runtime coverage for the four `OWNER_REQUIRED` types: intentionally blocked by policy; disposable privileged fixtures were not used to claim business approval.
+- Browser E2E: not run; owner manual acceptance remains required because Browser Use daemon is unavailable.
+- Full AND/OR/NOT metadata query language and DB-side ACL predicate/RPC: not implemented in this bounded CP2-C patch.
+- Historical full migration chain: remains FAIL at legacy fixture incompatibilities and was not changed.
+
+Production safety:
+- Production/VPS/database/release/policy: UNCHANGED. No production migration, grant/RLS change, deploy, merge, restart or canonical branch update performed.
+
+Next:
+- Owner can manually accept the local UI at `http://localhost:3107` after starting the disposable runtime and Next.js with local-only credentials supplied by the fixture runner.
+- Separate owner approval is required before applying the Quick Report grant hardening or any sensitive record permission.
+
+## Database Management V1 — CP3 + CP4 advanced search and record management (2026-10-17)
+
+Current Phase: CP3/CP4 implementation and disposable validation
+Current Task: PostgreSQL authorization-predicate search and record-management acceptance
+
+Completed:
+- Added additive migration `20261017130000_database_management_v1_cp3_search_rpc.sql` with `api_search_database_records(...)`.
+- Search authorization now executes in PostgreSQL before count/window pagination, preserving explicit deny, ACL expiry, owner/department fallback and the four-type sensitive deny policy.
+- Repository list/search no longer performs the prior unbounded batch scan and in-memory ACL filter; it calls the service-role RPC with bounded limit/offset.
+- Search query complexity is bounded and the RPC is unavailable to `public`, `anon` and `authenticated` roles.
+- Isolated runner allowlist and contract tests include the CP3 migration.
+
+Validation:
+- Database Management and CP3 contract tests: 21/21 PASS.
+- Source-only TypeScript: PASS.
+- Touched-file ESLint: PASS (no errors).
+- `git diff --check`: PASS.
+- Docker/disposable migration replay: BLOCKED by Docker Desktop `DockerLifecycleInspectError` while inspecting the isolated database container; no SQL runtime PASS is claimed for CP3.
+
+CP4 status:
+- Existing server routes for detail, update, soft-delete/restore, ACL and private file upload/download remain in place and covered by contract tests.
+- Full UI acceptance for edit, file/link/history/ACL/export controls and advanced filter persistence remains pending; no browser E2E was claimed.
+
+Blockers:
+- Restart Docker Desktop or restore its local engine API, then rerun the disposable migration and RPC matrix. This is the only current runtime blocker for CP3.
+- Local `npm run build` is blocked by the repository release-lineage guard on the feature branch; direct `npx next build` compiles and type-checks but stops during page-data collection because runtime Supabase environment variables are intentionally absent. The existing `.next` artifact therefore remains stale for artifact-route verification.
+- Historical migration chain remains FAIL on legacy fixtures; unchanged.
+- Browser Use daemon remains unavailable.
+
+Production safety:
+- Production/VPS/database/release/policy: UNCHANGED. No production migration, grant/RLS change, deploy, merge, restart or canonical branch update performed.
+
+Next:
+- After Docker health returns, run the CP3 RPC matrix with interleaved denied/allowed fixture rows, count/pagination checks and expired/explicit deny regressions.
+- Then complete CP4 UI controls and local manual acceptance without exposing the development server publicly.
+
+## Database Management V1 — CP3–CP6 integration candidate (2026-10-18)
+
+Current Phase: COMPLETE; local integration candidate ready for owner review
+Current Task: migration-first integration and bounded validation
+
+Completed:
+- Candidate branch `review/database-v1-integration-20261018` is based on CP6 SHA `9bd37fb6e5583a3e806f28eae1ff9029f895654d`; canonical `integration/production` remains an ancestor.
+- CP3 search/RBAC/ACL/sensitive controls, CP4 CRUD/private files/history, CP5 backup and hardening, and CP6 audit outbox/benchmark changes are included without merging directly into `integration/production`.
+- Added CP6 audit outbox to strict sandbox, isolated migration, and standalone migration provenance in timestamp order.
+- Corrected audit event identity: independent download/export actions receive distinct keys; retries remain idempotent when callers provide an explicit key.
+- CP6 GitHub evidence reused from run `39110392819`: SUCCESS with SQL/security gates PASS and recorded evidence exceptions for HTTP average and exact post-run disk free.
+
+Validation:
+- Focused Database V1, CP3/CP4, audit outbox, migration, packaging-contract, and release compatibility tests: to be run on this candidate.
+- No benchmark rerun, production migration, build, push, merge, dispatch, deployment, or runtime cleanup APPLY performed.
+
+Blockers:
+- Production rollout remains NO-GO pending owner approval for migration/deploy, production backup/checkpoint, storage root, and immutable artifact gates.
+- Local C: free space is 16.78 GiB; build/packaging is intentionally not run under the 20 GiB warning budget.
+
+Next:
+- Owner review of this local candidate; push or PR creation requires separate approval.
