@@ -55,6 +55,13 @@ test("CP6 benchmark runner has a disk guard and disposable-only contract", () =>
   assert.match(evidence, /CP6_SQL_BENCHMARK_COMPLETE/);
   assert.match(evidence, /db_records_search_idx/);
   assert.match(httpDetail, /E2E_BASE_URL/);
+  assert.match(httpDetail, /controlRecordId = "71000000-0000-4000-8000-000000000003"/);
+  assert.match(httpDetail, /target preflight/);
+  assert.match(httpDetail, /control preflight/);
+  assert.match(httpDetail, /status=\$\{response\.status\} error=/);
+  assert.match(sql, /r\.id = v_control_id and r\.owner_id = v_admin_id and r\.status = 'approved'/);
+  assert.match(sql, /db_record_acl as a where a\.record_id = v_control_id/);
+  assert.match(sql, /db_record_files as f where f\.record_id = v_control_id/);
   assert.match(httpDetail, /forwardedRequestCount/);
   assert.match(httpDetail, /CP6_HTTP_DETAIL_EVIDENCE measured/);
   assert.match(httpDetail, /CP6_QUERY_COUNT_EVIDENCE measured/);

@@ -6,7 +6,7 @@ const username = process.env.E2E_ADMIN_USERNAME;
 const password = process.env.E2E_PASSWORD;
 const output = process.env.CP6_HTTP_EVIDENCE_LOG;
 const recordId = "71000000-0000-4000-8000-000000000001";
-const controlRecordId = "71000000-0000-4000-8000-000000000002";
+const controlRecordId = "71000000-0000-4000-8000-000000000003";
 if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(baseUrl ?? "")) throw new Error("E2E_BASE_URL must be localhost-only");
 if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(gatewayUrl ?? "")) throw new Error("E2E_GATEWAY_URL must be localhost-only");
 if (!username || !password || !output) throw new Error("synthetic HTTP benchmark configuration is required");
@@ -34,13 +34,26 @@ const reset = async () => {
   const response = await fetch(`${gatewayUrl}/metrics/reset`, { method: "POST" });
   if (!response.ok) throw new Error(`gateway metrics reset failed: ${response.status}`);
 };
+const assertDetailResponse = async (id, expectedAcl, expectedFiles, phase) => {
+  const response = await request(`/api/database/records/${id}`, {}, cookie);
+  const body = await response.json().catch(() => ({}));
+  if (response.status !== 200 || body.record?.record?.id !== id) {
+    const errorCode = typeof body.error === "string" ? body.error : "invalid_response";
+    throw new Error(`HTTP ${phase} failed: status=${response.status} error=${errorCode}`);
+  }
+  if (body.record.acl?.length !== expectedAcl || body.record.files?.length !== expectedFiles) {
+    throw new Error(`HTTP ${phase} fixture mismatch: acl=${body.record.acl?.length ?? "missing"} files=${body.record.files?.length ?? "missing"}`);
+  }
+};
+await assertDetailResponse(recordId, 20, 10, "target preflight");
+await assertDetailResponse(controlRecordId, 0, 0, "control preflight");
 const measure = async (id, expectedAcl, expectedFiles) => {
   await reset();
   const started = performance.now();
   const response = await request(`/api/database/records/${id}`, {}, cookie);
   const body = await response.json().catch(() => ({}));
   const elapsed = performance.now() - started;
-  if (response.status !== 200 || body.record?.record?.id !== id) throw new Error(`HTTP detail assertion failed: ${response.status}`);
+  if (response.status !== 200 || body.record?.record?.id !== id) throw new Error(`HTTP detail assertion failed: status=${response.status}`);
   if (body.record.acl?.length !== expectedAcl || body.record.files?.length !== expectedFiles) {
     throw new Error(`HTTP detail fixture mismatch for ${id}: ACL ${body.record.acl?.length}, files ${body.record.files?.length}`);
   }

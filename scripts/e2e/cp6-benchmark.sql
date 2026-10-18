@@ -194,6 +194,23 @@ end $$;
 do $$
 declare
   v_admin_id uuid := (select admin_id from cp6_benchmark_config);
+  v_control_id uuid := '71000000-0000-4000-8000-000000000003'::uuid;
+begin
+  if not exists (
+    select 1 from public.db_records as r
+    where r.id = v_control_id and r.owner_id = v_admin_id and r.status = 'approved'
+  ) then
+    raise exception 'CP6 HTTP control precondition failed: control owner/status';
+  end if;
+  if exists (select 1 from public.db_record_acl as a where a.record_id = v_control_id)
+     or exists (select 1 from public.db_record_files as f where f.record_id = v_control_id) then
+    raise exception 'CP6 HTTP control precondition failed: control ACL/files must be empty';
+  end if;
+end $$;
+
+do $$
+declare
+  v_admin_id uuid := (select admin_id from cp6_benchmark_config);
   v_actor_id uuid := (select actor_id from cp6_benchmark_config);
   v_admin_role_id uuid;
   v_admin_department_id uuid;
