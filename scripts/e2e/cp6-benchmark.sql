@@ -212,10 +212,14 @@ where to_tsvector('simple', concat_ws(' ', r.record_code, r.title, r.summary, co
 \echo CP6_EXPLAIN_RPC_INTERNAL_END
 
 \echo CP6_EXPLAIN_SEARCH_INDEX_BEGIN
+-- The probe is deliberately selective and disables sequential scans only for
+-- this diagnostic statement so the plan must expose the maintained GIN index.
+set local enable_seqscan = off;
 explain (analyze, buffers, format json)
 select r.id
 from public.db_records as r
 where r.search_document @@ websearch_to_tsquery('simple', 'cp6-index-probe-unique');
+reset enable_seqscan;
 \echo CP6_EXPLAIN_SEARCH_INDEX_END
 
 create temporary table cp6_latency (scenario text not null, elapsed_ms double precision not null) on commit drop;

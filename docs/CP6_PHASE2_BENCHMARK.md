@@ -20,7 +20,7 @@ The SQL harness performs 35 iterations per scenario after the disposable schema/
 
 It emits p50, p95, and average latency for SQL Search RPC, filtered Search RPC, and SQL detail. It also emits separate EXPLAIN plans for the RPC Function Scan, the searchable expression, and the maintained `search_document` index. The fixture checks pagination population/counts, sensitive deny and positive-control access, searchable-token preconditions, and the expected 20 ACL/10 file fixture shape. Application/HTTP detail latency and measured query count/N+1 are separate acceptance gates and must not be reported as PASS by this SQL-only harness. GNU `time -v` captures elapsed time, CPU, and maximum resident memory in the same bounded log.
 
-The runner requires a companion harness to emit `CP6_HTTP_DETAIL_EVIDENCE measured` and `CP6_QUERY_COUNT_EVIDENCE measured`; without both markers it fails closed as incomplete.
+The workflow starts the same-source Next.js standalone app against the disposable gateway after the committed SQL fixture, then measures 35 authenticated detail requests. The gateway exposes a localhost-only forwarded-request counter, so the HTTP evidence records measured application latency and PostgREST request count rather than a hardcoded N+1 claim. The selective index probe disables sequential scans only for that diagnostic statement, so the artifact must show the maintained GIN index rather than treating the outer Function Scan as proof. The runner/evidence checker requires `CP6_HTTP_DETAIL_EVIDENCE measured` and `CP6_QUERY_COUNT_EVIDENCE measured`; without both markers it fails closed as incomplete.
 
 ## Acceptance thresholds
 
