@@ -7,7 +7,7 @@ import { logServerAudit } from "@/lib/serverAudit";
 
 const MAX_MULTIPART_BYTES = 51 * 1024 * 1024;
 
-function boundedBody(body: ReadableStream<Uint8Array>, limit: number) {
+function boundedBody(body: ReadableStream<Uint8Array>, limit: number, onExceeded: () => void) {
   const reader = body.getReader();
   let seen = 0;
   return new ReadableStream<Uint8Array>({
@@ -17,6 +17,7 @@ function boundedBody(body: ReadableStream<Uint8Array>, limit: number) {
         if (done) return controller.close();
         seen += value.byteLength;
         if (seen > limit) {
+          onExceeded();
           await reader.cancel("body_too_large");
           return controller.error(new Error("file_too_large"));
         }
@@ -40,16 +41,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const recordId = (await context.params).id;
   if (!(await canAccessDatabaseRecordForActor(actor, recordId, "edit"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   let form: FormData;
+  let bodyExceeded = false;
   try {
-    const body = request.body ? boundedBody(request.body, MAX_MULTIPART_BYTES) : null;
+    const body = request.body ? boundedBody(request.body, MAX_MULTIPART_BYTES, () => { bodyExceeded = true; }) : null;
     const boundedRequest = body ? new Request(request.url, { method: request.method, headers: request.headers, body, duplex: "half" } as RequestInit) : request;
     form = await boundedRequest.formData();
   } catch (error) {
-    if (error instanceof Error && error.message === "file_too_large") return NextResponse.json({ error: "file_too_large" }, { status: 413 });
+    if (bodyExceeded || (error instanceof Error && error.message === "file_too_large")) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
     return NextResponse.json({ error: "invalid_multipart" }, { status: 400 });
   }
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "file_required" }, { status: 400 });
+  if (file.size > 50 * 1024 * 1024) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
   let storageKey: string | null = null;
   let retainStorageForReconciliation = false;
   try {
