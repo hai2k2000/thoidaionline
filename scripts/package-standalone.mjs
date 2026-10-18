@@ -113,6 +113,7 @@ const migrationReference = [
   "supabase/migrations/20261017140000_database_management_v1_cp3_search_security_fix.sql",
   "supabase/migrations/20261018100000_database_management_v1_cp3_search_rpc_identifier_fix.sql",
   "supabase/migrations/20261018120000_database_management_v1_cp3_search_scope_fix.sql",
+  "supabase/migrations/20261018121000_asset_locations_reclaim_liquidation.sql",
   "supabase/migrations/20261018130000_database_management_v1_cp6_audit_outbox.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");

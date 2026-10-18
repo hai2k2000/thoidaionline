@@ -292,5 +292,13 @@ export function createAssetRepository(database: AssetRepositoryDb) {
       p_asset_id: input.asset_id,
       p_return_note: input.return_note ?? null,
     }),
+    reclaimUnrepairableAssetForActor: (actor: AssetRepositoryActor, input: AssetLifecycleInput) => lifecycle(actor, input, "api_asset_reclaim_unrepairable", {
+      p_asset_id: input.asset_id,
+      p_return_note: input.return_note ?? null,
+    }),
+    liquidateAssetForActor: (actor: AssetRepositoryActor, input: AssetLifecycleInput) => lifecycle(actor, input, "api_asset_liquidate", {
+      p_asset_id: input.asset_id,
+      p_note: input.return_note ?? null,
+    }),
   };
 }
