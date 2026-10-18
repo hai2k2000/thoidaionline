@@ -2,6 +2,7 @@ import http from "node:http";
 
 const target = new URL(process.argv[2] ?? "");
 const port = Number(process.env.E2E_GATEWAY_PORT);
+let forwardedRequestCount = 0;
 if (target.protocol !== "http:" || !/^127\.0\.0\.1:\d+$/.test(target.host)) throw new Error("sandbox gateway target must be localhost HTTP");
 if (!Number.isInteger(port) || port < 1024) throw new Error("E2E_GATEWAY_PORT is required");
 
@@ -11,11 +12,21 @@ const server = http.createServer(async (request, response) => {
       response.writeHead(200, { "content-type": "text/plain" }).end("ok");
       return;
     }
+    if (request.url === "/metrics") {
+      response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ forwardedRequestCount }));
+      return;
+    }
+    if (request.url === "/metrics/reset" && request.method === "POST") {
+      forwardedRequestCount = 0;
+      response.writeHead(204).end();
+      return;
+    }
     const prefix = request.url?.startsWith("/rest/v1") ? "/rest/v1" : request.url?.startsWith("/storage/v1") ? "/storage/v1" : "";
     if (!prefix) {
       response.writeHead(404).end();
       return;
     }
+    forwardedRequestCount += 1;
     const body = request.method === "GET" || request.method === "HEAD" ? undefined : await new Promise((resolve, reject) => {
       const chunks = [];
       request.on("data", (chunk) => chunks.push(chunk));

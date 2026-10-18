@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: {
+    proxyClientMaxBodySize: "51mb",
+  },
   outputFileTracingExcludes: {
     "*": ["src/**", "docs/**", "mobile/**", "supabase/**", "bridge/**", "work/**", "sql/**", "deploy/**", "scripts/e2e/**", "**/*.test.*", "AGENTS.md", "*.md"],
   },
