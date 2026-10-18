@@ -8,7 +8,7 @@ This checkpoint prepares one controlled performance run for Database Management 
 - Eight synthetic departments, two synthetic owners, multiple statuses, and searchable keywords.
 - Four sensitive record types, each with a distinct search token.
 - Explicit ACL coverage on a detail record: 20 ACL rows and 10 private-file metadata rows.
-- All data is created inside the disposable PostgreSQL transaction and rolled back after measurements.
+- The SQL fixture commits its disposable rows so a later HTTP/detail harness can measure them; workflow cleanup must remove the disposable runtime.
 
 ## Measurements
 
@@ -16,18 +16,20 @@ The SQL harness performs 35 iterations per scenario after the disposable schema/
 
 - `search`: unfiltered Search RPC, limit 50, offset 0.
 - `filtered_search`: keyword plus status filter, limit 50, offset 0.
-- `detail`: one record joined to ACL and file metadata.
+- `detail_sql`: one record joined to ACL and file metadata (SQL-only evidence).
 
-It emits p50, p95, and average latency, plus `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` for filtered Search RPC. The result also checks pagination overlap, sensitive-record exclusion, the expected 20 ACL/10 file fixture shape, database size, and the single-query detail model. GNU `time -v` captures elapsed time, CPU, and maximum resident memory in the same bounded log.
+It emits p50, p95, and average latency for SQL Search RPC, filtered Search RPC, and SQL detail. It also emits separate EXPLAIN plans for the RPC Function Scan, the searchable expression, and the maintained `search_document` index. The fixture checks pagination population/counts, sensitive deny and positive-control access, searchable-token preconditions, and the expected 20 ACL/10 file fixture shape. Application/HTTP detail latency and measured query count/N+1 are separate acceptance gates and must not be reported as PASS by this SQL-only harness. GNU `time -v` captures elapsed time, CPU, and maximum resident memory in the same bounded log.
+
+The runner requires a companion harness to emit `CP6_HTTP_DETAIL_EVIDENCE measured` and `CP6_QUERY_COUNT_EVIDENCE measured`; without both markers it fails closed as incomplete.
 
 ## Acceptance thresholds
 
 - Search p95 <= 250 ms.
 - Filtered search p95 <= 400 ms.
-- Detail p95 <= 200 ms.
+- SQL detail p95 <= 200 ms (HTTP detail remains a separate gate).
 - Unauthorized rows and metadata/count leaks: 0.
 - Pagination ACL consistency: PASS.
-- No N+1 behavior in the benchmark query path; query-plan evidence is required before making an index-use claim.
+- Measured application query count/N+1 evidence is required before claiming the HTTP detail gate.
 
 Thresholds are fixed for this run and must not be relaxed to obtain PASS.
 
@@ -39,7 +41,7 @@ The workflow does not use production secrets, deploy, create release artifacts, 
 
 ## Evidence classification
 
-- CP3 Search/RBAC/ACL/sensitive: runtime PASS from prior local/CI evidence; not rerun here.
+- CP3 Search/RBAC/ACL/sensitive: runtime PASS from prior local/CI evidence; benchmark fixture re-checks sensitive deny and positive control.
 - CP4 HTTP CRUD/file/audit flows: runtime PASS from prior local evidence; not rerun here.
 - CP5 security/performance/backup foundation: static/contract PASS; benchmark execution was previously NOT RUN.
 - CP6 Phase 1 audit, backup/restore, upload boundary, storage escape, and audit recovery: runtime PASS from prior disposable evidence.

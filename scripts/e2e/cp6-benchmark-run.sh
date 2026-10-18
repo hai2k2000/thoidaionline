@@ -16,3 +16,4 @@ fi
 output_file="${RUNNER_TEMP:-/tmp}/cp6-benchmark.log"
 umask 077
 { /usr/bin/time -v psql "$E2E_DB_URL" -v ON_ERROR_STOP=1 -f scripts/e2e/cp6-benchmark.sql; } 2>&1 | tee "$output_file"
+node scripts/e2e/cp6-benchmark-evidence.mjs "$output_file"
