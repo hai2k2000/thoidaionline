@@ -24,12 +24,12 @@ select v.id, r.category_id, case when v.sensitive then r.sensitive_type_id else 
   v.record_code, v.title, v.summary, 'approved', case when v.other_department then r.other_department else r.employee_department end, v.owner_id, '30000000-0000-4000-8000-000000000001'::uuid, v.metadata
 from refs r
 cross join (values
-  ('60000000-0000-4000-8000-000000000001'::uuid, 'CP3-ALLOW', 'alpha visible', 'summaryhidden summary', false, false, '30000000-0000-4000-8000-000000000002'::uuid, '{"subject":"deny_only_token"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000002'::uuid, 'CP3-DENY', 'alpha denied', 'secret summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha hidden"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000003'::uuid, 'CP3-EXPIRED', 'gamma expired', 'expired summary', true, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"gamma"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000004'::uuid, 'CP3-SENSITIVE', 'sensitive hidden', 'sensitive summary', false, true, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"restricted"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000005'::uuid, 'CP3-DEPT', 'alpha department', 'department summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"alpha department"}'::jsonb),
-  ('60000000-0000-4000-8000-000000000006'::uuid, 'CP3-META', 'metadata visible', 'public summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"subject":"allow_only_token"}'::jsonb)
+  ('60000000-0000-4000-8000-000000000001'::uuid, 'CP3-ALLOW', 'alpha visible', 'summaryhidden summary', false, false, '30000000-0000-4000-8000-000000000002'::uuid, '{"keywords":"deny_only_token"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000002'::uuid, 'CP3-DENY', 'alpha denied', 'secret summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"alpha hidden"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000003'::uuid, 'CP3-EXPIRED', 'gamma expired', 'expired summary', true, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"gamma"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000004'::uuid, 'CP3-SENSITIVE', 'sensitive hidden', 'sensitive summary', false, true, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"restricted"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000005'::uuid, 'CP3-DEPT', 'alpha department', 'department summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"alpha department"}'::jsonb),
+  ('60000000-0000-4000-8000-000000000006'::uuid, 'CP3-META', 'metadata visible', 'public summary', false, false, '30000000-0000-4000-8000-000000000001'::uuid, '{"keywords":"allow_only_token"}'::jsonb)
 ) as v(id, record_code, title, summary, other_department, sensitive, owner_id, metadata)
 on conflict (id) do update set title = excluded.title, summary = excluded.summary, metadata = excluded.metadata, status = excluded.status;
 
