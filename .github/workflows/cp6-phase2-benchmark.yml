@@ -1,0 +1,167 @@
+name: CP6 Phase 2 Performance Benchmark
+
+# Manual-only benchmark registration. Do not add automatic triggers here.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Exact source SHA to benchmark"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      E2E_STRICT_GRANTS: "1"
+      THOIDAI_BUILD_CONFIG: sandbox-e2e
+      THOIDAI_RUNTIME_ENV_MODEL: runtime-injected
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-placeholder
+    steps:
+      - name: Checkout approved source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+
+      - name: Verify source SHA
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate benchmark contracts
+        run: node --test scripts/e2e/cp6-benchmark.test.mjs scripts/e2e/cp3-cp4-ci.test.mjs
+
+      - name: Check runner disk budget
+        shell: bash
+        run: |
+          free_kb=$(df -Pk "$RUNNER_TEMP" | awk 'NR==2 {print $4}')
+          test "$free_kb" -ge "$((10 * 1024 * 1024))"
+
+      - name: Start strict disposable PostgreSQL/PostgREST
+        shell: bash
+        run: |
+          bash scripts/e2e/start-sandbox.sh
+          set -a
+          source "$RUNNER_TEMP/thoidai-e2e.env"
+          set +a
+          echo "E2E_DB_URL=$E2E_DB_URL" >> "$GITHUB_ENV"
+          echo "E2E_POSTGREST_URL=$E2E_POSTGREST_URL" >> "$GITHUB_ENV"
+          echo "E2E_SERVICE_ROLE_KEY=$E2E_SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          echo "E2E_SESSION_SECRET=$E2E_SESSION_SECRET" >> "$GITHUB_ENV"
+          echo "E2E_ADMIN_USERNAME=$E2E_ADMIN_USERNAME" >> "$GITHUB_ENV"
+          echo "E2E_PASSWORD=$E2E_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Apply CP3 fixture
+        run: PGPASSWORD=e2e-postgres-only psql "$E2E_DB_URL" -f scripts/e2e/cp3-runtime.sql
+
+      - name: Start localhost gateway
+        shell: bash
+        run: |
+          gateway_port=$((21000 + (GITHUB_RUN_ID % 500)))
+          E2E_GATEWAY_PORT="$gateway_port" node scripts/e2e/sandbox-gateway.mjs "$E2E_POSTGREST_URL" > "$RUNNER_TEMP/cp6-gateway.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/cp6-gateway.pid"
+          for _ in $(seq 1 30); do curl -fsS "http://127.0.0.1:${gateway_port}/health" >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS "http://127.0.0.1:${gateway_port}/health" >/dev/null
+          echo "E2E_GATEWAY_PORT=$gateway_port" >> "$GITHUB_ENV"
+          echo "E2E_GATEWAY_URL=http://127.0.0.1:${gateway_port}" >> "$GITHUB_ENV"
+
+      - name: Build localhost application
+        shell: bash
+        run: |
+          export NEXT_PUBLIC_SUPABASE_URL="$E2E_GATEWAY_URL"
+          export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
+          export SESSION_SECRET="$E2E_SESSION_SECRET"
+          npx next build
+          cp -a .next/static .next/standalone/.next/static
+          test ! -e .env.production
+
+      - name: Start localhost application
+        shell: bash
+        run: |
+          export NEXT_PUBLIC_SUPABASE_URL="$E2E_GATEWAY_URL"
+          export SUPABASE_SERVICE_ROLE_KEY="$E2E_SERVICE_ROLE_KEY"
+          export SESSION_SECRET="$E2E_SESSION_SECRET"
+          export DATABASE_RECORD_STORAGE_ROOT="$RUNNER_TEMP/database-records"
+          PORT=3105 nohup node .next/standalone/server.js > "$RUNNER_TEMP/cp6-app.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/cp6-app.pid"
+          for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3105/login >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS http://127.0.0.1:3105/login >/dev/null
+          echo "E2E_BASE_URL=http://127.0.0.1:3105" >> "$GITHUB_ENV"
+          echo "CP6_HTTP_EVIDENCE_LOG=$RUNNER_TEMP/cp6-http-evidence.log" >> "$GITHUB_ENV"
+
+      - name: Recheck runner disk budget
+        shell: bash
+        run: |
+          free_kb=$(df -Pk "$RUNNER_TEMP" | awk 'NR==2 {print $4}')
+          test "$free_kb" -ge "$((10 * 1024 * 1024))"
+
+      - name: Run CP6 benchmark
+        run: CP6_DEFER_EVIDENCE=1 PGPASSWORD=e2e-postgres-only bash scripts/e2e/cp6-benchmark-run.sh
+
+      - name: Measure HTTP detail and query count
+        run: node scripts/e2e/cp6-http-detail.mjs
+
+      - name: Verify complete benchmark evidence
+        run: node scripts/e2e/cp6-benchmark-evidence.mjs "$RUNNER_TEMP/cp6-benchmark.log" "$CP6_HTTP_EVIDENCE_LOG"
+
+      - name: Redact bounded diagnostics
+        if: always()
+        shell: bash
+        run: |
+          for file in "$RUNNER_TEMP/cp6-benchmark.log" "$RUNNER_TEMP/cp6-app.log" "$RUNNER_TEMP/cp6-gateway.log" "$CP6_HTTP_EVIDENCE_LOG"; do
+            if [ -f "$file" ]; then
+              sed -E 's/(cookie|authorization|bearer|token|secret|password)[=:][^[:space:]]+/\1=[REDACTED]/Ig; s/[A-Za-z0-9_-]{48,}/[REDACTED]/g' "$file" > "$file.redacted"
+              mv "$file.redacted" "$file"
+            fi
+          done
+
+      - name: Upload bounded benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cp6-phase2-benchmark-${{ github.run_id }}
+          path: ${{ runner.temp }}/cp6-benchmark.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Upload HTTP and runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cp6-phase2-http-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/cp6-http-evidence.log
+            ${{ runner.temp }}/cp6-app.log
+            ${{ runner.temp }}/cp6-gateway.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Cleanup disposable runtime
+        if: always()
+        shell: bash
+        run: |
+          kill "$(cat "$RUNNER_TEMP/cp6-app.pid" 2>/dev/null)" 2>/dev/null || true
+          kill "$(cat "$RUNNER_TEMP/cp6-gateway.pid" 2>/dev/null)" 2>/dev/null || true
+          if [ -f "$RUNNER_TEMP/thoidai-e2e.env" ]; then
+            network=$(sed -n 's/^E2E_NETWORK=//p' "$RUNNER_TEMP/thoidai-e2e.env")
+            postgres=$(sed -n 's/^E2E_POSTGRES_CONTAINER=//p' "$RUNNER_TEMP/thoidai-e2e.env")
+            postgrest=$(sed -n 's/^E2E_POSTGREST_CONTAINER=//p' "$RUNNER_TEMP/thoidai-e2e.env")
+            docker rm -f "$postgrest" "$postgres" >/dev/null 2>&1 || true
+            docker network rm "$network" >/dev/null 2>&1 || true
+          fi
