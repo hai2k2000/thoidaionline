@@ -33,7 +33,7 @@ test("external deploy is verify-only by default and delegates activation to the 
   assert.match(deploy, /risk_test_evidence/);
 });
 
-test("CI placeholder artifacts are verification-only and cannot activate", () => {
+test("non-PR placeholder artifacts are verification-only and cannot activate", () => {
   assert.match(workflow, /THOIDAI_BUILD_CONFIG:[^\n]*ci-placeholder/);
   assert.match(deploy, /build_config=.*\.release-meta/);
   assert.match(deploy, /\[\[ \"\$build_config\" == canonical-public \]\]/);

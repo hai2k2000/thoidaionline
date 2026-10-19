@@ -20,9 +20,11 @@ jobs:
     timeout-minutes: 30
     env:
       THOIDAI_RUNTIME_ENV_MODEL: runtime-injected
-      THOIDAI_BUILD_CONFIG: ${{ github.ref == 'refs/heads/integration/production' && 'canonical-public' || 'ci-placeholder' }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ github.ref == 'refs/heads/integration/production' && vars.THOIDAI_PUBLIC_SUPABASE_URL || 'https://ci.invalid/supabase' }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ github.ref == 'refs/heads/integration/production' && vars.THOIDAI_PUBLIC_SUPABASE_ANON_KEY || 'ci-anon-key-placeholder' }}
+      # Pull requests into production must produce an activation-eligible artifact.
+      # Non-PR codex pushes remain placeholder-only rehearsal builds.
+      THOIDAI_BUILD_CONFIG: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/integration/production') && 'canonical-public' || 'ci-placeholder' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/integration/production') && vars.THOIDAI_PUBLIC_SUPABASE_URL || 'https://ci.invalid/supabase' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/integration/production') && vars.THOIDAI_PUBLIC_SUPABASE_ANON_KEY || 'ci-anon-key-placeholder' }}
       SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key-placeholder-01234567890123456789
       SESSION_SECRET: ci-session-secret-placeholder-01234567890123456789
       # The repository lineage guard requires production-shaped builds to identify

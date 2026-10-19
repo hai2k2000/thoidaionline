@@ -4,7 +4,7 @@ import test from "node:test";
 
 const workflow = readFileSync(".github/workflows/production-artifact.yml", "utf8");
 
-test("CI build uses bounded non-production Supabase placeholders", () => {
+test("non-PR codex pushes use bounded non-production Supabase placeholders", () => {
   assert.match(workflow, /node scripts\/check-ci-build-env\.mjs/);
   assert.match(workflow, /https:\/\/ci\.invalid\/supabase/);
   assert.match(workflow, /THOIDAI_BUILD_CONFIG:[^\n]*ci-placeholder/);
