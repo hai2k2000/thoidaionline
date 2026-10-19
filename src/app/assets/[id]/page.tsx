@@ -84,7 +84,7 @@ export default function AssetDetailPage() {
     if (action === "transfer" && !currentAssignment) return;
     if (action === "assign" && !window.confirm("Cấp phát tài sản cho phòng/người sử dụng mới?")) return;
     if (action === "transfer" && !window.confirm("Chuyển giao tài sản sang phòng/người sử dụng mới?")) return;
-    if (action === "return" && !window.confirm("Thu hồi tài sản khỏi người/phòng đang sử dụng?\n\nSau khi thu hồi, tài sản sẽ trở về trạng thái chưa phân công.")) return;
+    if (action === "return" && !window.confirm("Thu hồi tài sản khỏi người/phòng đang sử dụng?\n\nSau khi thu hồi, tài sản sẽ trở về trạng thái chưa phân công và tự động chuyển về Kho.")) return;
     if (action === "reclaim_unrepairable" && !window.confirm("Xác nhận tài sản hỏng không thể sửa?\n\nTài sản sẽ được thu hồi và chuyển vào Kho chờ xử lý.")) return;
     if (action === "liquidate" && !window.confirm("Xác nhận thanh lý tài sản này?\n\nTài sản sẽ được đánh dấu đã thanh lý và không còn vị trí lưu trữ.")) return;
     setLifecycleBusy(true);
