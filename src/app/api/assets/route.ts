@@ -63,6 +63,16 @@ export async function POST(request: Request) {
     await logServerAudit({ actorId: actor.id, module: "assets", entityType: "asset_assignments", entityId: assetId, action: "return", newData: result.data });
     return json(result.data);
   }
+  if (action === "reclaim_unrepairable") {
+    const result = await repository.reclaimUnrepairableAssetForActor(actor, { asset_id: assetId, return_note: typeof body?.return_note === "string" ? body.return_note : null });
+    if (!result.ok) return json({ error: result.error }, { status: result.error === "forbidden" ? 403 : 400 });
+    return json(result.data);
+  }
+  if (action === "liquidate") {
+    const result = await repository.liquidateAssetForActor(actor, { asset_id: assetId, return_note: typeof body?.note === "string" ? body.note : null });
+    if (!result.ok) return json({ error: result.error }, { status: result.error === "forbidden" ? 403 : 400 });
+    return json(result.data);
+  }
   const result = await repository.createAssetForActor(actor, {
     asset_code: typeof body?.asset_code === "string" ? body.asset_code : null,
     asset_name: typeof body?.asset_name === "string" ? body.asset_name : "",

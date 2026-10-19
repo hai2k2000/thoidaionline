@@ -17,14 +17,14 @@ test("asset APIs resolve server sessions and reject task-wide permission fallbac
 test("asset API supports explicit lifecycle actions and same-origin mutations", () => {
   const route = read("./route.ts");
   assert.match(route, /isSameOriginRequest/);
-  for (const action of ["assign", "transfer", "return"]) assert.match(route, new RegExp(action));
+  for (const action of ["assign", "transfer", "return", "reclaim_unrepairable", "liquidate"]) assert.match(route, new RegExp(action));
   assert.match(route, /canManageAssets/);
 });
 
 test("asset audit uses the asset-specific module and lifecycle actions", () => {
   const [route, detail, audit] = [read("./route.ts"), read("./[id]/route.ts"), read("../../../lib/serverAudit.ts")];
-  assert.match(audit, /"assets"/);
-  for (const action of ["create", "update", "assign", "transfer", "return"]) {
+  assert.match(audit, /enqueueAndDeliverAudit/);
+  for (const action of ["create", "update", "assign", "transfer", "return", "reclaim_unrepairable", "liquidate"]) {
     assert.match(`${route}\n${detail}`, new RegExp(action));
   }
 });

@@ -109,6 +109,7 @@ files=(
   20261016110000_asset_locations_expansion.sql
   20261015120000_quick_report_rpc_payload_compatibility.sql
   20261016120000_quick_report_rpc_payload_compatibility_fix.sql
+  20261016120001_asset_locations_reclaim_liquidation.sql
   20261016130000_quick_report_completion_date_compatibility.sql
 )
 
