@@ -9,3 +9,9 @@ test("dynamic record form renders typed controls instead of one universal text i
   assert.match(page, /selectedOptions/);
   assert.match(page, /type=\{inputType\}/);
 });
+
+test("record form explains field validation failures returned by the API", () => {
+  assert.match(page, /fields\?: ValidationField\[\]/);
+  assert.match(page, /invalid_url/);
+  assert.match(page, /https:\/\//);
+});

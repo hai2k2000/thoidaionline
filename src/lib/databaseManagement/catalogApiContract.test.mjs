@@ -12,3 +12,10 @@ test("catalog API is authenticated, permission checked and no-store", () => {
   assert.match(route, /db_form_fields/);
   assert.match(route, /private, no-store/);
 });
+
+test("record create route preserves dynamic metadata validation fields", () => {
+  const createRoute = readFileSync(fileURLToPath(new URL("../../app/api/database/records/route.ts", import.meta.url)), "utf8");
+  assert.match(createRoute, /invalid_metadata/);
+  assert.match(createRoute, /JSON\.parse\(error\.message\.slice/);
+  assert.match(createRoute, /fields,?\s*\}, 400/);
+});

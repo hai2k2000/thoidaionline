@@ -38,7 +38,12 @@ export async function POST(request: Request) {
     return json({ record }, 201);
   } catch (error) {
     if (error instanceof Error && ["permission_denied", "record_scope_forbidden", "record_type_restricted"].includes(error.message)) return json({ error: "forbidden" }, 403);
-    if (error instanceof Error && ["department_required"].includes(error.message) || error instanceof Error && error.message.startsWith("invalid_metadata:")) return json({ error: "invalid_request" }, 400);
+    if (error instanceof Error && error.message === "department_required") return json({ error: "invalid_request", fields: [{ field: "department", code: "required" }] }, 400);
+    if (error instanceof Error && error.message.startsWith("invalid_metadata:")) {
+      let fields: unknown[] = [];
+      try { fields = JSON.parse(error.message.slice("invalid_metadata:".length)) as unknown[]; } catch { fields = []; }
+      return json({ error: "invalid_request", fields }, 400);
+    }
     return json({ error: "record_create_failed" }, 500);
   }
 }
