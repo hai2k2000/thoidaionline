@@ -55,6 +55,7 @@ const v1Migrations = new Set([
   "20261018120000_database_management_v1_cp3_search_scope_fix.sql",
   "20261018130000_database_management_v1_cp6_audit_outbox.sql",
   "20261016120001_asset_locations_reclaim_liquidation.sql",
+  "20261019100000_asset_return_to_warehouse.sql",
 ]);
 const selectedMigrations = new Set([...currentAppMigrations, ...v1Migrations]);
 const compatibilityName = "20260826195000_local_bootstrap_task_actor_compatibility.sql";

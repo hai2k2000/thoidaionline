@@ -47,6 +47,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261018100000_database_management_v1_cp3_search_rpc_identifier_fix.sql",
   "supabase/migrations/20261018120000_database_management_v1_cp3_search_scope_fix.sql",
   "supabase/migrations/20261018130000_database_management_v1_cp6_audit_outbox.sql",
+  "supabase/migrations/20261019100000_asset_return_to_warehouse.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);

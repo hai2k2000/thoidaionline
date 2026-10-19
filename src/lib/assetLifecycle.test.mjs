@@ -18,8 +18,18 @@ test("warehouse and lifecycle migration preserves manage-only, atomic asset acti
   assert.match(migration, /revoke all on function public\.api_asset_(reclaim_unrepairable|liquidate)/);
 });
 
+test("ordinary asset return moves the asset to the Kho location", () => {
+  const migration = read("../../supabase/migrations/20261019100000_asset_return_to_warehouse.sql");
+  assert.match(migration, /create or replace function public\.api_asset_return/);
+  assert.match(migration, /where code = 'kho' and active = true/);
+  assert.match(migration, /status = 'available',[\s\S]*assigned_department_id = null,[\s\S]*location_id = v_location_id/);
+  assert.match(migration, /warehouse_location_not_configured/);
+  assert.match(migration, /grant execute on function public\.api_asset_return\(uuid, uuid, text\) to service_role/);
+});
+
 test("asset detail exposes explicit reclaim and liquidation controls", () => {
   const page = read("../app/assets/[id]/page.tsx");
+  assert.match(page, /tự động chuyển về Kho/);
   assert.match(page, /Thu hồi về kho chờ xử lý/);
   assert.match(page, /Thanh lý tài sản/);
   assert.match(page, /condition_status === "broken"/);
