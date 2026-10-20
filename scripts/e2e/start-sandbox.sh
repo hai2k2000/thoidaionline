@@ -112,6 +112,8 @@ files=(
   20261016120001_asset_locations_reclaim_liquidation.sql
   20261016130000_quick_report_completion_date_compatibility.sql
   20261019100000_asset_return_to_warehouse.sql
+  20261020100000_database_management_v1_autocode.sql
+  20261020110000_database_management_v1_idempotency.sql
 )
 
 # CP3-CI opts into the current Database V1 migrations without changing the
@@ -127,6 +129,8 @@ if [[ "${E2E_STRICT_GRANTS:-0}" == "1" ]]; then
     20261018120000_database_management_v1_cp3_search_scope_fix.sql
     20261018130000_database_management_v1_cp6_audit_outbox.sql
     20261019100000_asset_return_to_warehouse.sql
+    20261020100000_database_management_v1_autocode.sql
+    20261020110000_database_management_v1_idempotency.sql
   )
 fi
 

@@ -22,10 +22,18 @@ test("create form supports drag and drop, removing selected files, and retry mes
 test("record form recovers from network failures and focuses local validation errors", () => {
   assert.match(page, /catch \{/);
   assert.match(page, /Không thể kết nối máy chủ/);
-  assert.match(page, /firstErrorRef\.current\?\.focus\(\)/);
+  assert.match(page, /focusField\(clientErrors\[0\]\.field\)/);
+  assert.match(page, /data-field-key/);
 });
 
 test("record list translates status values for staff", () => {
   assert.match(listPage, /statusLabels/);
   assert.match(listPage, /statusLabels\[row\.status\]/);
+});
+
+test("record detail uses friendly export and history labels", () => {
+  const detail = readFileSync(new URL("../../app/database/records/[id]/page.tsx", import.meta.url), "utf8");
+  assert.match(detail, /Xuất thông tin hồ sơ/);
+  assert.match(detail, /historyLabels/);
+  assert.doesNotMatch(detail, />Xuất metadata</);
 });

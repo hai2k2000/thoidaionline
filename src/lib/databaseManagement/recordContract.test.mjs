@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { canAccessDatabaseRecord, defaultDatabaseRecordAccess } from "./acl.ts";
 import { validateDatabaseAclInput, validateDatabaseMetadata, validateDatabaseRecordInput, validateDatabaseRecordUpdateInput } from "./validation.ts";
@@ -15,6 +16,11 @@ test("record creation does not require a client-supplied code", () => {
   const result = validateDatabaseRecordInput({ ...ids, title: "Ho so tu cap ma", metadata: {} });
   assert.equal(result.ok, true);
   assert.equal(result.ok && result.value.recordCode, undefined);
+});
+
+test("metadata validation precedes server code allocation", () => {
+  const repository = readFileSync(new URL("./repository.ts", import.meta.url), "utf8");
+  assert.ok(repository.indexOf("await validateFormMetadata(form?.id") < repository.indexOf("api_next_database_record_code"));
 });
 
 test("record updates do not accept record code changes", () => {

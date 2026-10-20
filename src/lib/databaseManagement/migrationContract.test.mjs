@@ -38,3 +38,10 @@ test("autocode migration is additive and allocates Vietnam-year codes atomically
   assert.match(autocode, /grant execute on function public\.api_next_database_record_code\(\) to service_role/);
   assert.doesNotMatch(autocode, /grant execute .*anon|grant execute .*authenticated/i);
 });
+
+test("idempotency migration adds request keys without rewriting existing records", () => {
+  const source = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020110000_database_management_v1_idempotency.sql", import.meta.url)), "utf8");
+  assert.match(source, /add column if not exists client_request_id/i);
+  assert.match(source, /add column if not exists upload_request_id/i);
+  assert.match(source, /create unique index/);
+});

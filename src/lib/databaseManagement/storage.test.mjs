@@ -20,3 +20,9 @@ test("storage allows legacy Excel uploads alongside XLSX", () => {
   const source = readFileSync(new URL("./storage.ts", import.meta.url), "utf8");
   assert.match(source, /application\/vnd\.ms-excel/);
 });
+
+test("storage accepts the full validated idempotency key in stable file paths", () => {
+  const source = readFileSync(new URL("./storage.ts", import.meta.url), "utf8");
+  assert.match(source, /const STORAGE_KEY =/);
+  assert.match(source, /STORAGE_KEY\.test\(storageKey\)/);
+});
