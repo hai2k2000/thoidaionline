@@ -1,7 +1,6 @@
 import type { DatabaseRecordAclInput, DatabaseRecordInput, DatabaseRecordUpdateInput } from "./types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const CODE = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,119}$/;
 const URL = /^https:\/\//i;
 
 export type RecordValidationError = { field: string; code: string };
@@ -59,7 +58,6 @@ export function validateDatabaseRecordInput(input: unknown): { ok: true; value: 
   if (!value || typeof value !== "object") return { ok: false, errors: [{ field: "body", code: "object_required" }] };
   if (typeof value.categoryId !== "string" || !UUID.test(value.categoryId)) errors.push({ field: "categoryId", code: "uuid_required" });
   if (typeof value.recordTypeId !== "string" || !UUID.test(value.recordTypeId)) errors.push({ field: "recordTypeId", code: "uuid_required" });
-  if (typeof value.recordCode !== "string" || !CODE.test(value.recordCode.trim())) errors.push({ field: "recordCode", code: "invalid_code" });
   if (typeof value.title !== "string" || value.title.trim().length < 1 || value.title.length > 500) errors.push({ field: "title", code: "invalid_title" });
   if (value.summary !== undefined && value.summary !== null && (typeof value.summary !== "string" || value.summary.length > 5000)) errors.push({ field: "summary", code: "invalid_summary" });
   if (value.departmentId !== undefined && value.departmentId !== null && (typeof value.departmentId !== "string" || !UUID.test(value.departmentId))) errors.push({ field: "departmentId", code: "uuid_required" });
@@ -69,7 +67,7 @@ export function validateDatabaseRecordInput(input: unknown): { ok: true; value: 
   if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.some((link) => !link || link.provider !== "google_drive" || typeof link.url !== "string" || !URL.test(link.url)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: {
-    categoryId: value.categoryId!, recordTypeId: value.recordTypeId!, recordCode: value.recordCode!.trim(), title: value.title!.trim(),
+    categoryId: value.categoryId!, recordTypeId: value.recordTypeId!, title: value.title!.trim(),
     summary: value.summary ?? null, departmentId: value.departmentId ?? null, ownerId: value.ownerId ?? null,
     status: value.status ?? "draft", metadata: value.metadata as Record<string, unknown>, keywords: value.keywords ?? [], externalLinks: value.externalLinks ?? [],
   } };
@@ -80,9 +78,6 @@ export function validateDatabaseRecordUpdateInput(input: unknown): { ok: true; v
   const value = input as Record<string, unknown>;
   const errors: RecordValidationError[] = [];
   const result: DatabaseRecordUpdateInput = {};
-  if (value.recordCode !== undefined) {
-    if (typeof value.recordCode !== "string" || !CODE.test(value.recordCode.trim())) errors.push({ field: "recordCode", code: "invalid_code" }); else result.recordCode = value.recordCode.trim();
-  }
   if (value.title !== undefined) {
     if (typeof value.title !== "string" || value.title.trim().length < 1 || value.title.length > 500) errors.push({ field: "title", code: "invalid_title" }); else result.title = value.title.trim();
   }

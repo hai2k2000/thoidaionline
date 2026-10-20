@@ -8,7 +8,7 @@ export type DatabaseAclEffect = "allow" | "deny";
 export type DatabaseRecordInput = {
   categoryId: string;
   recordTypeId: string;
-  recordCode: string;
+  recordCode?: string;
   title: string;
   summary?: string | null;
   departmentId?: string | null;
@@ -28,5 +28,5 @@ export type DatabaseRecordAclInput = {
 };
 
 export type DatabaseRecordUpdateInput = Partial<Pick<DatabaseRecordInput,
-  "recordCode" | "title" | "summary" | "metadata" | "keywords" | "externalLinks"
+  "title" | "summary" | "metadata" | "keywords" | "externalLinks"
 >>;

@@ -15,3 +15,8 @@ test("storage implementation rejects resolved paths that escape the root", () =>
   assert.match(source, /resolvedParent\.startsWith/);
   assert.match(source, /resolvedTarget\.startsWith/);
 });
+
+test("storage allows legacy Excel uploads alongside XLSX", () => {
+  const source = readFileSync(new URL("./storage.ts", import.meta.url), "utf8");
+  assert.match(source, /application\/vnd\.ms-excel/);
+});

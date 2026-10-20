@@ -30,7 +30,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return json({ record });
   } catch (error) {
     const message = error instanceof Error ? error.message : "record_update_failed";
-    return json({ error: message === "permission_denied" ? "forbidden" : message === "record_not_found" ? "not_found" : message.startsWith("invalid_metadata:") ? "invalid_request" : "record_update_failed" }, errorStatus(message));
+    if (message.startsWith("invalid_metadata:")) {
+      try { return json({ error: "invalid_request", fields: JSON.parse(message.slice("invalid_metadata:".length)) }, 400); } catch { return json({ error: "invalid_request" }, 400); }
+    }
+    return json({ error: message === "permission_denied" ? "forbidden" : message === "record_not_found" ? "not_found" : "record_update_failed" }, errorStatus(message));
   }
 }
 

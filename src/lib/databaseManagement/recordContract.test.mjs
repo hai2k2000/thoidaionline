@@ -1,13 +1,26 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { canAccessDatabaseRecord, defaultDatabaseRecordAccess } from "./acl.ts";
-import { validateDatabaseAclInput, validateDatabaseMetadata, validateDatabaseRecordInput } from "./validation.ts";
+import { validateDatabaseAclInput, validateDatabaseMetadata, validateDatabaseRecordInput, validateDatabaseRecordUpdateInput } from "./validation.ts";
 
 const ids = { categoryId: "11111111-1111-4111-8111-111111111111", recordTypeId: "22222222-2222-4222-8222-222222222222" };
 
 test("record input requires controlled identifiers and metadata object", () => {
   const result = validateDatabaseRecordInput({ ...ids, recordCode: "VB/01", title: "Văn bản", metadata: { issuedAt: "2026-10-17" }, externalLinks: [{ provider: "google_drive", url: "https://drive.google.com/file/d/abc" }] });
   assert.equal(result.ok, true);
+  assert.equal(result.ok && result.value.recordCode, undefined);
+});
+
+test("record creation does not require a client-supplied code", () => {
+  const result = validateDatabaseRecordInput({ ...ids, title: "Ho so tu cap ma", metadata: {} });
+  assert.equal(result.ok, true);
+  assert.equal(result.ok && result.value.recordCode, undefined);
+});
+
+test("record updates do not accept record code changes", () => {
+  const result = validateDatabaseRecordUpdateInput({ recordCode: "HS-2026-000002", title: "Doi ten" });
+  assert.equal(result.ok, true);
+  assert.equal(result.ok && "recordCode" in result.value, false);
 });
 
 test("record ACL gives explicit deny precedence over allow", () => {
