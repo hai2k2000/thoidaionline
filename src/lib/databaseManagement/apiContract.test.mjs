@@ -22,3 +22,9 @@ test("record list applies ACL before returning rows and create requires record.c
   assert.match(repository, /record_scope_forbidden/);
   assert.match(repository, /cleanupNewRecord/);
 });
+
+test("record API accepts language filtering and persists the selected language", () => {
+  assert.match(route, /languageCode: params\.get\("languageCode"\)/);
+  assert.match(repository, /language_code: languageCodeForCategory\(category\.code\) \?\? languageCode/);
+  assert.match(repository, /row\.language_code \?\? languageByCategory\.get\(row\.category_id\) \?\? null/);
+});

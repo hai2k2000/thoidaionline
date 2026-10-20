@@ -5,11 +5,12 @@ import { canAccessDatabaseRecord, defaultDatabaseRecordAccess, type DatabaseAclA
 import { validateDatabaseMetadata } from "./validation";
 import { canAccessRecordType } from "./policy";
 import type { DatabaseRecordAclInput, DatabaseRecordInput, DatabaseRecordUpdateInput } from "./types";
+import { categoryCodeForLanguage, isCompatibleLanguageSelection, languageCodeForCategory } from "./languageGroup.mjs";
 
 type RecordRow = {
   id: string; category_id: string; record_type_id: string; record_code: string; title: string;
   summary: string | null; status: string; department_id: string | null; owner_id: string | null;
-  created_by: string; metadata: Record<string, unknown>; form_definition_id?: string | null; deleted_at?: string | null; created_at: string; updated_at: string;
+  created_by: string; metadata: Record<string, unknown>; language_code?: string | null; form_definition_id?: string | null; deleted_at?: string | null; created_at: string; updated_at: string;
   record_type_code?: string | null;
 };
 
@@ -48,12 +49,15 @@ export async function canAccessDatabaseRecordForActor(actor: DatabaseRecordActor
 }
 
 async function getRecord(recordId: string) {
-  const { data, error } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,form_definition_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at,deleted_at").eq("id", recordId).maybeSingle();
+  const { data, error } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,form_definition_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,language_code,created_at,updated_at,deleted_at").eq("id", recordId).maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("code").eq("id", data.record_type_id).maybeSingle();
-  if (typeError) throw typeError;
-  return { ...(data as RecordRow & { form_definition_id: string | null; deleted_at: string | null }), record_type_code: type?.code ?? null };
+  const [{ data: type, error: typeError }, { data: category, error: categoryError }] = await Promise.all([
+    serverSupabase.from("db_record_types").select("code").eq("id", data.record_type_id).maybeSingle(),
+    serverSupabase.from("db_categories").select("code").eq("id", data.category_id).maybeSingle(),
+  ]);
+  if (typeError || categoryError) throw typeError ?? categoryError;
+  return { ...(data as RecordRow & { form_definition_id: string | null; deleted_at: string | null }), language_code: data.language_code ?? languageCodeForCategory(category?.code), record_type_code: type?.code ?? null };
 }
 
 async function validateFormMetadata(formDefinitionId: string | null | undefined, metadata: Record<string, unknown>) {
@@ -89,35 +93,60 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   };
 }
 
-export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; limit?: number; offset?: number };
+export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; languageCode?: string; limit?: number; offset?: number };
 
 export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, filters: DatabaseRecordListQuery = {}) {
+  let categoryId = filters.categoryId ?? null;
+  if (filters.languageCode) {
+    const categoryCode = categoryCodeForLanguage(filters.languageCode);
+    if (!categoryCode) return [];
+    const category = await serverSupabase.from("db_categories").select("id").eq("code", categoryCode).maybeSingle();
+    if (category.error) throw category.error;
+    if (!category.data) return [];
+    categoryId = category.data.id;
+  }
   const { data, error } = await serverSupabase.rpc("api_search_database_records", {
     p_actor_id: actor.id,
     p_q: filters.q?.trim() || null,
     p_status: filters.status ?? null,
     p_record_type_id: filters.recordTypeId ?? null,
-    p_category_id: filters.categoryId ?? null,
+    p_category_id: categoryId,
     p_limit: Math.min(Math.max(filters.limit ?? 200, 1), 100),
     p_offset: Math.max(filters.offset ?? 0, 0),
   });
   if (error) throw error;
-  return (data ?? []) as RecordRow[];
+  const rows = (data ?? []) as RecordRow[];
+  const categoryIds = [...new Set(rows.map((row) => row.category_id))];
+  if (!categoryIds.length) return rows;
+  const categories = await serverSupabase.from("db_categories").select("id,code").in("id", categoryIds);
+  if (categories.error) throw categories.error;
+  const languageByCategory = new Map((categories.data ?? []).map((category) => [category.id, languageCodeForCategory(category.code)]));
+  return rows.map((row) => ({ ...row, language_code: row.language_code ?? languageByCategory.get(row.category_id) ?? null }));
 }
 
 export async function createDatabaseRecord(actor: DatabaseRecordActor, input: DatabaseRecordInput, clientRequestId?: string) {
   if (!actor.rbacPermissions.includes("record.create")) throw new Error("permission_denied");
   if (!actor.department_id) throw new Error("department_required");
   if (clientRequestId) {
-    const { data: existing, error: existingError } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").eq("created_by", actor.id).eq("client_request_id", clientRequestId).maybeSingle();
+    const { data: existing, error: existingError } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,language_code,created_at,updated_at").eq("created_by", actor.id).eq("client_request_id", clientRequestId).maybeSingle();
     if (existingError) throw existingError;
     if (existing) return existing as RecordRow;
   }
-  const { data: category, error: categoryError } = await serverSupabase.from("db_categories").select("id,department_id,active").eq("id", input.categoryId).eq("active", true).maybeSingle();
+  const { data: category, error: categoryError } = await serverSupabase.from("db_categories").select("id,parent_id,code,department_id,active").eq("id", input.categoryId).eq("active", true).maybeSingle();
   if (categoryError) throw categoryError;
   const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("id,category_id,active,code").eq("id", input.recordTypeId).eq("active", true).maybeSingle();
   if (typeError) throw typeError;
-  if (!category || !type || type.category_id !== category.id || (category.department_id && category.department_id !== actor.department_id)) throw new Error("record_scope_forbidden");
+  if (!category || !type || (category.department_id && category.department_id !== actor.department_id)) throw new Error("record_scope_forbidden");
+  const languageCode = input.languageCode ?? null;
+  const effectiveCategoryCode = category.code === "phong_noi_dung" ? categoryCodeForLanguage(languageCode) : category.code;
+  const effectiveCategory = effectiveCategoryCode && effectiveCategoryCode !== category.code
+    ? await serverSupabase.from("db_categories").select("id").eq("code", effectiveCategoryCode).maybeSingle()
+    : { data: category, error: null };
+  if (effectiveCategory.error) throw effectiveCategory.error;
+  if (!effectiveCategory.data) throw new Error("language_required");
+  const typeCategory = await serverSupabase.from("db_categories").select("code").eq("id", type.category_id).maybeSingle();
+  if (typeCategory.error) throw typeCategory.error;
+  if (!effectiveCategoryCode || !isCompatibleLanguageSelection(effectiveCategoryCode, typeCategory.data?.code ?? "", languageCode)) throw new Error(category.code === "phong_noi_dung" || category.parent_id ? "language_required" : "record_scope_forbidden");
   if (!canAccessRecordType(actor, type.code)) throw new Error("record_type_restricted");
   const { data: form, error: formError } = await serverSupabase.from("db_form_definitions").select("id").eq("record_type_id", input.recordTypeId).eq("status", "published").order("version", { ascending: false }).limit(1).maybeSingle();
   if (formError) throw formError;
@@ -125,7 +154,7 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
   const { data: generatedCode, error: codeError } = await serverSupabase.rpc("api_next_database_record_code");
   if (codeError || typeof generatedCode !== "string") throw codeError ?? new Error("record_code_generation_failed");
   const { data, error } = await serverSupabase.from("db_records").insert({
-    category_id: input.categoryId,
+    category_id: effectiveCategory.data.id,
     record_type_id: input.recordTypeId,
     record_code: generatedCode,
     title: input.title,
@@ -135,12 +164,13 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
     created_by: actor.id,
     status: "draft",
     metadata: input.metadata,
+    language_code: languageCodeForCategory(category.code) ?? languageCode,
     form_definition_id: form?.id ?? null,
     ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
-  }).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").single();
+  }).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,language_code,created_at,updated_at").single();
   if (error) {
     if (clientRequestId && error.code === "23505") {
-      const { data: existing, error: retryError } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").eq("created_by", actor.id).eq("client_request_id", clientRequestId).maybeSingle();
+      const { data: existing, error: retryError } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,language_code,created_at,updated_at").eq("created_by", actor.id).eq("client_request_id", clientRequestId).maybeSingle();
       if (!retryError && existing) return existing as RecordRow;
     }
     throw error;

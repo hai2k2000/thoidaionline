@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth";
 type FormField = { field_key: string; label: string; data_type: string; required: boolean; options?: Array<{ value: string; label: string }> };
 type ValidationField = { field: string; code: string };
 type CreateResponse = { record?: { id: string }; error?: string; fields?: ValidationField[] };
-type Catalog = { categories: Array<{ id: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; name: string }>; forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }> };
+type Catalog = { categories: Array<{ id: string; parent_id?: string | null; code: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; name: string }>; forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }> };
 
 export default function DatabaseRecordNewPage() {
   const router = useRouter();

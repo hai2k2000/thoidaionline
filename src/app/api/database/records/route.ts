@@ -17,6 +17,7 @@ export async function GET(request: Request) {
       status: params.get("status") ?? undefined,
       recordTypeId: params.get("recordTypeId") ?? undefined,
       categoryId: params.get("categoryId") ?? undefined,
+      languageCode: params.get("languageCode") ?? undefined,
       limit: Number(params.get("limit") ?? 200),
       offset: Number(params.get("offset") ?? 0),
     }) });
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Error && ["permission_denied", "record_scope_forbidden", "record_type_restricted"].includes(error.message)) return json({ error: "forbidden" }, 403);
     if (error instanceof Error && error.message === "department_required") return json({ error: "invalid_request", fields: [{ field: "department", code: "required" }] }, 400);
+    if (error instanceof Error && error.message === "language_required") return json({ error: "invalid_request", fields: [{ field: "languageCode", code: "required" }] }, 400);
     if (error instanceof Error && error.message.startsWith("invalid_metadata:")) {
       let fields: unknown[] = [];
       try { fields = JSON.parse(error.message.slice("invalid_metadata:".length)) as unknown[]; } catch { fields = []; }

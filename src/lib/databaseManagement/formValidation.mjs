@@ -1,6 +1,7 @@
-export function validateRecordForm({ mode, categoryId, recordTypeId, title, metadata, fields }) {
+export function validateRecordForm({ mode, categoryId, categoryCode, languageCode, recordTypeId, title, metadata, fields }) {
   const errors = [];
   if (mode === "create" && !categoryId) errors.push({ field: "categoryId", code: "required" });
+  if (mode === "create" && categoryCode === "phong_noi_dung" && !languageCode) errors.push({ field: "languageCode", code: "required" });
   if (mode === "create" && !recordTypeId) errors.push({ field: "recordTypeId", code: "required" });
   if (typeof title !== "string" || !title.trim()) errors.push({ field: "title", code: "invalid_title" });
   for (const field of fields ?? []) {

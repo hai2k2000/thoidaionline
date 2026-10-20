@@ -5,6 +5,7 @@ import test from "node:test";
 
 const migration = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261017100000_database_management_v1_foundation.sql", import.meta.url)), "utf8");
 const catalog = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261017101000_database_management_v1_catalog.sql", import.meta.url)), "utf8");
+const languageGroup = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020130000_database_management_v1_language_groups.sql", import.meta.url)), "utf8");
 const autocode = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020100000_database_management_v1_autocode.sql", import.meta.url)), "utf8");
 
 test("foundation migration is additive, indexed, server-only and ACL-capable", () => {
@@ -21,6 +22,20 @@ test("catalog migration does not invent a thirteenth top-level group", () => {
   assert.match(catalog, /'doan_the_quan_ly'/);
   assert.match(catalog, /db_form_definitions/);
   assert.match(catalog, /db_form_fields/);
+});
+
+test("language group migration is additive and keeps stable language codes", () => {
+  assert.match(languageGroup, /add column if not exists language_code/);
+  assert.match(languageGroup, /'phong_noi_dung'/);
+  for (const code of ["vi", "en", "zh", "lo", "km"]) assert.match(languageGroup, new RegExp(`'${code}'`));
+  assert.doesNotMatch(languageGroup, /delete from public\.db_records|drop table public\.db_records/i);
+  assert.match(languageGroup, /db_records_language_idx/);
+});
+
+test("production artifact contracts include the language group migration", () => {
+  const packager = readFileSync(fileURLToPath(new URL("../../../scripts/package-standalone.mjs", import.meta.url)), "utf8");
+  const verifier = readFileSync(fileURLToPath(new URL("../../../scripts/verify-standalone-artifact.mjs", import.meta.url)), "utf8");
+  for (const source of [packager, verifier]) assert.match(source, /20261020130000_database_management_v1_language_groups\.sql/);
 });
 
 test("CP2 specialized fields stay limited to source-backed record contracts", () => {

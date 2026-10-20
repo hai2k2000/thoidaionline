@@ -17,3 +17,8 @@ test("form validation accepts a complete typed form", () => {
   const errors = validateRecordForm({ mode: "create", categoryId: "cat-1", recordTypeId: "type-1", title: "Hồ sơ", metadata: { required_name: "A", website: "https://example.com", classification: "public" }, fields });
   assert.deepEqual(errors, []);
 });
+
+test("content group requires a language selection before submit", () => {
+  const errors = validateRecordForm({ mode: "create", categoryId: "cat-1", categoryCode: "phong_noi_dung", languageCode: "", recordTypeId: "type-1", title: "Hồ sơ", metadata: {}, fields: [] });
+  assert.deepEqual(errors, [{ field: "languageCode", code: "required" }]);
+});
