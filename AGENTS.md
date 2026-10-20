@@ -21,19 +21,23 @@
 - Không force-push, không rewrite history và không đưa file môi trường, credential, backup, build output hoặc runtime artifact vào Git.
 - Nếu push thất bại, phải báo blocker cùng bằng chứng; không được mô tả dự án là đã đồng bộ Git.
 
-## EXTERNAL ARTIFACT BUILD VÀ RELEASE LIFECYCLE
+## LOCAL BUILD VÀ RELEASE LIFECYCLE
 
-- Build/test/package production chạy trên GitHub Actions; không chạy `npm ci` hoặc `next build` trên VPS trong quy trình external-artifact.
+- Quy trình chính thức: Windows code/test/commit/push -> WSL2 Ubuntu với Node.js 22 Linux native build -> direct VPS transfer -> VPS verify -> owner approval -> activate.
+- GitHub lưu trữ và quản lý source code; GitHub Actions không phải điều kiện bắt buộc để deploy.
+- VPS chỉ verify artifact và activate; không chạy `npm ci`, `next build` hoặc build lại source trên VPS.
+- Docker không bắt buộc.
 - Artifact phải là Next.js standalone, có `.release-meta`, `.artifact-manifest.json`, `.artifact-manifest.sha256` và provenance/checksum verification trước khi bàn giao.
-- Runtime secrets không được đóng gói. Artifact CI dùng `env_model=runtime-injected`; chỉ deployment gate được phép gắn runtime env tại thời điểm activation.
+- Build phải ghi `build_config=canonical-public`; runtime secrets không được đóng gói. Artifact dùng `env_model=runtime-injected`; chỉ deployment gate được phép gắn runtime env tại thời điểm activation.
 - `scripts/production/deploy-external-artifact.sh` mặc định verify-only; activation phải có owner approval và ủy quyền rõ ràng, sau đó delegate cho `deploy-gate.sh`.
+- Provenance, checksum, secret scan, atomic activation, health checks, rollback protection và disk guard là bắt buộc.
 - Activation uses the immutable artifact risk classification for technical checks, but authenticated smoke is optional diagnostics for every risk class. Missing smoke credentials, test accounts, controlled waivers, or RBAC smoke evidence must never block activation. High-risk changes still require their applicable static/automated auth/RBAC tests, migration/data-safety checks, artifact verification, health, rollback, and disk gates. The classifier remains fail closed for risk-specific technical requirements and manual downgrade flags are not accepted.
 - Lifecycle mới giữ current/previous/rollback-1/rollback-2, bảo vệ `.keep`, evidence, references và UNKNOWN; retention chỉ dry-run cho đến khi có phê duyệt APPLY riêng.
 - Mọi build/worktree mới phải có metadata; disk guard dùng hard floor 10 GiB sau estimated headroom và warning threshold 20 GiB. Không backfill metadata legacy trong Phase 1.
 
 ## VPS DISK GUARD
 
-- Build and deploy use `deploy/disk-guard.conf` through `scripts/production/disk-guard.sh`.
+- Build and deploy use `deploy/disk-guard.conf` through `scripts/production/disk-guard.sh`. An explicit `THOIDAI_DISK_GUARD_CONFIG` takes precedence; otherwise the script uses the repository-local config or the canonical `/opt/thoidai-work/deploy/disk-guard.conf` fallback. Missing/invalid config fails closed.
 - The hard minimum is 10 GiB free after estimated build/release headroom. The warning threshold is 20 GiB.
 - Free disk below 10 GiB, or projected free disk below 10 GiB after estimated writes, is blocked. The guard must not be disabled or bypassed.
 

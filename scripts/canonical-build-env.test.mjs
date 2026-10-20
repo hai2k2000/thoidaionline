@@ -6,7 +6,7 @@ const workflow = readFileSync(".github/workflows/production-artifact.yml", "utf8
 const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
 
 test("canonical branch uses public Supabase config without production service-role secrets", () => {
-  assert.match(workflow, /THOIDAI_BUILD_CONFIG: \$\{\{ github\.ref == 'refs\/heads\/integration\/production'/);
+  assert.match(workflow, /THOIDAI_BUILD_CONFIG: \$\{\{ \(github\.event_name == 'pull_request' \|\| github\.ref == 'refs\/heads\/integration\/production'\)/);
   assert.match(workflow, /vars\.THOIDAI_PUBLIC_SUPABASE_URL/);
   assert.match(workflow, /vars\.THOIDAI_PUBLIC_SUPABASE_ANON_KEY/);
   assert.match(workflow, /SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key-placeholder/);

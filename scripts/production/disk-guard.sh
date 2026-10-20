@@ -2,8 +2,31 @@
 set -Eeuo pipefail
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-config=${THOIDAI_DISK_GUARD_CONFIG:-$script_dir/../../deploy/disk-guard.conf}
-[[ -r "$config" ]] || { echo "DISK_GUARD=BLOCKED reason=config-missing path=$config" >&2; return 1 2>/dev/null || exit 1; }
+disk_guard_config_path() {
+  local candidate
+  if [[ -n "${THOIDAI_DISK_GUARD_CONFIG:-}" ]]; then
+    candidate=$THOIDAI_DISK_GUARD_CONFIG
+    [[ -r "$candidate" ]] || { echo "DISK_GUARD=BLOCKED reason=config-missing path=$candidate (explicit)" >&2; return 1; }
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+
+  # Prefer the repository-local policy, then the canonical shared deploy root.
+  local candidates=(
+    "$script_dir/../../deploy/disk-guard.conf"
+    "${THOIDAI_CANONICAL_DEPLOY_ROOT:-${THOIDAI_SHARED_ROOT:-/opt/thoidai-work}}/deploy/disk-guard.conf"
+  )
+  for candidate in "${candidates[@]}"; do
+    if [[ -r "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  echo "DISK_GUARD=BLOCKED reason=config-missing candidates=${candidates[*]}" >&2
+  return 1
+}
+
+config=$(disk_guard_config_path) || return 1 2>/dev/null || exit 1
 # shellcheck disable=SC1090
 source "$config"
 THOIDAI_DISK_HARD_MIN_KB=${THOIDAI_DISK_HARD_MIN_KB//$'\r'/}
