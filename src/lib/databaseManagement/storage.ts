@@ -13,17 +13,18 @@ const ALLOWED = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ]);
+const STORAGE_KEY = /^[0-9a-f-]{36}\/[a-zA-Z0-9_-]+\.[a-z0-9]{1,12}$/i;
 
 export function databaseRecordStorageRoot() {
   return process.env.DATABASE_RECORD_STORAGE_ROOT || path.resolve(process.cwd(), "..", "thoidai-work-data", "database-records");
 }
 
-export async function writeDatabaseRecordFile(recordId: string, file: { name: string; type: string; size: number; arrayBuffer(): Promise<ArrayBuffer> }) {
+export async function writeDatabaseRecordFile(recordId: string, file: { name: string; type: string; size: number; arrayBuffer(): Promise<ArrayBuffer> }, requestId?: string) {
   if (!/^[0-9a-f-]{36}$/i.test(recordId)) throw new Error("invalid_record_id");
   if (!ALLOWED.has(file.type) || file.size <= 0 || file.size > MAX_FILE_BYTES) throw new Error("invalid_file");
   const bytes = Buffer.from(await file.arrayBuffer());
   if (bytes.length !== file.size) throw new Error("invalid_file_size");
-  const key = databaseRecordStorageKey(recordId, file.name);
+  const key = databaseRecordStorageKey(recordId, file.name, requestId);
   const root = path.resolve(databaseRecordStorageRoot());
   const target = path.resolve(root, key);
   if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error("invalid_storage_key");
@@ -31,12 +32,18 @@ export async function writeDatabaseRecordFile(recordId: string, file: { name: st
   const resolvedRoot = await realpath(root);
   const resolvedParent = await realpath(path.dirname(target));
   if (resolvedParent !== resolvedRoot && !resolvedParent.startsWith(`${resolvedRoot}${path.sep}`)) throw new Error("invalid_storage_key");
-  await writeFile(target, bytes, { flag: "wx", mode: 0o640 });
+  try {
+    await writeFile(target, bytes, { flag: "wx", mode: 0o640 });
+  } catch (error) {
+    if (!(requestId && error && typeof error === "object" && "code" in error && error.code === "EEXIST")) throw error;
+    const existing = await readFile(target);
+    if (existing.length !== bytes.length || createHash("sha256").update(existing).digest("hex") !== createHash("sha256").update(bytes).digest("hex")) throw new Error("idempotency_conflict");
+  }
   return { storageKey: key.replaceAll(path.sep, "/"), sizeBytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
 }
 
 export async function readDatabaseRecordFile(storageKey: string) {
-  if (!/^[0-9a-f-]{36}\/[0-9a-f-]+\.[a-z0-9]{1,12}$/i.test(storageKey)) throw new Error("invalid_storage_key");
+  if (!STORAGE_KEY.test(storageKey)) throw new Error("invalid_storage_key");
   const root = path.resolve(databaseRecordStorageRoot());
   const target = path.resolve(root, storageKey);
   if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error("invalid_storage_key");
@@ -48,7 +55,7 @@ export async function readDatabaseRecordFile(storageKey: string) {
 }
 
 export async function removeDatabaseRecordFile(storageKey: string) {
-  if (!/^[0-9a-f-]{36}\/[0-9a-f-]+\.[a-z0-9]{1,12}$/i.test(storageKey)) throw new Error("invalid_storage_key");
+  if (!STORAGE_KEY.test(storageKey)) throw new Error("invalid_storage_key");
   const root = path.resolve(databaseRecordStorageRoot());
   const target = path.resolve(root, storageKey);
   if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error("invalid_storage_key");

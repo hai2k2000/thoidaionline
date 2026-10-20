@@ -58,3 +58,13 @@ test("create and update return field-level metadata errors", () => {
   assert.match(read("src/app/api/database/records/route.ts"), /JSON\.parse\(error\.message\.slice\("invalid_metadata:"\.length\)\)/);
   assert.match(detail, /JSON\.parse\(message\.slice\("invalid_metadata:"\.length\)\)/);
 });
+
+test("record create and upload routes expose idempotency reconciliation contracts", () => {
+  const createRoute = read("src/app/api/database/records/route.ts");
+  const createPost = createRoute.slice(createRoute.indexOf("export async function POST"));
+  assert.match(createRoute, /Idempotency-Key/);
+  assert.match(createPost, /const clientRequestId = request\.headers\.get\("Idempotency-Key"\)\?\.trim\(\) \?\? ""/);
+  assert.match(createPost, /createDatabaseRecord\(actor, validated\.value, clientRequestId \|\| undefined\)/);
+  assert.match(read("src/app/api/database/records/[id]/files/route.ts"), /Idempotency-Key/);
+  assert.match(read("src/app/api/database/records/[id]/files/route.ts"), /upload_request_id/);
+});

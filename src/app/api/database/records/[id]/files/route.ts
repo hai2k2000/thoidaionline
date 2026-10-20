@@ -6,6 +6,7 @@ import { removeDatabaseRecordFile, writeDatabaseRecordFile } from "@/lib/databas
 import { logServerAudit } from "@/lib/serverAudit";
 
 const MAX_MULTIPART_BYTES = 51 * 1024 * 1024;
+const IDEMPOTENCY_KEY = /^[a-zA-Z0-9_-]{8,200}$/;
 
 function boundedBody(body: ReadableStream<Uint8Array>, limit: number, onExceeded: () => void) {
   const reader = body.getReader();
@@ -39,7 +40,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (contentLength !== null && (!Number.isSafeInteger(contentLength) || contentLength < 0)) return NextResponse.json({ error: "invalid_content_length" }, { status: 400 });
   if (contentLength !== null && Number.isFinite(contentLength) && contentLength > MAX_MULTIPART_BYTES) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
   const recordId = (await context.params).id;
+  const uploadRequestId = request.headers.get("Idempotency-Key")?.trim() ?? "";
+  if (uploadRequestId && !IDEMPOTENCY_KEY.test(uploadRequestId)) return NextResponse.json({ error: "invalid_idempotency_key" }, { status: 400 });
   if (!(await canAccessDatabaseRecordForActor(actor, recordId, "edit"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (uploadRequestId) {
+    const { data: existing, error: existingError } = await serverSupabase.from("db_record_files").select("id,original_name,mime_type,size_bytes,sha256,created_at").eq("record_id", recordId).eq("upload_request_id", uploadRequestId).maybeSingle();
+    if (existingError) return NextResponse.json({ error: "file_upload_reconciliation_required" }, { status: 500 });
+    if (existing) return NextResponse.json({ file: existing, reconciled: true }, { headers: { "Cache-Control": "private, no-store" } });
+  }
   let form: FormData;
   let bodyExceeded = false;
   try {
@@ -56,10 +64,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   let storageKey: string | null = null;
   let retainStorageForReconciliation = false;
   try {
-    const stored = await writeDatabaseRecordFile(recordId, file);
+    const stored = await writeDatabaseRecordFile(recordId, file, uploadRequestId || undefined);
     storageKey = stored.storageKey;
-    const { data, error } = await serverSupabase.from("db_record_files").insert({ record_id: recordId, storage_backend: "vps_private", storage_key: stored.storageKey, original_name: file.name, mime_type: file.type, size_bytes: stored.sizeBytes, sha256: stored.sha256, created_by: actor.id }).select("id,original_name,mime_type,size_bytes,sha256,created_at").single();
-    if (error) throw error;
+    const { data, error } = await serverSupabase.from("db_record_files").insert({ record_id: recordId, upload_request_id: uploadRequestId || null, storage_backend: "vps_private", storage_key: stored.storageKey, original_name: file.name, mime_type: file.type, size_bytes: stored.sizeBytes, sha256: stored.sha256, created_by: actor.id }).select("id,original_name,mime_type,size_bytes,sha256,created_at").single();
+    if (error) {
+      if (uploadRequestId && error.code === "23505") {
+        const { data: existing, error: retryError } = await serverSupabase.from("db_record_files").select("id,original_name,mime_type,size_bytes,sha256,created_at").eq("record_id", recordId).eq("upload_request_id", uploadRequestId).maybeSingle();
+        if (!retryError && existing) return NextResponse.json({ file: existing, reconciled: true }, { headers: { "Cache-Control": "private, no-store" } });
+      }
+      throw error;
+    }
     const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "file_upload", old_data: null, new_data: { file_id: data.id, original_name: file.name, size_bytes: stored.sizeBytes, sha256: stored.sha256 } });
     if (historyError) {
       const { error: compensationError } = await serverSupabase.from("db_record_files").delete().eq("id", data.id);
@@ -70,7 +84,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       throw historyError;
     }
     let auditStatus: "delivered" | "pending";
-    try { auditStatus = await logServerAudit({ actorId: actor.id, module: "database", entityType: "db_record_files", entityId: data.id, action: "upload", newData: { record_id: recordId, size_bytes: stored.sizeBytes, sha256: stored.sha256 } }); } catch { retainStorageForReconciliation = true; throw new Error("audit_reconciliation_required"); }
+    try { auditStatus = await logServerAudit({ actorId: actor.id, module: "database", entityType: "db_record_files", entityId: data.id, action: "upload", idempotencyKey: uploadRequestId || `file-upload:${data.id}`, newData: { record_id: recordId, size_bytes: stored.sizeBytes, sha256: stored.sha256 } }); } catch { retainStorageForReconciliation = true; throw new Error("audit_reconciliation_required"); }
     return NextResponse.json({ file: data, audit_status: auditStatus }, { status: 201, headers: { "Cache-Control": "private, no-store", "X-Audit-Status": auditStatus } });
   } catch (error) {
     if (storageKey && !retainStorageForReconciliation) await removeDatabaseRecordFile(storageKey).catch(() => undefined);
@@ -78,4 +92,17 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (message === "file_upload_reconciliation_required" || message === "audit_reconciliation_required") return NextResponse.json({ error: message }, { status: 500 });
     return NextResponse.json({ error: message === "invalid_file" ? "invalid_file" : "file_upload_failed" }, { status: 400 });
   }
+}
+
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
+  const actor = await getSessionUser();
+  if (!actor) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  const recordId = (await context.params).id;
+  if (!(await canAccessDatabaseRecordForActor(actor, recordId, "edit"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const uploadRequestId = new URL(request.url).searchParams.get("upload_request_id")?.trim() ?? "";
+  if (!IDEMPOTENCY_KEY.test(uploadRequestId)) return NextResponse.json({ error: "invalid_idempotency_key" }, { status: 400 });
+  const { data, error } = await serverSupabase.from("db_record_files").select("id,original_name,mime_type,size_bytes,sha256,created_at").eq("record_id", recordId).eq("upload_request_id", uploadRequestId).maybeSingle();
+  if (error) return NextResponse.json({ error: "file_upload_reconciliation_required" }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "file_not_found" }, { status: 404 });
+  return NextResponse.json({ file: data, reconciled: true }, { headers: { "Cache-Control": "private, no-store" } });
 }

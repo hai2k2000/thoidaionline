@@ -105,9 +105,14 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, fil
   return (data ?? []) as RecordRow[];
 }
 
-export async function createDatabaseRecord(actor: DatabaseRecordActor, input: DatabaseRecordInput) {
+export async function createDatabaseRecord(actor: DatabaseRecordActor, input: DatabaseRecordInput, clientRequestId?: string) {
   if (!actor.rbacPermissions.includes("record.create")) throw new Error("permission_denied");
   if (!actor.department_id) throw new Error("department_required");
+  if (clientRequestId) {
+    const { data: existing, error: existingError } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").eq("created_by", actor.id).eq("client_request_id", clientRequestId).maybeSingle();
+    if (existingError) throw existingError;
+    if (existing) return existing as RecordRow;
+  }
   const { data: category, error: categoryError } = await serverSupabase.from("db_categories").select("id,department_id,active").eq("id", input.categoryId).eq("active", true).maybeSingle();
   if (categoryError) throw categoryError;
   const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("id,category_id,active,code").eq("id", input.recordTypeId).eq("active", true).maybeSingle();
@@ -116,9 +121,9 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
   if (!canAccessRecordType(actor, type.code)) throw new Error("record_type_restricted");
   const { data: form, error: formError } = await serverSupabase.from("db_form_definitions").select("id").eq("record_type_id", input.recordTypeId).eq("status", "published").order("version", { ascending: false }).limit(1).maybeSingle();
   if (formError) throw formError;
+  await validateFormMetadata(form?.id, { ...input.metadata, record_code: "HS-0000-000000", title: input.title, summary: input.summary ?? "", status: "draft" });
   const { data: generatedCode, error: codeError } = await serverSupabase.rpc("api_next_database_record_code");
   if (codeError || typeof generatedCode !== "string") throw codeError ?? new Error("record_code_generation_failed");
-  await validateFormMetadata(form?.id, { ...input.metadata, record_code: generatedCode, title: input.title, summary: input.summary ?? "", status: "draft" });
   const { data, error } = await serverSupabase.from("db_records").insert({
     category_id: input.categoryId,
     record_type_id: input.recordTypeId,
@@ -131,8 +136,15 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
     status: "draft",
     metadata: input.metadata,
     form_definition_id: form?.id ?? null,
+    ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
   }).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").single();
-  if (error) throw error;
+  if (error) {
+    if (clientRequestId && error.code === "23505") {
+      const { data: existing, error: retryError } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").eq("created_by", actor.id).eq("client_request_id", clientRequestId).maybeSingle();
+      if (!retryError && existing) return existing as RecordRow;
+    }
+    throw error;
+  }
   if (input.keywords?.length) {
     const { error: keywordError } = await serverSupabase.from("db_record_keywords").insert(input.keywords.map((keyword) => ({ record_id: data.id, keyword: keyword.trim() })));
     if (keywordError) { await cleanupNewRecord(data.id); throw keywordError; }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { uploadRecordFiles, validateSelectedFiles } from "./uploadClient.mjs";
+import { reconcileRecordFile, uploadRecordFiles, validateSelectedFiles } from "./uploadClient.mjs";
 
 const file = (name, type, size = 3) => new File([new Uint8Array(size)], name, { type });
 
@@ -28,4 +28,33 @@ test("upload retries only failed files", async () => {
   });
   assert.deepEqual(calls, ["ok.pdf", "retry.doc", "retry.doc"]);
   assert.equal(retry.failed.length, 0);
+});
+
+test("upload sends a stable idempotency key and marks a timeout as unknown", async () => {
+  const file = new File([new Uint8Array(3)], "pending.pdf", { type: "application/pdf" });
+  const seen = [];
+  const result = await uploadRecordFiles("record-1", [{ file, uploadId: "upload-1" }], async (_url, init) => {
+    seen.push(init.headers["Idempotency-Key"]);
+    throw Object.assign(new Error("aborted"), { name: "AbortError" });
+  }, { timeoutMs: 1 });
+  assert.deepEqual(seen, ["upload-1"]);
+  assert.equal(result.unknown[0].code, "upload_result_unknown");
+  assert.equal(result.failed.length, 0);
+});
+
+test("explicit reconciliation retry reuses the same idempotency key", async () => {
+  const file = new File([new Uint8Array(3)], "retry.pdf", { type: "application/pdf" });
+  const keys = [];
+  const result = await uploadRecordFiles("record-1", [{ file, uploadId: "upload-2" }], async (_url, init) => {
+    keys.push(init.headers["Idempotency-Key"]);
+    return new Response(JSON.stringify({ file: { id: "file-1" } }), { status: 200 });
+  });
+  assert.deepEqual(keys, ["upload-2"]);
+  assert.equal(result.failed.length, 0);
+  assert.equal(result.unknown.length, 0);
+  const reconciled = await reconcileRecordFile("record-1", "upload-2", async (_url, init) => {
+    assert.equal(init.headers["Idempotency-Key"], "upload-2");
+    return new Response(JSON.stringify({ file: { id: "file-1" } }), { status: 200 });
+  });
+  assert.equal(reconciled.file.id, "file-1");
 });
