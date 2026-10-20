@@ -12,6 +12,7 @@ test("artifact manifest records and verifies files", async () => {
     await writeFile(join(root, "server.js"), "ok\n");
     await writeManifest(root);
     assert.equal(await verifyManifest(root), 1);
+    assert.doesNotMatch(await readFile(join(root, ".artifact-manifest.json"), "utf8"), /artifact-manifest\.sha256/);
     await writeFile(join(root, "server.js"), "tampered\n");
     await assert.rejects(() => verifyManifest(root), /artifact size mismatch|artifact checksum mismatch/);
   } finally {

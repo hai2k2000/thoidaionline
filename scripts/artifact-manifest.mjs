@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { lstat, readdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 
-const IGNORED = new Set([".env.local", ".env.production", ".next/cache", ".deploy-success"]);
+const IGNORED = new Set([".env.local", ".env.production", ".next/cache", ".deploy-success", ".artifact-manifest.json", ".artifact-manifest.sha256"]);
 
 async function collect(root, current = root, rows = []) {
   for (const entry of await readdir(current, { withFileTypes: true })) {
