@@ -12,7 +12,7 @@ test("dynamic record form renders typed controls instead of one universal text i
 });
 
 test("record form explains field validation failures returned by the API", () => {
-  assert.match(page, /fields\?: ValidationField\[\]/);
+  assert.match(page, /fields\?: FieldError\[\]/);
   assert.match(page, /invalid_url/);
   assert.match(page, /https:\/\//);
 });
