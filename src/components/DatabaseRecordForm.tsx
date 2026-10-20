@@ -60,7 +60,7 @@ export default function DatabaseRecordForm({ mode, catalog, initial }: Props) {
     for (const item of items.filter((entry) => entry.state !== "uploaded")) {
       setUploads((current) => current.map((entry) => entry.file === item.file ? { ...entry, state: "uploading" } : entry));
       const result = await uploadRecordFiles(recordId, [item.file]);
-      if (result.failed.length) failed.push({ ...item, state: "failed", code: result.failed[0].code });
+      if (result.failed.length) { failed.push({ ...item, state: "failed", code: result.failed[0].code }); setUploads((current) => current.map((entry) => entry.file === item.file ? { ...entry, state: "failed", code: result.failed[0].code } : entry)); }
       else setUploads((current) => current.map((entry) => entry.file === item.file ? { ...entry, state: "uploaded" } : entry));
     }
     setUploads((current) => current.map((entry) => failed.some((item) => item.file === entry.file) ? { ...entry, state: "failed" } : entry));
@@ -69,9 +69,9 @@ export default function DatabaseRecordForm({ mode, catalog, initial }: Props) {
   const submit = async () => {
     if (busy) return;
     setMessage(""); setErrors([]);
-    if (!categoryId && mode === "create") return setErrors([{ field: "categoryId", code: "required" }]);
-    if (!recordTypeId && mode === "create") return setErrors([{ field: "recordTypeId", code: "required" }]);
-    if (!title.trim()) return setErrors([{ field: "title", code: "invalid_title" }]);
+    if (!categoryId && mode === "create") { setErrors([{ field: "categoryId", code: "required" }]); firstErrorRef.current?.focus(); return; }
+    if (!recordTypeId && mode === "create") { setErrors([{ field: "recordTypeId", code: "required" }]); firstErrorRef.current?.focus(); return; }
+    if (!title.trim()) { setErrors([{ field: "title", code: "invalid_title" }]); firstErrorRef.current?.focus(); return; }
     const body = { categoryId, recordTypeId, title, summary, metadata };
     setBusy(true);
     if (mode === "create" && createdRecordId) {
@@ -81,8 +81,14 @@ export default function DatabaseRecordForm({ mode, catalog, initial }: Props) {
       else setMessage("Một số tệp chưa tải lên được. Bạn có thể bấm thử lại; hồ sơ đã được lưu.");
       return;
     }
-    const response = await fetch(mode === "create" ? "/api/database/records" : `/api/database/records/${initial?.id}`, { method: mode === "create" ? "POST" : "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    const payload = await response.json().catch(() => null) as { record?: { id: string }; fields?: FieldError[]; error?: string } | null;
+    let response: Response;
+    let payload: { record?: { id: string }; fields?: FieldError[]; error?: string } | null;
+    try {
+      response = await fetch(mode === "create" ? "/api/database/records" : `/api/database/records/${initial?.id}`, { method: mode === "create" ? "POST" : "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      payload = await response.json().catch(() => null) as { record?: { id: string }; fields?: FieldError[]; error?: string } | null;
+    } catch {
+      setBusy(false); setMessage("Không thể kết nối máy chủ. Vui lòng thử lại."); return;
+    }
     if (!response.ok || !payload?.record) { const nextErrors = payload?.fields ?? []; setErrors(nextErrors); setMessage(payload?.error === "forbidden" ? "Bạn không có quyền thực hiện thao tác này." : nextErrors.length ? "Vui lòng kiểm tra các trường được đánh dấu." : "Không thể lưu hồ sơ. Vui lòng thử lại."); setBusy(false); firstErrorRef.current?.focus(); return; }
     if (mode === "edit") { setBusy(false); router.push(`/database/records/${initial?.id}`); return; }
     const recordId = payload.record.id;
