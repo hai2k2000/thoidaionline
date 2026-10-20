@@ -53,3 +53,8 @@ test("metadata export is authenticated and capability-gated", () => {
   assert.match(exportRoute, /canAccessDatabaseRecordForActor[\s\S]*[\"']export[\"']/);
   assert.match(exportRoute, /Content-Disposition/);
 });
+
+test("create and update return field-level metadata errors", () => {
+  assert.match(read("src/app/api/database/records/route.ts"), /JSON\.parse\(error\.message\.slice\("invalid_metadata:"\.length\)\)/);
+  assert.match(detail, /JSON\.parse\(message\.slice\("invalid_metadata:"\.length\)\)/);
+});

@@ -5,6 +5,7 @@ import test from "node:test";
 
 const migration = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261017100000_database_management_v1_foundation.sql", import.meta.url)), "utf8");
 const catalog = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261017101000_database_management_v1_catalog.sql", import.meta.url)), "utf8");
+const autocode = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020100000_database_management_v1_autocode.sql", import.meta.url)), "utf8");
 
 test("foundation migration is additive, indexed, server-only and ACL-capable", () => {
   for (const table of ["db_categories", "db_record_types", "db_form_definitions", "db_form_fields", "db_records", "db_record_files", "db_record_external_links", "db_record_acl", "db_record_history", "db_saved_search_filters"]) assert.match(migration, new RegExp(`create table if not exists public\\.${table}`));
@@ -27,4 +28,13 @@ test("CP2 specialized fields stay limited to source-backed record contracts", ()
   for (const field of ["contract_number", "signed_date", "term_end_date", "execution_status"]) assert.match(catalog, new RegExp(`'${field}'`));
   for (const field of ["event_name", "event_datetime", "event_location", "organizer_department", "related_country", "participants"]) assert.match(catalog, new RegExp(`'${field}'`));
   assert.match(catalog, /specialized here/i);
+});
+
+test("autocode migration is additive and allocates Vietnam-year codes atomically", () => {
+  assert.match(autocode, /create table if not exists public\.db_record_code_counters/);
+  assert.match(autocode, /create or replace function public\.api_next_database_record_code/);
+  assert.match(autocode, /timezone\('Asia\/Ho_Chi_Minh', now\(\)\)/);
+  assert.match(autocode, /on conflict \(code_year\) do update/);
+  assert.match(autocode, /grant execute on function public\.api_next_database_record_code\(\) to service_role/);
+  assert.doesNotMatch(autocode, /grant execute .*anon|grant execute .*authenticated/i);
 });

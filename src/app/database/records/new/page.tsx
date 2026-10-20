@@ -1,28 +1,31 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
+import DatabaseRecordForm from "@/components/DatabaseRecordForm";
+import { useAuth } from "@/lib/auth";
 
 type FormField = { field_key: string; label: string; data_type: string; required: boolean; options?: Array<{ value: string; label: string }> };
 type ValidationField = { field: string; code: string };
 type CreateResponse = { record?: { id: string }; error?: string; fields?: ValidationField[] };
 type Catalog = { categories: Array<{ id: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; name: string }>; forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }> };
+
 export default function DatabaseRecordNewPage() {
-  const router = useRouter(); const { loading, user, logout, hasPermission } = useAuth(); const [catalog, setCatalog] = useState<Catalog | null>(null); const [categoryId, setCategoryId] = useState(""); const [recordTypeId, setRecordTypeId] = useState(""); const [code, setCode] = useState(""); const [title, setTitle] = useState(""); const [summary, setSummary] = useState(""); const [metadata, setMetadata] = useState<Record<string, unknown>>({}); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
-  useEffect(() => { if (!loading && user) void fetch("/api/database/catalog", { cache: "no-store" }).then((response) => response.json()).then(setCatalog); }, [loading, user]);
+  const router = useRouter();
+  const { loading, user, logout, hasPermission } = useAuth();
+  const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [message, setMessage] = useState("Đang tải biểu mẫu...");
+  useEffect(() => {
+    if (loading) return;
+    if (!user) { router.push("/login"); return; }
+    if (!hasPermission("record.create")) { router.push("/"); return; }
+    void fetch("/api/database/catalog", { cache: "no-store" }).then(async (response) => {
+      const payload = await response.json().catch(() => null) as Catalog | null;
+      if (!response.ok || !payload) throw new Error("Không thể tải cấu hình hồ sơ.");
+      setCatalog(payload); setMessage("");
+    }).catch((error) => setMessage(error.message));
+  }, [loading, user, hasPermission, router]);
   if (loading || !user) return <main className="grid min-h-screen place-items-center bg-slate-50">Đang tải...</main>;
-  if (!hasPermission("record.create")) { router.push("/"); return null; }
-  const types = catalog?.recordTypes.filter((type) => !categoryId || type.category_id === categoryId) ?? []; const form = catalog?.forms.find((item) => item.record_type_id === recordTypeId); const fields = form?.db_form_fields ?? [];
-  const renderField = (field: FormField) => {
-    const value = metadata[field.field_key] ?? "";
-    const update = (next: unknown) => setMetadata((current) => ({ ...current, [field.field_key]: next }));
-    if (field.data_type === "long_text") return <textarea rows={3} required={field.required} className="rounded-lg border px-3 py-2 font-normal" value={typeof value === "string" ? value : ""} onChange={(event) => update(event.target.value)} />;
-    if (field.data_type === "select" || field.data_type === "country" || field.data_type === "department" || field.data_type === "person") return <select required={field.required} className="min-h-11 rounded-lg border px-3 font-normal" value={typeof value === "string" ? value : ""} onChange={(event) => update(event.target.value)}><option value="">Chọn...</option>{(field.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>;
-    if (field.data_type === "multi_select") return <select multiple required={field.required} className="min-h-24 rounded-lg border px-3 py-2 font-normal" value={Array.isArray(value) ? value as string[] : typeof value === "string" && value ? [value] : []} onChange={(event) => update(Array.from(event.target.selectedOptions, (option) => option.value))}>{(field.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>;
-    const inputType = field.data_type === "date" ? "date" : field.data_type === "datetime" ? "datetime-local" : field.data_type === "number" ? "number" : field.data_type === "url" ? "url" : "text";
-    return <input type={inputType} required={field.required} className="min-h-11 rounded-lg border px-3 font-normal" value={typeof value === "string" || typeof value === "number" ? value : ""} onChange={(event) => update(field.data_type === "number" ? Number(event.target.value) : event.target.value)} />;
-  };
-  const submit = async () => { setBusy(true); setMessage(""); const response = await fetch("/api/database/records", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ categoryId, recordTypeId, recordCode: code, title, summary, metadata }) }); const payload = await response.json().catch(() => null) as CreateResponse | null; setBusy(false); if (!response.ok) { const field = payload?.fields?.[0]; if (field) { const key = field.field.replace(/^metadata\./, ""); const label = fields.find((item) => item.field_key === key)?.label ?? key; const detail = field.code === "invalid_url" ? "phải bắt đầu bằng https://" : field.code === "required" ? "là bắt buộc" : field.code === "invalid_option" ? "có giá trị không hợp lệ" : field.code === "invalid_type" ? "không đúng định dạng" : field.code; return setMessage(`${label}: ${detail}.`); } return setMessage(payload?.error ?? "Không thể tạo hồ sơ."); } router.push(`/database/records/${payload?.record?.id}`); };
-  return <main className="min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6"><div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4"><div className="mb-4 lg:mb-0"><AppNav currentPath="/database/records/new" userLabel={`${user.full_name} (${user.role_name})`} onLogout={logout} /></div><div><header className="mb-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-700">Cơ sở dữ liệu</p><h1 className="mt-1 text-2xl font-bold">Nhập hồ sơ mới</h1></header><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="grid gap-4 md:grid-cols-2"><label className="grid gap-1 text-sm font-semibold">Phòng / nhóm<select className="min-h-11 rounded-lg border px-3 font-normal" value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setRecordTypeId(""); }}><option value="">Chọn nhóm hồ sơ</option>{catalog?.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><label className="grid gap-1 text-sm font-semibold">Loại hồ sơ<select className="min-h-11 rounded-lg border px-3 font-normal" value={recordTypeId} onChange={(event) => setRecordTypeId(event.target.value)}><option value="">Chọn loại hồ sơ</option>{types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label><label className="grid gap-1 text-sm font-semibold">Mã hồ sơ<input className="min-h-11 rounded-lg border px-3 font-normal" value={code} onChange={(event) => setCode(event.target.value)} /></label><label className="grid gap-1 text-sm font-semibold">Tên / trích yếu<input className="min-h-11 rounded-lg border px-3 font-normal" value={title} onChange={(event) => setTitle(event.target.value)} /></label><label className="grid gap-1 text-sm font-semibold md:col-span-2">Mô tả<textarea className="rounded-lg border px-3 py-2 font-normal" rows={3} value={summary} onChange={(event) => setSummary(event.target.value)} /></label>{fields.filter((field) => !["record_code", "title", "summary", "status"].includes(field.field_key)).map((field) => <label key={field.field_key} className="grid gap-1 text-sm font-semibold">{field.label}{renderField(field)}</label>)}</div>{message ? <p className="mt-4 text-sm text-rose-700">{message}</p> : null}<button type="button" disabled={busy} onClick={() => void submit()} className="mt-5 min-h-11 rounded-lg bg-orange-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Đang lưu..." : "Lưu hồ sơ"}</button></section></div></div></main>;
+  return <main className="min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6"><div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4"><div className="mb-4 lg:mb-0"><AppNav currentPath="/database/records/new" userLabel={`${user.full_name} (${user.role_name})`} onLogout={logout} /></div><div><header className="mb-4"><p className="text-xs font-bold uppercase text-orange-700">Cơ sở dữ liệu</p><h1 className="mt-1 text-2xl font-bold">Nhập hồ sơ mới</h1><p className="mt-1 text-sm text-slate-600">Mã hồ sơ được tự động tạo khi lưu.</p></header><section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">{catalog ? <DatabaseRecordForm mode="create" catalog={catalog} /> : <p className="text-sm text-slate-600">{message}</p>}</section></div></div></main>;
 }

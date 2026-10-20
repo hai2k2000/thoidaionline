@@ -116,11 +116,13 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
   if (!canAccessRecordType(actor, type.code)) throw new Error("record_type_restricted");
   const { data: form, error: formError } = await serverSupabase.from("db_form_definitions").select("id").eq("record_type_id", input.recordTypeId).eq("status", "published").order("version", { ascending: false }).limit(1).maybeSingle();
   if (formError) throw formError;
-  await validateFormMetadata(form?.id, { ...input.metadata, record_code: input.recordCode, title: input.title, summary: input.summary ?? "", status: "draft" });
+  const { data: generatedCode, error: codeError } = await serverSupabase.rpc("api_next_database_record_code");
+  if (codeError || typeof generatedCode !== "string") throw codeError ?? new Error("record_code_generation_failed");
+  await validateFormMetadata(form?.id, { ...input.metadata, record_code: generatedCode, title: input.title, summary: input.summary ?? "", status: "draft" });
   const { data, error } = await serverSupabase.from("db_records").insert({
     category_id: input.categoryId,
     record_type_id: input.recordTypeId,
-    record_code: input.recordCode,
+    record_code: generatedCode,
     title: input.title,
     summary: input.summary ?? null,
     department_id: actor.department_id,
@@ -155,11 +157,10 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
   const patch: Record<string, unknown> = {};
-  if (input.recordCode !== undefined) patch.record_code = input.recordCode;
   if (input.title !== undefined) patch.title = input.title;
   if (input.summary !== undefined) patch.summary = input.summary;
   if (input.metadata !== undefined) {
-    await validateFormMetadata(current.form_definition_id, { ...input.metadata, record_code: input.recordCode ?? current.record_code, title: input.title ?? current.title, summary: input.summary ?? current.summary ?? "", status: current.status });
+    await validateFormMetadata(current.form_definition_id, { ...input.metadata, record_code: current.record_code, title: input.title ?? current.title, summary: input.summary ?? current.summary ?? "", status: current.status });
     patch.metadata = input.metadata;
   }
   const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").single();
