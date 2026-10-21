@@ -12,6 +12,8 @@ type RecordRow = {
   summary: string | null; status: string; department_id: string | null; owner_id: string | null;
   created_by: string; metadata: Record<string, unknown>; language_code?: string | null; form_definition_id?: string | null; deleted_at?: string | null; created_at: string; updated_at: string;
   record_type_code?: string | null;
+  record_type_name?: string | null;
+  total_count?: number | null;
 };
 
 export type DatabaseRecordActor = { id: string; department_id: string | null; role_code: string; rbacPermissions: string[] };
@@ -116,12 +118,23 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, fil
   });
   if (error) throw error;
   const rows = (data ?? []) as RecordRow[];
+  const typeIds = [...new Set(rows.map((row) => row.record_type_id))];
+  const types = typeIds.length
+    ? await serverSupabase.from("db_record_types").select("id,code,name").in("id", typeIds)
+    : { data: [], error: null };
+  if (types.error) throw types.error;
+  const typeById = new Map((types.data ?? []).map((type) => [type.id, type]));
   const categoryIds = [...new Set(rows.map((row) => row.category_id))];
-  if (!categoryIds.length) return rows;
+  if (!categoryIds.length) return rows.map((row) => ({ ...row, record_type_code: typeById.get(row.record_type_id)?.code ?? null, record_type_name: typeById.get(row.record_type_id)?.name ?? null }));
   const categories = await serverSupabase.from("db_categories").select("id,code").in("id", categoryIds);
   if (categories.error) throw categories.error;
   const languageByCategory = new Map((categories.data ?? []).map((category) => [category.id, languageCodeForCategory(category.code)]));
-  return rows.map((row) => ({ ...row, language_code: row.language_code ?? languageByCategory.get(row.category_id) ?? null }));
+  return rows.map((row) => ({
+    ...row,
+    language_code: row.language_code ?? languageByCategory.get(row.category_id) ?? null,
+    record_type_code: typeById.get(row.record_type_id)?.code ?? null,
+    record_type_name: typeById.get(row.record_type_id)?.name ?? null,
+  }));
 }
 
 export async function createDatabaseRecord(actor: DatabaseRecordActor, input: DatabaseRecordInput, clientRequestId?: string) {

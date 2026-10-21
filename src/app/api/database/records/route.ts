@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   if (!actor) return json({ error: "unauthenticated" }, 401);
   try {
     const params = new URL(request.url).searchParams;
-    return json({ records: await listVisibleDatabaseRecords(actor, {
+    const query = {
       q: params.get("q") ?? "",
       status: params.get("status") ?? undefined,
       recordTypeId: params.get("recordTypeId") ?? undefined,
@@ -20,7 +20,15 @@ export async function GET(request: Request) {
       languageCode: params.get("languageCode") ?? undefined,
       limit: Number(params.get("limit") ?? 200),
       offset: Number(params.get("offset") ?? 0),
-    }) });
+    };
+    const records = await listVisibleDatabaseRecords(actor, query);
+    const stats = params.get("includeStats") === "1"
+      ? Object.fromEntries(await Promise.all(["all", "draft", "pending_review", "archived"].map(async (status) => {
+        const scoped = await listVisibleDatabaseRecords(actor, { languageCode: query.languageCode, limit: 1, status: status === "all" ? undefined : status });
+        return [status, Number(scoped[0]?.total_count ?? 0)];
+      })))
+      : undefined;
+    return json({ records, ...(stats ? { stats } : {}) });
   } catch {
     return json({ error: "record_read_failed" }, 500);
   }
