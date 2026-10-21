@@ -7,6 +7,7 @@ const migration = readFileSync(fileURLToPath(new URL("../../../supabase/migratio
 const catalog = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261017101000_database_management_v1_catalog.sql", import.meta.url)), "utf8");
 const languageGroup = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020130000_database_management_v1_language_groups.sql", import.meta.url)), "utf8");
 const autocode = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020100000_database_management_v1_autocode.sql", import.meta.url)), "utf8");
+const filterApproval = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261021100000_database_management_v1_filter_approval.sql", import.meta.url)), "utf8");
 
 test("foundation migration is additive, indexed, server-only and ACL-capable", () => {
   for (const table of ["db_categories", "db_record_types", "db_form_definitions", "db_form_fields", "db_records", "db_record_files", "db_record_external_links", "db_record_acl", "db_record_history", "db_saved_search_filters"]) assert.match(migration, new RegExp(`create table if not exists public\\.${table}`));
@@ -59,4 +60,14 @@ test("idempotency migration adds request keys without rewriting existing records
   assert.match(source, /add column if not exists client_request_id/i);
   assert.match(source, /add column if not exists upload_request_id/i);
   assert.match(source, /create unique index/);
+});
+
+test("filter and approval migration is additive and fail-closed", () => {
+  assert.match(filterApproval, /child\.parent_id = p_category_id/);
+  assert.match(filterApproval, /api_transition_database_record/);
+  assert.match(filterApproval, /record\.approve/);
+  assert.match(filterApproval, /Self approval is not allowed/);
+  assert.match(filterApproval, /Return reason is required/);
+  assert.match(filterApproval, /for update/);
+  assert.doesNotMatch(filterApproval, /drop table|delete from public\.db_records/i);
 });

@@ -5,6 +5,7 @@ import {
   getTotalPages,
   hasActiveRecordFilters,
   presentLanguage,
+  presentCategory,
   presentRecordType,
   presentStatus,
   statusToneClasses,
@@ -18,6 +19,7 @@ test("presents database list labels in Vietnamese while preserving unknown value
   assert.equal(presentStatus("future_status"), "future_status");
   assert.equal(presentRecordType({ name: "Hợp đồng", code: "contract" }), "Hợp đồng");
   assert.equal(presentRecordType({ name: null, code: "contract" }), "contract");
+  assert.equal(presentCategory({ code: "phong_noi_dung", name: null }), "Phòng Nội dung");
 });
 
 test("uses server-reported accessible total counts instead of page length", () => {
@@ -31,6 +33,7 @@ test("detects active list filters for a clear action", () => {
   assert.equal(hasActiveRecordFilters({ query: "HS-2026", languageCode: "", status: "" }), true);
   assert.equal(hasActiveRecordFilters({ query: "", languageCode: "vi", status: "" }), true);
   assert.equal(hasActiveRecordFilters({ query: "", languageCode: "", status: "draft" }), true);
+  assert.equal(hasActiveRecordFilters({ query: "", categoryId: "content", languageCode: "", status: "" }), true);
 });
 
 test("calculates bounded pagination from the accessible total", () => {

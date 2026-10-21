@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const records = await listVisibleDatabaseRecords(actor, query);
     const stats = params.get("includeStats") === "1"
       ? Object.fromEntries(await Promise.all(["all", "draft", "pending_review", "archived"].map(async (status) => {
-        const scoped = await listVisibleDatabaseRecords(actor, { languageCode: query.languageCode, limit: 1, status: status === "all" ? undefined : status });
+      const scoped = await listVisibleDatabaseRecords(actor, { categoryId: query.categoryId, languageCode: query.languageCode, limit: 1, status: status === "all" ? undefined : status });
         return [status, Number(scoped[0]?.total_count ?? 0)];
       })))
       : undefined;

@@ -119,6 +119,7 @@ const migrationReference = [
   "supabase/migrations/20261020100000_database_management_v1_autocode.sql",
   "supabase/migrations/20261020110000_database_management_v1_idempotency.sql",
   "supabase/migrations/20261020130000_database_management_v1_language_groups.sql",
+  "supabase/migrations/20261021100000_database_management_v1_filter_approval.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");
 const riskOutput = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", root], {

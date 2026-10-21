@@ -22,8 +22,20 @@ export const languageLabels = {
   km: "Tiếng Campuchia (Khmer)",
 };
 
+export const categoryLabels = {
+  tong_hop: "Phòng Tổng hợp",
+  truyen_thong: "Phòng Truyền thông",
+  phong_noi_dung: "Phòng Nội dung",
+  doan_the_quan_ly: "Tổ chức đoàn thể và hồ sơ quản lý chuyên biệt",
+  ngoai_ngu: "Các tổ Ngoại ngữ",
+};
+
 export function presentLanguage(code) {
   return code ? languageLabels[code] ?? code : "Chưa xác định";
+}
+
+export function presentCategory(category) {
+  return category?.name || categoryLabels[category?.code] || category?.code || "Chưa xác định";
 }
 
 export function presentStatus(status) {
@@ -45,6 +57,6 @@ export function getTotalPages(totalCount, pageSize) {
   return Math.max(1, Math.ceil(total / size));
 }
 
-export function hasActiveRecordFilters({ query, languageCode, status }) {
-  return Boolean(query.trim() || languageCode || status);
+export function hasActiveRecordFilters({ query, categoryId, languageCode, status }) {
+  return Boolean(query.trim() || categoryId || languageCode || status);
 }

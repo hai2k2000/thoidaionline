@@ -13,6 +13,8 @@ type RecordRow = {
   created_by: string; metadata: Record<string, unknown>; language_code?: string | null; form_definition_id?: string | null; deleted_at?: string | null; created_at: string; updated_at: string;
   record_type_code?: string | null;
   record_type_name?: string | null;
+  category_code?: string | null;
+  category_name?: string | null;
   total_count?: number | null;
 };
 
@@ -56,10 +58,10 @@ async function getRecord(recordId: string) {
   if (!data) return null;
   const [{ data: type, error: typeError }, { data: category, error: categoryError }] = await Promise.all([
     serverSupabase.from("db_record_types").select("code").eq("id", data.record_type_id).maybeSingle(),
-    serverSupabase.from("db_categories").select("code").eq("id", data.category_id).maybeSingle(),
+    serverSupabase.from("db_categories").select("code,name,parent_id").eq("id", data.category_id).maybeSingle(),
   ]);
   if (typeError || categoryError) throw typeError ?? categoryError;
-  return { ...(data as RecordRow & { form_definition_id: string | null; deleted_at: string | null }), language_code: data.language_code ?? languageCodeForCategory(category?.code), record_type_code: type?.code ?? null };
+  return { ...(data as RecordRow & { form_definition_id: string | null; deleted_at: string | null }), language_code: data.language_code ?? languageCodeForCategory(category?.code), category_code: category?.code ?? null, category_name: category?.name ?? null, record_type_code: type?.code ?? null };
 }
 
 async function validateFormMetadata(formDefinitionId: string | null | undefined, metadata: Record<string, unknown>) {
@@ -85,8 +87,12 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     serverSupabase.from("db_record_history").select("id,actor_id,action,old_data,new_data,created_at").eq("record_id", recordId).order("created_at", { ascending: false }).limit(100),
   ]);
   if (files.error || links.error || keywords.error || history.error) throw files.error ?? links.error ?? keywords.error ?? history.error;
+  const canApprove = record.status === "pending_review" && actor.id !== record.created_by && await canRecord(actor, record, recordId, "approve");
+  const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
   return {
     record: metadataAllowed ? record : { ...record, summary: null, metadata: {} },
+    canApprove,
+    canSubmit,
     acl: metadataAllowed ? acl : [],
     files: metadataAllowed ? files.data ?? [] : [],
     externalLinks: metadataAllowed ? links.data ?? [] : [],
@@ -99,6 +105,11 @@ export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeI
 
 export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, filters: DatabaseRecordListQuery = {}) {
   let categoryId = filters.categoryId ?? null;
+  if (categoryId && filters.languageCode) {
+    const selected = await serverSupabase.from("db_categories").select("code").eq("id", categoryId).maybeSingle();
+    if (selected.error) throw selected.error;
+    if (selected.data?.code !== "phong_noi_dung") return [];
+  }
   if (filters.languageCode) {
     const categoryCode = categoryCodeForLanguage(filters.languageCode);
     if (!categoryCode) return [];
@@ -126,15 +137,40 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, fil
   const typeById = new Map((types.data ?? []).map((type) => [type.id, type]));
   const categoryIds = [...new Set(rows.map((row) => row.category_id))];
   if (!categoryIds.length) return rows.map((row) => ({ ...row, record_type_code: typeById.get(row.record_type_id)?.code ?? null, record_type_name: typeById.get(row.record_type_id)?.name ?? null }));
-  const categories = await serverSupabase.from("db_categories").select("id,code").in("id", categoryIds);
+  const categories = await serverSupabase.from("db_categories").select("id,code,name,parent_id").in("id", categoryIds);
   if (categories.error) throw categories.error;
+  const parentIds = [...new Set((categories.data ?? []).map((category) => category.parent_id).filter(Boolean))];
+  const parents = parentIds.length ? await serverSupabase.from("db_categories").select("id,code,name").in("id", parentIds) : { data: [], error: null };
+  if (parents.error) throw parents.error;
+  const parentById = new Map((parents.data ?? []).map((category) => [category.id, category]));
+  const categoryById = new Map((categories.data ?? []).map((category) => [category.id, category]));
   const languageByCategory = new Map((categories.data ?? []).map((category) => [category.id, languageCodeForCategory(category.code)]));
   return rows.map((row) => ({
     ...row,
     language_code: row.language_code ?? languageByCategory.get(row.category_id) ?? null,
+    category_code: (parentById.get(categoryById.get(row.category_id)?.parent_id ?? "") ?? categoryById.get(row.category_id))?.code ?? null,
+    category_name: (parentById.get(categoryById.get(row.category_id)?.parent_id ?? "") ?? categoryById.get(row.category_id))?.name ?? null,
     record_type_code: typeById.get(row.record_type_id)?.code ?? null,
     record_type_name: typeById.get(row.record_type_id)?.name ?? null,
   }));
+}
+
+export type DatabaseRecordWorkflowAction = "submit" | "approve" | "return";
+
+export async function transitionDatabaseRecord(actor: DatabaseRecordActor, recordId: string, action: DatabaseRecordWorkflowAction, reason?: string) {
+  const { data, error } = await serverSupabase.rpc("api_transition_database_record", {
+    p_actor_id: actor.id,
+    p_record_id: recordId,
+    p_action: action,
+    p_reason: reason?.trim() || null,
+  });
+  if (error) {
+    if (error.code === "42501") throw new Error("permission_denied");
+    if (error.code === "P0002") throw new Error("record_not_found");
+    if (error.code === "22023") throw new Error(error.message.includes("reason") ? "return_reason_required" : "invalid_transition");
+    throw error;
+  }
+  return (data?.[0] ?? data) as { id: string; status: string; action: string; reason: string | null; replayed: boolean };
 }
 
 export async function createDatabaseRecord(actor: DatabaseRecordActor, input: DatabaseRecordInput, clientRequestId?: string) {
