@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { logServerAudit } from "@/lib/serverAudit";
-import { createDatabaseRecord, listVisibleDatabaseRecords } from "@/lib/databaseManagement/repository";
+import { createDatabaseRecord, listVisibleApprovalQueue, listVisibleDatabaseRecords } from "@/lib/databaseManagement/repository";
 import { validateDatabaseRecordInput } from "@/lib/databaseManagement/validation";
 
 const NO_STORE = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
@@ -21,14 +21,17 @@ export async function GET(request: Request) {
       limit: Number(params.get("limit") ?? 200),
       offset: Number(params.get("offset") ?? 0),
     };
-    const records = await listVisibleDatabaseRecords(actor, query);
+    const approvalQueue = params.get("approvalQueue") === "1";
+    const records = approvalQueue
+      ? await listVisibleApprovalQueue(actor, { q: query.q, categoryId: query.categoryId, languageCode: query.languageCode, limit: query.limit, offset: query.offset })
+      : await listVisibleDatabaseRecords(actor, query);
     const stats = params.get("includeStats") === "1"
       ? Object.fromEntries(await Promise.all(["all", "draft", "pending_review", "archived"].map(async (status) => {
       const scoped = await listVisibleDatabaseRecords(actor, { categoryId: query.categoryId, languageCode: query.languageCode, limit: 1, status: status === "all" ? undefined : status });
         return [status, Number(scoped[0]?.total_count ?? 0)];
       })))
       : undefined;
-    return json({ records, ...(stats ? { stats } : {}) });
+    return json({ records, ...(stats ? { stats } : {}), ...(approvalQueue ? { approvalQueue: true } : {}) });
   } catch {
     return json({ error: "record_read_failed" }, 500);
   }

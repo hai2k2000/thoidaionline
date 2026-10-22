@@ -1,94 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
 import DatabaseRecordForm from "@/components/DatabaseRecordForm";
+import { presentWorkflowAction, validateReturnReason, workflowErrorMessage } from "@/lib/databaseManagement/approvalUi.mjs";
 
 type FormField = { field_key: string; label: string; data_type: string; required: boolean; options?: Array<{ value: string; label: string }> };
 type Catalog = { forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }>; categories: Array<{ id: string; parent_id?: string | null; code: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; name: string }> };
 type DetailRecord = { id: string; category_id: string; record_type_id: string; record_code: string; title: string; summary: string | null; status: string; language_code?: string | null; metadata: Record<string, unknown> };
-type Detail = { record: DetailRecord; canSubmit?: boolean; canApprove?: boolean; files: Array<{ id: string; original_name: string; mime_type: string; size_bytes: number; sha256: string }>; externalLinks: Array<{ id: string; provider: string; url: string }>; keywords: string[]; history: Array<{ id: string; action: string; created_at: string }> };
+type HistoryItem = { id: string; actor_id: string; actor_name?: string | null; action: string; new_data?: Record<string, unknown> | null; created_at: string };
+type Detail = { record: DetailRecord; canSubmit?: boolean; canApprove?: boolean; approvedBy?: { name?: string | null; at: string } | null; files: Array<{ id: string; original_name: string; mime_type: string; size_bytes: number; sha256: string }>; externalLinks: Array<{ id: string; provider: string; url: string }>; keywords: string[]; history: HistoryItem[] };
 
 const statusLabels: Record<string, string> = { draft: "Nháp", pending_review: "Chờ duyệt", approved: "Đã duyệt", archived: "Lưu trữ", deleted: "Đã xóa" };
-const historyLabels: Record<string, string> = { create: "Tạo hồ sơ", update: "Cập nhật hồ sơ", file_upload: "Tải tệp lên", acl_update: "Cập nhật quyền truy cập", soft_delete: "Đưa vào thùng rác", restore: "Khôi phục hồ sơ" };
+const statusTone: Record<string, string> = { draft: "bg-slate-100 text-slate-700", pending_review: "bg-amber-100 text-amber-800", approved: "bg-emerald-100 text-emerald-800", archived: "bg-violet-100 text-violet-800", deleted: "bg-rose-100 text-rose-800" };
+const historyLabels: Record<string, string> = { create: "Tạo hồ sơ", update: "Cập nhật hồ sơ", file_upload: "Tải tệp lên", acl_update: "Cập nhật quyền truy cập", soft_delete: "Đưa vào thùng rác", restore: "Khôi phục hồ sơ", submit_review: "Gửi duyệt hồ sơ", approve: "Phê duyệt hồ sơ", return_for_correction: "Trả lại chỉnh sửa" };
 const languageLabels: Record<string, string> = { vi: "Tiếng Việt", en: "Tiếng Anh", zh: "Tiếng Trung", lo: "Tiếng Lào", km: "Tiếng Campuchia (Khmer)" };
 const formatBytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-const formatValue = (value: unknown, field?: FormField) => {
-  if (value === null || value === undefined || value === "") return "Chưa cập nhật";
-  const labels = new Map((field?.options ?? []).map((option) => [option.value, option.label]));
-  if (Array.isArray(value)) return value.map((item) => labels.get(String(item)) ?? String(item)).join(", ");
-  if (typeof value === "boolean") return value ? "Có" : "Không";
-  if (field?.data_type === "date") { const date = new Date(`${String(value)}T00:00:00`); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("vi-VN"); }
-  if (field?.data_type === "datetime") { const date = new Date(String(value)); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("vi-VN"); }
-  return labels.get(String(value)) ?? String(value);
-};
 
 export default function DatabaseRecordDetailPage() {
-  const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const { loading, user, logout, hasPermission } = useAuth();
-  const [detail, setDetail] = useState<Detail | null>(null);
-  const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [message, setMessage] = useState("Đang tải...");
-  const [editing, setEditing] = useState(false);
-  const [uploadBusy, setUploadBusy] = useState(false);
-  const [workflowBusy, setWorkflowBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    const [recordResponse, catalogResponse] = await Promise.all([
-      fetch(`/api/database/records/${params.id}`, { cache: "no-store" }),
-      fetch("/api/database/catalog", { cache: "no-store" }),
-    ]);
-    const payload = await recordResponse.json() as { record?: Detail; error?: string };
-    if (!recordResponse.ok || !payload.record) throw new Error(payload.error ?? "Không thể tải hồ sơ.");
-    setDetail(payload.record);
-    if (catalogResponse.ok) setCatalog(await catalogResponse.json() as Catalog);
-    setMessage("");
-  }, [params.id]);
-
-  useEffect(() => {
-    if (loading || !user) return;
-    const task = window.setTimeout(() => { void load().catch((error) => setMessage(error.message)); }, 0);
-    return () => window.clearTimeout(task);
-  }, [loading, user, load]);
-
-  const formFields = useMemo(() => catalog?.forms.find((form) => form.record_type_id === detail?.record.record_type_id)?.db_form_fields ?? [], [catalog, detail]);
-  const fieldLabels = useMemo(() => new Map(formFields.map((field) => [field.field_key, field.label])), [formFields]);
-  const upload = async (file: File) => {
-    setUploadBusy(true);
-    const body = new FormData(); body.set("file", file);
-    const response = await fetch(`/api/database/records/${params.id}/files`, { method: "POST", body });
-    setUploadBusy(false);
-    if (!response.ok) { setMessage("Không thể tải tệp lên. Vui lòng kiểm tra định dạng và dung lượng."); return; }
-    await load();
-  };
-  const workflow = async (action: "submit" | "approve" | "return") => {
-    const reason = action === "return" ? window.prompt("Nhập lý do trả lại chỉnh sửa:")?.trim() ?? "" : undefined;
-    if (action === "return" && !reason) return;
-    setWorkflowBusy(true);
-    const response = await fetch(`/api/database/records/${params.id}/workflow`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, reason }) });
-    const payload = await response.json().catch(() => null) as { error?: string } | null;
-    setWorkflowBusy(false);
-    if (!response.ok) { setMessage(payload?.error === "permission_denied" ? "Bạn không có quyền thực hiện thao tác này." : payload?.error === "self_approval_forbidden" ? "Không thể tự duyệt hồ sơ của mình." : payload?.error === "return_reason_required" ? "Cần nhập lý do trả lại hồ sơ." : "Không thể cập nhật quy trình duyệt."); return; }
-    await load();
-  };
-
-  if (loading || !user) return <main className="grid min-h-screen place-items-center bg-slate-50">Đang tải...</main>;
-  if (!detail) return <main className="grid min-h-screen place-items-center bg-slate-50 text-sm text-slate-600">{message}</main>;
+  const params = useParams<{ id: string }>(); const router = useRouter(); const { loading, user, logout, hasPermission } = useAuth();
+  const [detail, setDetail] = useState<Detail | null>(null); const [catalog, setCatalog] = useState<Catalog | null>(null); const [message, setMessage] = useState("Đang tải..."); const [editing, setEditing] = useState(false); const [uploadBusy, setUploadBusy] = useState(false); const [workflowBusy, setWorkflowBusy] = useState(false); const [returnOpen, setReturnOpen] = useState(false); const [returnReason, setReturnReason] = useState(""); const [returnError, setReturnError] = useState(""); const returnInputRef = useRef<HTMLTextAreaElement>(null);
+  const load = useCallback(async () => { const [recordResponse, catalogResponse] = await Promise.all([fetch(`/api/database/records/${params.id}`, { cache: "no-store" }), fetch("/api/database/catalog", { cache: "no-store" })]); const payload = await recordResponse.json() as { record?: Detail; error?: string }; if (!recordResponse.ok || !payload.record) throw new Error(payload.error ?? "Không thể tải hồ sơ."); setDetail(payload.record); if (catalogResponse.ok) setCatalog(await catalogResponse.json() as Catalog); setMessage(""); }, [params.id]);
+  useEffect(() => { if (loading || !user) return; const task = window.setTimeout(() => { void load().catch((error) => setMessage(error.message)); }, 0); return () => window.clearTimeout(task); }, [loading, user, load]);
+  useEffect(() => { if (returnOpen) returnInputRef.current?.focus(); }, [returnOpen]);
+  const formFields = useMemo(() => catalog?.forms.find((form) => form.record_type_id === detail?.record.record_type_id)?.db_form_fields ?? [], [catalog, detail]); const fieldLabels = useMemo(() => new Map(formFields.map((field) => [field.field_key, field.label])), [formFields]);
+  const upload = async (file: File) => { setUploadBusy(true); const body = new FormData(); body.set("file", file); const response = await fetch(`/api/database/records/${params.id}/files`, { method: "POST", body }); setUploadBusy(false); if (!response.ok) { setMessage("Không thể tải tệp lên. Vui lòng kiểm tra định dạng và dung lượng."); return; } await load(); };
+  const workflow = async (action: "submit" | "approve" | "return", reason?: string) => { setWorkflowBusy(true); const response = await fetch(`/api/database/records/${params.id}/workflow`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, reason }) }); const payload = await response.json().catch(() => null) as { error?: string } | null; setWorkflowBusy(false); if (!response.ok) { setMessage(workflowErrorMessage(response.status, payload?.error)); if (response.status === 409) await load().catch(() => undefined); return false; } await load(); return true; };
+  const submitReturn = async () => { const validation = validateReturnReason(returnReason); if (validation) { setReturnError(validation); return; } const ok = await workflow("return", returnReason.trim()); if (ok) { setReturnOpen(false); setReturnReason(""); setReturnError(""); } };
+  if (loading || !user) return <main className="grid min-h-screen place-items-center bg-slate-50">Đang tải...</main>; if (!detail) return <main className="grid min-h-screen place-items-center bg-slate-50 text-sm text-slate-600">{message}</main>;
   const initial = { id: detail.record.id, categoryId: detail.record.category_id, recordTypeId: detail.record.record_type_id, recordCode: detail.record.record_code, title: detail.record.title, summary: detail.record.summary, metadata: detail.record.metadata };
-
-  return <main className="min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6"><div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4"><div className="mb-4 lg:mb-0"><AppNav currentPath="/database/records" userLabel={`${user.full_name} (${user.role_name})`} onLogout={logout} /></div><div><button type="button" onClick={() => router.push("/database/records")} className="mb-4 text-sm font-semibold text-orange-700">← Quay lại danh sách</button><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    {message ? <p role="alert" className="mb-4 text-sm text-rose-700">{message}</p> : null}
-    {editing ? <DatabaseRecordForm mode="edit" catalog={catalog ?? { categories: [], recordTypes: [], forms: [] }} initial={initial} /> : <>
-      <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-xs text-slate-500">{detail.record.record_code}</p><h1 className="mt-1 text-2xl font-bold">{detail.record.title}</h1>{detail.record.language_code ? <p className="mt-2 text-sm text-slate-600">Tổ ngôn ngữ: {languageLabels[detail.record.language_code] ?? detail.record.language_code}</p> : null}</div><span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold">{statusLabels[detail.record.status] ?? detail.record.status}</span></div>
-      {detail.record.summary ? <p className="mt-5 whitespace-pre-wrap text-slate-700">{detail.record.summary}</p> : null}
-      <div className="mt-5 flex flex-wrap gap-2">{detail.canSubmit ? <button type="button" disabled={workflowBusy} className="rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => void workflow("submit")}>G?i duy?t</button> : null}{detail.canApprove ? <><button type="button" disabled={workflowBusy} className="rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => void workflow("approve")}>Duy?t h? so</button><button type="button" disabled={workflowBusy} className="rounded border border-amber-300 px-3 py-2 text-sm font-semibold text-amber-800 disabled:opacity-50" onClick={() => void workflow("return")}>Tr? l?i ch?nh s?a</button></> : null}{hasPermission("record.edit") ? <button type="button" disabled={!catalog} className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => setEditing(true)}>Sửa hồ sơ</button> : null}<a className="rounded border px-3 py-2 text-sm font-semibold" href={`/api/database/records/${params.id}/export`}>Xuất thông tin hồ sơ</a></div>
-      <h2 className="mt-6 border-b pb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Thông tin hồ sơ</h2><dl className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(detail.record.metadata).map(([key, value]) => { const field = formFields.find((item) => item.field_key === key); return <div key={key} className="rounded-lg bg-slate-50 p-3"><dt className="text-xs font-semibold text-slate-500">{fieldLabels.get(key) ?? key}</dt><dd className="mt-1 break-words text-sm">{formatValue(value, field)}</dd></div>; })}</dl>
-      <section className="mt-6"><h2 className="border-b pb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Tệp đính kèm</h2><label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold"><span>{uploadBusy ? "Đang tải lên..." : "Thêm tệp"}</span><input disabled={uploadBusy} className="sr-only" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} /></label>{detail.files.length ? <ul className="mt-3 space-y-2">{detail.files.map((file) => <li key={file.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-slate-50 p-3 text-sm"><span>{file.original_name} · {formatBytes(file.size_bytes)}</span><a className="font-semibold text-orange-700" href={`/api/database/records/${params.id}/files/${file.id}`}>Tải xuống</a></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">Chưa có tệp.</p>}</section>
-      <section className="mt-6"><h2 className="border-b pb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Từ khóa và liên kết</h2><p className="mt-3 text-sm">{detail.keywords.length ? detail.keywords.join(", ") : "Chưa có từ khóa."}</p>{detail.externalLinks.map((link) => <a className="mt-2 block text-sm text-orange-700" href={link.url} key={link.id} target="_blank" rel="noreferrer">{link.provider}: {link.url}</a>)}</section>
-      <section className="mt-6"><h2 className="border-b pb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Lịch sử</h2><ul className="mt-3 space-y-2 text-sm">{detail.history.map((item) => <li key={item.id}>{historyLabels[item.action] ?? "Hoạt động hồ sơ"} · {new Date(item.created_at).toLocaleString("vi-VN")}</li>)}</ul></section>
-    </>}
-  </section></div></div></main>;
+  return <main className="min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6"><div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4"><div className="mb-4 lg:mb-0"><AppNav currentPath="/database/records" userLabel={`${user.full_name} (${user.role_name})`} onLogout={logout} /></div><div><button type="button" onClick={() => router.push("/database/records")} className="mb-4 text-sm font-semibold text-orange-700">← Quay lại danh sách</button><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">{message ? <p role="alert" className="mb-4 text-sm text-rose-700">{message}</p> : null}{editing ? <DatabaseRecordForm mode="edit" catalog={catalog ?? { categories: [], recordTypes: [], forms: [] }} initial={initial} /> : <><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-xs text-slate-500">{detail.record.record_code}</p><h1 className="mt-1 text-2xl font-bold">{detail.record.title}</h1>{detail.record.language_code ? <p className="mt-2 text-sm text-slate-600">Tổ ngôn ngữ: {languageLabels[detail.record.language_code] ?? detail.record.language_code}</p> : null}</div><span className={`rounded-full px-3 py-1 text-sm font-semibold ${statusTone[detail.record.status] ?? "bg-slate-100 text-slate-700"}`}>{statusLabels[detail.record.status] ?? detail.record.status}</span></div>{detail.approvedBy ? <p className="mt-3 text-sm text-emerald-800">Người phê duyệt: {detail.approvedBy.name ?? "Đã xác định"} · {new Date(detail.approvedBy.at).toLocaleString("vi-VN")}</p> : null}{detail.record.summary ? <p className="mt-5 whitespace-pre-wrap text-slate-700">{detail.record.summary}</p> : null}<div className="mt-5 flex flex-wrap gap-2">{detail.canSubmit ? <button type="button" disabled={workflowBusy} className="rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => void workflow("submit")}>Gửi duyệt</button> : null}{detail.canApprove ? <><button type="button" disabled={workflowBusy} className="rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => void workflow("approve")}>Phê duyệt hồ sơ</button><button type="button" disabled={workflowBusy} className="rounded border border-amber-300 px-3 py-2 text-sm font-semibold text-amber-800 disabled:opacity-50" onClick={() => { setReturnOpen(true); setReturnError(""); }}>Trả lại chỉnh sửa</button></> : null}{hasPermission("record.edit") ? <button type="button" disabled={!catalog} className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => setEditing(true)}>Sửa hồ sơ</button> : null}<a className="rounded border px-3 py-2 text-sm font-semibold" href={`/api/database/records/${params.id}/export`}>Xuất thông tin hồ sơ</a></div><h2 className="mt-6 border-b pb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Thông tin hồ sơ</h2><dl className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(detail.record.metadata).map(([key, value]) => { const field = formFields.find((item) => item.field_key === key); return <div key={key} className="rounded-lg bg-slate-50 p-3"><dt className="text-xs font-semibold text-slate-500">{fieldLabels.get(key) ?? key}</dt><dd className="mt-1 break-words text-sm">{String(value ?? "Chưa cập nhật")}</dd></div>; })}</dl><section className="mt-6"><h2 className="border-b pb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Tệp đính kèm</h2><label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold"><span>{uploadBusy ? "Đang tải lên..." : "Thêm tệp"}</span><input disabled={uploadBusy} className="sr-only" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} /></label>{detail.files.length ? <ul className="mt-3 space-y-2">{detail.files.map((file) => <li key={file.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-slate-50 p-3 text-sm"><span>{file.original_name} · {formatBytes(file.size_bytes)}</span><a className="font-semibold text-orange-700" href={`/api/database/records/${params.id}/files/${file.id}`}>Tải xuống</a></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">Chưa có tệp.</p>}</section><section className="mt-6"><h2 className="border-b pb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Lịch sử xử lý</h2><ul className="mt-3 space-y-2 text-sm">{detail.history.map((item) => { const presentation = presentWorkflowAction(item); return <li key={item.id}><span className="font-semibold">{historyLabels[item.action] ?? presentation.label}</span>{presentation.reason ? ` · Lý do: ${presentation.reason}` : ""} · {item.actor_name ?? "Người dùng"} · {new Date(item.created_at).toLocaleString("vi-VN")}</li>; })}</ul></section></>}</section></div></div>{returnOpen ? <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4"><div role="dialog" aria-modal="true" aria-labelledby="return-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"><h2 id="return-title" className="text-lg font-bold">Trả lại hồ sơ chỉnh sửa</h2><p className="mt-1 text-sm text-slate-600">Nêu rõ nội dung cần bổ sung hoặc sửa.</p><label className="mt-4 grid gap-1 text-sm font-semibold">Lý do trả lại<textarea ref={returnInputRef} required minLength={3} rows={4} value={returnReason} onChange={(event) => { setReturnReason(event.target.value); setReturnError(""); }} className="rounded-lg border p-3 font-normal" aria-invalid={Boolean(returnError)} /></label>{returnError ? <p role="alert" className="mt-1 text-sm text-rose-700">{returnError}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setReturnOpen(false)} className="rounded-lg border px-3 py-2 text-sm font-semibold">Hủy</button><button type="button" disabled={workflowBusy} onClick={() => void submitReturn()} className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Xác nhận trả lại</button></div></div></div> : null}</main>;
 }

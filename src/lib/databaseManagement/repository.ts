@@ -87,6 +87,12 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     serverSupabase.from("db_record_history").select("id,actor_id,action,old_data,new_data,created_at").eq("record_id", recordId).order("created_at", { ascending: false }).limit(100),
   ]);
   if (files.error || links.error || keywords.error || history.error) throw files.error ?? links.error ?? keywords.error ?? history.error;
+  const historyRows = history.data ?? [];
+  const actorIds = [...new Set(historyRows.map((item) => item.actor_id).filter(Boolean))];
+  const actors = actorIds.length ? await serverSupabase.from("staff_users").select("id,full_name").in("id", actorIds) : { data: [], error: null };
+  if (actors.error) throw actors.error;
+  const actorNames = new Map((actors.data ?? []).map((item) => [item.id, item.full_name]));
+  const latestApproval = historyRows.find((item) => item.action === "approve");
   const canApprove = record.status === "pending_review" && actor.id !== record.created_by && await canRecord(actor, record, recordId, "approve");
   const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
   return {
@@ -97,7 +103,8 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     files: metadataAllowed ? files.data ?? [] : [],
     externalLinks: metadataAllowed ? links.data ?? [] : [],
     keywords: metadataAllowed ? (keywords.data ?? []).map((row) => row.keyword) : [],
-    history: metadataAllowed ? history.data ?? [] : [],
+    history: metadataAllowed ? historyRows.map((item) => ({ ...item, actor_name: actorNames.get(item.actor_id) ?? null })) : [],
+    approvedBy: latestApproval ? { name: actorNames.get(latestApproval.actor_id) ?? null, at: latestApproval.created_at } : null,
   };
 }
 
@@ -153,6 +160,27 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, fil
     record_type_code: typeById.get(row.record_type_id)?.code ?? null,
     record_type_name: typeById.get(row.record_type_id)?.name ?? null,
   }));
+}
+
+export async function listVisibleApprovalQueue(actor: DatabaseRecordActor, filters: Omit<DatabaseRecordListQuery, "status"> = {}) {
+  const approved: RecordRow[] = [];
+  let offset = 0;
+  let total = 0;
+  do {
+    const page = await listVisibleDatabaseRecords(actor, { ...filters, status: "pending_review", limit: 100, offset });
+    total = Number(page[0]?.total_count ?? offset + page.length);
+    for (const row of page) {
+      if (row.created_by !== actor.id && canAccessRecordType(actor, row.record_type_code) && await canRecord(actor, row, row.id, "approve")) {
+        approved.push(row);
+      }
+    }
+    offset += page.length;
+    if (page.length === 0 || page.length < 100) break;
+  } while (offset < total);
+  const totalCount = approved.length;
+  const offsetValue = Math.max(filters.offset ?? 0, 0);
+  const limitValue = Math.min(Math.max(filters.limit ?? 20, 1), 100);
+  return approved.slice(offsetValue, offsetValue + limitValue).map((row) => ({ ...row, total_count: totalCount }));
 }
 
 export type DatabaseRecordWorkflowAction = "submit" | "approve" | "return";
