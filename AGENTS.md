@@ -27,7 +27,7 @@
 - Authorized target: SSH alias `vps-aylaspa`; source workspaces live under `/opt/worktrees` or `/opt/build`, never in the active release.
 - Immutable release root: `/opt/releases/thoidai-work`; activation target is the `current` pointer, with `previous`, `rollback-1` and `rollback-2` protected.
 - Service/health target: `thoidai-work.service` and `http://127.0.0.1:3001/login`.
-- Build/test/package run directly on the VPS source workspace with the compatible Node.js 22 toolchain. WSL2, GitHub Actions, PRs, external artifact transfer and cross-machine lineage are not deployment prerequisites.
+- The authorized VPS source workspace performs test/package operations with the compatible Node.js 22 toolchain. WSL2, GitHub Actions, PRs, external artifact transfer and cross-machine lineage are not deployment prerequisites.
 - The canonical entry point is `scripts/production/deploy-vps-first.sh`; it delegates immutable release activation to the existing `deploy-gate.sh` and never edits the active release during build.
 - Every VPS-local release must include `.release-meta`, `.artifact-manifest.json`, `.artifact-manifest.sha256`, source/dirty-tree/toolchain provenance and a secret scan before verification.
 - Runtime secrets remain on the VPS and are linked only by the existing activation gate; they never enter the release artifact, Git, logs or reports.
