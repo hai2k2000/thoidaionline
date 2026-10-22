@@ -1,4 +1,6 @@
-# External Artifact CI (Phase 1)
+# External Artifact CI (Legacy Compatibility)
+
+Thời Đại Work now uses the canonical RuleCodex `thoidai-work-vps-first` profile. This document and workflow remain for historical verification or an explicitly requested compatibility run; they are not required for build, verify or deploy.
 
 GitHub Actions workflow `.github/workflows/production-artifact.yml` is the only Phase 1 build path for a production-shaped artifact. It installs dependencies, runs focused checks, TypeScript, ESLint, route validation, the production-like Next build, standalone packaging, provenance/checksum verification, and static secret scanning.
 

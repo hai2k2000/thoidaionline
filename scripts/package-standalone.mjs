@@ -13,6 +13,7 @@ const baselineText = await readFile(join(root, "scripts/check-release-baseline.m
 const canonicalBaseline = baselineText.match(/legacyBaseline = "([^"]+)"/)?.[1] || baselineText.match(/canonicalBaseline = "([^"]+)"/)?.[1];
 const output = resolve(process.env.STANDALONE_ARTIFACT_DIR || join(root, ".artifacts", "standalone", `${buildId}-${Date.now()}`));
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+const dirtyFiles = execFileSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean);
 const gitValue = (args, envName, fallback = "") => {
   if (process.env[envName]) return process.env[envName];
   try {
@@ -29,6 +30,8 @@ const currentProductionParent = process.env.THOIDAI_CURRENT_PRODUCTION_COMMIT ||
 const branch = process.env.THOIDAI_RELEASE_BRANCH || gitValue(["branch", "--show-current"], "THOIDAI_RELEASE_BRANCH", "detached");
 const sourceWorktree = process.env.THOIDAI_SOURCE_WORKTREE || root;
 const runtimeEnvModel = process.env.THOIDAI_RUNTIME_ENV_MODEL || "symlink:/opt/thoidai-work/.env.local,/opt/thoidai-work/.env.production";
+const deploymentProfile = process.env.THOIDAI_DEPLOYMENT_PROFILE || "default-local-to-target";
+if (!["default-local-to-target", "thoidai-work-vps-first"].includes(deploymentProfile)) throw new Error(`unsupported deployment profile: ${deploymentProfile}`);
 const buildConfig = process.env.THOIDAI_BUILD_CONFIG || (process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("https://ci.invalid/") ? "ci-placeholder" : "canonical-public");
 if (!["ci-placeholder", "canonical-public"].includes(buildConfig)) throw new Error(`unsupported artifact build config: ${buildConfig}`);
 const publicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -146,8 +149,11 @@ await writeFile(join(output, ".release-meta"), [
   `metadata_commit=${commit}`,
   `current_production_parent=${currentProductionParent}`,
   `integration_branch=${integrationBranch}`,
+  `deployment_profile=${deploymentProfile}`,
   `integration_baseline=${integrationBaseline}`,
   `source_worktree=${sourceWorktree}`,
+  `dirty_tree=${dirtyFiles.length ? "dirty" : "clean"}`,
+  `dirty_file_count=${dirtyFiles.length}`,
   "deployed_at=",
   `created_at=${new Date().toISOString()}`,
   "artifact_type=next-standalone",

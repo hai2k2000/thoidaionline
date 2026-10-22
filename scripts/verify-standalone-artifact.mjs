@@ -100,6 +100,8 @@ const metadata = Object.fromEntries(releaseMeta.split(/\r?\n/).filter(Boolean).m
   const index = line.indexOf("=");
   return [line.slice(0, index), line.slice(index + 1)];
 }));
+const deploymentProfile = metadata.deployment_profile || "default-local-to-target";
+assert.ok(["default-local-to-target", "thoidai-work-vps-first"].includes(deploymentProfile), "invalid deployment profile");
 assert.ok(["low", "high"].includes(metadata.risk_class), "invalid artifact risk class");
 assert.ok(["automated-tests-pass", "missing-or-invalid"].includes(metadata.risk_test_evidence), "invalid artifact risk evidence");
 if (metadata.risk_class === "low") assert.equal(metadata.risk_test_evidence, "automated-tests-pass", "low-risk artifact lacks automated test evidence");
@@ -107,7 +109,9 @@ for (const field of ["commit", "local_head", "remote_head", "artifact_source_com
   assert.match(metadata[field] || "", /^[0-9a-f]{40}$/i, `invalid provenance SHA: ${field}`);
 }
 for (const field of ["local_head", "remote_head", "artifact_source_commit", "metadata_commit"]) assert.equal(metadata[field], metadata.commit, `provenance mismatch: ${field}`);
-assert.equal(metadata.integration_branch, "integration/production", "artifact integration branch mismatch");
+if (deploymentProfile !== "thoidai-work-vps-first") {
+  assert.equal(metadata.integration_branch, "integration/production", "artifact integration branch mismatch");
+}
 for (const name of [".env.local", ".env.production"]) {
   const path = join(root, name);
   if (envModel.startsWith("symlink:")) {

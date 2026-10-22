@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run check:release",
+    "prebuild": "node scripts/prebuild-profile.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -19,7 +19,7 @@
     "migration:disposable": "bash scripts/production/safe-apply-migration.disposable.sh",
     "database:local-bootstrap": "node scripts/local-database-bootstrap.mjs",
     "database:local-bootstrap:test": "node --test scripts/local-database-bootstrap.test.mjs",
-    "check:release": "npm run check:baseline && npm run check:routes",
+    "check:release": "node scripts/prebuild-profile.mjs",
     "check:baseline": "node scripts/check-release-baseline.mjs",
     "package:standalone": "node scripts/package-standalone.mjs",
     "verify:standalone": "node scripts/verify-standalone-artifact.mjs",
@@ -27,6 +27,7 @@
     "artifact:verify": "node scripts/verify-artifact-manifest.mjs",
     "artifact:secret-scan": "node scripts/scan-artifact-secrets.mjs",
     "deploy:external:verify": "bash scripts/production/deploy-external-artifact.sh",
+    "deploy:vps-first": "bash scripts/production/deploy-vps-first.sh",
     "retention:dry-run": "bash scripts/production/release-retention.sh --dry-run"
   },
   "dependencies": {

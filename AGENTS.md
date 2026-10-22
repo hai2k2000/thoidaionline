@@ -21,12 +21,15 @@
 - Không force-push, không rewrite history và không đưa file môi trường, credential, backup, build output hoặc runtime artifact vào Git.
 - Nếu push thất bại, phải báo blocker cùng bằng chứng; không được mô tả dự án là đã đồng bộ Git.
 
-## EXTERNAL ARTIFACT BUILD VÀ RELEASE LIFECYCLE
+## VPS-FIRST DEPLOYMENT PROFILE
 
-- Build/test/package production chạy trên GitHub Actions; không chạy `npm ci` hoặc `next build` trên VPS trong quy trình external-artifact.
-- Artifact phải là Next.js standalone, có `.release-meta`, `.artifact-manifest.json`, `.artifact-manifest.sha256` và provenance/checksum verification trước khi bàn giao.
-- Runtime secrets không được đóng gói. Artifact CI dùng `env_model=runtime-injected`; chỉ deployment gate được phép gắn runtime env tại thời điểm activation.
-- `scripts/production/deploy-external-artifact.sh` mặc định verify-only; activation phải có owner approval và ủy quyền rõ ràng, sau đó delegate cho `deploy-gate.sh`.
+- `deployment_profile: thoidai-work-vps-first` (canonical RuleCodex 1.2.0 exception for Thời Đại Work only).
+- Authorized target: SSH alias `vps-aylaspa`; source workspaces live under `/opt/worktrees` or `/opt/build`, never in the active release.
+- Build/test/package run directly on the VPS source workspace with the compatible Node.js 22 toolchain. WSL2, GitHub Actions, PRs, external artifact transfer and cross-machine lineage are not deployment prerequisites.
+- The canonical entry point is `scripts/production/deploy-vps-first.sh`; it delegates immutable release activation to the existing `deploy-gate.sh` and never edits the active release during build.
+- Every VPS-local release must include `.release-meta`, `.artifact-manifest.json`, `.artifact-manifest.sha256`, source/dirty-tree/toolchain provenance and a secret scan before verification.
+- Runtime secrets remain on the VPS and are linked only by the existing activation gate; they never enter the release artifact, Git, logs or reports.
+- `scripts/production/deploy-external-artifact.sh` and `.github/workflows/production-artifact.yml` remain archival/optional compatibility paths and are not the default Thời Đại Work deployment path.
 - Activation uses the immutable artifact risk classification for technical checks, but authenticated smoke is optional diagnostics for every risk class. Missing smoke credentials, test accounts, controlled waivers, or RBAC smoke evidence must never block activation. High-risk changes still require their applicable static/automated auth/RBAC tests, migration/data-safety checks, artifact verification, health, rollback, and disk gates. The classifier remains fail closed for risk-specific technical requirements and manual downgrade flags are not accepted.
 - Lifecycle mới giữ current/previous/rollback-1/rollback-2, bảo vệ `.keep`, evidence, references và UNKNOWN; retention chỉ dry-run cho đến khi có phê duyệt APPLY riêng.
 - Mọi build/worktree mới phải có metadata; disk guard dùng hard floor 10 GiB sau estimated headroom và warning threshold 20 GiB. Không backfill metadata legacy trong Phase 1.
@@ -37,3 +40,19 @@
 - The hard minimum is 10 GiB free after estimated build/release headroom. The warning threshold is 20 GiB.
 - Free disk below 10 GiB, or projected free disk below 10 GiB after estimated writes, is blocked. The guard must not be disabled or bypassed.
 
+## VPS-FIRST SAFETY GATES
+
+- Owner approval is required once for the final VPS-local release before activation, restart, migration or destructive cleanup APPLY; preparatory source/build changes do not create repeated SHA approvals.
+- Keep deploy lock, backup and migration/data-safety gates, checksum/provenance, atomic activation, health checks, automatic rollback, protected pointers and bounded retention.
+- Verify-only must not mutate production, restart the service, apply migrations or change current/previous/rollback pointers.
+
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
