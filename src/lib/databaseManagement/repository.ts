@@ -19,7 +19,13 @@ type RecordRow = {
   total_count?: number | null;
 };
 
-export type DatabaseRecordActor = { id: string; department_id: string | null; role_code: string; rbacPermissions: string[] };
+export type DatabaseRecordActor = {
+  id: string;
+  department_id: string | null;
+  role_code: string;
+  rbacPermissions: string[];
+  rbacPermissionScopes?: Record<string, string[]>;
+};
 
 async function actorContext(actor: DatabaseRecordActor): Promise<DatabaseAclActor> {
   const { data, error } = await serverSupabase.from("staff_users").select("role_id").eq("id", actor.id).maybeSingle();
@@ -46,6 +52,20 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ow
   ));
   if (explicitDeny) return false;
   return canAccessDatabaseRecord(context, rows, capability) || defaultDatabaseRecordAccess(context, capability, record.owner_id, record.department_id);
+}
+
+function hasPermissionScope(actor: DatabaseRecordActor, permission: string, scopes: readonly string[]) {
+  if (!actor.rbacPermissions.includes(permission)) return false;
+  const effectiveScopes = actor.rbacPermissionScopes?.[permission];
+  // Older callers only expose flattened permissions; preserve their all-scope behavior.
+  if (!effectiveScopes) return true;
+  return effectiveScopes.some((scope) => scopes.includes(scope));
+}
+
+async function canApproveRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code" | "created_by">, recordId: string) {
+  if (!(await canRecord(actor, record, recordId, "approve"))) return false;
+  if (record.created_by !== actor.id) return true;
+  return hasPermissionScope(actor, "record.self_approve", ["self", "all"]);
 }
 
 export async function canAccessDatabaseRecordForActor(actor: DatabaseRecordActor, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
@@ -94,7 +114,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   if (actors.error) throw actors.error;
   const actorNames = new Map((actors.data ?? []).map((item) => [item.id, item.full_name]));
   const latestApproval = historyRows.find((item) => item.action === "approve");
-  const canApprove = record.status === "pending_review" && actor.id !== record.created_by && await canRecord(actor, record, recordId, "approve");
+  const canApprove = record.status === "pending_review" && await canApproveRecord(actor, record, recordId);
   const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
   return {
     record: metadataAllowed ? record : { ...record, summary: null, metadata: {} },
@@ -171,7 +191,7 @@ export async function listVisibleApprovalQueue(actor: DatabaseRecordActor, filte
     const page = await listVisibleDatabaseRecords(actor, { ...filters, status: "pending_review", limit: 100, offset });
     total = Number(page[0]?.total_count ?? offset + page.length);
     for (const row of page) {
-      if (row.created_by !== actor.id && canAccessRecordType(actor, row.record_type_code) && await canRecord(actor, row, row.id, "approve")) {
+      if (canAccessRecordType(actor, row.record_type_code) && await canApproveRecord(actor, row, row.id)) {
         approved.push(row);
       }
     }

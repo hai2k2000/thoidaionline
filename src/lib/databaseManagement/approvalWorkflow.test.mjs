@@ -4,6 +4,7 @@ import { canTransitionRecord, transitionRecord } from "./approvalWorkflow.mjs";
 
 const owner = { id: "owner", permissions: ["record.edit"] };
 const approver = { id: "approver", permissions: ["record.approve"] };
+const selfApprover = { id: "owner", permissions: ["record.approve", "record.self_approve"], permissionScopes: { "record.self_approve": ["self"] } };
 
 test("allows draft submission and records a pending-review transition", () => {
   assert.deepEqual(canTransitionRecord(owner, { status: "draft", created_by: "owner" }, "submit"), { ok: true });
@@ -14,6 +15,13 @@ test("requires approve permission, ACL approval, and a different actor", () => {
   assert.equal(canTransitionRecord(owner, { status: "pending_review", created_by: "owner", aclApprove: true }, "approve").ok, false);
   assert.equal(canTransitionRecord(approver, { status: "pending_review", created_by: "approver", aclApprove: true }, "approve").reason, "self_approval_forbidden");
   assert.deepEqual(transitionRecord({ status: "pending_review", created_by: "owner", aclApprove: true }, approver, "approve"), { status: "approved", action: "approve", reason: null });
+});
+
+test("allows creator self-approval only with the dedicated scoped permission", () => {
+  const record = { status: "pending_review", created_by: "owner", aclApprove: true };
+  assert.deepEqual(transitionRecord(record, selfApprover, "approve"), { status: "approved", action: "approve", reason: null });
+  assert.equal(canTransitionRecord({ id: "owner", permissions: ["record.approve"] }, record, "approve").reason, "self_approval_forbidden");
+  assert.equal(canTransitionRecord({ id: "owner", permissions: ["record.self_approve"], permissionScopes: { "record.self_approve": ["self"] } }, record, "approve").reason, "permission_denied");
 });
 
 test("requires a reason when returning a pending record to draft", () => {

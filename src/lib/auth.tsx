@@ -22,6 +22,7 @@ type AuthUser = {
   preferences: AccountPreferences;
   must_change_password: boolean;
   rbacPermissions?: string[];
+  rbacPermissionScopes?: Record<string, string[]>;
 };
 
 type ModuleKey = "hr" | "assets" | "documents" | "performance";

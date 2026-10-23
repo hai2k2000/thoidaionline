@@ -29,6 +29,7 @@ export const RBAC_PERMISSION_CODES = [
   "record.create",
   "record.edit",
   "record.approve",
+  "record.self_approve",
   "record.delete",
   "record.restore",
   "record.export",

@@ -35,6 +35,7 @@ export type ServerAuthUser = {
   avatar_url: string | null;
   preferences: AccountPreferences;
   rbacPermissions: string[];
+  rbacPermissionScopes: Record<string, string[]>;
 };
 
 function secret() {
@@ -124,6 +125,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     avatar_url: avatarResult?.data?.signedUrl ?? null,
     preferences: normalizeAccountPreferences(row.preferences),
     rbacPermissions: [...new Set(rbacActor.grants.map((grant) => grant.permissionCode))],
+    rbacPermissionScopes: Object.fromEntries((rbacActor.permissions ?? []).map((permission) => [permission.permissionCode, permission.effectiveScopes])),
   };
 }
 

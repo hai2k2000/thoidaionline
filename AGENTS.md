@@ -21,17 +21,18 @@
 - Không force-push, không rewrite history và không đưa file môi trường, credential, backup, build output hoặc runtime artifact vào Git.
 - Nếu push thất bại, phải báo blocker cùng bằng chứng; không được mô tả dự án là đã đồng bộ Git.
 
-## VPS-FIRST DEPLOYMENT PROFILE
+## LOCAL-FIRST DEPLOYMENT PROFILE
 
-- `deployment_profile: thoidai-work-vps-first` (canonical RuleCodex 1.2.0 exception for Thời Đại Work only).
-- Authorized target: SSH alias `vps-aylaspa`; source workspaces live under `/opt/worktrees` or `/opt/build`, never in the active release.
+- `deployment_profile: local-first` (canonical RuleCodex 2.0.0 default for Thời Đại Work).
+- Authorized target: SSH alias `vps-aylaspa`; local source/build workspaces are canonical, and VPS source workspaces are fallback-only.
 - Immutable release root: `/opt/releases/thoidai-work`; activation target is the `current` pointer, with `previous`, `rollback-1` and `rollback-2` protected.
 - Service/health target: `thoidai-work.service` and `http://127.0.0.1:3001/login`.
-- The authorized VPS source workspace performs test/package operations with the compatible Node.js 22 toolchain. WSL2, GitHub Actions, PRs, external artifact transfer and cross-machine lineage are not deployment prerequisites.
-- The canonical entry point is `scripts/production/deploy-vps-first.sh`; it delegates immutable release activation to the existing `deploy-gate.sh` and never edits the active release during build.
+- Local Mac/Linux-compatible Node.js 22 builds produce the immutable artifact; transfer and target verification happen through the documented external-artifact path.
+- The existing `scripts/production/deploy-vps-first.sh` path remains a narrowly approved VPS-FIRST fallback when local compatibility cannot be established and owner approval names the exception.
+- `scripts/production/deploy-external-artifact.sh` is the default transfer/verify entry point and never edits the active release during build or verify-only.
 - Every VPS-local release must include `.release-meta`, `.artifact-manifest.json`, `.artifact-manifest.sha256`, source/dirty-tree/toolchain provenance and a secret scan before verification.
 - Runtime secrets remain on the VPS and are linked only by the existing activation gate; they never enter the release artifact, Git, logs or reports.
-- `scripts/production/deploy-external-artifact.sh` and `.github/workflows/production-artifact.yml` remain archival/optional compatibility paths and are not the default Thời Đại Work deployment path.
+- `.github/workflows/production-artifact.yml` remains archival/optional compatibility; GitHub Actions is not required for the local-first path.
 - Activation uses the immutable artifact risk classification for technical checks, but authenticated smoke is optional diagnostics for every risk class. Missing smoke credentials, test accounts, controlled waivers, or RBAC smoke evidence must never block activation. High-risk changes still require their applicable static/automated auth/RBAC tests, migration/data-safety checks, artifact verification, health, rollback, and disk gates. The classifier remains fail closed for risk-specific technical requirements and manual downgrade flags are not accepted.
 - Lifecycle mới giữ current/previous/rollback-1/rollback-2, bảo vệ `.keep`, evidence, references và UNKNOWN; retention chỉ dry-run cho đến khi có phê duyệt APPLY riêng.
 - Mọi build/worktree mới phải có metadata; disk guard dùng hard floor 10 GiB sau estimated headroom và warning threshold 20 GiB. Không backfill metadata legacy trong Phase 1.
@@ -42,7 +43,7 @@
 - The hard minimum is 10 GiB free after estimated build/release headroom. The warning threshold is 20 GiB.
 - Free disk below 10 GiB, or projected free disk below 10 GiB after estimated writes, is blocked. The guard must not be disabled or bypassed.
 
-## VPS-FIRST SAFETY GATES
+## DEPLOYMENT SAFETY GATES (LOCAL-FIRST AND VPS-FIRST FALLBACK)
 
 - Owner approval is required once for the final VPS-local release before activation, restart, migration or destructive cleanup APPLY; preparatory source/build changes do not create repeated SHA approvals.
 - Keep deploy lock, backup and migration/data-safety gates, checksum/provenance, atomic activation, health checks, automatic rollback, protected pointers and bounded retention.

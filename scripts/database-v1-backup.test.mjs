@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createBackup, restoreBackup, verifyBackup } from "./database-v1-backup.mjs";
 
+const tempRoot = async (prefix) => mkdtemp(path.join(await realpath(os.tmpdir()), prefix));
+
 test("synthetic database and private files round-trip with SHA-256 manifest", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "db-v1-backup-"));
+  const root = await tempRoot("db-v1-backup-");
   try {
     const storage = path.join(root, "storage");
     const output = path.join(root, "backup");
@@ -27,7 +29,7 @@ test("synthetic database and private files round-trip with SHA-256 manifest", as
 });
 
 test("backup rejects existing destinations, checksum corruption and malformed manifests", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "db-v1-backup-negative-"));
+  const root = await tempRoot("db-v1-backup-negative-");
   try {
     const storage = path.join(root, "storage");
     const output = path.join(root, "backup");

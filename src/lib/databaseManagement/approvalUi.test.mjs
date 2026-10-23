@@ -37,3 +37,10 @@ test("workflow history uses Vietnamese labels and preserves return reasons", () 
     reason: "Thiếu tài liệu",
   });
 });
+
+test("workflow history labels self-approval explicitly", () => {
+  assert.deepEqual(presentWorkflowAction({ action: "approve", new_data: { status: "approved", self_approval: true } }), {
+    label: "Tự phê duyệt hồ sơ",
+    reason: "",
+  });
+});

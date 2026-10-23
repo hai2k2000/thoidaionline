@@ -13,6 +13,7 @@ test("catalog codes are authoritative and expose shared scope metadata", () => {
   assert.equal(isCatalogPermission("can_manage_permissions"), false);
   assert.deepEqual(supportedScopesForPermission("task.view"), ["self", "assigned", "department", "all"]);
   assert.deepEqual(supportedScopesForPermission("task.quick_report.create"), ["self", "all"]);
+  assert.deepEqual(supportedScopesForPermission("record.self_approve"), ["self", "all"]);
   assert.deepEqual(supportedScopesForPermission("task.create"), ["all"]);
 });
 

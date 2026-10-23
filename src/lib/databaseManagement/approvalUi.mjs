@@ -25,8 +25,9 @@ export function workflowErrorMessage(status, code) {
 
 export function presentWorkflowAction(item) {
   const data = item?.new_data && typeof item.new_data === "object" ? item.new_data : {};
+  const selfApproval = item?.action === "approve" && data.self_approval === true;
   return {
-    label: WORKFLOW_LABELS[item?.action] ?? "Ho\u1ea1t \u0111\u1ed9ng h\u1ed3 s\u01a1",
+    label: selfApproval ? "T\u1ef1 ph\u00ea duy\u1ec7t h\u1ed3 s\u01a1" : WORKFLOW_LABELS[item?.action] ?? "Ho\u1ea1t \u0111\u1ed9ng h\u1ed3 s\u01a1",
     reason: typeof data.reason === "string" ? data.reason : "",
   };
 }
