@@ -8,3 +8,9 @@ test("standalone packaging includes the writable Next cache directory", () => {
   assert.match(packager, /mkdir\(join\(output, "\.next", "cache"\)/);
   assert.doesNotMatch(verifier, /"\.next\/cache"/);
 });
+
+test("standalone packaging measures artifact bytes without GNU-only du flags", () => {
+  const packager = fs.readFileSync(new URL("./package-standalone.mjs", import.meta.url), "utf8");
+  assert.match(packager, /const directoryBytes = async/);
+  assert.doesNotMatch(packager, /du.*-sb/);
+});

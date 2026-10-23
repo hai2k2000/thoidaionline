@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
@@ -12,6 +12,13 @@ const buildId = (await readFile(join(build, "BUILD_ID"), "utf8")).trim();
 const baselineText = await readFile(join(root, "scripts/check-release-baseline.mjs"), "utf8");
 const canonicalBaseline = baselineText.match(/legacyBaseline = "([^"]+)"/)?.[1] || baselineText.match(/canonicalBaseline = "([^"]+)"/)?.[1];
 const output = resolve(process.env.STANDALONE_ARTIFACT_DIR || join(root, ".artifacts", "standalone", `${buildId}-${Date.now()}`));
+const directoryBytes = async (path) => {
+  const stat = await lstat(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) return stat.size;
+  let total = 0;
+  for (const entry of await readdir(path)) total += await directoryBytes(join(path, entry));
+  return total;
+};
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
 const dirtyFiles = execFileSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean);
 const gitValue = (args, envName, fallback = "") => {
@@ -138,7 +145,7 @@ const risk = Object.fromEntries(riskOutput.trim().split(/\r?\n/).map((line) => {
 if (!["low", "high"].includes(risk.risk_class)) throw new Error("risk classifier did not return a valid risk class");
 if (!["automated-tests-pass", "missing-or-invalid"].includes(risk.risk_test_evidence)) throw new Error("risk classifier did not return valid test evidence");
 await writeFile(join(output, "package.json"), `${JSON.stringify({ name: "thoidai-work-runtime", version: "0.1.0", private: true, scripts: { start: "node start-standalone.mjs" } }, null, 2)}\n`);
-const artifactBytes = execFileSync("du", ["-sb", output], { encoding: "utf8" }).trim().split(/\s+/, 1)[0];
+const artifactBytes = String(await directoryBytes(output));
 await writeFile(join(output, ".release-meta"), [
   `release_id=${buildId}-standalone`,
   `build_id=${buildId}`,
