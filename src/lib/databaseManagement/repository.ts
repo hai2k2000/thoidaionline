@@ -6,6 +6,7 @@ import { validateDatabaseMetadata } from "./validation";
 import { canAccessRecordType } from "./policy";
 import type { DatabaseRecordAclInput, DatabaseRecordInput, DatabaseRecordUpdateInput } from "./types";
 import { categoryCodeForLanguage, isCompatibleLanguageSelection, languageCodeForCategory } from "./languageGroup.mjs";
+import { classifyWorkflowRpcError } from "./workflowErrors.mjs";
 
 type RecordRow = {
   id: string; category_id: string; record_type_id: string; record_code: string; title: string;
@@ -193,10 +194,7 @@ export async function transitionDatabaseRecord(actor: DatabaseRecordActor, recor
     p_reason: reason?.trim() || null,
   });
   if (error) {
-    if (error.code === "42501") throw new Error("permission_denied");
-    if (error.code === "P0002") throw new Error("record_not_found");
-    if (error.code === "22023") throw new Error(error.message.includes("reason") ? "return_reason_required" : "invalid_transition");
-    throw error;
+    throw new Error(classifyWorkflowRpcError(error));
   }
   return (data?.[0] ?? data) as { id: string; status: string; action: string; reason: string | null; replayed: boolean };
 }

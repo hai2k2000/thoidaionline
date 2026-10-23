@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { logServerAudit } from "@/lib/serverAudit";
 import { transitionDatabaseRecord, type DatabaseRecordWorkflowAction } from "@/lib/databaseManagement/repository";
+import { workflowHttpStatus } from "@/lib/databaseManagement/workflowErrors.mjs";
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
@@ -19,7 +20,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return json({ result, audit_status: auditStatus });
   } catch (error) {
     const message = error instanceof Error ? error.message : "workflow_failed";
-    const status = message === "permission_denied" ? 403 : message === "record_not_found" ? 404 : message === "return_reason_required" ? 400 : 409;
+    const status = workflowHttpStatus(message);
     return json({ error: message }, status);
   }
 }
