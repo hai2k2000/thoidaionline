@@ -24,6 +24,14 @@ test("allows creator self-approval only with the dedicated scoped permission", (
   assert.equal(canTransitionRecord({ id: "owner", permissions: ["record.self_approve"], permissionScopes: { "record.self_approve": ["self"] } }, record, "approve").reason, "permission_denied");
 });
 
+test("fails closed when the self-approval permission has no effective scopes", () => {
+  const record = { status: "pending_review", created_by: "owner", aclApprove: true };
+  const missingScopes = { id: "owner", permissions: ["record.approve", "record.self_approve"] };
+  const emptyScopes = { id: "owner", permissions: ["record.approve", "record.self_approve"], permissionScopes: { "record.self_approve": [] } };
+  assert.equal(canTransitionRecord(missingScopes, record, "approve").reason, "self_approval_forbidden");
+  assert.equal(canTransitionRecord(emptyScopes, record, "approve").reason, "self_approval_forbidden");
+});
+
 test("requires a reason when returning a pending record to draft", () => {
   assert.equal(canTransitionRecord(approver, { status: "pending_review", created_by: "owner", aclApprove: true }, "return").reason, "return_reason_required");
   assert.deepEqual(transitionRecord({ status: "pending_review", created_by: "owner", aclApprove: true }, approver, "return", "Thiếu tài liệu đối chiếu"), { status: "draft", action: "return_for_correction", reason: "Thiếu tài liệu đối chiếu" });

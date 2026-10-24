@@ -5,7 +5,7 @@ function hasPermission(actor, permission, scopes = null) {
   if (!actor.permissions.includes(permission)) return false;
   if (!scopes) return true;
   const effectiveScopes = actor.permissionScopes?.[permission];
-  return !effectiveScopes || effectiveScopes.some((scope) => scopes.includes(scope));
+  return Array.isArray(effectiveScopes) && effectiveScopes.some((scope) => scopes.includes(scope));
 }
 
 export function canTransitionRecord(actor, record, action, reason = "") {

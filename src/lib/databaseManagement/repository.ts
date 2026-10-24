@@ -57,9 +57,7 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ow
 function hasPermissionScope(actor: DatabaseRecordActor, permission: string, scopes: readonly string[]) {
   if (!actor.rbacPermissions.includes(permission)) return false;
   const effectiveScopes = actor.rbacPermissionScopes?.[permission];
-  // Older callers only expose flattened permissions; preserve their all-scope behavior.
-  if (!effectiveScopes) return true;
-  return effectiveScopes.some((scope) => scopes.includes(scope));
+  return Array.isArray(effectiveScopes) && effectiveScopes.some((scope) => scopes.includes(scope));
 }
 
 async function canApproveRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code" | "created_by">, recordId: string) {
