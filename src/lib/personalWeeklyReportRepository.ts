@@ -204,6 +204,7 @@ async function getReopenEligibility(db: Db, actorId: string, report: PersonalWee
 }
 
 const PERSONAL_WEEKLY_TASK_PAGE_SIZE = 500;
+const PERSONAL_WEEKLY_IN_BATCH_SIZE = 500;
 
 function applyCanonicalTaskWindow(query: any, period: PersonalWeeklyPeriod) {
   return query
@@ -212,10 +213,12 @@ function applyCanonicalTaskWindow(query: any, period: PersonalWeeklyPeriod) {
     .neq("status", "cancelled");
 }
 
-async function readTaskPages(queryFactory: () => any): Promise<any[]> {
+async function readTaskPages(queryFactory: () => any, orderBy = "id"): Promise<any[]> {
   const rows: any[] = [];
   for (let offset = 0; ; offset += PERSONAL_WEEKLY_TASK_PAGE_SIZE) {
-    const result = await queryFactory().range(offset, offset + PERSONAL_WEEKLY_TASK_PAGE_SIZE - 1);
+    const result = await queryFactory()
+      .order(orderBy, { ascending: true })
+      .range(offset, offset + PERSONAL_WEEKLY_TASK_PAGE_SIZE - 1);
     errorOrThrow(result);
     const page = (result.data ?? []) as any[];
     rows.push(...page);
@@ -234,13 +237,13 @@ async function getCanonicalRows(db: Db, actorId: string, period: PersonalWeeklyP
     .select("task_id")
     .eq("user_id", actorId)
     .or("assignment_role.is.null,assignment_role.neq.watcher")
-    .or("status.is.null,status.neq.removed"));
+    .or("status.is.null,status.neq.removed"), "task_id");
   const participantIds = [...new Set(assignmentIds
     .map((row) => row.task_id)
     .filter((id): id is string => typeof id === "string"))];
   const participantRows: any[] = [];
-  for (let offset = 0; offset < participantIds.length; offset += PERSONAL_WEEKLY_TASK_PAGE_SIZE) {
-    const ids = participantIds.slice(offset, offset + PERSONAL_WEEKLY_TASK_PAGE_SIZE);
+  for (let offset = 0; offset < participantIds.length; offset += PERSONAL_WEEKLY_IN_BATCH_SIZE) {
+    const ids = participantIds.slice(offset, offset + PERSONAL_WEEKLY_IN_BATCH_SIZE);
     participantRows.push(...await readTaskPages(() => applyCanonicalTaskWindow(
       db.from("tasks").select(taskFields).in("id", ids),
       period,
