@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSessionToken, isSameOriginRequest, SESSION_COOKIE, sessionCookieOptions } from "@/lib/serverSession";
-import { authenticateCredentials } from "@/lib/authenticateCredentials";
+import { authenticateCredentials, AuthenticationUnavailableError } from "@/lib/authenticateCredentials";
 import { clearLoginAttempts, consumeLoginAttempt } from "@/lib/loginRateLimit";
 
 export async function POST(request: Request) {
@@ -12,7 +12,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
   }
   const identifier = body.identifier.trim().toLowerCase();
-  const password = body.password.trim();
+  // Passwords are opaque secrets; preserve the exact user input for verification.
+  const password = body.password;
   if (identifier.length < 1 || identifier.length > 200 || password.length < 1 || password.length > 200) {
     return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
   }
@@ -27,7 +28,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const authenticated = await authenticateCredentials(identifier, password);
+  let authenticated;
+  try {
+    authenticated = await authenticateCredentials(identifier, password);
+  } catch (error) {
+    if (error instanceof AuthenticationUnavailableError) {
+      return NextResponse.json({ error: "Hệ thống đăng nhập tạm thời chưa sẵn sàng. Vui lòng thử lại." }, { status: 503, headers: { "Retry-After": "5" } });
+    }
+    throw error;
+  }
   if (!authenticated) {
     return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
   }

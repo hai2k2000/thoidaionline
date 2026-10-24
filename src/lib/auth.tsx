@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         identifier: identifier.trim().toLowerCase(),
-        password: password.trim(),
+        password,
       }),
     });
     if (!response.ok) {

@@ -15,9 +15,17 @@ type CredentialRow = {
   roles?: { active: boolean } | null;
 };
 
+export class AuthenticationUnavailableError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "AuthenticationUnavailableError";
+  }
+}
+
 export async function authenticateCredentials(identifierInput: string, passwordInput: string) {
   const identifier = identifierInput.trim().toLowerCase();
-  const password = passwordInput.trim();
+  // Do not normalize password material; bcrypt compares the exact secret.
+  const password = passwordInput;
   if (!identifier || !password) return null;
   const roleLifecycleEnabled = process.env.ROLE_LIFECYCLE_ENABLED === "true";
   const { data, error } = await serverSupabase
@@ -27,12 +35,13 @@ export async function authenticateCredentials(identifierInput: string, passwordI
     .limit(1)
     .maybeSingle();
   const row = data as CredentialRow | null;
-  if (error || !row) return null;
+  if (error) throw new AuthenticationUnavailableError("credential_lookup_failed");
+  if (!row) return null;
   const valid = row.active
     && (!roleLifecycleEnabled || row.roles?.active === true)
     && (isBcryptHash(row.password_hash)
       ? await verifyPassword(password, row.password_hash)
-      : (row.password ?? DEFAULT_FIRST_LOGIN_PASSWORD).trim() === password);
+      : (row.password ?? DEFAULT_FIRST_LOGIN_PASSWORD) === password);
   if (!valid) return null;
   if (!isBcryptHash(row.password_hash)) {
     let upgradeQuery = serverSupabase.from("staff_users")
@@ -45,7 +54,9 @@ export async function authenticateCredentials(identifierInput: string, passwordI
     upgradeQuery = row.password_hash === null ? upgradeQuery.is("password_hash", null) : upgradeQuery.eq("password_hash", row.password_hash);
     upgradeQuery = row.password === null ? upgradeQuery.is("password", null) : upgradeQuery.eq("password", row.password);
     const { data: upgraded, error: upgradeError } = await upgradeQuery.select("id").maybeSingle();
-    if (upgradeError || !upgraded) return null;
+    if (upgradeError || !upgraded) {
+      throw new AuthenticationUnavailableError("legacy_password_upgrade_failed");
+    }
   }
   return {
     userId: row.id,

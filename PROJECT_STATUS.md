@@ -1,3 +1,25 @@
+# Authentication Reliability Fix
+
+Current Phase: implementation complete; pre-production validation
+Current Task: preserve exact password input and distinguish auth backend failures
+
+Completed:
+- Removed password trimming from web/mobile login and credential verification.
+- Added a safe 503 response for credential lookup or legacy-upgrade failures instead of reporting a false password mismatch.
+- Added regression coverage for exact password preservation, bcrypt behavior, and temporary auth failures.
+
+Validation:
+- Focused authentication tests: 11/11 PASS.
+- TypeScript and changed-file ESLint: PASS.
+- `git diff --check`: PASS.
+
+Production safety:
+- Production database, active release, service, and credentials unchanged.
+- No migration, restart, or activation performed.
+
+Next:
+- Commit and push the feature branch; owner approval is required before any production deployment.
+
 # Weekly Report Quick Work Final Blockers
 
 Current Phase: final source checkpoint
