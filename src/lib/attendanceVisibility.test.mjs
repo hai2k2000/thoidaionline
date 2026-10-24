@@ -25,6 +25,6 @@ test("role relation supports Supabase object and array shapes", () => {
 
 test("attendance API applies the shared visibility filter", () => {
   assert.match(route, /isAttendanceListedStaff/);
-  assert.match(route, /withNotes\(items\)\.filter\(\(row\) =>/);
+  assert.match(route, /withNotes\(items, adminNotes\)\)\.filter\(\(row(?:: AttendanceRow)?\) =>/);
   assert.match(route, /roleCodeFromRelation/);
 });

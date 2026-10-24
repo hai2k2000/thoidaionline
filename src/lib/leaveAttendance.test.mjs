@@ -7,6 +7,7 @@ const attendance = readFileSync("src/app/api/attendance/route.ts", "utf8");
 const page = readFileSync("src/app/attendance/page.tsx", "utf8");
 const migration = readFileSync("supabase/migrations/20260910090000_leave_requests.sql", "utf8");
 const scopedMigration = readFileSync("supabase/migrations/20260911133000_scope_leave_review_to_department.sql", "utf8");
+const scheduleNotes = readFileSync("src/lib/attendanceScheduleNotes.mjs", "utf8");
 
 test("leave workflow is authenticated, approved by leadership, and conflict-safe", () => {
   assert.match(route, /requireReadActor/);
@@ -46,4 +47,22 @@ test("approved business leave contributes one workday when the attendance row is
 test("all approved full-day leave types contribute one workday", () => {
   assert.match(attendance, /leaveIsFull \? 1 : 0\.5/);
   assert.match(attendance, /const leaveWorkday = leave \? \(leaveIsFull \? 1 : 0\.5\) : 0/);
+});
+
+test("attendance includes approved personal schedules and stable pagination", () => {
+  assert.match(attendance, /attendanceScheduleNoteEntriesFor/);
+  assert.match(attendance, /schedule_scope\.eq\.personal/);
+  assert.match(attendance, /\.order\("id", \{ ascending: true \}\)/);
+  assert.match(attendance, /readPages/);
+  assert.match(scheduleNotes, /approval_status === "APPROVED"/);
+  assert.match(scheduleNotes, /plan_type === "business"/);
+  assert.match(scheduleNotes, /\["business", "event"\]\.includes\(schedule\?\.plan_type\)/);
+});
+
+test("attendance source reads are paginated instead of whole-organization capped", () => {
+  assert.match(attendance, /const PAGE_SIZE = 500/);
+  assert.match(attendance, /readPages\(\(from, to\) => .*\.range\(from, to\)/s);
+  assert.match(attendance, /\.order\("work_date", \{ ascending: true \}\)\.order\("id", \{ ascending: true \}\)/);
+  assert.doesNotMatch(attendance, /leave_requests[\s\S]*?\.limit\(500\)/);
+  assert.doesNotMatch(attendance, /online_work_schedules[\s\S]*?\.limit\(1000\)/);
 });

@@ -22,6 +22,7 @@ type AttendanceRow = {
   admin_note_at?: string | null;
   has_attendance_log?: boolean;
   workday?: number;
+  attendance_sources?: { leave?: boolean; business?: boolean; event?: boolean; online?: boolean };
   staff_users?: { full_name: string } | null;
 };
 
@@ -368,11 +369,10 @@ export default function AttendancePage() {
       const name = r.staff_users?.full_name ?? "-";
       if (!map.has(key)) map.set(key, { name, presentDays: new Set<string>(), leaveWithPermission: new Set<string>(), leaveWithoutPermission: new Set<string>(), businessDays: new Set<string>() });
       const current = map.get(key)!;
-      const note = (r.note ?? "").toLocaleLowerCase("vi");
-      if (note.startsWith("công tác")) current.businessDays.add(r.work_date);
-      else if (r.status === "leave" || note.startsWith("nghỉ")) current.leaveWithPermission.add(r.work_date);
+      if (r.attendance_sources?.business) current.businessDays.add(r.work_date);
+      if (r.attendance_sources?.leave || r.status === "leave") current.leaveWithPermission.add(r.work_date);
       else if (r.status === "absent") current.leaveWithoutPermission.add(r.work_date);
-      else if (r.workday === 1) current.presentDays.add(r.work_date);
+      if (!r.attendance_sources?.business && !r.attendance_sources?.leave && r.workday === 1) current.presentDays.add(r.work_date);
     });
 
     return Array.from(map.entries())
@@ -634,7 +634,7 @@ export default function AttendancePage() {
         {selectedSummaryEmployee ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="attendance-detail-title" onClick={(event) => { if (event.target === event.currentTarget) setSelectedSummaryEmployee(null); }}>
           <section className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-4"><div><h2 id="attendance-detail-title" className="text-lg font-semibold">Chi tiết chấm công</h2><p className="mt-1 text-sm text-slate-600">{selectedSummaryEmployee.name} · {summaryDetailRange.start} đến {summaryDetailRange.end}</p></div><button type="button" onClick={() => setSelectedSummaryEmployee(null)} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-4"><div className="rounded border bg-slate-50 p-3"><p className="text-xs text-slate-500">Có công</p><p className="text-lg font-bold">{selectedSummaryDetails.filter((row) => row.workday === 1).length}</p></div><div className="rounded border bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Nghỉ có phép</p><p className="text-lg font-bold text-emerald-700">{selectedSummaryDetails.filter((row) => row.status === "leave" || (row.note ?? "").toLocaleLowerCase("vi").startsWith("nghỉ")).length}</p></div><div className="rounded border bg-red-50 p-3"><p className="text-xs text-red-700">Nghỉ không phép</p><p className="text-lg font-bold text-red-700">{selectedSummaryDetails.filter((row) => row.status === "absent").length}</p></div><div className="rounded border bg-sky-50 p-3"><p className="text-xs text-sky-700">Công tác</p><p className="text-lg font-bold text-sky-700">{selectedSummaryDetails.filter((row) => (row.note ?? "").toLocaleLowerCase("vi").startsWith("công tác")).length}</p></div></div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-4"><div className="rounded border bg-slate-50 p-3"><p className="text-xs text-slate-500">Có công</p><p className="text-lg font-bold">{selectedSummaryDetails.filter((row) => row.workday === 1 && !row.attendance_sources?.business && !row.attendance_sources?.leave).length}</p></div><div className="rounded border bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Nghỉ có phép</p><p className="text-lg font-bold text-emerald-700">{selectedSummaryDetails.filter((row) => row.attendance_sources?.leave || row.status === "leave").length}</p></div><div className="rounded border bg-red-50 p-3"><p className="text-xs text-red-700">Nghỉ không phép</p><p className="text-lg font-bold text-red-700">{selectedSummaryDetails.filter((row) => row.status === "absent").length}</p></div><div className="rounded border bg-sky-50 p-3"><p className="text-xs text-sky-700">Công tác</p><p className="text-lg font-bold text-sky-700">{selectedSummaryDetails.filter((row) => row.attendance_sources?.business).length}</p></div></div>
             <div className="mt-4 table-scroll rounded-lg border border-slate-200"><table className="data-table min-w-[720px] text-left text-sm"><thead className="bg-slate-50"><tr><th className="px-3 py-2">Ngày</th><th className="px-3 py-2">Giờ vào</th><th className="px-3 py-2">Giờ ra</th><th className="px-3 py-2">Ngày công</th><th className="px-3 py-2">Trạng thái</th><th className="px-3 py-2">Ghi chú</th></tr></thead><tbody>{selectedSummaryDetails.map((row) => <tr key={row.id} className="border-t"><td className="whitespace-nowrap px-3 py-2">{row.work_date}</td><td className="whitespace-nowrap px-3 py-2">{row.check_in ?? "-"}</td><td className="whitespace-nowrap px-3 py-2">{row.check_out ?? "-"}</td><td className="px-3 py-2 text-right font-semibold">{row.workday ?? 0}</td><td className="px-3 py-2">{row.late_exception === "sudden_work" ? "Đi muộn do việc phát sinh" : attendanceStatusLabel[(row.status ?? "").toLowerCase()] ?? row.status ?? "-"}</td><td className="px-3 py-2">{row.note ?? ""}</td></tr>)}{selectedSummaryDetails.length === 0 ? <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">Không có dữ liệu trong khoảng thời gian này.</td></tr> : null}</tbody></table></div>
           </section>
         </div> : null}

@@ -1260,3 +1260,21 @@ Production safety:
 
 Next:
 - Wait for owner approval and an available isolated PostgreSQL/Docker runtime before claiming runtime migration matrix PASS.
+# Attendance organization notes fix
+
+Current Phase: implementation complete; pre-production validation
+Current Task: complete approved leave, personal schedule, leadership event, and online-work note coverage without whole-organization query caps
+
+Completed:
+- Added stable paginated reads for attendance logs, admin notes, approved leave, active online schedules, and approved schedules.
+- Added approved personal business/event schedule notes while preserving leadership assignment and multi-day event behavior.
+- Excluded pending, rejected, cancelled, and out-of-range sources; preserved actor/organization visibility filtering and admin notes.
+- Added source metadata so attendance summaries count leave and business days from source records rather than note prefixes.
+
+Validation:
+- Focused attendance suite: 46/46 PASS.
+- TypeScript, changed-file ESLint, and `git diff --check`: PASS.
+- Production data, migration, service, and release pointers: unchanged.
+
+Next:
+- Commit and push the feature branch, create a Linux-compatible artifact, and run VPS verify-only. Owner approval is required before production activation.
