@@ -1,3 +1,29 @@
+# Weekly Report Quick Work Final Blockers
+
+Current Phase: final source checkpoint
+Current Task: commit and push the runtime and packaging fixes
+
+Completed:
+- Traced the weekly API failure to participant task requests containing 500 UUIDs, which returned HTTP 431 before the API mapped the failure to `operation_failed`.
+- Reduced participant ID batches to 100 while preserving stable task and assignment ordering.
+- Aligned the database window with the existing open-ended task rule so tasks with a period start and NULL due date remain eligible.
+- Added a packaging file policy that removes `.env*` files before approved runtime environment symlinks are created.
+- Kept the secret scanner fail-closed for environment files, populated runtime secrets, and private keys.
+
+Validation:
+- Focused weekly report and artifact policy tests: 76/76 PASS.
+- Changed-file ESLint and `git diff --check`: PASS.
+- Isolated PostgREST reproduced HTTP 431 with 500 UUIDs and passed seven 100-ID batches.
+- Native session weekly API: HTTP 200 with 601 eligible rows, including the in-period REPORT_ONLY row.
+- Save, refresh, complete, immutable snapshot, and DOCX content: PASS.
+- Linux-compatible Next standalone build and artifact secret scan: PASS.
+
+Production safety:
+- Production database, active release, service, and rollback pointers unchanged.
+
+Next:
+- Commit and push the feature branch, package the clean source SHA, and run VPS verify-only.
+
 # Thoidai Work3 PR #6 Final Review & Fix
 
 ## Trusted RBAC V2 readiness evidence producer

@@ -17,6 +17,7 @@ test("packaging keeps guards and env symlinks", () => {
   assert.match(packager, /required-route-manifest\.json/);
   assert.match(packager, /\.env\.local/);
   assert.match(packager, /verify-artifact-manifest\.mjs/);
+  assert.match(packager, /removePackagedEnvironmentFiles\(output\)/);
   assert.match(verifier, /app-paths-manifest\.json/);
 });
 test("artifact migration reference includes RBAC V2 dependency", () => {
@@ -81,7 +82,7 @@ test("release metadata uses the complete ordered migration reference", () => {
   const migrations = [...migrationBlock[1].matchAll(/"(supabase\/migrations\/[^"\n]+\.sql)"/g)].map((match) => match[1]);
   assert.ok(migrations.includes("supabase/migrations/20261016110000_asset_locations_expansion.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261016130000_quick_report_completion_date_compatibility.sql"));
-  assert.equal(migrations.at(-1), "supabase/migrations/20261023130000_database_management_v1_workflow_ambiguity_fix.sql");
+  assert.equal(migrations.at(-1), "supabase/migrations/20261024110000_database_management_v1_self_approval.sql");
   assert.match(packager, /"migration_reference=" \+ migrationReference\.join\(\",\"\)/);
   assert.doesNotMatch(packager, /20261016110000_asset_locations_expansion\.sql",\s*\n\s*"migration_reference=/);
 });

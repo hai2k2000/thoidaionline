@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { REQUIRED_PRODUCTION_ROUTES } from "../src/lib/requiredProductionRoutes.mjs";
+import { removePackagedEnvironmentFiles } from "./artifact-file-policy.mjs";
 
 const root = process.cwd();
 const build = join(root, ".next");
@@ -65,6 +66,7 @@ if (existsSync(nextFramework)) {
 await mkdir(join(output, ".next", "cache"), { recursive: true });
 await cp(join(build, "static"), join(output, ".next", "static"), { recursive: true });
 if (existsSync(join(root, "public"))) await cp(join(root, "public"), join(output, "public"), { recursive: true });
+await removePackagedEnvironmentFiles(output);
 const sharedRoot = process.env.THOIDAI_SHARED_ROOT || "/opt/thoidai-work";
 for (const name of [".env.local", ".env.production"]) {
   await rm(join(output, name), { force: true });

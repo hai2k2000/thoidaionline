@@ -19,3 +19,16 @@ test("secret scanner accepts source references but rejects populated runtime sec
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("secret scanner keeps environment files and private keys fail closed", async () => {
+  const root = await mkdtemp(join(tmpdir(), "thoidai-secret-scan-policy-"));
+  try {
+    await writeFile(join(root, ".env.example"), "NEXT_PUBLIC_EXAMPLE=placeholder\n");
+    await assert.rejects(() => run(process.execPath, ["scripts/scan-artifact-secrets.mjs", root]), /environment file/);
+    await rm(join(root, ".env.example"));
+    await writeFile(join(root, "private.pem"), "-----BEGIN PRIVATE KEY-----\nblocked\n-----END PRIVATE KEY-----\n");
+    await assert.rejects(() => run(process.execPath, ["scripts/scan-artifact-secrets.mjs", root]), /private key material/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

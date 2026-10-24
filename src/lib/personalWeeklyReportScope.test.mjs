@@ -10,7 +10,7 @@ test("weekly candidates scope actor before pagination", () => {
   assert.match(repository, /from\("task_assignees"\)[\s\S]*?eq\("user_id", actorId\)/);
   assert.match(repository, /assignment_role\.is\.null,assignment_role\.neq\.watcher/);
   assert.match(repository, /status\.is\.null,status\.neq\.removed/);
-  assert.match(repository, /const PERSONAL_WEEKLY_IN_BATCH_SIZE = 500/);
+  assert.match(repository, /const PERSONAL_WEEKLY_IN_BATCH_SIZE = 100/);
   assert.match(repository, /queryFactory\(\)[\s\S]*?\.order\(orderBy, \{ ascending: true \}\)[\s\S]*?\.range\(offset, offset \+ PERSONAL_WEEKLY_TASK_PAGE_SIZE - 1\)/);
   assert.match(repository, /readTaskPages\(\(\) => applyCanonicalTaskWindow\([\s\S]*?db\.from\("tasks"\)/);
   assert.match(repository, /slice\(offset, offset \+ PERSONAL_WEEKLY_IN_BATCH_SIZE\)/);
@@ -20,6 +20,7 @@ test("weekly candidates scope actor before pagination", () => {
 
 test("weekly candidate scope preserves REPORT_ONLY boundaries and excludes cancelled work", () => {
   assert.match(repository, /task\.workflow_type === "REPORT_ONLY"[\s\S]*?task\.report_work_date >= period\.start && task\.report_work_date < period\.end/);
+  assert.match(repository, /due_date\.is\.null,due_date\.gte\.\$\{period\.start\}/);
   assert.match(repository, /\.neq\("status", "cancelled"\)/);
   assert.match(repository, /assignment_role.*watcher|watcher.*assignment_role/);
 });

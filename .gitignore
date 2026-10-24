@@ -33,6 +33,7 @@ AGENTS.md.backup-*
 
 # local snapshots and release artifacts
 /.codex-backups/
+/.artifacts/
 /backups/
 /releases/
 

@@ -204,12 +204,16 @@ async function getReopenEligibility(db: Db, actorId: string, report: PersonalWee
 }
 
 const PERSONAL_WEEKLY_TASK_PAGE_SIZE = 500;
-const PERSONAL_WEEKLY_IN_BATCH_SIZE = 500;
+// Keep PostgREST request URLs below common proxy/request-line limits.
+const PERSONAL_WEEKLY_IN_BATCH_SIZE = 100;
 
 function applyCanonicalTaskWindow(query: any, period: PersonalWeeklyPeriod) {
   return query
-    .or(`start_date.lt.${period.end},report_work_date.lt.${period.end}`)
-    .or(`due_date.gte.${period.start},report_work_date.gte.${period.start}`)
+    .or([
+      `and(start_date.lt.${period.end},or(due_date.is.null,due_date.gte.${period.start}))`,
+      `and(due_date.gte.${period.start},due_date.lt.${period.end})`,
+      `and(report_work_date.gte.${period.start},report_work_date.lt.${period.end})`,
+    ].join(","))
     .neq("status", "cancelled");
 }
 
