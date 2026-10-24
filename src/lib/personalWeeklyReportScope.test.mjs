@@ -8,6 +8,8 @@ const page = readFileSync(new URL("../components/PersonalWeeklyReportPage.tsx", 
 test("weekly candidates scope actor before pagination", () => {
   assert.match(repository, /owner_id\.eq\.\$\{actorId\},assignee_id\.eq\.\$\{actorId\}/);
   assert.match(repository, /from\("task_assignees"\)[\s\S]*?eq\("user_id", actorId\)/);
+  assert.match(repository, /assignment_role\.is\.null,assignment_role\.neq\.watcher/);
+  assert.match(repository, /status\.is\.null,status\.neq\.removed/);
   assert.match(repository, /queryFactory\(\)\.range\(offset, offset \+ PERSONAL_WEEKLY_TASK_PAGE_SIZE - 1\)/);
   assert.doesNotMatch(repository, /tasks[\s\S]*?\.limit\(2000\)/);
 });

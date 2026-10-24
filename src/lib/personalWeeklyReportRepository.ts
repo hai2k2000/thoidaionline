@@ -233,8 +233,8 @@ async function getCanonicalRows(db: Db, actorId: string, period: PersonalWeeklyP
   const assignmentIds = await readTaskPages(() => db.from("task_assignees")
     .select("task_id")
     .eq("user_id", actorId)
-    .neq("assignment_role", "watcher")
-    .neq("status", "removed"));
+    .or("assignment_role.is.null,assignment_role.neq.watcher")
+    .or("status.is.null,status.neq.removed"));
   const participantIds = [...new Set(assignmentIds
     .map((row) => row.task_id)
     .filter((id): id is string => typeof id === "string"))];
