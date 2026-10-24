@@ -42,4 +42,5 @@ test("login routes distinguish temporary auth backend failures from bad credenti
   }
   assert.match(credentials, /throw new AuthenticationUnavailableError\("credential_lookup_failed"\)/);
   assert.match(credentials, /throw new AuthenticationUnavailableError\("legacy_password_upgrade_failed"\)/);
+  assert.match(credentials, /throw new AuthenticationUnavailableError\("password_verifier_failed"\)/);
 });

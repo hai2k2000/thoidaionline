@@ -37,11 +37,18 @@ export async function authenticateCredentials(identifierInput: string, passwordI
   const row = data as CredentialRow | null;
   if (error) throw new AuthenticationUnavailableError("credential_lookup_failed");
   if (!row) return null;
-  const valid = row.active
-    && (!roleLifecycleEnabled || row.roles?.active === true)
-    && (isBcryptHash(row.password_hash)
-      ? await verifyPassword(password, row.password_hash)
-      : (row.password ?? DEFAULT_FIRST_LOGIN_PASSWORD) === password);
+  let valid = false;
+  if (row.active && (!roleLifecycleEnabled || row.roles?.active === true)) {
+    if (isBcryptHash(row.password_hash)) {
+      try {
+        valid = await verifyPassword(password, row.password_hash);
+      } catch {
+        throw new AuthenticationUnavailableError("password_verifier_failed");
+      }
+    } else {
+      valid = (row.password ?? DEFAULT_FIRST_LOGIN_PASSWORD) === password;
+    }
+  }
   if (!valid) return null;
   if (!isBcryptHash(row.password_hash)) {
     let upgradeQuery = serverSupabase.from("staff_users")
