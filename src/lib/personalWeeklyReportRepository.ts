@@ -203,14 +203,52 @@ async function getReopenEligibility(db: Db, actorId: string, report: PersonalWee
   return normalizePersonalWeeklyEligibility(row);
 }
 
-async function getCanonicalRows(db: Db, actorId: string, period: PersonalWeeklyPeriod) {
-  const query = db.from("tasks").select(taskFields)
+const PERSONAL_WEEKLY_TASK_PAGE_SIZE = 500;
+
+function applyCanonicalTaskWindow(query: any, period: PersonalWeeklyPeriod) {
+  return query
     .or(`start_date.lt.${period.end},report_work_date.lt.${period.end}`)
     .or(`due_date.gte.${period.start},report_work_date.gte.${period.start}`)
-    .neq("status", "cancelled").limit(2000);
-  const result = await query;
-  errorOrThrow(result);
-  return dedupePersonalWeeklyTasks(taskRows((result.data ?? []) as any[], actorId, period));
+    .neq("status", "cancelled");
+}
+
+async function readTaskPages(queryFactory: () => any): Promise<any[]> {
+  const rows: any[] = [];
+  for (let offset = 0; ; offset += PERSONAL_WEEKLY_TASK_PAGE_SIZE) {
+    const result = await queryFactory().range(offset, offset + PERSONAL_WEEKLY_TASK_PAGE_SIZE - 1);
+    errorOrThrow(result);
+    const page = (result.data ?? []) as any[];
+    rows.push(...page);
+    if (page.length < PERSONAL_WEEKLY_TASK_PAGE_SIZE) return rows;
+  }
+}
+
+async function getCanonicalRows(db: Db, actorId: string, period: PersonalWeeklyPeriod) {
+  // Query direct ownership/assignment and participant assignments separately so
+  // pagination is applied after the actor scope, never to the whole task table.
+  const directRows = await readTaskPages(() => applyCanonicalTaskWindow(
+    db.from("tasks").select(taskFields).or(`owner_id.eq.${actorId},assignee_id.eq.${actorId}`),
+    period,
+  ));
+  const assignmentIds = await readTaskPages(() => db.from("task_assignees")
+    .select("task_id")
+    .eq("user_id", actorId)
+    .neq("assignment_role", "watcher")
+    .neq("status", "removed"));
+  const participantIds = [...new Set(assignmentIds
+    .map((row) => row.task_id)
+    .filter((id): id is string => typeof id === "string"))];
+  const participantRows: any[] = [];
+  for (let offset = 0; offset < participantIds.length; offset += PERSONAL_WEEKLY_TASK_PAGE_SIZE) {
+    const ids = participantIds.slice(offset, offset + PERSONAL_WEEKLY_TASK_PAGE_SIZE);
+    participantRows.push(...await readTaskPages(() => applyCanonicalTaskWindow(
+      db.from("tasks").select(taskFields).in("id", ids),
+      period,
+    )));
+  }
+  const byId = new Map<string, any>();
+  for (const task of [...directRows, ...participantRows]) if (typeof task?.id === "string") byId.set(task.id, task);
+  return dedupePersonalWeeklyTasks(taskRows([...byId.values()], actorId, period));
 }
 
 async function getProposals(actorId: string, period: PersonalWeeklyPeriod) {
@@ -272,8 +310,10 @@ export async function getPersonalWeeklyReport(
       ? savedDraft.excludedTaskIds.filter((id): id is string => typeof id === "string")
       : [],
   );
+  // Exclusions remain part of the draft contract, but must not hide eligible work.
+  void excludedTaskIds;
   const addableCurrentRows = report?.status === "DRAFT"
-    ? filterPersonalWeeklyAddableRows(currentRows, selectedTaskIds).filter((row) => !excludedTaskIds.has(row.taskId))
+    ? filterPersonalWeeklyAddableRows(currentRows, selectedTaskIds)
     : [];
   const nextRows = buildNextWeekCandidates(currentRows, periods.next);
   const proposals = await getProposals(actorId, periods.next);
