@@ -51,6 +51,8 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ow
     || row.principal_type === "department" && row.principal_id === context.departmentId
   ));
   if (explicitDeny) return false;
+  // ACL managers are granted record-wide management by RBAC; an explicit deny still wins.
+  if (capability === "acl.manage") return true;
   return canAccessDatabaseRecord(context, rows, capability) || defaultDatabaseRecordAccess(context, capability, record.owner_id, record.department_id);
 }
 
@@ -64,6 +66,31 @@ async function canApproveRecord(actor: DatabaseRecordActor, record: Pick<RecordR
   if (!(await canRecord(actor, record, recordId, "approve"))) return false;
   if (record.created_by !== actor.id) return true;
   return hasPermissionScope(actor, "record.self_approve", ["self", "all"]);
+}
+
+export type DatabaseRecordApprovalBlockReason =
+  | "record_not_pending"
+  | "record_type_restricted"
+  | "missing_record_approve_permission"
+  | "approval_acl_denied"
+  | "missing_approval_acl_allow"
+  | "missing_self_approve_permission";
+
+async function approvalBlockReason(actor: DatabaseRecordActor, record: RecordRow, recordId: string): Promise<DatabaseRecordApprovalBlockReason | null> {
+  if (record.status !== "pending_review") return "record_not_pending";
+  if (!canAccessRecordType(actor, record.record_type_code)) return "record_type_restricted";
+  if (!actor.rbacPermissions.includes("record.approve")) return "missing_record_approve_permission";
+  const context = await actorContext(actor);
+  const rows = await aclForRecord(recordId);
+  const applicable = rows.filter((row) => row.capability === "approve" && (
+    row.principal_type === "user" && row.principal_id === actor.id
+    || row.principal_type === "role" && row.principal_id === context.roleId
+    || row.principal_type === "department" && row.principal_id === context.departmentId
+  ));
+  if (applicable.some((row) => row.effect === "deny")) return "approval_acl_denied";
+  if (!applicable.some((row) => row.effect === "allow")) return "missing_approval_acl_allow";
+  if (record.created_by === actor.id && !hasPermissionScope(actor, "record.self_approve", ["self", "all"])) return "missing_self_approve_permission";
+  return null;
 }
 
 export async function canAccessDatabaseRecordForActor(actor: DatabaseRecordActor, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
@@ -114,17 +141,34 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   const latestApproval = historyRows.find((item) => item.action === "approve");
   const canApprove = record.status === "pending_review" && await canApproveRecord(actor, record, recordId);
   const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
+  const canManageAcl = await canRecord(actor, record, recordId, "acl.manage");
+  const blockReason = canManageAcl ? await approvalBlockReason(actor, record, recordId) : null;
   return {
     record: metadataAllowed ? record : { ...record, summary: null, metadata: {} },
     canApprove,
     canSubmit,
-    acl: metadataAllowed ? acl : [],
+    canManageAcl,
+    approvalBlockReason: blockReason,
+    acl: canManageAcl ? acl : [],
     files: metadataAllowed ? files.data ?? [] : [],
     externalLinks: metadataAllowed ? links.data ?? [] : [],
     keywords: metadataAllowed ? (keywords.data ?? []).map((row) => row.keyword) : [],
     history: metadataAllowed ? historyRows.map((item) => ({ ...item, actor_name: actorNames.get(item.actor_id) ?? null })) : [],
     approvedBy: latestApproval ? { name: actorNames.get(latestApproval.actor_id) ?? null, at: latestApproval.created_at } : null,
   };
+}
+
+export async function getDatabaseRecordAclManagement(actor: DatabaseRecordActor, recordId: string) {
+  const record = await getRecord(recordId);
+  if (!record || record.status === "deleted") throw new Error("record_not_found");
+  if (!(await canRecord(actor, record, recordId, "acl.manage"))) throw new Error("permission_denied");
+  const [acl, users, roles] = await Promise.all([
+    serverSupabase.from("db_record_acl").select("id,record_id,principal_type,principal_id,capability,effect,expires_at,created_at").eq("record_id", recordId).order("capability").order("principal_type"),
+    serverSupabase.from("staff_users").select("id,full_name,username,active").eq("active", true).order("full_name"),
+    serverSupabase.from("roles").select("id,code,name,active").eq("active", true).order("name"),
+  ]);
+  if (acl.error || users.error || roles.error) throw acl.error ?? users.error ?? roles.error;
+  return { acl: acl.data ?? [], users: users.data ?? [], roles: roles.data ?? [] };
 }
 
 export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; languageCode?: string; limit?: number; offset?: number };
@@ -328,7 +372,7 @@ export async function upsertDatabaseRecordAcl(actor: DatabaseRecordActor, record
   if (previousError) throw previousError;
   const { data, error } = await serverSupabase.from("db_record_acl").upsert({ record_id: recordId, principal_type: input.principalType, principal_id: input.principalId, capability: input.capability, effect: input.effect, granted_by: actor.id, expires_at: input.expiresAt ?? null }, { onConflict: "record_id,principal_type,principal_id,capability" }).select("id,record_id,principal_type,principal_id,capability,effect,expires_at,created_at").single();
   if (error) throw error;
-  const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "acl_update", old_data: null, new_data: data });
+  const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "acl_update", old_data: previous, new_data: data });
   if (historyError) {
     if (previous) await serverSupabase.from("db_record_acl").update({ effect: previous.effect, granted_by: previous.granted_by, expires_at: previous.expires_at }).eq("id", previous.id);
     else await serverSupabase.from("db_record_acl").delete().eq("id", data.id);
