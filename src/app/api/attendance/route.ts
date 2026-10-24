@@ -287,8 +287,8 @@ export async function GET(request: Request) {
     const sources: NonNullable<AttendanceRow["attendance_sources"]> = {};
     if (leave) {
       extraNotes.push(leaveLabel(leave, row.work_date));
-      sources.leave = true;
       if (leave.leave_type === "business") sources.business = true;
+      else sources.leave = true;
     }
     const scheduleEntries = attendanceScheduleNoteEntriesFor(approvedSchedules, row.user_id, row.work_date);
     extraNotes.push(...scheduleEntries.map((entry) => entry.text));
@@ -297,6 +297,7 @@ export async function GET(request: Request) {
     if (onlineDay) sources.online = true;
     const leaveIsFull = !!leave && leavePeriodsForDate(leave, row.work_date).every((period) => period === "full");
     const leaveWorkday = leave ? (leaveIsFull ? 1 : 0.5) : 0;
+    const synthetic = row.has_attendance_log === false;
     if (onlineDay && !leaveIsFull) extraNotes.push("Làm việc online");
     return {
       ...calculateAttendance({
@@ -304,9 +305,9 @@ export async function GET(request: Request) {
         checkOut: row.check_out,
         existingNote: row.note,
         extraNotes,
-        exceptional: row.status === "leave" || row.status === "absent" || !!leaveWorkday || (onlineDay && !row.check_in && !row.check_out),
+        exceptional: synthetic || row.status === "leave" || row.status === "absent" || !!leaveWorkday || (onlineDay && !row.check_in && !row.check_out),
         lateException: row.late_exception === "sudden_work",
-        exceptionalWorkday: leaveWorkday || (onlineDay && !leaveIsFull ? 1 : 0),
+        exceptionalWorkday: leaveWorkday || (onlineDay && !leaveIsFull ? 1 : 0) || (scheduleEntries.length ? 1 : 0),
       }),
       sources,
     };
@@ -338,7 +339,7 @@ export async function GET(request: Request) {
       if (!admin.staff_users || admin.work_date < from || admin.work_date > to || !isAttendanceBusinessDate(admin.work_date) || (organizationScope && !isAttendanceListedStaff({ full_name: admin.staff_users.full_name, role_code: "employee" }))) continue;
       const key = `${admin.user_id}:${admin.work_date}`;
       if (existing.has(key)) continue;
-      result.push({ id: `admin-note-${admin.user_id}-${admin.work_date}`, user_id: admin.user_id, work_date: admin.work_date, check_in: null, check_out: null, note: "", admin_note: admin.note, admin_note_at: admin.updated_at ?? admin.created_at, has_attendance_log: false, status: "absent", staff_users: { full_name: admin.staff_users.full_name }, workday: 0 });
+      result.push({ id: `admin-note-${admin.user_id}-${admin.work_date}`, user_id: admin.user_id, work_date: admin.work_date, check_in: null, check_out: null, note: "", admin_note: admin.note, admin_note_at: admin.updated_at ?? admin.created_at, has_attendance_log: false, status: "admin_note", staff_users: { full_name: admin.staff_users.full_name }, workday: 0 });
       existing.add(key);
     }
     for (const leave of leaves) {
@@ -351,7 +352,7 @@ export async function GET(request: Request) {
         const leavePeriods = leavePeriodsForDate(leave, workDate);
         const leaveIsFull = leavePeriods.every((period) => period === "full");
             const workday = leaveIsFull ? 1 : 0.5;
-        result.push({ id: `leave-${leave.requester.id}-${workDate}`, user_id: leave.requester.id, work_date: workDate, check_in: null, check_out: null, note: label, status: "leave", staff_users: { full_name: leave.requester.full_name }, workday, attendance_sources: { leave: true, business: leave.leave_type === "business" } });
+      result.push({ id: `leave-${leave.requester.id}-${workDate}`, user_id: leave.requester.id, work_date: workDate, check_in: null, check_out: null, note: label, status: leave.leave_type === "business" ? "present" : "leave", staff_users: { full_name: leave.requester.full_name }, workday, has_attendance_log: false, attendance_sources: leave.leave_type === "business" ? { business: true } : { leave: true } });
         existing.add(key);
       }
     }
@@ -360,7 +361,7 @@ export async function GET(request: Request) {
       if (onlineRow.work_date < from || onlineRow.work_date > to || !isAttendanceBusinessDate(onlineRow.work_date)) continue;
       const key = `${onlineRow.staff.id}:${onlineRow.work_date}`;
       if (existing.has(key)) continue;
-      result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name }, workday: 1, attendance_sources: { online: true } });
+      result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name }, workday: 1, has_attendance_log: false, attendance_sources: { online: true } });
       existing.add(key);
     }
     for (const event of approvedSchedules.filter((schedule) => schedule.event_assignment_kind === "leadership" && schedule.plan_type === "event")) {
@@ -377,7 +378,7 @@ export async function GET(request: Request) {
           if (existing.has(key)) continue;
           const eventNotes = attendanceScheduleNoteEntriesFor([event], participantId, workDate).map((entry) => entry.text);
           if (!eventNotes.length) continue;
-          result.push({ id: `event-${event.id}-${participantId}-${workDate}`, user_id: participantId, work_date: workDate, check_in: null, check_out: null, note: eventNotes.join("; "), status: "present", staff_users: { full_name: staff.full_name }, workday: 1, attendance_sources: { event: true } });
+          result.push({ id: `event-${event.id}-${participantId}-${workDate}`, user_id: participantId, work_date: workDate, check_in: null, check_out: null, note: eventNotes.join("; "), status: "present", staff_users: { full_name: staff.full_name }, workday: 1, has_attendance_log: false, attendance_sources: { event: true } });
           existing.add(key);
         }
       }
@@ -401,6 +402,7 @@ export async function GET(request: Request) {
             check_out: null,
             note: entries.map((entry) => entry.text).join("; "),
             status: "present",
+            has_attendance_log: false,
             staff_users: { full_name: staff.full_name },
             workday: 1,
             attendance_sources: { business: entries.some((entry) => entry.kind === "business"), event: entries.some((entry) => entry.kind === "event") },
@@ -421,19 +423,15 @@ export async function GET(request: Request) {
         }
       }
     }
-    // Event rows can be synthetic (no attendance log); enrich them after all
-    // leave/online/absence rows are materialized so approved events are visible.
+    // Synthetic rows may combine an admin note with approved leave, schedules,
+    // or online work. Re-run the same note/source calculation without changing
+    // their no-log marker or the admin note itself.
     for (const row of result) {
-      const eventEntries = attendanceScheduleNoteEntriesFor(approvedSchedules, row.user_id, row.work_date);
-      const eventNotes = eventEntries.map((entry) => entry.text);
-      if (!eventNotes.length) continue;
-      const existingNotes = (row.note ?? "").split(";").map((part) => part.trim()).filter(Boolean);
-      row.note = [...existingNotes, ...eventNotes.filter((note) => !existingNotes.includes(note))].join("; ");
-      row.attendance_sources = {
-        ...(row.attendance_sources ?? {}),
-        business: row.attendance_sources?.business || eventEntries.some((entry) => entry.kind === "business"),
-        event: row.attendance_sources?.event || eventEntries.some((entry) => entry.kind === "event"),
-      };
+      if (row.has_attendance_log !== false) continue;
+      const calculation = noteFor(row);
+      row.workday = calculation.workday;
+      row.note = calculation.note;
+      row.attendance_sources = calculation.sources;
     }
     return result.sort((a, b) => {
       const byDate = b.work_date.localeCompare(a.work_date);
