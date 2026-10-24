@@ -1186,3 +1186,29 @@ Blockers:
 
 Next:
 - Owner review of this local candidate; push or PR creation requires separate approval.
+# Database V1 Self-Approval Release Check (2026-10-24)
+
+Current Phase: release validation complete; owner approval pending
+Current Task: DATABASE_V1_SELF_APPROVAL_RELEASE_READY
+
+Completed:
+- Source commit `562878334ef83227204aa647dbdc9bbfd6642cc9` pushed to `feature/database-v1-self-approval-local-first`.
+- Self-approval authorization now fails closed when `record.self_approve` effective scopes are missing or empty.
+- Isolated migration runner includes workflow ambiguity and self-approval migrations.
+- Local webpack build, standalone packaging, manifest/checksum, secret scan, and VPS verify-only passed.
+
+Validation:
+- Targeted authorization/database workflow suite: 95/95 non-browser tests passed.
+- TypeScript, changed-file ESLint, and `git diff --check`: PASS.
+- Browser fixture: BLOCKED because `/tmp/thoidai-approval-browser/node_modules/playwright/index.mjs` is absent.
+- Isolated PostgreSQL runner: BLOCKED because Docker daemon is unavailable and registry access is restricted.
+- Artifact manifest SHA-256: `ea75a70f364bdff9970ed7e981784d449aa338f42c19a11c0f6128ededa0ab53`.
+- VPS external artifact verification: PASS (verify-only).
+
+Production safety:
+- Production database, migration ledger, grants, releases, pointers, service, and health: unchanged.
+- No migration applied, restart, activation, or cleanup APPLY performed.
+- Migration-first decision: old database without `20261024110000_database_management_v1_self_approval.sql` is NO-GO for activation; owner must approve migration-first rollout separately.
+
+Next:
+- Wait for owner approval and an available isolated PostgreSQL/Docker runtime before claiming runtime migration matrix PASS.
