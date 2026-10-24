@@ -5,7 +5,7 @@ Current Task: preserve exact password input and distinguish auth backend failure
 
 Completed:
 - Removed password trimming from web/mobile login and credential verification.
-- Added a safe 503 response for credential lookup or legacy-upgrade failures instead of reporting a false password mismatch.
+- Added a safe 503 response for credential lookup, password-verifier, or legacy-upgrade failures instead of reporting a false password mismatch.
 - Added regression coverage for exact password preservation, bcrypt behavior, and temporary auth failures.
 
 Validation:
