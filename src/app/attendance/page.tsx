@@ -401,13 +401,13 @@ export default function AttendancePage() {
   }, [isOrganizationView, recentRows, rows]);
 
   return (
-    <main className="mobile-page-shell min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6">
-      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4">
-        <div className="mb-4 lg:mb-0">
+    <main className="attendance-page-main mobile-page-shell min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6">
+      <div className="mx-auto w-full min-w-0 max-w-7xl lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-4">
+        <div className="mb-4 min-w-0 lg:mb-0">
           <AppNav currentPath={pathname} userLabel={`${user?.full_name ?? ""} (${user?.role_name ?? ""})`} onLogout={logout} />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <div className="mb-4">
             <h1 className="text-2xl font-bold">{isOrganizationView ? "Chấm công toàn cơ quan" : "Chấm công của tôi"}</h1>
           </div>
@@ -523,7 +523,7 @@ export default function AttendancePage() {
 
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}</h2>
-          <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
+          <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll min-w-0 max-w-full rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
           <table className={`data-table attendance-day-table ${isOrganizationView ? "attendance-organization-table" : ""} min-w-[820px] text-left text-sm`}>
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>

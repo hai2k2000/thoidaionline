@@ -54,6 +54,7 @@ button, a, summary {
   main { overflow-x: clip; }
   main :where(input, select, textarea) { font-size: 16px; }
   main :where(button, a, summary) { min-height: 2.75rem; }
+  .attendance-page-main { overflow-x: visible; }
 }
 
 button,

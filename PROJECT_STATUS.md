@@ -1302,3 +1302,28 @@ Production safety:
 
 Next:
 - Owner review, then commit/push the UI hotfix feature branch. Do not merge/deploy without approval.
+
+# Attendance page layout final hotfix
+
+Current Phase: implementation complete; pre-production validation
+Current Task: ATTENDANCE_PAGE_LAYOUT_FINAL_READY
+
+Completed:
+- Prevented the attendance page content grid from forcing a wider-than-viewport track by adding `min-width: 0` and `minmax(0,1fr)`.
+- Preserved intentional table overflow with a bounded `table-scroll` wrapper and disabled the mobile page-level clipping rule only for `/attendance`.
+- Kept the existing status and note wrapping behavior unchanged.
+
+Validation:
+- Attendance layout/table regression tests: 10/10 PASS.
+- TypeScript: PASS.
+- Changed-file ESLint: PASS (globals.css ignored by repository configuration).
+- `git diff --check`: PASS.
+- Local webpack production-like build: PASS with non-production placeholders.
+- Browser: local `/attendance` redirects to `/login` without an authorized session; authenticated viewport acceptance is not claimed.
+
+Production safety:
+- Production database, active release, service, and rollback pointers unchanged.
+- No migration, deploy, restart, activation, or cleanup APPLY performed.
+
+Next:
+- Commit and push the feature branch, package the exact source SHA, and run VPS verify-only. Owner approval is required before production activation.
