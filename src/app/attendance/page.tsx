@@ -524,7 +524,7 @@ export default function AttendancePage() {
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}</h2>
           <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll min-w-0 max-w-full rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
-          <table className="data-table attendance-day-table min-w-[820px] text-left text-sm">
+          <table className={`data-table attendance-day-table ${isOrganizationView ? "attendance-organization-table" : "attendance-personal-table"} min-w-[820px] text-left text-sm`}>
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Nhân sự</th>
