@@ -157,8 +157,8 @@ table {
 
 .attendance-day-table th:nth-child(7),
 .attendance-day-table td:nth-child(7) {
-  width: 18rem;
-  min-width: 18rem;
+  width: 16rem;
+  min-width: 16rem;
 }
 
 /* The organization table reserves more note space for the Admin label and icon. */
@@ -175,6 +175,12 @@ table {
 /* Keep the personal view compact while preserving the same seven-column grid. */
 .attendance-day-table.attendance-personal-table {
   min-width: 68rem;
+}
+
+.attendance-day-table.attendance-personal-table th:nth-child(7),
+.attendance-day-table.attendance-personal-table td:nth-child(7) {
+  width: 16rem;
+  min-width: 16rem;
 }
 
 /* Keep the schedule's identity columns readable while the day columns scroll. */
