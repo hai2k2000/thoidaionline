@@ -120,7 +120,7 @@ table {
    surrounding .table-scroll provides the intentional horizontal overflow. */
 .attendance-day-table {
   table-layout: fixed;
-  min-width: 820px;
+  min-width: 68rem;
 }
 
 .attendance-day-table th:first-child,
@@ -157,32 +157,8 @@ table {
 
 .attendance-day-table th:nth-child(7),
 .attendance-day-table td:nth-child(7) {
-  width: 16rem;
-  min-width: 16rem;
-}
-
-/* The organization view has an action column and needs extra room without
-   changing the personal attendance table's established proportions. */
-.attendance-day-table.attendance-organization-table {
-  min-width: 75.5rem;
-}
-
-.attendance-day-table.attendance-organization-table th:nth-child(6),
-.attendance-day-table.attendance-organization-table td:nth-child(6) {
-  width: 12rem;
-  min-width: 12rem;
-}
-
-.attendance-day-table.attendance-organization-table th:nth-child(7),
-.attendance-day-table.attendance-organization-table td:nth-child(7) {
-  width: 18rem;
-  min-width: 18rem;
-}
-
-.attendance-day-table th:nth-child(8),
-.attendance-day-table td:nth-child(8) {
-  width: 8rem;
-  min-width: 8rem;
+  width: 20rem;
+  min-width: 20rem;
 }
 
 /* Keep the schedule's identity columns readable while the day columns scroll. */

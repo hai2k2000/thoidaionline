@@ -524,7 +524,7 @@ export default function AttendancePage() {
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}</h2>
           <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll min-w-0 max-w-full rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
-          <table className={`data-table attendance-day-table ${isOrganizationView ? "attendance-organization-table" : ""} min-w-[820px] text-left text-sm`}>
+          <table className="data-table attendance-day-table min-w-[820px] text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Nhân sự</th>
@@ -534,7 +534,6 @@ export default function AttendancePage() {
                 <th scope="col" className="whitespace-nowrap px-3 py-2 text-right">Ngày công</th>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Trạng thái</th>
                 <th scope="col" className="min-w-64 px-3 py-2">Ghi chú</th>
-                {isOrganizationView ? <th scope="col" className="whitespace-nowrap px-3 py-2">Thao tác</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -546,12 +545,11 @@ export default function AttendancePage() {
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{r.workday ?? 0}</td>
                   <td className="attendance-status-cell px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception === "sudden_work" ? "Đi muộn do việc phát sinh" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
-                  <td className="attendance-note-cell min-w-64 px-3 py-2"><div>{r.note ?? ""}{!isOrganizationView && canQuickReport && !r.late_exception && (r.note ?? "").includes("Đi muộn") ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Đánh dấu việc phát sinh</button> : null}</div>{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</td>
-                  {isOrganizationView ? <td className="px-3 py-2"><button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="rounded border border-orange-300 px-2 py-1 text-xs font-semibold text-orange-800">{r.admin_note ? "Sửa ghi chú" : "Thêm ghi chú"}</button></td> : null}
+                  <td className="attendance-note-cell min-w-64 px-3 py-2"><div className="flex items-start gap-2"><div className="min-w-0 flex-1 whitespace-pre-wrap break-words">{r.note ?? ""}{!isOrganizationView && canQuickReport && !r.late_exception && (r.note ?? "").includes("Đi muộn") ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Đánh dấu việc phát sinh</button> : null}{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</div>{isOrganizationView ? <button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="attendance-note-action shrink-0 rounded border border-orange-300 p-1.5 text-orange-800 hover:bg-orange-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" title={r.admin_note ? "Sửa ghi chú Admin" : "Thêm ghi chú Admin"} aria-label={`${r.admin_note ? "Sửa" : "Thêm"} ghi chú Admin cho ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`}>{r.admin_note ? <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg> : <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>}</button> : null}</div></td>
                 </tr>
               ))}
               {visibleAttendanceRows.length === 0 ? (
-                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={isOrganizationView ? 8 : 7}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
+                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={7}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
               ) : null}
             </tbody>
           </table>
