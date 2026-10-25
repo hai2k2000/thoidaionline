@@ -1278,3 +1278,27 @@ Validation:
 
 Next:
 - Commit and push the feature branch, create a Linux-compatible artifact, and run VPS verify-only. Owner approval is required before production activation.
+
+# Attendance table UI hotfix
+
+Current Phase: UI implementation complete; owner review pending
+Current Task: keep organization attendance status and notes inside their table cells
+
+Completed:
+- Added an organization-table width profile with horizontal scrolling preserved on small screens.
+- Allowed the long no-attendance-log status label and multi-line/admin notes to wrap within their own cells.
+- Kept personal attendance table proportions and all attendance/business rules unchanged.
+
+Validation:
+- Attendance UI/scroll/admin-note/date tests: PASS.
+- TypeScript (`--incremental false`): PASS.
+- Changed-file ESLint: PASS.
+- Webpack production build with non-production placeholders: PASS.
+- Browser smoke reached the local login page; authenticated attendance data was not used.
+
+Production safety:
+- Production database, releases, service, and pointers: unchanged.
+- No migration, deploy, restart, or activation performed.
+
+Next:
+- Owner review, then commit/push the UI hotfix feature branch. Do not merge/deploy without approval.

@@ -160,6 +160,24 @@ table {
   min-width: 16rem;
 }
 
+/* The organization view has an action column and needs extra room without
+   changing the personal attendance table's established proportions. */
+.attendance-day-table.attendance-organization-table {
+  min-width: 75.5rem;
+}
+
+.attendance-day-table.attendance-organization-table th:nth-child(6),
+.attendance-day-table.attendance-organization-table td:nth-child(6) {
+  width: 12rem;
+  min-width: 12rem;
+}
+
+.attendance-day-table.attendance-organization-table th:nth-child(7),
+.attendance-day-table.attendance-organization-table td:nth-child(7) {
+  width: 18rem;
+  min-width: 18rem;
+}
+
 .attendance-day-table th:nth-child(8),
 .attendance-day-table td:nth-child(8) {
   width: 8rem;
@@ -205,6 +223,22 @@ table {
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
+}
+
+/* Keep attendance status and notes inside their cells on narrow tables. */
+.attendance-status-cell,
+.attendance-note-cell {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.attendance-status-cell .table-status {
+  align-items: flex-start;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+  white-space: normal;
 }
 
 .table-status::before {
