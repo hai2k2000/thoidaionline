@@ -83,3 +83,17 @@ The four copied files match byte-for-byte (SHA-256 source = destination):
 
 ## Claude fix after dry-run run 5
 - Dry-run run 5 matched the production baseline and exposed a real bug in the public migration: `acldefault(case ... end, oid)` passed `text`; fixed with an explicit `::"char"` cast (verified read-only on production: returns exactly the 9 exposed tables). New public SQL SHA-256 `aa26878d...`; dry-run payload and expected SHA updated; storage payload unchanged.
+
+## Stage 3 apply runbook
+- Added `scripts/production/c01-apply.sh` as a five-step, one-step-per-invocation production runbook (`backup|migrate|storage|nginx|verify`) requiring `--approved`, a non-blocking deploy `flock`, `main`/EXIT status guard, explicit stdin for every `docker exec -i`, no service/container restart, and no secret output.
+- Embedded public migration, storage migration, and `verify-anon-lockdown.sql` as gzip+base64 payloads. The runbook decodes each payload into a temporary file and checks SHA-256 before use: public `aa26878df83a3e5ba3aebb8ecdcb2e870ffa662d279231b404aa283c357e0e30`, storage `b13be1d8e42d56c119ddc087c15b9b91e2bf5366b95137c442fbc42d223acad6`, verify `77db99f89eb621c07ac7d0129747fbf03a6454d6d988a6c2d732a5b9374a42e4`.
+- Static validation required by the apply spec: `bash -n scripts/production/c01-apply.sh`, focused Node tests, and `git diff --check`. No script, SSH, Docker, network, package install, Git write, or `.env` read was performed in this sandbox.
+- Payload `cmp` validation: PASS for public migration, storage migration, and verify SQL after gzip+base64 decode; all three match repository sources byte-for-byte.
+
+## Stage 3 apply runbook - review round 1 fixes
+- A1: migration execution and ledger writes now fail explicitly on errors; ledger writes use `supabase_admin`, verify the inserted version count, and migrate/storage branching uses explicit `if` statements.
+- A2: BEFORE counts now compare against the documented production baseline and emit `BASELINE_MATCH=YES/NO`; AFTER uses zero leak counts and RPC count 108. Count prefixes are `BEFORE_*` and `AFTER_*`.
+- A3: nginx location matching uses POSIX `[[:space:]]` in both `grep -E` and `awk`.
+- A4: ledger insertion uses `supabase_admin` while public migration execution remains `postgres`.
+- A5: EXIT cleanup removes only the temporary work directory; backups and `c01-last-backup` are preserved.
+- Scope preserved: only `scripts/production/c01-apply.sh` and this report were changed in this round. Per request, no script, test, Git, network, SSH, Docker, package installation, or `.env` access was performed.
