@@ -1,0 +1,6 @@
+[Unit]
+Description=Check Thoidai backup freshness
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/thoidai-backup status
+SyslogLevel=err
