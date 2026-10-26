@@ -92,6 +92,8 @@ SQL
   if [[ "$migration_schema" == 1 ]]; then
     migration_table=$(docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -Atc "select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='supabase_migrations' and c.relname='schema_migrations' and c.relkind='r';" </dev/null)
     [[ "$migration_table" == 1 ]] && docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'truncate table supabase_migrations.schema_migrations;' </dev/null >/dev/null
+  else
+    docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'create schema supabase_migrations;' </dev/null >/dev/null
   fi
 
   set +e
@@ -109,7 +111,7 @@ SQL
       fail "psql error for $table: $count_error"
     fi
     tmp_count=$(printf '%s' "$tmp_count" | tr -d '\r')
-    if ! prod_count=$(docker exec "$production" psql -U postgres -d postgres -Atc "set default_transaction_read_only=on; select count(*) from $table;" 2>"$count_error"); then
+    if ! prod_count=$(docker exec -e PGOPTIONS='-c default_transaction_read_only=on' "$production" psql -U postgres -d postgres -Atc "select count(*) from $table;" 2>"$count_error"); then
       count_error=$(tr -cd '[:print:]\n' < "$count_error" | tr '\n' ' ' | cut -c1-300)
       fail "psql error for $table: $count_error"
     fi
