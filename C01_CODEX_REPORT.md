@@ -74,3 +74,9 @@ The four copied files match byte-for-byte (SHA-256 source = destination):
 - R9: tracks whether PASS was printed; the EXIT cleanup trap converts any zero exit before `DRYRUN_STATUS=PASS` into `DRYRUN_STATUS=INCOMPLETE` with exit 1 while preserving cleanup evidence.
 - Scope preserved: SQL payloads and SHA-256 checks, R7, R8, baseline/AFTER criteria and role checks are unchanged.
 - Validation: `bash -n scripts/production/c01-dryrun.sh` PASS; `node --test src/lib/anonAccessLockdown.test.mjs scripts/standalone-packaging.test.mjs` 14/14 PASS; `git diff --check` PASS. No dry-run script, Docker, SSH, network, package install, Git write, or `.env` read was performed.
+
+## Round 6 fixes (dry-run run 4)
+- R10: the temporary `storage.buckets` conflict-delete transaction now sets `session_replication_role = replica`, reports `STORAGE_BUCKETS_CONFLICTS`, and deletes only matching bucket IDs.
+- R10: bucket restore is assembled into a temporary transaction with the same temporary-only replica setting, preserving the dump content unchanged; the C-01 storage migration continues to run normally without replica mode.
+- Scope preserved: main/status guard, embedded SQL payloads and SHA-256 checks, R7, R8, baseline/AFTER criteria and role checks are unchanged.
+- Validation: `bash -n scripts/production/c01-dryrun.sh`; `node --test src/lib/anonAccessLockdown.test.mjs scripts/standalone-packaging.test.mjs`; `git diff --check`.
