@@ -81,3 +81,10 @@ dry-run output, never removed unless `--apply` is explicitly used.
 - Temp ACL setup now mirrors the C01 default-privilege revokes for `postgres` and `supabase_admin`, and prints `TEMP_DEFAULT_ACL_PUBLIC=0` before restore.
 - Every temporary-container `psql`/`pg_restore` call uses loopback and `supabase_admin`, fixing the first VPS authentication failure.
 - Restore `already exists` errors are tolerated and excluded from the first-20 error report; table-count comparisons remain the PASS/FAIL gate, with a non-zero restore exit failing only when no table count is available.
+
+## Restore drill round 3
+
+- Changed restore scope to application data only: `public` and `supabase_migrations`; Supabase system schemas remain image-provided.
+- Preserved temporary default-privilege revokes and loopback `supabase_admin` access. If the temporary image already contains `supabase_migrations.schema_migrations`, the drill truncates that temporary table before restore to avoid duplicate migration keys.
+- Count checks now include sanitized `psql` stderr (printable characters, max 300 characters) in `DRILL_ERROR`; restore errors still report `RESTORE_ERRORS` and the first 20 non-`already exists` lines.
+- Known limitation: disaster recovery requires the same Supabase stack version because `auth`, `storage`, `realtime`, extensions, and vault schemas are supplied by the image rather than restored by this application-data drill.

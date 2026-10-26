@@ -11,7 +11,7 @@ main() {
   local work=''
   local backup='' dump='' manifest='' storage=''
   local restore_log='' restore_errors=0
-  local table tmp_count prod_count countable=0
+  local table tmp_count prod_count countable=0 count_error
   local tables=(public.staff_users public.tasks public.assets public.work_schedules public.db_records public.attendance_logs supabase_migrations.schema_migrations)
 
   cleanup() {
@@ -87,8 +87,15 @@ SQL
   echo "TEMP_DEFAULT_ACL_PUBLIC=$temp_default_acl_public"
   [[ "$temp_default_acl_public" == 0 ]] || fail 'temporary default ACL is not empty'
 
+  # Restore only application data; Supabase system schemas come from the image.
+  migration_schema=$(docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -Atc "select 1 from pg_namespace where nspname='supabase_migrations';" </dev/null)
+  if [[ "$migration_schema" == 1 ]]; then
+    migration_table=$(docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -Atc "select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='supabase_migrations' and c.relname='schema_migrations' and c.relkind='r';" </dev/null)
+    [[ "$migration_table" == 1 ]] && docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'truncate table supabase_migrations.schema_migrations;' </dev/null >/dev/null
+  fi
+
   set +e
-  docker exec -i "$tmp" pg_restore -h 127.0.0.1 -U supabase_admin -d postgres < "$dump" >"$restore_log" 2>&1
+  docker exec -i "$tmp" pg_restore --schema=public --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres < "$dump" >"$restore_log" 2>&1
   restore_rc=$?
   set -e
   restore_errors=$(grep -Eiv 'already exists' "$restore_log" | grep -Eic 'ERROR|FATAL' || true)
@@ -96,9 +103,19 @@ SQL
   grep -Ei 'ERROR|FATAL' "$restore_log" | grep -Eiv 'already exists' | sed -n '1,20p' || true
 
   for table in "${tables[@]}"; do
-    tmp_count=$(docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -Atc "select count(*) from $table;" </dev/null | tr -d '\r') || tmp_count=''
-    prod_count=$(docker exec "$production" psql -U postgres -d postgres -Atc "set default_transaction_read_only=on; select count(*) from $table;" | tr -d '\r')
-    if [[ "$tmp_count" =~ ^[0-9]+$ && "$prod_count" =~ ^[0-9]+$ ]]; then countable=$((countable + 1)); else fail "invalid count for $table"; fi
+    count_error="$work/count-error"
+    if ! tmp_count=$(docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -Atc "select count(*) from $table;" </dev/null 2>"$count_error"); then
+      count_error=$(tr -cd '[:print:]\n' < "$count_error" | tr '\n' ' ' | cut -c1-300)
+      fail "psql error for $table: $count_error"
+    fi
+    tmp_count=$(printf '%s' "$tmp_count" | tr -d '\r')
+    if ! prod_count=$(docker exec "$production" psql -U postgres -d postgres -Atc "set default_transaction_read_only=on; select count(*) from $table;" 2>"$count_error"); then
+      count_error=$(tr -cd '[:print:]\n' < "$count_error" | tr '\n' ' ' | cut -c1-300)
+      fail "psql error for $table: $count_error"
+    fi
+    prod_count=$(printf '%s' "$prod_count" | tr -d '\r')
+    [[ "$tmp_count" =~ ^[0-9]+$ && "$prod_count" =~ ^[0-9]+$ ]] || fail "invalid count for $table"
+    countable=$((countable + 1))
     echo "RESTORE_${table}=$tmp_count/$prod_count"
     if [[ "$table" == supabase_migrations.schema_migrations ]]; then
       (( tmp_count == prod_count )) || fail "schema migration count mismatch"

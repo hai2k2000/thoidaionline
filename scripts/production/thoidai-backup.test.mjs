@@ -23,7 +23,9 @@ test('restore drill is isolated and guarded', () => {
   assert.match(drill, /TEMP_DEFAULT_ACL_PUBLIC/);
   assert.doesNotMatch(drill, /revoke all on schema public from public/i);
   assert.match(drill, /docker exec -i/);
-  assert.match(drill, /pg_restore -h 127\.0\.0\.1 -U supabase_admin -d postgres/);
+  assert.match(drill, /pg_restore .* -h 127\.0\.0\.1 -U supabase_admin -d postgres/);
+  assert.match(drill, /--schema=public/);
+  assert.match(drill, /--schema=supabase_migrations/);
   assert.match(drill, /RESTORE_ERRORS/);
   assert.match(drill, /already exists/);
   assert.doesNotMatch(drill, /pg_restore[^\n]*--clean/);
@@ -32,7 +34,7 @@ test('restore drill is isolated and guarded', () => {
 });
 
 test('run keeps only valid daily predecessor and cleans partials', () => {
-  const root = mkdtempSync('.thoidai-backup-');
+  const root = mkdtempSync(join(tmpdir(), 'thoidai-backup-'));
   const bin = join(root, 'bin');
   const storage = join(root, 'storage');
   mkdirSync(bin);
@@ -68,7 +70,9 @@ exit 0
     THOIDAI_TEST_COUNTER: join(root, 'counter'),
   };
   if (process.platform !== 'win32') execFileSync('chmod', ['+x', join(bin, 'docker'), join(bin, 'flock')]);
-  const bashPath = (value) => value;
+  const bashPath = (value) => process.platform === 'win32'
+    ? execFileSync('cygpath', ['-u', value], { encoding: 'utf8' }).trim()
+    : value;
   const run = (now, same = false) => execFileSync('bash', [script, 'run'], {
     env: { ...envBase, PATH: `${bashPath(bin)}:${process.env.PATH}`, THOIDAI_BACKUP_ROOT: bashPath(root), THOIDAI_BACKUP_LOCK: bashPath(join(root, 'backup.lock')), THOIDAI_BACKUP_STORAGE: bashPath(storage), THOIDAI_TEST_COUNTER: bashPath(join(root, 'counter')), THOIDAI_BACKUP_NOW: now, THOIDAI_TEST_SAME: same ? '1' : '0' },
     encoding: 'utf8',
