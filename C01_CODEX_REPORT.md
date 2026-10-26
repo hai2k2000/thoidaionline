@@ -61,3 +61,9 @@ The four copied files match byte-for-byte (SHA-256 source = destination):
 
 ## Quan sát thêm (không xử lý)
 - Existing standalone packaging is the repository's migration registry, so it was updated together with its verifier and focused contract test.
+
+## Round 4 fixes (dry-run run 2)
+- R8: before schema restore, revokes public-schema default privileges for `postgres` and `supabase_admin` across tables, sequences and functions using `-U supabase_admin` with `ON_ERROR_STOP=1`, then prints `TEMP_DEFAULT_ACL_PUBLIC`.
+- R8: adds a read-only `storage.buckets` data dump with SHA-256 evidence; removes matching bucket IDs in the temporary database and restores the dump with `ON_ERROR_STOP=1` immediately after the migration ledger. `storage.objects` is untouched.
+- Scope preserved: embedded SQL payloads and SHA-256 checks, baseline/AFTER criteria, role checks and cleanup remain unchanged.
+- Validation: `bash -n scripts/production/c01-dryrun.sh` PASS; `node --test src/lib/anonAccessLockdown.test.mjs scripts/standalone-packaging.test.mjs` 14/14 PASS; `git diff --check` PASS. No script, Docker, SSH, network, package install, Git write, or `.env` read was performed.
