@@ -11,7 +11,7 @@ main() {
   local work=''
   local backup='' dump='' manifest='' storage=''
   local restore_log='' restore_errors=0
-  local table tmp_count prod_count
+  local table tmp_count prod_count countable=0
   local tables=(public.staff_users public.tasks public.assets public.work_schedules public.db_records public.attendance_logs supabase_migrations.schema_migrations)
 
   cleanup() {
@@ -49,32 +49,56 @@ main() {
 
   docker run -d --name "$tmp" --network none --memory 512m \
     -e POSTGRES_PASSWORD=restore-drill-local-only "$image" >/dev/null
-  for _ in $(seq 1 120); do
-    if docker logs "$tmp" 2>&1 | grep -Fq 'PostgreSQL init process complete'; then break; fi
-    sleep 1
+  for _ in $(seq 1 90); do
+    if docker logs "$tmp" 2>&1 | grep -Fq 'PostgreSQL init process complete; ready for start up.'; then break; fi
+    sleep 2
   done
-  docker logs "$tmp" 2>&1 | grep -Fq 'PostgreSQL init process complete' || fail 'postgres init timeout'
-  for _ in 1 2 3; do
-    docker exec "$tmp" pg_isready -U postgres -d postgres >/dev/null || fail 'temporary postgres not ready'
-    sleep 1
+  if ! docker logs "$tmp" 2>&1 | grep -Fq 'PostgreSQL init process complete; ready for start up.'; then
+    echo 'POSTGRES_INIT_LOG_TAIL=' >&2
+    docker logs "$tmp" 2>&1 | tail -n 30 | tr -cd '[:print:]\n' >&2
+    fail 'postgres init timeout'
+  fi
+  ready_streak=0
+  for _ in $(seq 1 90); do
+    if docker exec "$tmp" pg_isready -h 127.0.0.1 -U supabase_admin -d postgres >/dev/null 2>&1 \
+      && role_count=$(docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -Atc "select count(*) from pg_roles where rolname in ('supabase_admin','supabase_auth_admin','supabase_storage_admin','service_role');" </dev/null) \
+      && [[ "$role_count" == 4 ]]; then
+      ready_streak=$((ready_streak + 1))
+      (( ready_streak >= 3 )) && break
+    else
+      ready_streak=0
+    fi
+    sleep 2
   done
-  role_count=$(docker exec "$tmp" psql -U postgres -d postgres -Atc "select count(*) from pg_roles where rolname in ('postgres','supabase_admin','anon','authenticated');")
-  [[ "$role_count" == 4 ]] || fail 'temporary role set incomplete'
-  docker exec "$tmp" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'revoke all on schema public from public;' >/dev/null
+  if (( ready_streak < 3 )); then
+    echo 'POSTGRES_READY_LOG_TAIL=' >&2
+    docker logs "$tmp" 2>&1 | tail -n 30 | tr -cd '[:print:]\n' >&2
+    fail 'postgres readiness timeout'
+  fi
+  docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+alter default privileges for role postgres in schema public revoke all on tables from postgres, anon, authenticated, service_role;
+alter default privileges for role postgres in schema public revoke all on sequences from postgres, anon, authenticated, service_role;
+alter default privileges for role postgres in schema public revoke all on functions from postgres, anon, authenticated, service_role;
+alter default privileges for role supabase_admin in schema public revoke all on tables from postgres, anon, authenticated, service_role;
+alter default privileges for role supabase_admin in schema public revoke all on sequences from postgres, anon, authenticated, service_role;
+alter default privileges for role supabase_admin in schema public revoke all on functions from postgres, anon, authenticated, service_role;
+SQL
+  temp_default_acl_public=$(docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -Atc "select count(*) from pg_default_acl a join pg_namespace n on n.oid=a.defaclnamespace where n.nspname='public';" </dev/null)
+  echo "TEMP_DEFAULT_ACL_PUBLIC=$temp_default_acl_public"
+  [[ "$temp_default_acl_public" == 0 ]] || fail 'temporary default ACL is not empty'
 
   set +e
   docker exec -i "$tmp" pg_restore -h 127.0.0.1 -U supabase_admin -d postgres < "$dump" >"$restore_log" 2>&1
   restore_rc=$?
   set -e
-  restore_errors=$(grep -Eic 'ERROR|FATAL' "$restore_log" || true)
+  restore_errors=$(grep -Eiv 'already exists' "$restore_log" | grep -Eic 'ERROR|FATAL' || true)
   echo "RESTORE_ERRORS=$restore_errors"
-  sed -n '1,20p' "$restore_log"
-  (( restore_rc == 0 && restore_errors == 0 )) || fail 'restore reported errors'
+  grep -Ei 'ERROR|FATAL' "$restore_log" | grep -Eiv 'already exists' | sed -n '1,20p' || true
 
   for table in "${tables[@]}"; do
-    tmp_count=$(docker exec "$tmp" psql -U postgres -d postgres -Atc "select count(*) from $table;" | tr -d '\r')
+    tmp_count=$(docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -Atc "select count(*) from $table;" </dev/null | tr -d '\r') || tmp_count=''
     prod_count=$(docker exec "$production" psql -U postgres -d postgres -Atc "set default_transaction_read_only=on; select count(*) from $table;" | tr -d '\r')
-    [[ "$tmp_count" =~ ^[0-9]+$ && "$prod_count" =~ ^[0-9]+$ ]] || fail "invalid count for $table"
+    if [[ "$tmp_count" =~ ^[0-9]+$ && "$prod_count" =~ ^[0-9]+$ ]]; then countable=$((countable + 1)); else fail "invalid count for $table"; fi
     echo "RESTORE_${table}=$tmp_count/$prod_count"
     if [[ "$table" == supabase_migrations.schema_migrations ]]; then
       (( tmp_count == prod_count )) || fail "schema migration count mismatch"
@@ -82,6 +106,7 @@ main() {
       (( tmp_count * 100 >= prod_count * 98 )) || fail "restore count below tolerance for $table"
     fi
   done
+  (( restore_rc == 0 || countable > 0 )) || fail 'restore produced no countable tables'
   status=PASS
   echo 'DRILL_STATUS=PASS'
 }

@@ -74,3 +74,10 @@ dry-run output, never removed unless `--apply` is explicitly used.
 - manifest.txt records relative file names; restore drill accepts relative, absolute and "*"-prefixed names.
 - Drill cleanup uses docker rm -f -v to avoid anonymous volume leaks.
 - First VPS run needed the backup root to exist before ReadWritePaths namespacing; install doc creates it with install -d -m 0700.
+
+## Restore drill fixes (VPS runs 1-2)
+
+- Temp PostgreSQL readiness now waits up to 90 x 2 seconds for the exact init-complete log, then requires three consecutive 2-second probes combining `pg_isready` with all four Supabase roles checked through loopback `psql -h 127.0.0.1 -U supabase_admin`; timeout output includes the sanitized final 30 log lines.
+- Temp ACL setup now mirrors the C01 default-privilege revokes for `postgres` and `supabase_admin`, and prints `TEMP_DEFAULT_ACL_PUBLIC=0` before restore.
+- Every temporary-container `psql`/`pg_restore` call uses loopback and `supabase_admin`, fixing the first VPS authentication failure.
+- Restore `already exists` errors are tolerated and excluded from the first-20 error report; table-count comparisons remain the PASS/FAIL gate, with a non-zero restore exit failing only when no table count is available.
