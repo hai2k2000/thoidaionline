@@ -80,3 +80,6 @@ The four copied files match byte-for-byte (SHA-256 source = destination):
 - R10: bucket restore is assembled into a temporary transaction with the same temporary-only replica setting, preserving the dump content unchanged; the C-01 storage migration continues to run normally without replica mode.
 - Scope preserved: main/status guard, embedded SQL payloads and SHA-256 checks, R7, R8, baseline/AFTER criteria and role checks are unchanged.
 - Validation: `bash -n scripts/production/c01-dryrun.sh`; `node --test src/lib/anonAccessLockdown.test.mjs scripts/standalone-packaging.test.mjs`; `git diff --check`.
+
+## Claude fix after dry-run run 5
+- Dry-run run 5 matched the production baseline and exposed a real bug in the public migration: `acldefault(case ... end, oid)` passed `text`; fixed with an explicit `::"char"` cast (verified read-only on production: returns exactly the 9 exposed tables). New public SQL SHA-256 `aa26878d...`; dry-run payload and expected SHA updated; storage payload unchanged.

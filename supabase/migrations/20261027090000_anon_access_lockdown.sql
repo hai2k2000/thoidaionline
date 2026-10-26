@@ -25,7 +25,7 @@ begin
     where n.nspname = 'public'
       and c.relkind in ('r', 'p', 'v', 'm', 'f', 'S')
       and exists (
-        select 1 from aclexplode(coalesce(c.relacl, acldefault(case when c.relkind = 'S' then 's' else 'r' end, c.relowner))) a
+        select 1 from aclexplode(coalesce(c.relacl, acldefault((case when c.relkind = 'S' then 's' else 'r' end)::"char", c.relowner))) a
         where a.grantee in (0, 'anon'::regrole, 'authenticated'::regrole)
       )
   loop
