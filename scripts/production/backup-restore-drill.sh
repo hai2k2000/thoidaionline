@@ -7,8 +7,8 @@ main() {
   local daily="$root/daily"
   local image=public.ecr.aws/supabase/postgres:17.6.1.095
   local production=supabase_db_thoidai-work
-  local tmp="thoidai-restore-drill-$$"
-  local work=''
+  tmp="thoidai-restore-drill-$$"
+  work=''
   local backup='' dump='' manifest='' storage=''
   local restore_log='' restore_errors=0
   local table tmp_count prod_count countable=0 count_error
@@ -16,9 +16,9 @@ main() {
 
   cleanup() {
     local rc=$?
-    if [[ -n "$tmp" ]]; then docker rm -f -v "$tmp" >/dev/null 2>&1 || true; fi
-    if [[ -n "$work" && -d "$work" ]]; then rm -rf -- "$work"; fi
-    if (( rc != 0 )) && [[ "$status" == INCOMPLETE ]]; then
+    if [[ -n "${tmp:-}" ]]; then docker rm -f -v "$tmp" >/dev/null 2>&1 || true; fi
+    if [[ -n "${work:-}" && -d "${work:-}" ]]; then rm -rf -- "$work"; fi
+    if (( rc != 0 )) && [[ "${status:-INCOMPLETE}" == INCOMPLETE ]]; then
       echo 'DRILL_STATUS=FAIL'
     fi
   }
