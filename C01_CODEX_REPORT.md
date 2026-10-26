@@ -50,7 +50,14 @@ The four copied files match byte-for-byte (SHA-256 source = destination):
 - R3: restores the schema as `supabase_admin` without `ON_ERROR_STOP`, prints `SCHEMA_RESTORE_ERRORS`, and prints up to the first 20 filtered error lines; the baseline gate determines whether the restore is trustworthy.
 - R4: runs service/anon role probes through `supabase_admin`; anon denial passes only for the exact expected table/function permission errors, while all other errors print `ERROR` plus a reason and exit nonzero.
 - R5: starts the temporary database container with `--network none`.
+
 - R6: compares BEFORE values with the production baseline and stops with `DRYRUN_STATUS=INCONCLUSIVE` before migrations on mismatch; AFTER requires all leak/missing/storage/RLS counts to be zero and the service-role RPC count to remain 108 before PASS.
+
+## Round 3 fixes (dry-run run 1)
+- R7: waits for the image's `PostgreSQL init process complete; ready for start up.` log marker, then requires three consecutive 2-second-spaced checks where `pg_isready` succeeds and `supabase_admin` sees all four required roles. Timeout evidence includes the sanitized last 30 container-log lines; successful startup prints `TEMP_DB_INIT=COMPLETE` and `TEMP_DB_HEALTH=PASS`.
+- LOW: restore-error counting and the first-20-line excerpt now include both `ERROR:` and `FATAL:` records.
+- Scope preserved: embedded SQL payloads, SHA-256 checks, baseline comparison, role checks, and cleanup were not changed.
+- Validation: `bash -n scripts/production/c01-dryrun.sh` = PASS; `node --test src/lib/anonAccessLockdown.test.mjs scripts/standalone-packaging.test.mjs` = 14/14 PASS; `git diff --check` = PASS.
 
 ## Quan sát thêm (không xử lý)
 - Existing standalone packaging is the repository's migration registry, so it was updated together with its verifier and focused contract test.

@@ -23,12 +23,15 @@ printf 'DUMP_SCHEMA_SHA256=%s\n' "$(sha256sum "$work_dir/schema.sql"|awk '{print
 docker volume create "$volume" >/dev/null
 docker run -d --name "$container" --network none --volume "$volume:/var/lib/postgresql/data" --memory 512m -e POSTGRES_PASSWORD="$temp_password" "$image" >/dev/null
 container_started=1
-healthy=0; for _ in $(seq 1 60); do if docker exec "$container" pg_isready -U postgres -d postgres >/dev/null 2>&1; then healthy=1; break; fi; sleep 2; done
-if [ "$healthy" -ne 1 ]; then printf 'TEMP_DB_HEALTH=TIMEOUT\n'; exit 1; fi
+init_complete=0; for _ in $(seq 1 90); do if docker logs "$container" 2>&1 | grep -Fq 'PostgreSQL init process complete; ready for start up.'; then init_complete=1; break; fi; sleep 2; done
+if [ "$init_complete" -ne 1 ]; then printf 'TEMP_DB_HEALTH=TIMEOUT\n'; docker logs "$container" 2>&1 | tail -n 30 | tr -cd '[:print:]\n'; exit 1; fi
+printf 'TEMP_DB_INIT=COMPLETE\n'
+healthy=0; consecutive=0; for _ in $(seq 1 90); do if docker exec "$container" pg_isready -U postgres -d postgres >/dev/null 2>&1 && [ "$(docker exec "$container" env PGPASSWORD="$temp_password" psql -Atqc "select count(*) from pg_roles where rolname in ('supabase_admin','supabase_auth_admin','supabase_storage_admin','service_role')" -U supabase_admin -d postgres 2>/dev/null || true)" = 4 ]; then consecutive=$((consecutive + 1)); if [ "$consecutive" -ge 3 ]; then healthy=1; break; fi; else consecutive=0; fi; sleep 2; done
+if [ "$healthy" -ne 1 ]; then printf 'TEMP_DB_HEALTH=TIMEOUT\n'; docker logs "$container" 2>&1 | tail -n 30 | tr -cd '[:print:]\n'; exit 1; fi
 printf 'TEMP_DB_HEALTH=PASS\n'
 psql_as(){ local role="$1"; shift; docker exec -i "$container" env PGPASSWORD="$temp_password" psql -v ON_ERROR_STOP=1 -U "$role" -d postgres "$@"; }
 docker exec -i "$container" env PGPASSWORD="$temp_password" psql -U supabase_admin -d postgres <"$work_dir/schema.sql" >"$work_dir/restore.log" 2>&1 || true
-restore_errors="$(grep -Eic '(^| )ERROR:' "$work_dir/restore.log" || true)"; printf 'SCHEMA_RESTORE_ERRORS=%s\n' "$restore_errors"; grep -Ei '(^| )ERROR:' "$work_dir/restore.log"|head -n 20||true
+restore_errors="$(grep -Eic '(^| )(ERROR|FATAL):' "$work_dir/restore.log" || true)"; printf 'SCHEMA_RESTORE_ERRORS=%s\n' "$restore_errors"; grep -Ei '(^| )(ERROR|FATAL):' "$work_dir/restore.log"|head -n 20||true
 [ "$restore_errors" -eq 0 ] && printf 'SCHEMA_RESTORE=PASS\n' || printf 'SCHEMA_RESTORE=COMPLETED_WITH_ERRORS\n'
 grep -Eiq 'warning|no privileges could be revoked' "$work_dir/restore.log" && printf 'SCHEMA_RESTORE_WARNINGS=%s\n' "$(grep -Ei 'warning|no privileges could be revoked' "$work_dir/restore.log"|tr '\n' ' '|tr -cd '[:print:]')" || printf 'SCHEMA_RESTORE_WARNINGS=NONE\n'
 psql_as supabase_admin <"$work_dir/migrations.sql" >"$work_dir/ledger-restore.log" 2>&1 || { printf 'LEDGER_RESTORE=FAIL\n'; cat "$work_dir/ledger-restore.log"; exit 1; }; printf 'LEDGER_RESTORE=PASS\n'
