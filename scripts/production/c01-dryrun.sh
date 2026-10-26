@@ -1,5 +1,6 @@
 set -Eeuo pipefail
 
+main() {
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 work_dir="/opt/ops/thoidai-work/c01-dryrun-${timestamp}"
 container="thoidai-c01-dryrun-${timestamp}"
@@ -8,7 +9,8 @@ image='public.ecr.aws/supabase/postgres:17.6.1.095'
 db_container='supabase_db_thoidai-work'
 temp_password="$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')"
 container_started=0
-cleanup(){ set +e; if [ "$container_started" -eq 1 ]; then docker rm -f "$container" >/dev/null 2>&1 || true; fi; docker volume rm "$volume" >/dev/null 2>&1 || true; rm -rf -- "$work_dir"; printf 'CLEANUP_CONTAINER=%s\n' "$(docker ps -a --format '{{.Names}}' | grep -Fx "$container" >/dev/null 2>&1 && echo PRESENT || echo ABSENT)"; printf 'CLEANUP_VOLUME=%s\n' "$(docker volume ls --format '{{.Name}}' | grep -Fx "$volume" >/dev/null 2>&1 && echo PRESENT || echo ABSENT)"; printf 'CLEANUP_DIR=%s\n' "$(test -e "$work_dir" && echo PRESENT || echo ABSENT)"; }
+status_printed=0
+cleanup(){ exit_status=$?; set +e; if [ "$container_started" -eq 1 ]; then docker rm -f "$container" >/dev/null 2>&1 || true; fi; docker volume rm "$volume" >/dev/null 2>&1 || true; rm -rf -- "$work_dir"; printf 'CLEANUP_CONTAINER=%s\n' "$(docker ps -a --format '{{.Names}}' | grep -Fx "$container" >/dev/null 2>&1 && echo PRESENT || echo ABSENT)"; printf 'CLEANUP_VOLUME=%s\n' "$(docker volume ls --format '{{.Name}}' | grep -Fx "$volume" >/dev/null 2>&1 && echo PRESENT || echo ABSENT)"; printf 'CLEANUP_DIR=%s\n' "$(test -e "$work_dir" && echo PRESENT || echo ABSENT)"; if [ "$exit_status" -eq 0 ] && [ "$status_printed" -eq 0 ]; then printf 'DRYRUN_STATUS=INCOMPLETE\n'; exit_status=1; fi; trap - EXIT; exit "$exit_status"; }
 trap cleanup EXIT
 free_kib="$(df -Pk / | awk 'NR==2 {print $4}')"
 printf 'DISK_FREE_BEFORE=%s\nDISK_REQUIRED_GIB=11\n' "$(df -h / | awk 'NR==2 {print $4}')"
@@ -40,7 +42,7 @@ alter default privileges for role supabase_admin in schema public revoke all on 
 alter default privileges for role supabase_admin in schema public revoke all on sequences from postgres, anon, authenticated, service_role;
 alter default privileges for role supabase_admin in schema public revoke all on functions from postgres, anon, authenticated, service_role;
 SQL
-printf 'TEMP_DEFAULT_ACL_PUBLIC=%s\n' "$(psql_as supabase_admin -Atc "select count(*) from pg_default_acl a join pg_namespace n on n.oid=a.defaclnamespace where n.nspname='public';")"
+printf 'TEMP_DEFAULT_ACL_PUBLIC=%s\n' "$(psql_as supabase_admin -Atc "select count(*) from pg_default_acl a join pg_namespace n on n.oid=a.defaclnamespace where n.nspname='public';" </dev/null)"
 docker exec -i "$container" env PGPASSWORD="$temp_password" psql -U supabase_admin -d postgres <"$work_dir/schema.sql" >"$work_dir/restore.log" 2>&1 || true
 restore_errors="$(grep -Eic '(^| )(ERROR|FATAL):' "$work_dir/restore.log" || true)"; printf 'SCHEMA_RESTORE_ERRORS=%s\n' "$restore_errors"; grep -Ei '(^| )(ERROR|FATAL):' "$work_dir/restore.log"|head -n 20||true
 [ "$restore_errors" -eq 0 ] && printf 'SCHEMA_RESTORE=PASS\n' || printf 'SCHEMA_RESTORE=COMPLETED_WITH_ERRORS\n'
@@ -107,4 +109,8 @@ if out="$(psql_as supabase_admin <<'SQL' 2>&1
 begin; set local role service_role; insert into public.tasks(title) values ('C-01 dry-run trigger probe'); rollback;
 SQL
 )"; then printf 'TRIGGER_INSERT=PASS\n'; else printf 'TRIGGER_INSERT=SKIPPED\nTRIGGER_INSERT_REASON=%s\n' "$(printf '%s' "$out"|tr '\n' ' '|tr -cd '[:print:]')"; fi
+status_printed=1
 printf 'DRYRUN_STATUS=PASS\n'
+}
+
+main "$@"; exit $?

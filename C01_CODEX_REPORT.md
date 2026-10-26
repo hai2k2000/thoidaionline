@@ -67,3 +67,10 @@ The four copied files match byte-for-byte (SHA-256 source = destination):
 - R8: adds a read-only `storage.buckets` data dump with SHA-256 evidence; removes matching bucket IDs in the temporary database and restores the dump with `ON_ERROR_STOP=1` immediately after the migration ledger. `storage.objects` is untouched.
 - Scope preserved: embedded SQL payloads and SHA-256 checks, baseline/AFTER criteria, role checks and cleanup remain unchanged.
 - Validation: `bash -n scripts/production/c01-dryrun.sh` PASS; `node --test src/lib/anonAccessLockdown.test.mjs scripts/standalone-packaging.test.mjs` 14/14 PASS; `git diff --check` PASS. No script, Docker, SSH, network, package install, Git write, or `.env` read was performed.
+
+## Round 5 fixes (dry-run run 3)
+- R9: wraps the executable body in `main()` so Bash parses the complete function before any `docker exec -i` can consume the script stream; the final file line is `main "$@"; exit $?`.
+- R9: redirects `psql_as` from `/dev/null` for the `TEMP_DEFAULT_ACL_PUBLIC` query, the only `docker exec -i` call without a file or heredoc input.
+- R9: tracks whether PASS was printed; the EXIT cleanup trap converts any zero exit before `DRYRUN_STATUS=PASS` into `DRYRUN_STATUS=INCOMPLETE` with exit 1 while preserving cleanup evidence.
+- Scope preserved: SQL payloads and SHA-256 checks, R7, R8, baseline/AFTER criteria and role checks are unchanged.
+- Validation: `bash -n scripts/production/c01-dryrun.sh` PASS; `node --test src/lib/anonAccessLockdown.test.mjs scripts/standalone-packaging.test.mjs` 14/14 PASS; `git diff --check` PASS. No dry-run script, Docker, SSH, network, package install, Git write, or `.env` read was performed.
