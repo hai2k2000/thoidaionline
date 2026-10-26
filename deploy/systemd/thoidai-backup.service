@@ -1,0 +1,11 @@
+[Unit]
+Description=Thoidai managed backup
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/thoidai-backup run
+Nice=10
+IOSchedulingClass=idle
+ProtectSystem=full
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/opt/ops/thoidai-work/backups/managed /run/lock

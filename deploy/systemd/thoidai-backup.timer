@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily Thoidai managed backup
+[Timer]
+OnCalendar=*-*-* 02:40:00 Asia/Ho_Chi_Minh
+Persistent=true
+RandomizedDelaySec=10m
+[Install]
+WantedBy=timers.target
