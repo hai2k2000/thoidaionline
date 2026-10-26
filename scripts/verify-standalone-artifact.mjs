@@ -54,6 +54,8 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261021100000_database_management_v1_filter_approval.sql",
   "supabase/migrations/20261023130000_database_management_v1_workflow_ambiguity_fix.sql",
   "supabase/migrations/20261024110000_database_management_v1_self_approval.sql",
+  "supabase/migrations/20261027090000_anon_access_lockdown.sql",
+  "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);
