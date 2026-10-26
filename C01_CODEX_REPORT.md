@@ -90,10 +90,12 @@ The four copied files match byte-for-byte (SHA-256 source = destination):
 - Static validation required by the apply spec: `bash -n scripts/production/c01-apply.sh`, focused Node tests, and `git diff --check`. No script, SSH, Docker, network, package install, Git write, or `.env` read was performed in this sandbox.
 - Payload `cmp` validation: PASS for public migration, storage migration, and verify SQL after gzip+base64 decode; all three match repository sources byte-for-byte.
 
-## Stage 3 apply runbook - review round 1 fixes
+## Stage 3 apply runbook — round 3 (supabase_admin via loopback)
 - A1: migration execution and ledger writes now fail explicitly on errors; ledger writes use `supabase_admin`, verify the inserted version count, and migrate/storage branching uses explicit `if` statements.
 - A2: BEFORE counts now compare against the documented production baseline and emit `BASELINE_MATCH=YES/NO`; AFTER uses zero leak counts and RPC count 108. Count prefixes are `BEFORE_*` and `AFTER_*`.
 - A3: nginx location matching uses POSIX `[[:space:]]` in both `grep -E` and `awk`.
 - A4: ledger insertion uses `supabase_admin` while public migration execution remains `postgres`.
 - A5: EXIT cleanup removes only the temporary work directory; backups and `c01-last-backup` are preserved.
+- Round 3: all migration and ledger `psql` commands use `-h 127.0.0.1`; `check_admin_auth` gates both migration steps after backup freshness and requires `current_user = supabase_admin`.
+- Round 3: AFTER requires every count to be zero (including storage anonymous-policy, object-grant and public-bucket counts), keeps RPC at 108, and requires `LEDGER_C01=2`.
 - Scope preserved: only `scripts/production/c01-apply.sh` and this report were changed in this round. Per request, no script, test, Git, network, SSH, Docker, package installation, or `.env` access was performed.
