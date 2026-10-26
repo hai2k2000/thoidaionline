@@ -63,7 +63,7 @@ main() {
   docker exec "$tmp" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'revoke all on schema public from public;' >/dev/null
 
   set +e
-  docker exec -i "$tmp" pg_restore -U supabase_admin -d postgres < "$dump" >"$restore_log" 2>&1
+  docker exec -i "$tmp" pg_restore -h 127.0.0.1 -U supabase_admin -d postgres < "$dump" >"$restore_log" 2>&1
   restore_rc=$?
   set -e
   restore_errors=$(grep -Eic 'ERROR|FATAL' "$restore_log" || true)
