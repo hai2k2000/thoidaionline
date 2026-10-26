@@ -9,6 +9,7 @@
 - `deploy/systemd/thoidai-backup-status.service`
 - `deploy/systemd/thoidai-backup-status.timer`
 - `docs/operations/backup-c02.md`
+- `scripts/production/backup-restore-drill.sh`
 
 ## Validation
 
@@ -16,8 +17,19 @@
 | --- | --- |
 | `bash -n scripts/production/thoidai-backup.sh` | PASS |
 | `bash scripts/production/thoidai-backup.sh self-test` | `SELF_TEST=PASS` |
-| `node --test scripts/production/thoidai-backup.test.mjs` | 2 passed, 0 failed |
+| `bash -n scripts/production/backup-restore-drill.sh` | PASS |
+| `node --test scripts/production/thoidai-backup.test.mjs` | 3 passed, 0 failed |
 | `git diff --check` | PASS; no output |
+
+## C-02 restore drill
+
+The restore drill is a verify-only VPS script. It selects and validates the newest complete daily backup, restores into an isolated Supabase PostgreSQL container, and compares required table counts with production read-only queries. It uses the C01 isolation/readiness contracts (`main` guard, `INCOMPLETE` status guard, cleanup trap, `--network none`, 512 MiB memory, init-log wait, three readiness probes, and four-role check). It does not dump production, write production, restart services, inspect/top the production container, or print secrets. The local workspace validation intentionally does not execute Docker, SSH, or the drill.
+
+## Fix D1/D2 (first VPS run)
+
+- D1: predecessor lookup now considers only direct child directories in `daily` whose names pass `valid_name`, excluding dot-prefixed partial directories; newest is selected by name.
+- D2: partial cleanup uses an `EXIT` trap with an initialized cleanup flag, clears the flag after atomic rename, and is safe under `set -u`.
+- Regression coverage runs two distinct fake `pg_dump` backups and a third identical dump, asserting exit 0, valid daily count, no remaining `.partial`, `last-success`, and the expected `DUPLICATE_OF` target.
 
 No real `run`, `retention --apply`, Docker, SSH, network, or VPS command was executed.
 
@@ -56,3 +68,9 @@ dry-run output, never removed unless `--apply` is explicitly used.
 ## Claude review fix
 - `pg_restore --list` now uses `docker exec -i` (stdin was not forwarded, so verification always failed).
 - Known limitation: `pg_dump -Fc` embeds a timestamp, so byte-level dedupe rarely triggers; bounded retention keeps size small (~1.5 MB per backup).
+
+## Claude review fixes (round 2)
+- Duplicate path now removes its .partial directory (previously leaked ~1.5 MB per duplicate run).
+- manifest.txt records relative file names; restore drill accepts relative, absolute and "*"-prefixed names.
+- Drill cleanup uses docker rm -f -v to avoid anonymous volume leaks.
+- First VPS run needed the backup root to exist before ReadWritePaths namespacing; install doc creates it with install -d -m 0700.
