@@ -54,7 +54,22 @@ if (!existsSync(standalone)) throw new Error("Next standalone output is missing;
 if (!canonicalBaseline) throw new Error("canonical baseline is missing from check-release-baseline.mjs");
 if (existsSync(output)) throw new Error(`artifact already exists: ${output}`);
 execFileSync(process.execPath, ["scripts/check-required-routes.mjs"], { cwd: root, stdio: "inherit" });
+// Packaging is only eligible after the repository's real Node test suite passes.
+// Keep the risk-relevant contract list explicit so evidence cannot be fabricated.
+const automatedTestFiles = [
+  "scripts/classify-release-risk.test.mjs",
+  "scripts/deploy-gate.test.mjs",
+  "scripts/external-artifact-contract.test.mjs",
+  "scripts/production/safe-apply-migration.test.mjs",
+  "scripts/rbac-v2-scope-hotfix.test.mjs",
+  "scripts/standalone-packaging.test.mjs",
+  "src/lib/anonAccessLockdown.test.mjs",
+  "src/lib/assetAuthorization.test.mjs",
+];
+const riskEvidencePath = join(output, ".risk-test-evidence");
+execFileSync(process.execPath, ["--test", ...automatedTestFiles], { cwd: root, stdio: "inherit" });
 await mkdir(output, { recursive: true });
+await writeFile(riskEvidencePath, `commit=${commit}\nstatus=PASS\ncommand=node --test ${automatedTestFiles.join(" ")}\n`);
 await cp(standalone, output, { recursive: true });
 // Next 16 standalone tracing can omit framework constants required by the runtime.
 const nextFramework = join(root, "node_modules", "next", "dist", "lib", "framework");
@@ -143,7 +158,11 @@ await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n
 const riskOutput = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", root], {
   cwd: root,
   encoding: "utf8",
-  env: { ...process.env, THOIDAI_RISK_BASE: process.env.THOIDAI_RISK_BASE || currentProductionParent },
+  env: {
+    ...process.env,
+    THOIDAI_RISK_BASE: process.env.THOIDAI_RISK_BASE || currentProductionParent,
+    THOIDAI_RISK_TEST_EVIDENCE: riskEvidencePath,
+  },
 });
 const risk = Object.fromEntries(riskOutput.trim().split(/\r?\n/).map((line) => {
   const index = line.indexOf("=");
@@ -190,6 +209,7 @@ await writeFile(join(output, ".release-meta"), [
   "rollback_role=unassigned",
   "",
 ].join("\n"));
+await rm(riskEvidencePath, { force: true });
 await import(pathToFileURL(join(output, "artifact-manifest.mjs")).href).then(({ writeManifest }) => writeManifest(output));
 execFileSync(process.execPath, [join(output, "verify-standalone-artifact.mjs"), output], { stdio: "inherit" });
 console.log(`standalone-artifact: ${output}`);

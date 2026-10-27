@@ -36,7 +36,7 @@ artifact_commit=$(awk -F= '$1=="commit" {print $2; exit}' "$artifact/.release-me
 risk_class=$(awk -F= '$1=="risk_class" {print $2; exit}' "$artifact/.release-meta")
 risk_test_evidence=$(awk -F= '$1=="risk_test_evidence" {print $2; exit}' "$artifact/.release-meta")
 [[ "$risk_class" == low || "$risk_class" == high ]] || { echo "DEPLOY ABORTED: artifact risk classification missing or invalid" >&2; exit 1; }
-[[ "$risk_class" != low || "$risk_test_evidence" == automated-tests-pass ]] || { echo "DEPLOY ABORTED: low-risk artifact lacks automated test evidence" >&2; exit 1; }
+[[ "$risk_test_evidence" == automated-tests-pass ]] || { echo "DEPLOY ABORTED: $risk_class-risk artifact lacks required automated test evidence (expected risk_test_evidence=automated-tests-pass)" >&2; exit 1; }
 smoke_required=0
 smoke_waived=0
 echo "authenticated smoke: OPTIONAL (not an activation gate)"

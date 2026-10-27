@@ -1,5 +1,7 @@
 # Thời Đại Work VPS-FIRST
 
+> **Fallback only:** VPS-FIRST is an owner-approved exception when the default local-to-target path cannot be used. See `AGENTS.md` for the canonical RuleCodex 1.2.0 routing and approval gates.
+
 RuleCodex `1.2.0` authorizes this profile only for the Thời Đại Work release family. The VPS is the build and verification target; GitHub remains source archive/version control.
 
 ## Flow

@@ -23,7 +23,8 @@
 
 ## LOCAL-FIRST DEPLOYMENT PROFILE
 
-- `deployment_profile: local-first` (canonical RuleCodex 2.0.0 default for Thời Đại Work).
+- `deployment_profile: local-first` (RuleCodex 1.2.0, main@ad0778f, default local-to-target path).
+- Naming alignment: `local-first` (AGENTS) = `default-local-to-target` (`.release-meta`) = RuleCodex 1.2.0's default path; VPS-first fallback = RuleCodex profile `thoidai-work-vps-first`.
 - Authorized target: SSH alias `vps-aylaspa`; local source/build workspaces are canonical, and VPS source workspaces are fallback-only.
 - Immutable release root: `/opt/releases/thoidai-work`; activation target is the `current` pointer, with `previous`, `rollback-1` and `rollback-2` protected.
 - Service/health target: `thoidai-work.service` and `http://127.0.0.1:3001/login`.

@@ -1,6 +1,8 @@
 # External Artifact CI (Legacy Compatibility)
 
-Thời Đại Work now uses the canonical RuleCodex `thoidai-work-vps-first` profile. This document and workflow remain for historical verification or an explicitly requested compatibility run; they are not required for build, verify or deploy.
+> **Historical/optional only:** EXTERNAL_ARTIFACT_CI is not a mandatory gate. The default path is local build -> target verification; see `AGENTS.md` for the canonical RuleCodex 1.2.0 policy.
+
+The default path is local build -> target verification. This document and workflow remain for historical verification or an explicitly requested compatibility run; they are not required for build, verify or deploy. VPS-first is a separate owner-approved fallback described in `AGENTS.md`.
 
 GitHub Actions workflow `.github/workflows/production-artifact.yml` is the only Phase 1 build path for a production-shaped artifact. It installs dependencies, runs focused checks, TypeScript, ESLint, route validation, the production-like Next build, standalone packaging, provenance/checksum verification, and static secret scanning.
 

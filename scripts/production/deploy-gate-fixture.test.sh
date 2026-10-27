@@ -13,7 +13,7 @@ bin="$root/bin"
 mkdir -p "$release_root" "$bin" "$root/artifact/.next/server" "$root/artifact/node_modules/next" "$root/artifact/scripts/production" "$root/shared"
 chmod 755 "$root" "$release_root" "$root/shared"
 chmod 700 "$root/artifact"
-printf 'commit=4fcd766d3b96a261297d9bd1d121c41a8a211f62\nbuild_config=canonical-public\nenv_model=runtime-injected\nrisk_class=high\nrisk_test_evidence=not-applicable\n' > "$root/artifact/.release-meta"
+printf 'commit=4fcd766d3b96a261297d9bd1d121c41a8a211f62\nbuild_config=canonical-public\nenv_model=runtime-injected\nrisk_class=high\nrisk_test_evidence=missing-or-invalid\n' > "$root/artifact/.release-meta"
 touch "$root/artifact/verify-standalone-artifact.mjs" "$root/artifact/server.js" "$root/artifact/.next/BUILD_ID" "$root/artifact/node_modules/next/package.json" "$root/shared/.env.local" "$root/shared/.env.production"
 
 cat > "$bin/node" <<'EOF'
@@ -169,6 +169,28 @@ run_failure() {
     }
   fi
 }
+
+# High-risk artifacts must fail closed before any release mutation.
+if PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/high-missing.lock" THOIDAI_NEW_RELEASE_PATH="$release_root/new-high-missing" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" bash scripts/production/deploy-gate.sh "$root/artifact" >"$root/high-missing.out" 2>"$root/high-missing.err"; then
+  echo "high-risk missing evidence was accepted" >&2
+  exit 1
+fi
+grep -q 'high-risk artifact lacks required automated test evidence' "$root/high-missing.err"
+[[ "$(snapshot)" == "$expected" ]]
+
+# Low-risk artifacts keep the same fail-closed evidence requirement.
+sed -i 's/risk_class=high/risk_class=low/' "$root/artifact/.release-meta"
+if PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_DEPLOY_LOCK="$root/low-missing.lock" THOIDAI_NEW_RELEASE_PATH="$release_root/new-low-missing" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" bash scripts/production/deploy-gate.sh "$root/artifact" >"$root/low-missing.out" 2>"$root/low-missing.err"; then
+  echo "low-risk missing evidence was accepted" >&2
+  exit 1
+fi
+grep -q 'low-risk artifact lacks required automated test evidence' "$root/low-missing.err"
+[[ "$(snapshot)" == "$expected" ]]
+
+# Restore high-risk coverage and verify valid evidence passes the gate.
+sed -i 's/risk_class=low/risk_class=high/' "$root/artifact/.release-meta"
+# The same high-risk artifact passes once real automated evidence is recorded.
+sed -i 's/risk_test_evidence=missing-or-invalid/risk_test_evidence=automated-tests-pass/' "$root/artifact/.release-meta"
 
 for kind in restart health ln-rollback-2 mv-rollback-2 ln-rollback-1 mv-rollback-1 ln-previous mv-previous ln-current mv-current; do run_failure "$kind"; done
 
