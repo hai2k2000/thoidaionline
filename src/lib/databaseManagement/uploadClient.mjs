@@ -24,6 +24,11 @@ export async function uploadRecordFiles(recordId, files, fetchImpl = fetch, opti
   const timeoutMs = options.timeoutMs ?? 30_000;
   for (const file of files) {
     const item = normalizeUpload(file, files.indexOf(file));
+    const validation = validateSelectedFiles([item.file]);
+    if (validation.length) {
+      failed.push({ file: item.file, uploadId: item.uploadId, code: validation[0].code });
+      continue;
+    }
     const body = new FormData();
     body.set("file", item.file);
     const controller = typeof AbortController === "function" ? new AbortController() : null;

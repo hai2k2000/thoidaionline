@@ -43,3 +43,12 @@ test("record detail uses friendly export and history labels", () => {
   assert.match(detail, /historyLabels/);
   assert.doesNotMatch(detail, />Xuất metadata</);
 });
+
+test("record detail exposes delete and restore controls from API capabilities", () => {
+  const detail = readFileSync(new URL("../../app/database/records/[id]/page.tsx", import.meta.url), "utf8");
+  assert.match(detail, /canDelete\?: boolean/);
+  assert.match(detail, /canRestore\?: boolean/);
+  assert.match(detail, /Xóa hồ sơ/);
+  assert.match(detail, /Khôi phục hồ sơ/);
+  assert.match(detail, /window\.confirm/);
+});
