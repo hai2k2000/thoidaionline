@@ -6,7 +6,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 test("risk classifier is fail-closed without sealed test evidence", () => {
-  const output = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", process.cwd()], { encoding: "utf8" });
+  // CI exports THOIDAI_RISK_TEST_EVIDENCE job-wide and package:standalone reruns this suite, so clear it explicitly.
+  const output = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", process.cwd()], {
+    encoding: "utf8",
+    env: { ...process.env, THOIDAI_RISK_TEST_EVIDENCE: "" },
+  });
   assert.match(output, /risk_class=high/);
   assert.match(output, /risk_test_evidence=missing-or-invalid/);
 });
