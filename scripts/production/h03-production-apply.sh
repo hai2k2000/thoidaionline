@@ -34,7 +34,8 @@ for arg in "$@"; do
     *) args+=("$arg") ;;
   esac
 done
-exec docker exec -i supabase_db_thoidai-work psql -h 127.0.0.1 -U supabase_admin --dbname postgres "${args[@]}"
+# -q: container psql 17 prints command tags (DO) for -c, which breaks safe-apply postcondition parsing.
+exec docker exec -i supabase_db_thoidai-work psql -q -h 127.0.0.1 -U supabase_admin --dbname postgres "${args[@]}"
 EOF
   chmod 700 "$psql_wrap"
   export SAFE_MIGRATION_PSQL_BIN="$psql_wrap" SAFE_MIGRATION_MIGRATIONS_DIR="$migrations"
