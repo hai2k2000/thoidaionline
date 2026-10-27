@@ -41,40 +41,7 @@ main() {
   docker exec -i "$tmp" pg_restore --schema=public --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres < "$dump" >"$restore_log" 2>&1 || true
   export H03_DB_URL="postgresql://supabase_admin:$db_password@127.0.0.1:$port/postgres"
   export SAFE_MIGRATION_MIGRATIONS_DIR="$BUNDLE_DIR/supabase/migrations"
-  local pre="$work/pre.sql"
-  cat > "$pre" <<'SQL'
-do $$
-declare v_count bigint;
-begin
-  select count(*) into v_count from supabase_migrations.schema_migrations;
-  -- 133 = backups taken before the 2026-10-27 H-03 ledger backfill, 167 = after it.
-  if v_count not in (133, 167) then raise exception 'expected ledger count 133 or 167, found %', v_count; end if;
-  if exists (
-    select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
-    where n.nspname='public' and c.relname in (
-      'task_assignment_batch_idempotency','editorial_topics','editorial_series',
-      'editorial_topic_tasks','editorial_series_items','journalism_publication_reports',
-      'journalism_publication_verifications'
-    )
-  ) then raise exception 'target table or index already exists'; end if;
-  if to_regprocedure('public.audit_direct_assignment_start()') is not null
-     or to_regprocedure('public.api_assign_task_batch_v1(uuid,uuid,uuid,uuid,jsonb)') is not null
-     or to_regprocedure('public.api_assert_journalism_access(uuid,uuid,text)') is not null
-     or to_regprocedure('public.api_assert_journalism_department_scope(uuid,uuid)') is not null
-     or to_regprocedure('public.api_register_journalism_task_v1(uuid,text,text,uuid,date,time,text,uuid,timestamptz,text,text)') is not null
-  then raise exception 'target function already exists'; end if;
-  if exists (
-    select 1 from pg_trigger where not tgisinternal and tgname in (
-      
-      'audit_direct_assignment_start','journalism_publication_reports_set_updated_at',
-      'editorial_topic_tasks_journalism_task_guard','editorial_series_items_journalism_task_guard',
-      'editorial_series_topic_compatibility_guard','editorial_topic_series_compatibility_guard',
-      'editorial_topics_set_updated_at','editorial_series_set_updated_at','editorial_series_items_set_updated_at'
-    )
-  ) then raise exception 'target trigger already exists'; end if;
-end $$;
-select 1;
-SQL
+  local pre="$BUNDLE_DIR/scripts/production/h03-apply/absent.sql"
   psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$pre" >/dev/null
   local file start end rc result
   while IFS= read -r file; do
@@ -89,7 +56,7 @@ SQL
   done < "$BUNDLE_DIR/scripts/production/h03-apply/order.txt"
   # The disposable DB restores only public + supabase_migrations, so the storage.* checks cannot run here;
   # production runs the full file.
-  psql "$H03_DB_URL" -v ON_ERROR_STOP=0 -f "$BUNDLE_DIR/scripts/production/verify-anon-lockdown.sql" 2>&1 | tee "$evidence/anon-lockdown.txt"
+  psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/verify-anon-public.sql" 2>&1 | tee "$evidence/anon-lockdown.txt"
   psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/h03-apply/rollback.sql" >/dev/null
   psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$pre" >/dev/null
   echo 'H03_STATUS=PASS'

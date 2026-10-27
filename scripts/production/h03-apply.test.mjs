@@ -32,3 +32,19 @@ test("rollback does not drop tables outside CREATE TABLE objects in the listed f
   const rollback = readFileSync(`${root}/rollback.sql`, "utf8");
   for (const match of rollback.matchAll(/drop\s+table\s+(?:if\s+exists\s+)?(?:public\.)?([a-z0-9_]+)/gi)) assert.equal(creates.has(match[1].toLowerCase()), true, match[1]);
 });
+
+test("rollback and absent cover every migration-created function name", () => {
+  const names = new Set();
+  for (const filename of order) {
+    const sql = readFileSync(`supabase/migrations/${filename}`, "utf8");
+    for (const match of sql.matchAll(/create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?([a-z0-9_]+)/gi)) names.add(match[1].toLowerCase());
+  }
+  const rollback = readFileSync(`${root}/rollback.sql`, "utf8").toLowerCase();
+  const absent = readFileSync(`${root}/absent.sql`, "utf8").toLowerCase();
+  for (const name of names) {
+    assert.match(rollback, new RegExp(`['\\"]${name}['\\"]`), name);
+    assert.match(absent, new RegExp(`['\\"]${name}['\\"]`), name);
+  }
+  assert.doesNotMatch(rollback, /cascade/);
+  assert.doesNotMatch(rollback, /touch_journalism_updated_at/);
+});
