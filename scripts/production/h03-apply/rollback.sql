@@ -10,14 +10,6 @@ drop trigger if exists editorial_topics_set_updated_at on public.editorial_topic
 drop trigger if exists editorial_series_set_updated_at on public.editorial_series;
 drop trigger if exists editorial_series_items_set_updated_at on public.editorial_series_items;
 
-drop table if exists public.editorial_topic_tasks;
-drop table if exists public.editorial_series_items;
-drop table if exists public.journalism_publication_verifications;
-drop table if exists public.journalism_publication_reports;
-drop table if exists public.editorial_series;
-drop table if exists public.editorial_topics;
-drop table if exists public.task_assignment_batch_idempotency;
-
 do $$
 declare
   r record;
@@ -38,6 +30,14 @@ begin
     where n.nspname='public' and p.proname=any(names)
   loop execute format('drop function %s', r.oid::regprocedure); end loop;
 end $$;
+
+drop table if exists public.editorial_topic_tasks;
+drop table if exists public.editorial_series_items;
+drop table if exists public.journalism_publication_verifications;
+drop table if exists public.journalism_publication_reports;
+drop table if exists public.editorial_series;
+drop table if exists public.editorial_topics;
+drop table if exists public.task_assignment_batch_idempotency;
 
 delete from public.role_permission_grants g using public.permissions p
 where g.permission_id=p.id and p.code in ('journalism.metadata.update','journalism.publication.manage','journalism.structure.manage','journalism.structure.assign','journalism.publication.verify');

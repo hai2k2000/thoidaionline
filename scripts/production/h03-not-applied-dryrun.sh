@@ -37,12 +37,22 @@ main() {
   port=$(docker port "$tmp" 5432/tcp | sed -n 's/.*127.0.0.1:\([0-9]*\).*/\1/p' | head -n1)
   [[ "$port" =~ ^[0-9]+$ ]] || { echo 'H03_ERROR=disposable port missing' >&2; return 1; }
   docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'create schema if not exists supabase_migrations;' >/dev/null
+  # Same as backup-restore-drill.sh: drop the image's default grants so restored ACLs mirror production.
+  docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+alter default privileges for role postgres in schema public revoke all on tables from postgres, anon, authenticated, service_role;
+alter default privileges for role postgres in schema public revoke all on sequences from postgres, anon, authenticated, service_role;
+alter default privileges for role postgres in schema public revoke all on functions from postgres, anon, authenticated, service_role;
+alter default privileges for role supabase_admin in schema public revoke all on tables from postgres, anon, authenticated, service_role;
+alter default privileges for role supabase_admin in schema public revoke all on sequences from postgres, anon, authenticated, service_role;
+alter default privileges for role supabase_admin in schema public revoke all on functions from postgres, anon, authenticated, service_role;
+SQL
   # Let pg_restore create schema_migrations with the dump's own columns (as backup-restore-drill.sh does).
   docker exec -i "$tmp" pg_restore --schema=public --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres < "$dump" >"$restore_log" 2>&1 || true
   export H03_DB_URL="postgresql://supabase_admin:$db_password@127.0.0.1:$port/postgres"
   export SAFE_MIGRATION_MIGRATIONS_DIR="$BUNDLE_DIR/supabase/migrations"
   local pre="$BUNDLE_DIR/scripts/production/h03-apply/absent.sql"
   psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$pre" >/dev/null
+  psql "$H03_DB_URL" -At -F'|' -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/verify-anon-public.sql" > "$evidence/anon-before.txt"
   local file start end rc result
   while IFS= read -r file; do
     [[ -z "$file" ]] && continue
@@ -56,7 +66,12 @@ main() {
   done < "$BUNDLE_DIR/scripts/production/h03-apply/order.txt"
   # The disposable DB restores only public + supabase_migrations, so the storage.* checks cannot run here;
   # production runs the full file.
-  psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/verify-anon-public.sql" 2>&1 | tee "$evidence/anon-lockdown.txt"
+  psql "$H03_DB_URL" -At -F'|' -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/verify-anon-public.sql" > "$evidence/anon-after.txt"
+  # What matters is the delta the migrations introduce: any *_LEAK / RLS_OFF counter that grows fails the run.
+  local grew
+  grew=$(awk -F'|' 'NR==FNR{b[$1]=$2; next} ($1 ~ /LEAK|RLS_OFF/) && ($2+0 > b[$1]+0) {print $1"="b[$1]"->"$2}' "$evidence/anon-before.txt" "$evidence/anon-after.txt")
+  paste -d'|' "$evidence/anon-before.txt" "$evidence/anon-after.txt" | awk -F'|' '{printf "ANON\t%s\tbefore=%s\tafter=%s\n", $1, $2, $4}'
+  [[ -z "$grew" ]] || { echo "H03_ERROR=anon exposure grew: $grew" >&2; return 1; }
   psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/h03-apply/rollback.sql" >/dev/null
   psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$pre" >/dev/null
   echo 'H03_STATUS=PASS'
