@@ -16,6 +16,7 @@ test("isolated Database V1 runner is reproducible from official migrations", () 
   assert.match(source, /20261018130000_database_management_v1_cp6_audit_outbox\.sql/);
   assert.match(source, /20261023130000_database_management_v1_workflow_ambiguity_fix\.sql/);
   assert.match(source, /20261024110000_database_management_v1_self_approval\.sql/);
+  assert.match(source, /20261027160000_database_management_v1_drop_source_person\.sql/);
   assert.match(source, /mkdtempSync/);
   assert.match(source, /cpSync\(sourceSupabase/);
   assert.match(source, /has_table_privilege/);

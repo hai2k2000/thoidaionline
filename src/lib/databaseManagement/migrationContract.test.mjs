@@ -9,6 +9,13 @@ const languageGroup = readFileSync(fileURLToPath(new URL("../../../supabase/migr
 const autocode = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020100000_database_management_v1_autocode.sql", import.meta.url)), "utf8");
 const filterApproval = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261021100000_database_management_v1_filter_approval.sql", import.meta.url)), "utf8");
 const listFilters = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027140000_database_management_v1_list_filters.sql", import.meta.url)), "utf8");
+const dropSourcePerson = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql", import.meta.url)), "utf8");
+
+test("source_person retirement removes obsolete fields and strips orphaned metadata", () => {
+  assert.match(dropSourcePerson, /^begin;[\s\S]*delete from public\.db_form_fields\s+where field_key = 'source_person';[\s\S]*commit;\s*$/i);
+  assert.match(dropSourcePerson, /update public\.db_records\s+set metadata = metadata - 'source_person'\s+where metadata \? 'source_person'/i);
+  assert.doesNotMatch(dropSourcePerson, /owner_id|permission|rpc/i);
+});
 
 test("foundation migration is additive, indexed, server-only and ACL-capable", () => {
   for (const table of ["db_categories", "db_record_types", "db_form_definitions", "db_form_fields", "db_records", "db_record_files", "db_record_external_links", "db_record_acl", "db_record_history", "db_saved_search_filters"]) assert.match(migration, new RegExp(`create table if not exists public\\.${table}`));
