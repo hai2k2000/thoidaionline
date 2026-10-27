@@ -6,7 +6,9 @@ main() {
   command -v docker >/dev/null || { echo 'H03_ERROR=docker missing' >&2; return 1; }
   command -v node >/dev/null || { echo 'H03_ERROR=node missing; safe-apply-migration requires node on the host' >&2; return 1; }
   local evidence="/opt/ops/thoidai-work/h03-evidence/dryrun-$(date -u +%Y%m%dT%H%M%SZ)"
-  local tmp="h03-dryrun-$$" work='' image='' port='' db_url='' backup='' dump='' manifest='' restore_log='' db_password=''
+  # tmp/work stay global so the EXIT trap can still see them after main returns.
+  tmp="h03-dryrun-$$" work=''
+  local image='' port='' db_url='' backup='' dump='' manifest='' restore_log='' db_password=''
   mkdir -p "$evidence"
   cleanup() { local rc=$?; [[ -n "$tmp" ]] && docker rm -f -v "$tmp" >/dev/null 2>&1 || true; [[ -n "$work" && -d "$work" ]] && rm -rf -- "$work"; return "$rc"; }
   trap cleanup EXIT
@@ -34,7 +36,8 @@ main() {
   ((ready)) || { echo 'H03_ERROR=disposable postgres timeout' >&2; return 1; }
   port=$(docker port "$tmp" 5432/tcp | sed -n 's/.*127.0.0.1:\([0-9]*\).*/\1/p' | head -n1)
   [[ "$port" =~ ^[0-9]+$ ]] || { echo 'H03_ERROR=disposable port missing' >&2; return 1; }
-  docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'create schema if not exists supabase_migrations; create table if not exists supabase_migrations.schema_migrations(version text primary key,name text not null,statements text[] not null); truncate supabase_migrations.schema_migrations;' >/dev/null
+  docker exec -i "$tmp" psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'create schema if not exists supabase_migrations;' >/dev/null
+  # Let pg_restore create schema_migrations with the dump's own columns (as backup-restore-drill.sh does).
   docker exec -i "$tmp" pg_restore --schema=public --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres < "$dump" >"$restore_log" 2>&1 || true
   export H03_DB_URL="postgresql://supabase_admin:$db_password@127.0.0.1:$port/postgres"
   export SAFE_MIGRATION_MIGRATIONS_DIR="$BUNDLE_DIR/supabase/migrations"
