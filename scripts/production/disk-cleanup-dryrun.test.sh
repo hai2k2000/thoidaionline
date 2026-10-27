@@ -57,7 +57,7 @@ grep -F $'worktree\tKEEP\t' "$tmp/out" | grep -F "$worktrees/dirty" >/dev/null |
 grep -F $'worktree\tKEEP\t' "$tmp/out" | grep -F "$worktrees/ahead" >/dev/null || fail "ahead worktree not kept"
 grep -F $'worktree\tKEEP\t' "$tmp/out" | grep -F "$worktrees/detached" >/dev/null || fail "detached worktree not kept"
 
-if rg -n -e 'rm ' -e 'prune' -e 'docker rm' -e 'docker volume rm' -e 'kill' -e 'mv ' "$script"; then
+if grep -n -e 'rm ' -e 'prune' -e 'docker rm' -e 'docker volume rm' -e 'kill' -e 'mv ' "$script"; then
   fail "forbidden mutating command text found"
 fi
 bash -n "$script" || fail "script syntax"
