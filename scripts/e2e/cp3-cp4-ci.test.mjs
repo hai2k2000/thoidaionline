@@ -25,6 +25,7 @@ test("strict fixture applies CP3 and does not grant public tables", () => {
   assert.match(fixture, /20261017100000_database_management_v1_foundation\.sql/);
   assert.match(fixture, /20261017101000_database_management_v1_catalog\.sql/);
   assert.match(fixture, /20261017110000_database_management_v1_cp2b_optional_fields\.sql/);
+  assert.match(fixture, /20261027160000_database_management_v1_drop_source_person\.sql/);
   assert.match(fixture, /20261017130000_database_management_v1_cp3_search_rpc\.sql/);
   assert.match(fixture, /20261017140000_database_management_v1_cp3_search_security_fix\.sql/);
   assert.match(fixture, /20261018100000_database_management_v1_cp3_search_rpc_identifier_fix\.sql/);
