@@ -1327,3 +1327,19 @@ Production safety:
 
 Next:
 - Commit and push the feature branch, package the exact source SHA, and run VPS verify-only. Owner approval is required before production activation.
+## H-03 Ledger Reconciliation
+
+Current Phase: implementation complete; local validation
+Current Task: read-only migration ledger reconciliation tooling
+
+Completed:
+- Added read-only `checks`, `report`, and `backfill-sql` commands with later-drop filtering and all-object APPLIED gating.
+- Added temporary-directory fixture coverage and `H03_REPORT.md` usage/limitations/workflow.
+
+Validation:
+- `node --test scripts/production/ledger-reconcile.test.mjs`: PASS (5/5).
+- `git diff --check`: PASS.
+- Changed-file ESLint: PASS (0 errors, 0 warnings).
+
+Production safety:
+- No SSH, Docker, network, database, migration, deployment, or commit performed.
