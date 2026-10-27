@@ -16,11 +16,11 @@ case "$*" in
   "volume inspect"*)
     n="${@: -1}"
     case "$n" in
-      attached-vol) printf 'attached-vol\t2026-10-01T00:00:00Z\t%s/attached-vol\t{}\n' "$ANALYSIS_VOLUME_ROOT" ;;
-      prod-vol) printf 'prod-vol\t2026-09-01T00:00:00Z\t%s/prod-vol\t{"com.docker.compose.project":"thoidai-work"}\n' "$ANALYSIS_VOLUME_ROOT" ;;
-      other-vol) printf 'other-vol\t2026-09-01T00:00:00Z\t%s/other-vol\t{"com.docker.compose.project":"other-app"}\n' "$ANALYSIS_VOLUME_ROOT" ;;
-      "$OLD_ANON") printf '%s\t2026-09-01T00:00:00Z\t%s/%s\t{}\n' "$OLD_ANON" "$ANALYSIS_VOLUME_ROOT" "$OLD_ANON" ;;
-      "$RECENT_ANON") printf '%s\t2026-10-26T00:00:00Z\t%s/%s\t{}\n' "$RECENT_ANON" "$ANALYSIS_VOLUME_ROOT" "$RECENT_ANON" ;;
+      attached-vol) printf 'attached-vol|2026-10-01T00:00:00Z|%s/attached-vol|{}\n' "$ANALYSIS_VOLUME_ROOT" ;;
+      prod-vol) printf 'prod-vol|2026-09-01T00:00:00Z|%s/prod-vol|{"com.docker.compose.project":"thoidai-work"}\n' "$ANALYSIS_VOLUME_ROOT" ;;
+      other-vol) printf 'other-vol|2026-09-01T00:00:00Z|%s/other-vol|{"com.docker.compose.project":"other-app"}\n' "$ANALYSIS_VOLUME_ROOT" ;;
+      "$OLD_ANON") printf '%s|2026-09-01T00:00:00Z|%s/%s|{}\n' "$OLD_ANON" "$ANALYSIS_VOLUME_ROOT" "$OLD_ANON" ;;
+      "$RECENT_ANON") printf '%s|2026-10-26T00:00:00Z|%s/%s|{}\n' "$RECENT_ANON" "$ANALYSIS_VOLUME_ROOT" "$RECENT_ANON" ;;
     esac ;;
   "ps -a"*) printf 'supabase_db_thoidai-work\tUp 2 days\tattached-vol\n' ;;
   "system df"*) printf 'DOCKER_DF_FIXTURE\n' ;;

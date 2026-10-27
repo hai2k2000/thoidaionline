@@ -19,7 +19,8 @@ main(){
 
   while IFS= read -r name; do
     [ -n "$name" ] || continue
-    IFS=$'\t' read -r _ created mount labels < <(docker volume inspect --format '{{.Name}}\t{{.CreatedAt}}\t{{.Mountpoint}}\t{{json .Labels}}' "$name")
+    # docker emits a literal "\t" for \t inside --format, so use '|' as the separator.
+    IFS='|' read -r _ created mount labels < <(docker volume inspect --format '{{.Name}}|{{.CreatedAt}}|{{.Mountpoint}}|{{json .Labels}}' "$name")
     [ -n "$volume_root" ] && mount="$volume_root/$name"
     bytes=$(timeout 120 du -sb -- "$mount" 2>/dev/null | awk 'NR==1{print $1}')
     bytes=${bytes:-0}; human=$(numfmt --to=iec --suffix=B "$bytes" 2>/dev/null || printf '%sB' "$bytes")
