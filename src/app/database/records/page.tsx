@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
@@ -23,7 +23,7 @@ const statuses = [["", "Tất cả trạng thái"], ["draft", statusLabels.draft
 const dateText = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? "Chưa xác định" : date.toLocaleString("vi-VN", { dateStyle: "medium", timeStyle: "short" }); };
 const uniqueOptions = (items: Option[]) => [...new Map(items.map((item) => [item.value, item])).values()];
 
-export default function DatabaseRecordsPage() {
+function DatabaseRecordsPageContent() {
   const router = useRouter(); const searchParams = useSearchParams(); const { loading, user, logout, hasPermission } = useAuth();
   const [filters, setFilters] = useState<FilterState>(() => parseRecordListState(new URLSearchParams(searchParams.toString())));
   const [searchDraft, setSearchDraft] = useState(filters.q); const [advanced, setAdvanced] = useState(false);
@@ -58,3 +58,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Chip({ label, onClick }: { label: string; onClick: () => void }) { return <button type="button" onClick={onClick} className="rounded-full bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-800">{label} ×</button>; }
 function Advanced({ filters, departments, people, setField }: { filters: FilterState; departments: Option[]; people: Option[]; setField: (key: keyof FilterState, value: string | boolean | undefined) => void }) { return <div className="mt-4 grid gap-3 rounded-lg border border-orange-100 bg-orange-50/40 p-4 sm:grid-cols-2 lg:grid-cols-3"><Field label="Ngày tạo từ"><input type="date" className="control" value={filters.createdFrom} onChange={(e) => setField("createdFrom", e.target.value)} /></Field><Field label="Ngày tạo đến"><input type="date" className="control" value={filters.createdTo} onChange={(e) => setField("createdTo", e.target.value)} /></Field><Field label="Cập nhật từ"><input type="date" className="control" value={filters.updatedFrom} onChange={(e) => setField("updatedFrom", e.target.value)} /></Field><Field label="Cập nhật đến"><input type="date" className="control" value={filters.updatedTo} onChange={(e) => setField("updatedTo", e.target.value)} /></Field><OptionField label="Phòng / đơn vị phụ trách" value={filters.departmentId} options={departments} empty="Tất cả đơn vị" onChange={(value) => setField("departmentId", value)} /><OptionField label="Người phụ trách" value={filters.ownerId} options={people} empty="Tất cả người phụ trách" onChange={(value) => setField("ownerId", value)} /><OptionField label="Người tạo" value={filters.createdBy} options={people} empty="Tất cả người tạo" onChange={(value) => setField("createdBy", value)} /><Field label="Có tệp đính kèm"><select className="control" value={filters.hasFiles === undefined ? "" : filters.hasFiles ? "1" : "0"} onChange={(e) => setField("hasFiles", e.target.value === "" ? undefined : e.target.value === "1")}><option value="">Tất cả</option><option value="1">Có</option><option value="0">Không</option></select></Field><Field label="Từ khóa"><input className="control" value={filters.keyword} onChange={(e) => setField("keyword", e.target.value)} placeholder="Khớp chính xác" /></Field><Field label="Trạng thái"><select className="control" value={filters.status} onChange={(e) => setField("status", e.target.value)}>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field></div>; }
 function OptionField({ label, value, options, empty, onChange }: { label: string; value: string; options: Option[]; empty: string; onChange: (value: string) => void }) { return <Field label={label}><select className="control" value={value} onChange={(e) => onChange(e.target.value)}><option value="">{empty}</option>{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>; }
+
+export default function DatabaseRecordsPage() {
+  return <Suspense fallback={<main className="min-h-screen bg-[#f5f7fa] p-6 text-sm text-slate-600">Đang tải danh sách hồ sơ...</main>}><DatabaseRecordsPageContent /></Suspense>;
+}
