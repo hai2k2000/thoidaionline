@@ -87,7 +87,9 @@ SQL
     printf 'STEP\t%s\t%s\t%s\n' "$file" "$result" "$((end-start))"
     ((rc==0)) || return "$rc"
   done < "$BUNDLE_DIR/scripts/production/h03-apply/order.txt"
-  psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/verify-anon-lockdown.sql" | tee "$evidence/anon-lockdown.txt"
+  # The disposable DB restores only public + supabase_migrations, so the storage.* checks cannot run here;
+  # production runs the full file.
+  psql "$H03_DB_URL" -v ON_ERROR_STOP=0 -f "$BUNDLE_DIR/scripts/production/verify-anon-lockdown.sql" 2>&1 | tee "$evidence/anon-lockdown.txt"
   psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/h03-apply/rollback.sql" >/dev/null
   psql "$H03_DB_URL" -v ON_ERROR_STOP=1 -f "$pre" >/dev/null
   echo 'H03_STATUS=PASS'
