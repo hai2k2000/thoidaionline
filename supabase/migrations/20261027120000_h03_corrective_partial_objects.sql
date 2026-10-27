@@ -1,15 +1,5 @@
 begin;
 
-drop trigger if exists journalism_work_kinds_set_updated_at on public.journalism_work_kinds;
-create trigger journalism_work_kinds_set_updated_at
-before update on public.journalism_work_kinds
-for each row execute function public.touch_journalism_updated_at();
-
-drop trigger if exists journalism_task_details_set_updated_at on public.journalism_task_details;
-create trigger journalism_task_details_set_updated_at
-before update on public.journalism_task_details
-for each row execute function public.touch_journalism_updated_at();
-
 create or replace function public.audit_direct_assignment_start()
 returns trigger
 language plpgsql

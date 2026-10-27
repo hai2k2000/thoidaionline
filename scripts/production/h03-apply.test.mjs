@@ -16,8 +16,9 @@ test("H03 order contains exactly corrective plus approved Group A and B migratio
 
 test("corrective migration is narrowly scoped and does not grant anon or public", () => {
   const sql = readFileSync("supabase/migrations/20261027120000_h03_corrective_partial_objects.sql", "utf8").toLowerCase();
-  assert.match(sql, /journalism_work_kinds_set_updated_at/);
-  assert.match(sql, /journalism_task_details_set_updated_at/);
+  // J2 triggers exist on production (2026-10-27 recheck); the corrective must not recreate them.
+  assert.doesNotMatch(sql, /journalism_work_kinds_set_updated_at/);
+  assert.doesNotMatch(sql, /journalism_task_details_set_updated_at/);
   assert.match(sql, /audit_direct_assignment_start/);
   assert.doesNotMatch(sql, /grant\s+[^;]*\s+to\s+(?:anon|public)\b/);
 });

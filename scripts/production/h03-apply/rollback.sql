@@ -2,8 +2,6 @@ begin;
 
 drop trigger if exists audit_direct_assignment_start on public.tasks;
 drop function if exists public.audit_direct_assignment_start();
-drop trigger if exists journalism_task_details_set_updated_at on public.journalism_task_details;
-drop trigger if exists journalism_work_kinds_set_updated_at on public.journalism_work_kinds;
 
 drop function if exists public.api_register_journalism_task_v1(uuid,text,text,uuid,date,time,text,uuid,timestamptz,text,text);
 drop function if exists public.api_assert_journalism_department_scope(uuid,uuid);

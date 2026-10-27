@@ -65,7 +65,7 @@ begin
   then raise exception 'target function already exists'; end if;
   if exists (
     select 1 from pg_trigger where not tgisinternal and tgname in (
-      'journalism_work_kinds_set_updated_at','journalism_task_details_set_updated_at',
+      
       'audit_direct_assignment_start','journalism_publication_reports_set_updated_at',
       'editorial_topic_tasks_journalism_task_guard','editorial_series_items_journalism_task_guard',
       'editorial_series_topic_compatibility_guard','editorial_topic_series_compatibility_guard',
