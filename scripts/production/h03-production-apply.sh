@@ -67,8 +67,11 @@ EOF
   [[ "$(systemctl show -p Result --value "$backup_unit" 2>/dev/null || true)" == success ]] || fail backup-result
   local backup_dir=""
   local backup_root=${H03_BACKUP_ROOT:-/opt/ops/thoidai-work/backups/managed}
-  if [[ -f "$backup_root/last-success" && $(stat -c %Y "$backup_root/last-success") -ge $run_start_epoch ]]; then backup_dir=$(tail -n 1 "$backup_root/last-success"); fi
-  if [[ -z "$backup_dir" ]]; then backup_dir=$(find "$backup_root" -mindepth 1 -maxdepth 1 -type d -newermt "@$run_start_epoch" -print 2>/dev/null | sort | tail -n 1); fi
+  # last-success holds "<utc-time> <backup-dir-name> <n>"; the dir lives under daily/ (thoidai-backup layout).
+  if [[ -f "$backup_root/last-success" && $(stat -c %Y "$backup_root/last-success") -ge $run_start_epoch ]]; then
+    backup_dir="$backup_root/daily/$(awk 'END {print $2}' "$backup_root/last-success")"
+  fi
+  if [[ ! -f "$backup_dir/postgres.dump" ]]; then backup_dir=$(find "$backup_root/daily" -mindepth 1 -maxdepth 1 -type d -newermt "@$run_start_epoch" -print 2>/dev/null | sort | tail -n 1); fi
   [[ -n "$backup_dir" && -f "$backup_dir/postgres.dump" ]] || fail backup-artifact
   printf 'BACKUP_PATH=%s\n' "$backup_dir" >"$evidence/backup.txt"
   sha256sum "$backup_dir/postgres.dump" >>"$evidence/backup.txt" || fail backup-hash

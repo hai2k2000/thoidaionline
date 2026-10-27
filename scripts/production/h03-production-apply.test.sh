@@ -42,7 +42,7 @@ echo safe-apply "$@" >>"$H03_TEST_LOG"
 exit 1
 EOF
 chmod +x "$bundle/scripts/production/safe-apply-migration.sh"
-mkdir -p "$work/backups/2026-10-27"; : >"$work/backups/2026-10-27/postgres.dump"; touch "$work/backups/last-success"; printf '%s\n' "$work/backups/2026-10-27" >"$work/backups/last-success"
+mkdir -p "$work/backups/daily/20261027T000000Z-daily"; : >"$work/backups/daily/20261027T000000Z-daily/postgres.dump"; echo "2026-10-27T00:00:00Z 20261027T000000Z-daily 2" >"$work/backups/last-success"
 export BUNDLE_DIR="$bundle" THOIDAI_H03_APPLY_APPROVED=APPROVE-NOT-APPLIED-PRODUCTION-2026-10-27
 if "$bundle/scripts/production/h03-production-apply.sh" --apply >"$state/apply.out" 2>&1; then echo 'expected postcondition failure' >&2; exit 1; fi
 grep -Eq 'H03_FAIL=20261027120000_h03_corrective_partial_objects.sql' "$state/apply.out" || { cat "$state/apply.out"; exit 1; }
