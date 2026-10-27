@@ -120,11 +120,13 @@ async function validateFormMetadata(formDefinitionId: string | null | undefined,
 
 export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recordId: string) {
   const record = await getRecord(recordId);
-  if (!record || record.status === "deleted") return null;
+  if (!record) return null;
   if (!canAccessRecordType(actor, record.record_type_code)) return null;
+  const canRestore = record.status === "deleted" && await canRecord(actor, record, recordId, "restore");
+  if (record.status === "deleted" && !canRestore) return null;
   const metadataAllowed = await canRecord(actor, record, recordId, "metadata.view");
   const discoverAllowed = await canRecord(actor, record, recordId, "discover");
-  if (!metadataAllowed && !discoverAllowed) return null;
+  if (!metadataAllowed && !discoverAllowed && !canRestore) return null;
   const [acl, files, links, keywords, history] = await Promise.all([
     aclForRecord(recordId),
     serverSupabase.from("db_record_files").select("id,storage_backend,original_name,mime_type,size_bytes,sha256,created_by,created_at").eq("record_id", recordId).order("created_at", { ascending: false }),
@@ -141,12 +143,15 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   const latestApproval = historyRows.find((item) => item.action === "approve");
   const canApprove = record.status === "pending_review" && await canApproveRecord(actor, record, recordId);
   const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
+  const canDelete = record.status !== "deleted" && await canRecord(actor, record, recordId, "delete");
   const canManageAcl = await canRecord(actor, record, recordId, "acl.manage");
   const blockReason = canManageAcl ? await approvalBlockReason(actor, record, recordId) : null;
   return {
     record: metadataAllowed ? record : { ...record, summary: null, metadata: {} },
     canApprove,
     canSubmit,
+    canDelete,
+    canRestore,
     canManageAcl,
     approvalBlockReason: blockReason,
     acl: canManageAcl ? acl : [],
