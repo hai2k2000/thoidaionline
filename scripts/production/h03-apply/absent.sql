@@ -34,5 +34,5 @@ begin
     'editorial_topics_set_updated_at','editorial_series_set_updated_at','editorial_series_items_set_updated_at'
   ])) then raise exception 'migration-owned trigger exists'; end if;
   if exists (select 1 from public.permissions where code=any(array['journalism.metadata.update','journalism.publication.manage','journalism.structure.manage','journalism.structure.assign','journalism.publication.verify'])) then raise exception 'migration-owned permission exists'; end if;
-  if exists (select 1 from supabase_migrations.schema_migrations where version=any(array['20261027120000','20260925110000','20260925111000','20260918120000','20260918130000','20260918140000','20260918150000','20260919110000','20260919120000','20260922120000','20260922123000','20260922130000','20260923110000','20260923150000','20260925100000'])) then raise exception 'migration ledger row exists'; end if;
+  if exists (select 1 from supabase_migrations.schema_migrations where version=any(array['20261027120000','20261027120100','20260925110000','20260925111000','20260918120000','20260918130000','20260918140000','20260918150000','20260919110000','20260919120000','20260922120000','20260922123000','20260922130000','20260923110000','20260923150000','20260925100000'])) then raise exception 'migration ledger row exists'; end if;
 end $$;

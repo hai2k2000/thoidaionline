@@ -6,8 +6,10 @@ const root = "scripts/production/h03-apply";
 const order = readFileSync(`${root}/order.txt`, "utf8").trim().split(/\r?\n/).filter(Boolean);
 const forbidden = /20260827160000|20260829100000|20260829110000|20260826210000|20260918100000/;
 
-test("H03 order contains exactly corrective plus approved Group A and B migrations", () => {
-  assert.equal(order.length, 15);
+test("H03 order contains exactly correctives plus approved Group A and B migrations", () => {
+  assert.equal(order.length, 16);
+  // The batch-table lockdown must run right after the migration that creates the table.
+  assert.equal(order[order.indexOf("20260925110000_task_assignment_batch_idempotency.sql") + 2], "20261027120100_h03_batch_idempotency_lockdown.sql");
   assert.equal(order[0], "20261027120000_h03_corrective_partial_objects.sql");
   assert.equal(forbidden.test(order.join("\n")), false);
   for (const filename of order) assert.equal(existsSync(`supabase/migrations/${filename}`), true, filename);

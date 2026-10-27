@@ -42,6 +42,6 @@ drop table if exists public.task_assignment_batch_idempotency;
 delete from public.role_permission_grants g using public.permissions p
 where g.permission_id=p.id and p.code in ('journalism.metadata.update','journalism.publication.manage','journalism.structure.manage','journalism.structure.assign','journalism.publication.verify');
 delete from public.permissions where code in ('journalism.metadata.update','journalism.publication.manage','journalism.structure.manage','journalism.structure.assign','journalism.publication.verify');
-delete from supabase_migrations.schema_migrations where version in ('20261027120000','20260925110000','20260925111000','20260918120000','20260918130000','20260918140000','20260918150000','20260919110000','20260919120000','20260922120000','20260922123000','20260922130000','20260923110000','20260923150000','20260925100000');
+delete from supabase_migrations.schema_migrations where version in ('20261027120000','20261027120100','20260925110000','20260925111000','20260918120000','20260918130000','20260918140000','20260918150000','20260919110000','20260919120000','20260922120000','20260922123000','20260922130000','20260923110000','20260923150000','20260925100000');
 
 commit;
