@@ -1,21 +1,29 @@
 #!/usr/bin/env bash
 
+tmp=''
+work=''
+step=init
+output=''
+shadow=''
+
 main() {
   set -Eeuo pipefail
-  local step=init output='' shadow=''
-  trap 'rc=$?; if [[ $rc -ne 0 ]]; then echo "RBAC_DRYRUN_RESULT=FAIL step=$step" >&2; [[ -f "$output" ]] && tail -n 20 "$output" >&2 || true; [[ -f "$shadow" ]] && tail -n 20 "$shadow" >&2 || true; fi' ERR
   [[ "${THOIDAI_RBAC_DRYRUN_APPROVED:-0}" == 1 ]] || { echo 'RBAC_DRYRUN_ERROR=approval required' >&2; return 1; }
   : "${BUNDLE_DIR:?BUNDLE_DIR is required}"; : "${POSTGRES_IMAGE:?POSTGRES_IMAGE is required}"
   command -v docker >/dev/null; command -v node >/dev/null
   local evidence="/opt/ops/thoidai-work/rbac-approval-evidence/dryrun-$(date -u +%Y%m%dT%H%M%SZ)" daily=/opt/ops/thoidai-work/backups/managed/daily
-  local tmp="rbac-approval-dryrun-$$" work='' backup='' dump='' manifest='' db_password='' port='' before_file output shadow
+  tmp="rbac-approval-dryrun-$$"
+  work=''
+  output=''
+  shadow=''
+  local backup='' dump='' manifest='' db_password='' port='' before_file
   local expected_pass=21
   output="$evidence/behaviour.txt"; shadow="$evidence/shadow.txt"; before_file="$evidence/before-md5.txt"; mkdir -p "$evidence"
-  cleanup() { local rc=$?; if [[ $rc -ne 0 ]]; then echo "RBAC_DRYRUN_RESULT=FAIL step=$step" >&2; [[ -f "$output" ]] && tail -n 20 "$output" >&2 || true; [[ -f "$shadow" ]] && tail -n 20 "$shadow" >&2 || true; fi; [[ -n "$tmp" ]] && docker rm -f -v "$tmp" >/dev/null 2>&1 || true; [[ -n "$work" && -d "$work" ]] && rm -rf -- "$work"; return "$rc"; }; trap cleanup EXIT
+  cleanup() { local rc=$?; set +u; set +e; if [[ $rc -ne 0 ]]; then echo "RBAC_DRYRUN_RESULT=FAIL step=$step" >&2; [[ -f "$output" ]] && tail -n 20 "$output" >&2; [[ -f "$shadow" ]] && tail -n 20 "$shadow" >&2; fi; [[ -n "$tmp" ]] && docker rm -f -v "$tmp" >/dev/null 2>&1; [[ -n "$work" ]] && rm -rf -- "$work"; return "$rc"; }; trap cleanup EXIT
   step=disk; "$BUNDLE_DIR/scripts/production/disk-guard.sh"; work=$(mktemp -d)
   step=backup; while IFS= read -r entry; do [[ -f "$daily/$entry/postgres.dump" && -f "$daily/$entry/manifest.txt" ]] && { backup="$daily/$entry"; break; }; done < <(find "$daily" -mindepth 1 -maxdepth 1 -type d -name '*-daily' -printf '%f\n' | sort -r)
   [[ -n "$backup" ]]; dump="$backup/postgres.dump"; manifest="$backup/manifest.txt"; [[ "$(awk '$2=="postgres.dump" || $2=="*postgres.dump" {print $1; exit}' "$manifest")" == "$(sha256sum "$dump" | awk '{print $1}')" ]]
-  step=postgres; db_password=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n'); docker run -d --name "$tmp" --memory 512m -p 127.0.0.1::5432 -e POSTGRES_PASSWORD="$db_password" "$POSTGRES_IMAGE" >/dev/null
+  step=postgres; if docker ps -a --format '{{.Names}}' | grep -Eq '^rbac-approval-dryrun-[^[:space:]]+$'; then echo 'RBAC_DRYRUN_ERROR=leftover dry-run container exists' >&2; return 1; fi; db_password=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n'); docker run -d --name "$tmp" --memory 512m -p 127.0.0.1::5432 -e POSTGRES_PASSWORD="$db_password" "$POSTGRES_IMAGE" >/dev/null
   for _ in $(seq 1 90); do docker exec "$tmp" pg_isready -h 127.0.0.1 -U supabase_admin -d postgres >/dev/null 2>&1 && break; sleep 2; done
   docker exec -i "$tmp" psql -q -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'create schema if not exists supabase_migrations;' </dev/null >/dev/null
   docker exec -i "$tmp" pg_restore --schema=public --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres < "$dump" >"$work/restore.log" 2>&1 || true

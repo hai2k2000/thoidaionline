@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const script = readFileSync("scripts/production/rbac-approval-dryrun.sh", "utf8");
+const migration = readFileSync("supabase/migrations/20261028100000_rbac_approval_permissions_v1.sql", "utf8");
 const behaviour = readFileSync("supabase/tests/rbac_approval_v1_behaviour.sql", "utf8").trim().toLowerCase();
 const shadow = readFileSync("scripts/production/rbac-approval-shadow-diff.sql", "utf8").trim().toLowerCase();
 const revert = readFileSync("scripts/production/rbac-approval-v1-revert.sql", "utf8").toLowerCase();
@@ -25,6 +26,22 @@ test("dry-run isolates disposable postgres", () => {
 test("dry-run uses strict psql and scoped cleanup", () => {
   assert.match(script, /psql -q[^\n]*ON_ERROR_STOP=1/);
   for (const match of script.matchAll(/rm -rf[^\n]*/g)) assert.match(match[0], /"\$(?:work|tmp)"/);
+});
+
+test("dry-run cleanup state survives main and guards leftovers", () => {
+  assert.doesNotMatch(migration, /foreach\s+\w+\s+in\s+array\s*\[/i);
+  assert.match(migration, /foreach\s+\w+\s+in\s+array\s+array\[/i);
+  assert.match(script, /^(?:tmp|work|step|output|shadow)=/m);
+  assert.doesNotMatch(script, /local\s+(?:tmp|work|step|output|shadow)\b/);
+  assert.match(script, /cleanup\(\)\s*\{[\s\S]*?set \+u[\s\S]*?set \+e/);
+  assert.match(script, /docker\s+ps\s+-a[\s\S]*?rbac-approval-dryrun/);
+});
+
+test("migration dollar-quoted blocks are balanced", () => {
+  for (const tag of ["do $$", "$function$"]) {
+    const occurrences = migration.match(new RegExp(tag.replace("$", "\\$").replace("$", "\\$"), "gi")) ?? [];
+    assert.equal(occurrences.length % 2, 0, `${tag} delimiter count must be even`);
+  }
 });
 
 test("SQL files are transaction scoped and rollback is narrow", () => {
