@@ -61,7 +61,8 @@ test("authenticated smoke is optional and never requires a waiver", () => {
 
 test("risk policy remains fail-closed", () => {
   assert.match(deploy, /risk classification is missing or invalid/);
-  assert.match(deploy, /low-risk artifact lacks automated test evidence/);
+  assert.match(deploy, /risk artifact lacks required automated test evidence/);
+  assert.doesNotMatch(deploy, /risk_class \!= low \|\|/);
 });
 
 test("staging cleanup is fail-closed and protected from release paths", () => {

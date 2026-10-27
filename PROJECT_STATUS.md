@@ -1327,3 +1327,10 @@ Production safety:
 
 Next:
 - Commit and push the feature branch, package the exact source SHA, and run VPS verify-only. Owner approval is required before production activation.
+
+# H-04 + H-05 Policy Gate Checkpoint (2026-10-26)
+
+- C-01 applied to production on 2026-10-26 through PR #51.
+- C-02 automatic backup and restore rehearsal PASS through PR #52.
+- VPS cleanup completed: stopped the hanging backend DB, 18 orphaned `next-server` processes, 13 test containers, and removed 2 openclaw cron jobs.
+- This branch handles H-04 and H-05.
