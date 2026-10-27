@@ -3,6 +3,7 @@ import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { logServerAudit } from "@/lib/serverAudit";
 import { createDatabaseRecord, listVisibleApprovalQueue, listVisibleDatabaseRecords } from "@/lib/databaseManagement/repository";
 import { validateDatabaseRecordInput } from "@/lib/databaseManagement/validation";
+import { parseRecordListParams } from "@/lib/databaseManagement/recordsListFilters.mjs";
 
 const NO_STORE = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: NO_STORE });
@@ -12,22 +13,15 @@ export async function GET(request: Request) {
   if (!actor) return json({ error: "unauthenticated" }, 401);
   try {
     const params = new URL(request.url).searchParams;
-    const query = {
-      q: params.get("q") ?? "",
-      status: params.get("status") ?? undefined,
-      recordTypeId: params.get("recordTypeId") ?? undefined,
-      categoryId: params.get("categoryId") ?? undefined,
-      languageCode: params.get("languageCode") ?? undefined,
-      limit: Number(params.get("limit") ?? 200),
-      offset: Number(params.get("offset") ?? 0),
-    };
+    let query;
+    try { query = { ...parseRecordListParams(params), languageCode: params.get("languageCode") ?? undefined }; } catch { return json({ error: "invalid_filter" }, 400); }
     const approvalQueue = params.get("approvalQueue") === "1";
     const records = approvalQueue
-      ? await listVisibleApprovalQueue(actor, { q: query.q, categoryId: query.categoryId, languageCode: query.languageCode, limit: query.limit, offset: query.offset })
+      ? await listVisibleApprovalQueue(actor, query)
       : await listVisibleDatabaseRecords(actor, query);
     const stats = params.get("includeStats") === "1"
       ? Object.fromEntries(await Promise.all(["all", "draft", "pending_review", "archived"].map(async (status) => {
-      const scoped = await listVisibleDatabaseRecords(actor, { categoryId: query.categoryId, languageCode: query.languageCode, limit: 1, status: status === "all" ? undefined : status });
+        const scoped = await listVisibleDatabaseRecords(actor, { ...query, categoryId: query.categoryId, languageCode: query.languageCode, limit: 1, offset: 0, status: status === "all" ? undefined : status });
         return [status, Number(scoped[0]?.total_count ?? 0)];
       })))
       : undefined;

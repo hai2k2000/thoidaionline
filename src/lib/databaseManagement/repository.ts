@@ -176,7 +176,7 @@ export async function getDatabaseRecordAclManagement(actor: DatabaseRecordActor,
   return { acl: acl.data ?? [], users: users.data ?? [], roles: roles.data ?? [] };
 }
 
-export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; languageCode?: string; limit?: number; offset?: number };
+export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; languageCode?: string; limit?: number; offset?: number; createdFrom?: string; createdTo?: string; updatedFrom?: string; updatedTo?: string; departmentId?: string; ownerId?: string; createdBy?: string; hasFiles?: boolean; keyword?: string; sort?: string; sortDir?: string };
 
 export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, filters: DatabaseRecordListQuery = {}) {
   let categoryId = filters.categoryId ?? null;
@@ -201,6 +201,17 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, fil
     p_category_id: categoryId,
     p_limit: Math.min(Math.max(filters.limit ?? 200, 1), 100),
     p_offset: Math.max(filters.offset ?? 0, 0),
+    p_created_from: filters.createdFrom ?? null,
+    p_created_to: filters.createdTo ?? null,
+    p_updated_from: filters.updatedFrom ?? null,
+    p_updated_to: filters.updatedTo ?? null,
+    p_department_id: filters.departmentId ?? null,
+    p_owner_id: filters.ownerId ?? null,
+    p_created_by: filters.createdBy ?? null,
+    p_has_files: filters.hasFiles ?? null,
+    p_keyword: filters.keyword?.trim() || null,
+    p_sort: filters.sort ?? "updated_at",
+    p_sort_dir: filters.sortDir ?? "desc",
   });
   if (error) throw error;
   const rows = (data ?? []) as RecordRow[];

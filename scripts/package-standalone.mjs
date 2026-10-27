@@ -147,6 +147,7 @@ const migrationReference = [
   "supabase/migrations/20261020110000_database_management_v1_idempotency.sql",
   "supabase/migrations/20261020130000_database_management_v1_language_groups.sql",
   "supabase/migrations/20261021100000_database_management_v1_filter_approval.sql",
+  "supabase/migrations/20261027140000_database_management_v1_list_filters.sql",
   "supabase/migrations/20261023130000_database_management_v1_workflow_ambiguity_fix.sql",
   "supabase/migrations/20261024110000_database_management_v1_self_approval.sql",
   "supabase/migrations/20261027090000_anon_access_lockdown.sql",
