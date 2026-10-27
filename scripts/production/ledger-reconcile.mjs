@@ -81,11 +81,13 @@ function existenceCondition(entry) {
     return `exists (select 1 from information_schema.columns where table_schema = ${sqlString(tableParts[0])} and table_name = ${sqlString(tableParts[1])} and column_name = ${sqlString(column)})`;
   }
   if (entry.kind === 'function') return `exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = ${sqlString(schema)} and p.proname = ${sqlString(name)})`;
+  // entry.table is schema-qualified ("public.tasks"); catalogs store schema and relname separately.
+  const [tableSchema, tableName] = String(entry.table ?? '').includes('.') ? String(entry.table).split('.', 2) : [schema, entry.table];
   if (entry.kind === 'policy') {
-    return `exists (select 1 from pg_policies where schemaname = ${sqlString(schema)} and tablename = ${sqlString(entry.table)} and policyname = ${sqlString(entry.object)})`;
+    return `exists (select 1 from pg_policies where schemaname = ${sqlString(tableSchema)} and tablename = ${sqlString(tableName)} and policyname = ${sqlString(entry.object)})`;
   }
   if (entry.kind === 'trigger') {
-    return `exists (select 1 from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace where n.nspname = ${sqlString(schema)} and c.relname = ${sqlString(entry.table)} and t.tgname = ${sqlString(entry.object)} and not t.tgisinternal)`;
+    return `exists (select 1 from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace where n.nspname = ${sqlString(tableSchema)} and c.relname = ${sqlString(tableName)} and t.tgname = ${sqlString(entry.object)} and not t.tgisinternal)`;
   }
   if (entry.kind === 'type') return `exists (select 1 from pg_type t join pg_namespace n on n.oid = t.typnamespace where n.nspname = ${sqlString(schema)} and t.typname = ${sqlString(name)})`;
   if (entry.kind === 'view') return `exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = ${sqlString(schema)} and c.relname = ${sqlString(name)} and c.relkind = 'v')`;
