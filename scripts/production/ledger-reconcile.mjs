@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const VERSION_RE = /^(\d{14})/;
 
@@ -99,7 +100,7 @@ export function buildChecks(migrations) {
   const lines = ['set default_transaction_read_only = on;'];
   for (const migration of migrations) {
     if (!migration.objects.length) {
-      lines.push(resultLine(migration.version, 'no-evidence', '-', 'unknown'));
+      lines.push(resultLine(migration.version, 'no-evidence', '-', "'unknown'"));
       continue;
     }
     for (const entry of migration.objects) lines.push(resultLine(migration.version, entry.kind, entry.object, existenceCondition(entry)));
@@ -143,7 +144,7 @@ export function buildBackfillSql(results, fileMap = new Map()) {
   for (const [version, group] of groups) {
     if (group.present !== group.total || group.total === 0) continue;
     const name = fileMap.get(version) ?? version;
-    lines.push(`insert into supabase_migrations.schema_migrations(version, name, statements) values (${sqlString(version)}, ${sqlString(name.replace(/\.sql$/, ''))}, array[]::text[]) on conflict (version) do nothing;`);
+    lines.push(`insert into supabase_migrations.schema_migrations(version, name, statements) values (${sqlString(version)}, ${sqlString(name.replace(/\.sql$/, '').replace(/^\d+_/, ''))}, array[]::text[]) on conflict (version) do nothing;`);
   }
   lines.push('commit;');
   return `${lines.join('\n')}\n`;
@@ -165,4 +166,4 @@ async function main(argv) {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replaceAll('\\', '/')}`) main(process.argv.slice(2)).catch((error) => { console.error(error.message); process.exitCode = 1; });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main(process.argv.slice(2)).catch((error) => { console.error(error.message); process.exitCode = 1; });
