@@ -1,5 +1,8 @@
 -- Authorization-only shadow comparison. Status/revision/pending gates are intentionally ignored.
 -- D-6 (job pho_truong_phong) is the only intended difference; P1 shows 0 such users.
+-- Schema checked against: fixture-tables-schema.sql, fixture-tables-constraints.sql,
+-- fixture-trigger-functions.sql (staff_users, departments, leave_requests,
+-- work_schedules, user_permission_grants, roles, job_titles).
 begin;
 
 create or replace function pg_temp.legacy_leave_decision(actor uuid, request uuid)

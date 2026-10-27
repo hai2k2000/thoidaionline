@@ -1,9 +1,7 @@
 -- Phase 2B disposable behaviour suite. Every object created here is rolled back.
--- Schema checked: 20260318101500_baseline, 20260318132500_add_username_to_staff_users,
--- 20260814070000_job_titles, 20260826110000_work_schedules,
--- 20260910090000_leave_requests, 20260915120000_personal_work_plans,
--- 20260921150000_event_assignment_v1, 20260930100000_global_creator_mutation_policy,
--- 20261001110000_user_specific_permission_grants, 20261015100000_rbac_v2_role_user_overrides.
+-- Schema checked against: fixture-tables-schema.sql, fixture-tables-constraints.sql,
+-- fixture-trigger-functions.sql (staff_users, departments, leave_requests,
+-- work_schedules, user_permission_grants, roles, job_titles).
 begin;
 
 create temporary table zz_rbac_test_users (key text primary key, id uuid not null) on commit drop;
@@ -19,7 +17,8 @@ select case when code = 'zz_rbac_test_a' then 'a' else 'b' end, id
 from public.departments where code in ('zz_rbac_test_a', 'zz_rbac_test_b');
 
 insert into public.staff_users(full_name, username, email, password, role_id, department_id, job_title_id, active)
-select 'zz_rbac_test_' || x.key, x.key || '@invalid.test', 'zz_rbac_test',
+select 'zz_rbac_test_' || x.key, 'zz_rbac_test_' || x.key || '_' || x.department_key,
+       x.key || '@zz-rbac-test.invalid', 'zz_rbac_test',
        (select id from public.roles where code = x.role_code limit 1),
        (select id from zz_rbac_test_departments where key = x.department_key),
        (select id from public.job_titles where code = x.job_code limit 1), x.active
@@ -38,8 +37,22 @@ insert into zz_rbac_test_users
 select substring(u.full_name from 14), u.id
 from public.staff_users u where u.full_name like 'zz_rbac_test_%';
 
-update public.departments d set manager_id = (select id from zz_rbac_test_users where key='manager')
-where d.id = (select id from zz_rbac_test_departments where key='a');
+do $$ begin
+  if not exists (
+    select 1
+    from public.departments d
+    join public.staff_users u on u.id=d.manager_id
+    join public.job_titles jt on jt.id=u.job_title_id
+    where d.id=(select id from zz_rbac_test_departments where key='a')
+      and u.id=(select id from zz_rbac_test_users where key='manager')
+      and u.active and u.department_id=d.id and lower(jt.code)='truong_phong'
+  ) then
+    raise exception 'RBAC_TEST_FAIL setup manager';
+  end if;
+  if (select manager_id from public.departments where id=(select id from zz_rbac_test_departments where key='b')) is not null then
+    raise exception 'RBAC_TEST_FAIL setup manager';
+  end if;
+end $$;
 
 insert into public.user_permission_grants(user_id, permission_id, scope, effect, created_by)
 select u.id, p.id, x.scope, x.effect, (select id from zz_rbac_test_users where key='admin')
