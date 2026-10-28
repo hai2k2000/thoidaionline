@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
@@ -160,6 +160,8 @@ function AttendancePageContent() {
   const [selectedSummaryEmployee, setSelectedSummaryEmployee] = useState<{ userId: string; name: string } | null>(null);
   const [selectedAttendanceRow, setSelectedAttendanceRow] = useState<AttendanceRow | null>(null);
   const [attendanceAccess, setAttendanceAccess] = useState<{ orgScope: "all" | "department" | null; canManage: boolean }>({ orgScope: null, canManage: false });
+  const attendanceRequestSequence = useRef<number>(0);
+  const skipNextAttendanceEffect = useRef(false);
   const userOrgScope = user?.rbacPermissionScopes?.["attendance.view_all"]?.includes("all")
     ? "all" as const
     : user?.rbacPermissionScopes?.["attendance.view_all"]?.includes("department")
@@ -230,15 +232,21 @@ function AttendancePageContent() {
     }
   };
 
-  const loadAttendance = useCallback(async () => {
+  const loadAttendance = useCallback(async (overrides: Partial<{ staffFilter: string; departmentFilter: string; statusFilter: string; recentOffset: number }> = {}) => {
+    const requestSequence = ++attendanceRequestSequence.current;
+    const effectiveStaffFilter = overrides.staffFilter ?? staffFilter;
+    const effectiveDepartmentFilter = overrides.departmentFilter ?? departmentFilter;
+    const effectiveStatusFilter = overrides.statusFilter ?? statusFilter;
+    const effectiveRecentOffset = overrides.recentOffset ?? recentOffset;
     const scope = isOrganizationView ? "organization" : "personal";
     const recentMode = period === "day";
     const filterQuery = new URLSearchParams();
-    if (isOrganizationView && staffFilter) filterQuery.set("staffId", staffFilter);
-    if (isOrganizationView && departmentFilter) filterQuery.set("departmentId", departmentFilter);
-    if (isOrganizationView && statusFilter) filterQuery.set("status", statusFilter);
+    if (isOrganizationView && effectiveStaffFilter) filterQuery.set("staffId", effectiveStaffFilter);
+    if (isOrganizationView && effectiveDepartmentFilter) filterQuery.set("departmentId", effectiveDepartmentFilter);
+    if (isOrganizationView && effectiveStatusFilter) filterQuery.set("status", effectiveStatusFilter);
     const filterSuffix = filterQuery.toString() ? `&${filterQuery.toString()}` : "";
-    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&period=${period}&scope=${scope}&recent=${recentMode ? "1" : "0"}&offset=${recentOffset}&limit=10${filterSuffix}`, {
+    setMessage("Đang tải dữ liệu chấm công...");
+    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&period=${period}&scope=${scope}&recent=${recentMode ? "1" : "0"}&offset=${effectiveRecentOffset}&limit=10${filterSuffix}`, {
       cache: "no-store",
     });
     const payload = await response.json().catch(() => null) as {
@@ -251,6 +259,7 @@ function AttendancePageContent() {
       grid?: { days: string[]; rows: Array<{ staffId: string; name: string; departmentName: string; cells: Array<{ date: string; code: string; symbol: string; label: string; workday: number }>; totalWorkday: number }> };
       filterOptions?: typeof filterOptions;
     } | null;
+    if (requestSequence !== attendanceRequestSequence.current) return;
     if (!response.ok || !payload) {
       setRows([]);
       setRecentRows([]);
@@ -261,7 +270,7 @@ function AttendancePageContent() {
     }
     const dayList = payload.rows ?? [];
     setRows(dayList);
-    setRecentRows((current) => !recentMode || recentOffset === 0 ? dayList : [...current, ...dayList.filter((row) => !current.some((item) => item.id === row.id))]);
+    setRecentRows((current) => !recentMode || effectiveRecentOffset === 0 ? dayList : [...current, ...dayList.filter((row) => !current.some((item) => item.id === row.id))]);
     setMonthlyRows(payload.monthlyRows ?? []);
     setGrid(payload.grid ?? null);
     if (payload.filterOptions) setFilterOptions(payload.filterOptions);
@@ -270,6 +279,26 @@ function AttendancePageContent() {
     setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi.`}`);
     setRecentLoading(false);
   }, [departmentFilter, isOrganizationView, period, recentOffset, selectedDate, staffFilter, statusFilter]);
+
+  const refreshAfterFilterChange = (filters: Partial<{ staffFilter: string; departmentFilter: string; statusFilter: string }>) => {
+    skipNextAttendanceEffect.current = true;
+    setRecentOffset(0);
+    setRecentRows([]);
+    void loadAttendance({ ...filters, recentOffset: 0 });
+  };
+
+  const changeDepartmentFilter = (nextDepartment: string) => {
+    const nextStaff = filterOptions.staff.find((item) => item.id === staffFilter);
+    if (nextStaff && nextDepartment && nextStaff.department_id !== nextDepartment) {
+      setDepartmentFilter(nextDepartment); setStaffFilter(""); setStaffQuery("");
+      updateQuery({ staffId: "", departmentId: nextDepartment });
+      refreshAfterFilterChange({ staffFilter: "", departmentFilter: nextDepartment });
+      return;
+    }
+    setDepartmentFilter(nextDepartment);
+    updateQuery({ departmentId: nextDepartment });
+    refreshAfterFilterChange({ departmentFilter: nextDepartment });
+  };
 
   const updateQuery = (updates: Record<string, string>) => {
     const next = new URLSearchParams(searchParams.toString());
@@ -416,6 +445,10 @@ function AttendancePageContent() {
     if (pathname === "/attendance" && !effectiveOrgScope) return void router.push("/my-attendance");
     if (!canAccessModule("hr")) return void router.push("/");
     void loadLeaveRequests();
+    if (skipNextAttendanceEffect.current) {
+      skipNextAttendanceEffect.current = false;
+      return;
+    }
     const t = setTimeout(() => {
       void loadAttendance();
     }, 0);
@@ -607,10 +640,10 @@ function AttendancePageContent() {
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
           {isOrganizationView ? <div className="mt-3 grid gap-2 rounded-lg border bg-slate-50 p-3 sm:grid-cols-4">
-            <label className="text-sm font-semibold">Nhân viên<input list="attendance-staff-options" value={staffQuery} onChange={(event) => { const query = event.target.value; setStaffQuery(query); const match = filterOptions.staff.find((item) => item.full_name === query); if (match || query === "") { setStaffFilter(match?.id ?? ""); updateQuery({ staffId: match?.id ?? "" }); } }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal" placeholder="Tìm nhân viên" /><datalist id="attendance-staff-options">{filterOptions.staff.map((item) => <option key={item.id} value={item.full_name} />)}</datalist></label>
-            <label className="text-sm font-semibold">Phòng ban<select value={departmentFilter} onChange={(event) => { setDepartmentFilter(event.target.value); updateQuery({ departmentId: event.target.value }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả phòng ban</option>{filterOptions.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-            <label className="text-sm font-semibold">Trạng thái<select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); updateQuery({ status: event.target.value }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả trạng thái</option><option value="present">Đi làm</option><option value="incomplete">Đi làm (thiếu giờ/đi muộn/về sớm)</option><option value="absent">Nghỉ không phép</option><option value="leave">Nghỉ phép</option><option value="online">Làm việc online</option><option value="business">{"Công tác/Sự kiện"}</option></select></label>
-            <button type="button" className="self-end min-h-10 rounded border bg-white px-3 py-2 text-sm font-semibold" onClick={() => { setStaffFilter(""); setStaffQuery(""); setDepartmentFilter(""); setStatusFilter(""); updateQuery({ staffId: "", departmentId: "", status: "" }); }}>Xóa lọc</button>
+            <label className="text-sm font-semibold">Phòng ban<select value={departmentFilter} onChange={(event) => changeDepartmentFilter(event.target.value)} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả phòng ban</option>{filterOptions.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+            <label className="text-sm font-semibold">Nhân viên<input list="attendance-staff-options" value={staffQuery} onChange={(event) => { const query = event.target.value; setStaffQuery(query); const match = filterOptions.staff.find((item) => item.full_name === query && (!departmentFilter || item.department_id === departmentFilter)); if (match || query === "") { const nextStaff = match?.id ?? ""; setStaffFilter(nextStaff); updateQuery({ staffId: nextStaff }); refreshAfterFilterChange({ staffFilter: nextStaff }); } }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal" placeholder="Tìm nhân viên" /><datalist id="attendance-staff-options">{filterOptions.staff.filter((item) => !departmentFilter || item.department_id === departmentFilter).map((item) => <option key={item.id} value={item.full_name} />)}</datalist></label>
+            <label className="text-sm font-semibold">Trạng thái<select value={statusFilter} onChange={(event) => { const nextStatus = event.target.value; setStatusFilter(nextStatus); updateQuery({ status: nextStatus }); refreshAfterFilterChange({ statusFilter: nextStatus }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả trạng thái</option><option value="present">Đi làm</option><option value="incomplete">Đi làm (thiếu giờ/đi muộn/về sớm)</option><option value="absent">Nghỉ không phép</option><option value="leave">Nghỉ phép</option><option value="online">Làm việc online</option><option value="business">{"Công tác/Sự kiện"}</option></select></label>
+            <button type="button" className="self-end min-h-10 rounded border bg-white px-3 py-2 text-sm font-semibold" onClick={() => { setStaffFilter(""); setStaffQuery(""); setDepartmentFilter(""); setStatusFilter(""); updateQuery({ staffId: "", departmentId: "", status: "" }); refreshAfterFilterChange({ staffFilter: "", departmentFilter: "", statusFilter: "" }); }}>Xóa lọc</button>
           </div> : null}
           {isOrganizationView && period === "month" ? <div className="mt-3 flex gap-2"><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("list"); updateQuery({ view: "" }); }}>Danh sách</button><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "grid" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("grid"); updateQuery({ view: "grid" }); }}>Lưới</button></div> : null}
         </section>
