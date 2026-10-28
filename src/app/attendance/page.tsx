@@ -21,6 +21,7 @@ type AttendanceRow = {
   late_exception_status?: "pending" | "approved" | "rejected" | null;
   admin_note?: string | null;
   admin_note_at?: string | null;
+  workday_adjustment?: { workday: number; reason: string } | null;
   has_attendance_log?: boolean;
   workday?: number;
   attendance_sources?: { leave?: boolean; business?: boolean; event?: boolean; online?: boolean };
@@ -135,6 +136,11 @@ export default function AttendancePage() {
   const [adminNoteText, setAdminNoteText] = useState("");
   const [adminNoteBusy, setAdminNoteBusy] = useState(false);
   const [adminNoteError, setAdminNoteError] = useState("");
+  const [adjustmentRow, setAdjustmentRow] = useState<AttendanceRow | null>(null);
+  const [adjustmentWorkday, setAdjustmentWorkday] = useState("1");
+  const [adjustmentReason, setAdjustmentReason] = useState("");
+  const [adjustmentBusy, setAdjustmentBusy] = useState(false);
+  const [adjustmentError, setAdjustmentError] = useState("");
   const initialLeaveFilters = useMemo(() => defaultLeaveRequestFilters(), []);
   const [leaveTimeScope, setLeaveTimeScope] = useState<"month" | "all">(initialLeaveFilters.timeScope as "month" | "all");
   const [leaveMonth, setLeaveMonth] = useState(initialLeaveFilters.month);
@@ -306,6 +312,29 @@ export default function AttendancePage() {
     } finally { setAdminNoteBusy(false); }
   };
 
+  const submitAdjustment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!adjustmentRow || adjustmentReason.trim().length < 3) { setAdjustmentError("Vui lòng nhập lý do từ 3 ký tự."); return; }
+    setAdjustmentBusy(true); setAdjustmentError("");
+    try {
+      const response = await fetch("/api/attendance/workday-adjustment", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: adjustmentRow.user_id, workDate: adjustmentRow.work_date, workday: Number(adjustmentWorkday), reason: adjustmentReason.trim() }) });
+      if (!response.ok) throw new Error("Chưa lưu được điều chỉnh công.");
+      setAdjustmentRow(null); await loadAttendance();
+    } catch (error) { setAdjustmentError(error instanceof Error ? error.message : "Chưa lưu được điều chỉnh công."); }
+    finally { setAdjustmentBusy(false); }
+  };
+
+  const deleteAdjustment = async () => {
+    if (!adjustmentRow) return;
+    setAdjustmentBusy(true); setAdjustmentError("");
+    try {
+      const response = await fetch("/api/attendance/workday-adjustment", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: adjustmentRow.user_id, workDate: adjustmentRow.work_date }) });
+      if (!response.ok) throw new Error("Chưa xóa được điều chỉnh công.");
+      setAdjustmentRow(null); await loadAttendance();
+    } catch (error) { setAdjustmentError(error instanceof Error ? error.message : "Chưa xóa được điều chỉnh công."); }
+    finally { setAdjustmentBusy(false); }
+  };
+
   const reviewLateException = async (row: AttendanceRow, decision: "approved" | "rejected") => {
     const note = decision === "rejected" ? window.prompt("Nhập lý do từ chối:", "")?.trim() ?? "" : "";
     if (decision === "rejected" && note.length < 3) return;
@@ -466,6 +495,7 @@ export default function AttendancePage() {
               <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setAdminNoteRow(null)} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={adminNoteBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{adminNoteBusy ? "Đang lưu..." : "Lưu ghi chú"}</button></div>
             </form>
           </div> : null}
+          {adjustmentRow ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="adjustment-title"><form onSubmit={submitAdjustment} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl"><h2 id="adjustment-title" className="text-lg font-semibold">Điều chỉnh công</h2><p className="mt-1 text-sm text-slate-600">{adjustmentRow.staff_users?.full_name ?? "Nhân sự"} · {formatAttendanceDate(adjustmentRow.work_date)}</p><label className="mt-4 block text-sm font-semibold">Ngày công<select value={adjustmentWorkday} onChange={(event) => setAdjustmentWorkday(event.target.value)} className="mt-1 w-full rounded border px-3 py-2 font-normal"><option value="1">1</option><option value="0.5">0.5</option><option value="0">0</option></select></label><label className="mt-3 block text-sm font-semibold">Lý do<textarea required minLength={3} maxLength={2000} value={adjustmentReason} onChange={(event) => setAdjustmentReason(event.target.value)} className="mt-1 min-h-24 w-full rounded border px-3 py-2 font-normal" /></label>{adjustmentError ? <p className="mt-2 text-sm text-red-700" role="alert">{adjustmentError}</p> : null}<div className="mt-4 flex justify-between gap-2"><button type="button" onClick={deleteAdjustment} disabled={adjustmentBusy || !adjustmentRow.workday_adjustment} className="rounded border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Xóa điều chỉnh</button><div className="flex gap-2"><button type="button" onClick={() => setAdjustmentRow(null)} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={adjustmentBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Lưu điều chỉnh</button></div></div></form></div> : null}
           {leaveModalOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="leave-dialog-title">
             <form onSubmit={submitLeave} className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
               <div className="flex items-center justify-between"><h2 id="leave-dialog-title" className="text-lg font-semibold">Gửi đơn xin nghỉ</h2><button type="button" onClick={() => setLeaveModalOpen(false)} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
@@ -510,6 +540,7 @@ export default function AttendancePage() {
               >
                 {syncBusy ? "Đang gửi..." : syncRequests[0]?.status === "completing" ? "Đang chốt dữ liệu..." : syncRequests[0]?.status === "running" ? "Đang đồng bộ..." : "Đồng bộ ngay"}
               </button>
+              {isOrganizationView && period === "month" ? <a href={`/api/attendance/export?month=${selectedDate.slice(0, 7)}`} className="min-h-11 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800">Xuất Excel (CSV)</a> : null}
             </div>
           ) : null}
           <div className="grid gap-2 md:grid-cols-4">
@@ -571,7 +602,7 @@ export default function AttendancePage() {
                   <td className="whitespace-nowrap px-3 py-2">{formatAttendanceDate(r.work_date)}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_in ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{r.workday ?? 0}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{r.workday ?? 0}{effectiveCanManage ? <button type="button" onClick={() => { setAdjustmentRow(r); setAdjustmentWorkday(String(r.workday_adjustment?.workday ?? r.workday ?? 1)); setAdjustmentReason(r.workday_adjustment?.reason ?? ""); setAdjustmentError(""); }} className="ml-2 rounded border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-800">Điều chỉnh công</button> : null}</td>
                   <td className="attendance-status-cell px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception_status === "approved" ? "Đi muộn do việc phát sinh" : r.late_exception_status === "pending" ? "Đi muộn (chờ duyệt lý do phát sinh)" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
                   <td className="attendance-note-cell min-w-64 px-3 py-2"><div className="flex items-start gap-2"><div className="min-w-0 flex-1 whitespace-pre-wrap break-words">{r.note ?? ""}{!isOrganizationView && (!r.late_exception_status || r.late_exception_status === "rejected") && !!r.check_in && r.check_in > "08:15:00" ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Báo đi muộn do việc phát sinh</button> : null}{isOrganizationView && reviewableLateExceptionIds.includes(r.id) ? <span className="ml-2 inline-flex gap-2"><button type="button" disabled={lateExceptionBusy} onClick={() => void reviewLateException(r, "approved")} className="rounded bg-emerald-700 px-2 py-1 text-xs font-semibold text-white">Duyệt</button><button type="button" disabled={lateExceptionBusy} onClick={() => void reviewLateException(r, "rejected")} className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700">Từ chối</button></span> : null}{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</div>{effectiveCanManage ? <button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="attendance-note-action shrink-0 rounded border border-orange-300 p-1.5 text-orange-800 hover:bg-orange-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" title={r.admin_note ? "Sửa ghi chú Admin" : "Thêm ghi chú Admin"} aria-label={`${r.admin_note ? "Sửa" : "Thêm"} ghi chú Admin cho ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`}>{r.admin_note ? <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1-1-4Z" /></svg> : <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>}</button> : null}</div></td>
                 </tr>

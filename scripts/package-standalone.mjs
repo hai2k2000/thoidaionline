@@ -159,6 +159,7 @@ const migrationReference = [
   "supabase/migrations/20261028100000_rbac_approval_permissions_v1.sql",
   "supabase/migrations/20261028120000_attendance_rbac_v1.sql",
   "supabase/migrations/20261028130000_attendance_late_exception_review.sql",
+  "supabase/migrations/20261028140000_attendance_workday_adjustments.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");
