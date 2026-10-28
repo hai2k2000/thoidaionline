@@ -26,6 +26,12 @@ test("strictly late check-in keeps one workday and adds the late note", () => {
   assert.equal(calculate("08:15:01", "17:00").late, true);
 });
 
+test("late exception status controls the generated note", () => {
+  assert.equal(calculate("08:16", "17:00", { lateExceptionStatus: "pending" }).note, "Đi muộn (chờ duyệt lý do phát sinh)");
+  assert.equal(calculate("08:16", "17:00", { lateExceptionStatus: "approved" }).note, "Đi muộn do việc phát sinh");
+  assert.equal(calculate("08:16", "17:00", { lateExceptionStatus: "rejected" }).note, "Đi muộn");
+});
+
 test("strictly early check-out keeps one workday and adds the early note", () => {
   assert.deepEqual(calculate("08:00", "16:29"), { workday: 1, late: false, early: true, note: "Về sớm" });
   assert.equal(calculate("08:00", "16:29:59").early, true);

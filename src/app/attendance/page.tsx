@@ -18,6 +18,7 @@ type AttendanceRow = {
   note: string | null;
   status: string | null;
   late_exception?: string | null;
+  late_exception_status?: "pending" | "approved" | "rejected" | null;
   admin_note?: string | null;
   admin_note_at?: string | null;
   has_attendance_log?: boolean;
@@ -129,6 +130,7 @@ export default function AttendancePage() {
   const [lateExceptionNote, setLateExceptionNote] = useState("");
   const [lateExceptionBusy, setLateExceptionBusy] = useState(false);
   const [lateExceptionError, setLateExceptionError] = useState("");
+  const [reviewableLateExceptionIds, setReviewableLateExceptionIds] = useState<string[]>([]);
   const [adminNoteRow, setAdminNoteRow] = useState<AttendanceRow | null>(null);
   const [adminNoteText, setAdminNoteText] = useState("");
   const [adminNoteBusy, setAdminNoteBusy] = useState(false);
@@ -148,6 +150,7 @@ export default function AttendancePage() {
   const effectiveCanManage = attendanceAccess.canManage || user?.rbacPermissions?.includes("attendance.manage") === true;
   const isOrganizationView = pathname === "/attendance" && effectiveOrgScope !== null;
   const canQuickReport = !!user?.rbacPermissions?.includes("task.quick_report.create");
+
   const canMutateLeave = (item: LeaveRequest) => canEditCreatorMutation({
     actorId: user?.id,
     createdBy: item.requester_id,
@@ -214,6 +217,7 @@ export default function AttendancePage() {
       message?: string;
       orgScope?: "all" | "department" | null;
       canManage?: boolean;
+      reviewableLateExceptionIds?: string[];
     } | null;
     if (!response.ok || !payload) {
       setRows([]);
@@ -228,6 +232,7 @@ export default function AttendancePage() {
     setRecentRows((current) => !recentMode || recentOffset === 0 ? dayList : [...current, ...dayList.filter((row) => !current.some((item) => item.id === row.id))]);
     setMonthlyRows(payload.monthlyRows ?? []);
     setAttendanceAccess({ orgScope: payload.orgScope ?? null, canManage: payload.canManage === true });
+    setReviewableLateExceptionIds(payload.reviewableLateExceptionIds ?? []);
     setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi.`}`);
     setRecentLoading(false);
   }, [isOrganizationView, period, recentOffset, selectedDate]);
@@ -299,6 +304,18 @@ export default function AttendancePage() {
     } catch (error) {
       setAdminNoteError(error instanceof Error ? error.message : "Chưa lưu được ghi chú Admin.");
     } finally { setAdminNoteBusy(false); }
+  };
+
+  const reviewLateException = async (row: AttendanceRow, decision: "approved" | "rejected") => {
+    const note = decision === "rejected" ? window.prompt("Nhập lý do từ chối:", "")?.trim() ?? "" : "";
+    if (decision === "rejected" && note.length < 3) return;
+    setLateExceptionBusy(true);
+    try {
+      const response = await fetch("/api/attendance/late-exception", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ logId: row.id, decision, note }) });
+      if (!response.ok) throw new Error("Chưa xử lý được ngoại lệ.");
+      await loadAttendance();
+    } catch (error) { setLateExceptionError(error instanceof Error ? error.message : "Chưa xử lý được ngoại lệ."); }
+    finally { setLateExceptionBusy(false); }
   };
 
   const cancelLeave = async (request: LeaveRequest) => {
@@ -555,8 +572,8 @@ export default function AttendancePage() {
                   <td className="whitespace-nowrap px-3 py-2">{r.check_in ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{r.workday ?? 0}</td>
-                  <td className="attendance-status-cell px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception === "sudden_work" ? "Đi muộn do việc phát sinh" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
-                  <td className="attendance-note-cell min-w-64 px-3 py-2"><div className="flex items-start gap-2"><div className="min-w-0 flex-1 whitespace-pre-wrap break-words">{r.note ?? ""}{!isOrganizationView && canQuickReport && !r.late_exception && (r.note ?? "").includes("Đi muộn") ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Đánh dấu việc phát sinh</button> : null}{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</div>{effectiveCanManage ? <button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="attendance-note-action shrink-0 rounded border border-orange-300 p-1.5 text-orange-800 hover:bg-orange-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" title={r.admin_note ? "Sửa ghi chú Admin" : "Thêm ghi chú Admin"} aria-label={`${r.admin_note ? "Sửa" : "Thêm"} ghi chú Admin cho ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`}>{r.admin_note ? <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1-1-4Z" /></svg> : <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>}</button> : null}</div></td>
+                  <td className="attendance-status-cell px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception_status === "approved" ? "Đi muộn do việc phát sinh" : r.late_exception_status === "pending" ? "Đi muộn (chờ duyệt lý do phát sinh)" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
+                  <td className="attendance-note-cell min-w-64 px-3 py-2"><div className="flex items-start gap-2"><div className="min-w-0 flex-1 whitespace-pre-wrap break-words">{r.note ?? ""}{!isOrganizationView && (!r.late_exception_status || r.late_exception_status === "rejected") && !!r.check_in && r.check_in > "08:15:00" ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Báo đi muộn do việc phát sinh</button> : null}{isOrganizationView && reviewableLateExceptionIds.includes(r.id) ? <span className="ml-2 inline-flex gap-2"><button type="button" disabled={lateExceptionBusy} onClick={() => void reviewLateException(r, "approved")} className="rounded bg-emerald-700 px-2 py-1 text-xs font-semibold text-white">Duyệt</button><button type="button" disabled={lateExceptionBusy} onClick={() => void reviewLateException(r, "rejected")} className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700">Từ chối</button></span> : null}{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</div>{effectiveCanManage ? <button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="attendance-note-action shrink-0 rounded border border-orange-300 p-1.5 text-orange-800 hover:bg-orange-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" title={r.admin_note ? "Sửa ghi chú Admin" : "Thêm ghi chú Admin"} aria-label={`${r.admin_note ? "Sửa" : "Thêm"} ghi chú Admin cho ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`}>{r.admin_note ? <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1-1-4Z" /></svg> : <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>}</button> : null}</div></td>
                 </tr>
               ))}
               {visibleAttendanceRows.length === 0 ? (
@@ -652,3 +669,7 @@ export default function AttendancePage() {
     </main>
   );
 }
+
+
+
+

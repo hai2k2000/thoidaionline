@@ -18,6 +18,7 @@ type AttendanceRow = {
   note: string | null;
   status: string | null;
   late_exception?: string | null;
+  late_exception_status?: "pending" | "approved" | "rejected" | null;
   admin_note?: string | null;
   admin_note_at?: string | null;
   has_attendance_log?: boolean;
@@ -57,33 +58,18 @@ const readPages = async <T>(readPage: (from: number, to: number) => PromiseLike<
 export async function POST(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (!guard.actor.rbacPermissions.includes("task.quick_report.create")) return apiError("forbidden", 403);
+  if (!guard.actor.rbacPermissions.includes("attendance.view_self")) return apiError("forbidden", 403);
   const body = await readJsonObject(request);
   const workDate = typeof body?.workDate === "string" ? body.workDate : "";
   const note = typeof body?.note === "string" ? body.note.trim() : "";
   if (!isValidDate(workDate) || note.length < 3 || note.length > 2000) return apiError("invalid_request", 400);
 
-  const existing = await serverSupabase
-    .from("attendance_logs")
-    .select("id,check_in,check_out,note,status,late_exception")
-    .eq("user_id", guard.actor.id)
-    .eq("work_date", workDate)
-    .maybeSingle();
-  if (existing.error) return apiError("operation_failed", 500);
-  const row = existing.data as { id: string; check_in: string | null; check_out: string | null; note: string | null; status: string | null; late_exception: string | null } | null;
-  const protectedStatus = row?.status === "leave" || row?.status === "absent";
-  if (!row || protectedStatus || row.status !== "late" || !calculateAttendance({ checkIn: row.check_in, checkOut: row.check_out }).late) return apiError("invalid_request", 400);
-  if (row.late_exception === "sudden_work") return apiError("conflict", 409);
-  const mergedNote = [row.note?.trim(), note].filter(Boolean).join("; ");
-  const updated = await serverSupabase
-    .from("attendance_logs")
-    .update({ late_exception: "sudden_work", note: mergedNote })
-    .eq("id", row.id)
-    .eq("user_id", guard.actor.id)
-    .select("id,work_date,check_in,check_out,note,status,late_exception")
-    .maybeSingle();
-  if (updated.error || !updated.data) return apiError("operation_failed", 500);
-  return apiJson({ ok: true, row: updated.data });
+  const result = await serverSupabase.rpc("api_request_late_exception", { p_actor: guard.actor.id, p_work_date: workDate, p_reason: note });
+  if (result.error) {
+    const status = result.error.code === "40001" ? 409 : result.error.code === "42501" ? 403 : ["22023", "P0002"].includes(result.error.code ?? "") ? 400 : 500;
+    return apiError(status === 409 ? "conflict" : status === 403 ? "forbidden" : status === 400 ? "invalid_request" : "operation_failed", status);
+  }
+  return apiJson({ ok: true, row: result.data });
 }
 
 export async function PATCH(request: Request) {
@@ -162,14 +148,14 @@ export async function GET(request: Request) {
   }
   let dayQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,staff_users(full_name,attendance_exempt,department_id,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users(full_name,attendance_exempt,department_id,roles(code))")
     .gte("work_date", rangeStart)
     .lte("work_date", rangeEnd)
     .order("check_in", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   let monthQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,staff_users(full_name,attendance_exempt,department_id,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users(full_name,attendance_exempt,department_id,roles(code))")
     .gte("work_date", period === "day" ? monthStart : summaryRangeStart)
     .lte("work_date", period === "day" ? anchorDate : summaryRangeEnd)
     .order("work_date", { ascending: true })
@@ -311,6 +297,7 @@ export async function GET(request: Request) {
         extraNotes,
         exceptional: synthetic || row.status === "leave" || row.status === "absent" || !!leaveWorkday || (onlineDay && !row.check_in && !row.check_out),
         lateException: row.late_exception === "sudden_work",
+        lateExceptionStatus: row.late_exception_status,
         exceptionalWorkday: leaveWorkday || (onlineDay && !leaveIsFull ? 1 : 0) || (scheduleEntries.length ? 1 : 0),
       }),
       sources,
@@ -450,10 +437,17 @@ export async function GET(request: Request) {
       return (a.staff_users?.full_name ?? "").localeCompare(b.staff_users?.full_name ?? "", "vi");
     });
   };
+  let reviewableLateExceptionIds: string[] = [];
+  if (organizationScope) {
+    const reviewable = await serverSupabase.rpc("api_list_reviewable_late_exceptions", { p_actor: guard.actor.id, p_from: rangeStart, p_to: rangeEnd });
+    if (reviewable.error) return apiError("operation_failed", 500);
+    reviewableLateExceptionIds = ((reviewable.data ?? []) as Array<{ id: string }>).map((item) => item.id);
+  }
   return apiJson({
     scope: organizationScope ? "organization" : "personal",
     orgScope: access.orgScope,
     canManage: access.canManage,
+    reviewableLateExceptionIds,
     demo: false,
     rows: contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd, dayAdminNotes),
     monthlyRows: contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : summaryRangeStart, period === "day" ? anchorDate : summaryRangeEnd, monthAdminNotes),
