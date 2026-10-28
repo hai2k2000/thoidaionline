@@ -221,6 +221,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     canViewAssets: hasPermission("asset.view"),
     canManageAssets: hasPermission("asset.manage"),
     canViewDatabase: hasPermission("record.discover"),
+    rbacPermissionScopes: user?.rbacPermissionScopes,
   });
 
   const restoreMenuFocus = useCallback(() => {

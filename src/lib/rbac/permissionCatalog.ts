@@ -15,6 +15,7 @@ export const RBAC_PERMISSION_CODES = [
   "evaluation.rubric.manage",
   "attendance.view_self",
   "attendance.view_all",
+  "attendance.manage",
   "leave.view_self",
   "leave.approve",
   "schedule.view_self",

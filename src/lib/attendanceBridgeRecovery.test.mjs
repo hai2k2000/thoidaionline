@@ -14,7 +14,7 @@ test("scheduled sync uses a rolling three-day range", () => {
 });
 
 test("owner reconciliation is admin-only and dry-run by default", () => {
-  assert.match(reconcileRoute, /role_code !== "admin"/);
+  assert.match(reconcileRoute, /resolveAttendanceAccess[\s\S]*canManage/);
   assert.match(reconcileRoute, /dry_run: dryRun/);
   assert.match(reconcileRoute, /validateAttendanceRange\("range"/);
 });

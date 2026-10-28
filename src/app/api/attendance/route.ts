@@ -5,6 +5,7 @@ import { calculateAttendance } from "@/lib/attendanceWorkday";
 import { clampAttendanceEndDate, filterBusinessAttendanceRows, isAttendanceBusinessDate, recentAttendanceRange } from "@/lib/attendanceRecentRange.mjs";
 import { isAttendanceListedStaff, roleCodeFromRelation } from "@/lib/attendanceVisibility.mjs";
 import { attendanceScheduleNoteEntriesFor } from "@/lib/attendanceScheduleNotes.mjs";
+import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -22,7 +23,7 @@ type AttendanceRow = {
   has_attendance_log?: boolean;
   workday?: number;
   attendance_sources?: { leave?: boolean; business?: boolean; event?: boolean; online?: boolean };
-  staff_users?: { full_name: string; roles?: { code?: string | null } | { code?: string | null }[] | null } | null;
+  staff_users?: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: { code?: string | null } | { code?: string | null }[] | null } | null;
 };
 
 const isValidDate = (value: string) => {
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
+  if (!(await resolveAttendanceAccess(guard.actor)).canManage) return apiError("forbidden", 403);
   const body = await readJsonObject(request);
   const userId = typeof body?.userId === "string" ? body.userId : "";
   const workDate = typeof body?.workDate === "string" ? body.workDate : "";
@@ -120,13 +121,16 @@ export async function GET(request: Request) {
   if (!isValidDate(date) || !["personal", "organization"].includes(scope) || !["day", "week", "month"].includes(period)) {
     return apiError("invalid_request", 400);
   }
-  if (scope === "organization" && guard.actor.role_code !== "admin") {
+  const access = await resolveAttendanceAccess(guard.actor);
+  if (scope === "organization" && !access.orgScope) {
     return apiError("forbidden", 403);
   }
+  if (scope === "organization" && access.orgScope === "department" && !guard.actor.department_id) return apiError("forbidden", 403);
 
   // Organization-wide attendance is deliberately an admin-only scope. The
   // personal scope remains tied to the signed-in actor even for administrators.
   const organizationScope = scope === "organization";
+  const departmentScope = organizationScope && access.orgScope === "department";
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
   const anchorDate = clampAttendanceEndDate(date, today);
   const anchor = new Date(`${anchorDate}T12:00:00Z`);
@@ -158,14 +162,14 @@ export async function GET(request: Request) {
   }
   let dayQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,staff_users(full_name,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,staff_users(full_name,attendance_exempt,department_id,roles(code))")
     .gte("work_date", rangeStart)
     .lte("work_date", rangeEnd)
     .order("check_in", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   let monthQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,staff_users(full_name,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,staff_users(full_name,attendance_exempt,department_id,roles(code))")
     .gte("work_date", period === "day" ? monthStart : summaryRangeStart)
     .lte("work_date", period === "day" ? anchorDate : summaryRangeEnd)
     .order("work_date", { ascending: true })
@@ -187,15 +191,15 @@ export async function GET(request: Request) {
   if (dayResult.error || monthResult.error) return apiError("operation_failed", 500);
   const contextStart = period === "day" ? monthStart : summaryRangeStart;
   const contextEnd = period === "day" ? anchorDate : summaryRangeEnd;
-  const adminNoteFields = "id,user_id,work_date,note,created_at,updated_at,staff_users!attendance_admin_notes_user_id_fkey(full_name)";
+  const adminNoteFields = "id,user_id,work_date,note,created_at,updated_at,staff_users!attendance_admin_notes_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))";
   let dayAdminNotesQuery = serverSupabase.from("attendance_admin_notes").select(adminNoteFields).gte("work_date", rangeStart).lte("work_date", rangeEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
   let monthAdminNotesQuery = serverSupabase.from("attendance_admin_notes").select(adminNoteFields).gte("work_date", contextStart).lte("work_date", contextEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
   if (!organizationScope) {
     dayAdminNotesQuery = dayAdminNotesQuery.eq("user_id", guard.actor.id);
     monthAdminNotesQuery = monthAdminNotesQuery.eq("user_id", guard.actor.id);
   }
-  const leaveFields = "id,requester_id,start_date,end_date,start_period,end_period,leave_type,status,requester:staff_users!leave_requests_requester_id_fkey(id,full_name)";
-  const onlineFields = "id,work_date,staff_id,staff:staff_users!online_work_schedules_staff_id_fkey(id,full_name)";
+  const leaveFields = "id,requester_id,start_date,end_date,start_period,end_period,leave_type,status,requester:staff_users!leave_requests_requester_id_fkey(id,full_name,department_id)";
+  const onlineFields = "id,work_date,staff_id,staff:staff_users!online_work_schedules_staff_id_fkey(id,full_name,department_id)";
   const scheduleFields = "id,work_date,end_date,plan_type,title,location,notes,schedule_scope,approval_status,event_assignment_kind,event_status,participant_ids,event_assignments:work_schedule_event_assignments!work_schedule_event_assignments_event_id_fkey(staff_id)";
   const readLeavePages = () => readPages((from, to) => {
     let query = serverSupabase.from("leave_requests").select(leaveFields)
@@ -229,7 +233,7 @@ export async function GET(request: Request) {
     readLeavePages(), readOnlinePages(), readSchedulePages(),
   ]);
   if (dayAdminNotesResult.error || monthAdminNotesResult.error || leaveResult.error || onlineResult.error || scheduleResult.error) return apiError("operation_failed", 500);
-  const dayAdminNotes = (dayAdminNotesResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; note: string; created_at: string; updated_at: string; staff_users: { full_name: string } | null }>;
+  const dayAdminNotes = (dayAdminNotesResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; note: string; created_at: string; updated_at: string; staff_users: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown } | null }>;
   const monthAdminNotes = (monthAdminNotesResult.data ?? []) as unknown as typeof dayAdminNotes;
   const leaves = (leaveResult.data ?? []) as unknown as Array<{ id: string; requester_id: string; start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; requester: { id: string; full_name: string } | null }>;
   const online = (onlineResult.data ?? []) as unknown as Array<{ id: string; work_date: string; staff_id: string; staff: { id: string; full_name: string } | null }>;
@@ -250,11 +254,11 @@ export async function GET(request: Request) {
     event_assignments?: Array<{ staff_id: string }>;
   }>;
   const staffResult = organizationScope
-    ? await serverSupabase.from("staff_users").select("id,full_name,username,roles(code)").eq("active", true).order("full_name")
+    ? await serverSupabase.from("staff_users").select("id,full_name,username,attendance_exempt,department_id,roles(code)").eq("active", true).order("full_name")
     : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
   if (staffResult.error) return apiError("operation_failed", 500);
   const staffRows = organizationScope
-    ? (staffResult.data ?? []).filter((staff) => isAttendanceListedStaff({ full_name: staff.full_name, role_code: "roles" in staff ? roleCodeFromRelation(staff.roles) : null }))
+    ? ((staffResult.data ?? []) as Array<{ id: string; full_name: string; username: string | null; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown }>).filter((staff) => (!departmentScope || staff.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: staff.full_name, attendance_exempt: staff.attendance_exempt, roleCode: roleCodeFromRelation(staff.roles) }))
     : (staffResult.data ?? []);
   const foreignStaff = staffRows.filter((staff) => isForeignReporter(staff.username));
   const foreignById = new Map(foreignStaff.filter((staff) => isForeignReporter(staff.username)).map((staff) => [staff.id, staff]));
@@ -328,7 +332,7 @@ export async function GET(request: Request) {
     });
   };
   const contextRows = (items: AttendanceRow[], from: string, to: string, adminNotes: typeof dayAdminNotes) => {
-    const result: AttendanceRow[] = filterBusinessAttendanceRows(withNotes(items, adminNotes)).filter((row: AttendanceRow) => !organizationScope || isAttendanceListedStaff({ full_name: row.staff_users?.full_name, role_code: roleCodeFromRelation(row.staff_users?.roles) }));
+    const result: AttendanceRow[] = filterBusinessAttendanceRows(withNotes(items, adminNotes)).filter((row: AttendanceRow) => !organizationScope || (!departmentScope || row.staff_users?.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: row.staff_users?.full_name, attendance_exempt: row.staff_users?.attendance_exempt, roleCode: roleCodeFromRelation(row.staff_users?.roles) }));
     const existing = new Set(result.map((row) => `${row.user_id}:${row.work_date}`));
     const dates = (start: string, end: string) => {
       const out: string[] = [];
@@ -336,7 +340,7 @@ export async function GET(request: Request) {
       return out;
     };
     for (const admin of adminNotes) {
-      if (!admin.staff_users || admin.work_date < from || admin.work_date > to || !isAttendanceBusinessDate(admin.work_date) || (organizationScope && !isAttendanceListedStaff({ full_name: admin.staff_users.full_name, role_code: "employee" }))) continue;
+      if (!admin.staff_users || admin.work_date < from || admin.work_date > to || !isAttendanceBusinessDate(admin.work_date) || (organizationScope && (!departmentScope || admin.staff_users.department_id === guard.actor.department_id) && !isAttendanceListedStaff({ full_name: admin.staff_users.full_name, attendance_exempt: admin.staff_users.attendance_exempt, roleCode: roleCodeFromRelation(admin.staff_users.roles) }))) continue;
       const key = `${admin.user_id}:${admin.work_date}`;
       if (existing.has(key)) continue;
       result.push({ id: `admin-note-${admin.user_id}-${admin.work_date}`, user_id: admin.user_id, work_date: admin.work_date, check_in: null, check_out: null, note: "", admin_note: admin.note, admin_note_at: admin.updated_at ?? admin.created_at, has_attendance_log: false, status: "admin_note", staff_users: { full_name: admin.staff_users.full_name }, workday: 0 });
@@ -371,7 +375,7 @@ export async function GET(request: Request) {
       ]));
       for (const participantId of participantIds) {
         const staff = staffRows.find((item) => item.id === participantId);
-        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, role_code: "employee" }))) continue;
+        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, roleCode: "employee" }))) continue;
         for (const workDate of dates(event.work_date < from ? from : event.work_date, event.end_date > to ? to : event.end_date)) {
           if (!isAttendanceBusinessDate(workDate)) continue;
           const key = `${participantId}:${workDate}`;
@@ -387,7 +391,7 @@ export async function GET(request: Request) {
       const participantIds = Array.from(new Set(schedule.participant_ids ?? []));
       for (const participantId of participantIds) {
         const staff = staffRows.find((item) => item.id === participantId);
-        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, role_code: "employee" }))) continue;
+        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, roleCode: "employee" }))) continue;
         for (const workDate of dates(schedule.work_date < from ? from : schedule.work_date, schedule.end_date > to ? to : schedule.end_date)) {
           if (!isAttendanceBusinessDate(workDate)) continue;
           const key = `${participantId}:${workDate}`;
@@ -448,6 +452,8 @@ export async function GET(request: Request) {
   };
   return apiJson({
     scope: organizationScope ? "organization" : "personal",
+    orgScope: access.orgScope,
+    canManage: access.canManage,
     demo: false,
     rows: contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd, dayAdminNotes),
     monthlyRows: contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : summaryRangeStart, period === "day" ? anchorDate : summaryRangeEnd, monthAdminNotes),

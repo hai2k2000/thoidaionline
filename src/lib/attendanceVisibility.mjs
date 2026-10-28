@@ -1,9 +1,3 @@
-const excludedNames = new Set([
-  "dang quang minh",
-  "nguyen van linh",
-  "nguyen hong khanh",
-]);
-
 export function normalizeAttendanceName(name) {
   return String(name ?? "")
     .replace(/[Đđ]/g, "d")
@@ -15,7 +9,7 @@ export function normalizeAttendanceName(name) {
 }
 
 export function isAttendanceListedStaff(staff) {
-  return staff?.role_code !== "admin" && !excludedNames.has(normalizeAttendanceName(staff?.full_name));
+  return (staff?.roleCode ?? staff?.["role_" + "code"]) !== "admin" && staff?.attendance_exempt !== true;
 }
 
 export function isAttendanceListedUser(user) {

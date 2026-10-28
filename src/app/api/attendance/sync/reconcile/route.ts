@@ -1,11 +1,12 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { configuredAttendanceDeviceId, validateAttendanceRange } from "@/lib/attendanceBridgeAuth";
+import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
 
 export async function POST(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
+  if (!(await resolveAttendanceAccess(guard.actor)).canManage) return apiError("forbidden", 403);
   const body = await readJsonObject(request);
   const rangeStart = typeof body?.range_start === "string" ? body.range_start : "";
   const rangeEnd = typeof body?.range_end === "string" ? body.range_end : "";

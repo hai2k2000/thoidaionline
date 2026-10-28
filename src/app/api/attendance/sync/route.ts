@@ -1,8 +1,8 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { bridgeAuthorized, configuredAttendanceDeviceId, validateAttendanceRange } from "@/lib/attendanceBridgeAuth";
+import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
 
-const isAdmin = (actor: { role_code: string }) => actor.role_code === "admin";
 export async function GET(request: Request) {
   if (!(await bridgeAuthorized(request))) return apiError("unauthenticated", 401);
   const { data, error } = await serverSupabase
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (!isAdmin(guard.actor)) return apiError("forbidden", 403);
+  if (!(await resolveAttendanceAccess(guard.actor)).canManage) return apiError("forbidden", 403);
   const body = await readJsonObject(request);
   const configuredDeviceId = configuredAttendanceDeviceId();
   const deviceId = typeof body?.device_id === "string" ? body.device_id : configuredDeviceId;

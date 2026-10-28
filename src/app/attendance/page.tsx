@@ -138,12 +138,20 @@ export default function AttendancePage() {
   const [leaveMonth, setLeaveMonth] = useState(initialLeaveFilters.month);
   const [leaveStatus, setLeaveStatus] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled">(initialLeaveFilters.status as "all" | "pending" | "approved" | "rejected" | "cancelled");
   const [selectedSummaryEmployee, setSelectedSummaryEmployee] = useState<{ userId: string; name: string } | null>(null);
-  const isOrganizationView = pathname === "/attendance" && user?.role_code === "admin";
+  const [attendanceAccess, setAttendanceAccess] = useState<{ orgScope: "all" | "department" | null; canManage: boolean }>({ orgScope: null, canManage: false });
+  const userOrgScope = user?.rbacPermissionScopes?.["attendance.view_all"]?.includes("all")
+    ? "all" as const
+    : user?.rbacPermissionScopes?.["attendance.view_all"]?.includes("department")
+      ? "department" as const
+      : null;
+  const effectiveOrgScope = attendanceAccess.orgScope ?? userOrgScope;
+  const effectiveCanManage = attendanceAccess.canManage || user?.rbacPermissions?.includes("attendance.manage") === true;
+  const isOrganizationView = pathname === "/attendance" && effectiveOrgScope !== null;
   const canQuickReport = !!user?.rbacPermissions?.includes("task.quick_report.create");
   const canMutateLeave = (item: LeaveRequest) => canEditCreatorMutation({
     actorId: user?.id,
     createdBy: item.requester_id,
-    isAdmin: user?.role_code === "admin",
+    isAdmin: false,
     state: leaveLifecycleState(item.status),
   });
 
@@ -204,6 +212,8 @@ export default function AttendancePage() {
       rows?: AttendanceRow[];
       monthlyRows?: AttendanceRow[];
       message?: string;
+      orgScope?: "all" | "department" | null;
+      canManage?: boolean;
     } | null;
     if (!response.ok || !payload) {
       setRows([]);
@@ -217,6 +227,7 @@ export default function AttendancePage() {
     setRows(dayList);
     setRecentRows((current) => !recentMode || recentOffset === 0 ? dayList : [...current, ...dayList.filter((row) => !current.some((item) => item.id === row.id))]);
     setMonthlyRows(payload.monthlyRows ?? []);
+    setAttendanceAccess({ orgScope: payload.orgScope ?? null, canManage: payload.canManage === true });
     setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi.`}`);
     setRecentLoading(false);
   }, [isOrganizationView, period, recentOffset, selectedDate]);
@@ -320,14 +331,14 @@ export default function AttendancePage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
-    if (pathname === "/attendance" && user.role_code !== "admin") return void router.push("/my-attendance");
+    if (pathname === "/attendance" && !effectiveOrgScope) return void router.push("/my-attendance");
     if (!canAccessModule("hr")) return void router.push("/");
     void loadLeaveRequests();
     const t = setTimeout(() => {
       void loadAttendance();
     }, 0);
     return () => clearTimeout(t);
-  }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView, loadAttendance, loadLeaveRequests]);
+  }, [authLoading, user, canAccessModule, router, selectedDate, pathname, isOrganizationView, effectiveOrgScope, loadAttendance, loadLeaveRequests]);
 
   useEffect(() => {
     if (!user) return;
@@ -396,7 +407,7 @@ export default function AttendancePage() {
     const source = recentRows.length ? recentRows : rows;
     return source.filter((row) => {
       const day = new Date(`${row.work_date}T12:00:00Z`).getUTCDay();
-      return day !== 0 && day !== 6 && (!isOrganizationView || isAttendanceListedStaff({ full_name: row.staff_users?.full_name, role_code: "employee" }));
+      return day !== 0 && day !== 6 && (!isOrganizationView || isAttendanceListedStaff({ full_name: row.staff_users?.full_name, roleCode: "employee" }));
     });
   }, [isOrganizationView, recentRows, rows]);
 
@@ -409,7 +420,7 @@ export default function AttendancePage() {
 
         <div className="min-w-0">
           <div className="mb-4">
-            <h1 className="text-2xl font-bold">{isOrganizationView ? "Chấm công toàn cơ quan" : "Chấm công của tôi"}</h1>
+            <h1 className="text-2xl font-bold">{isOrganizationView ? (effectiveOrgScope === "department" ? `Chấm công phòng${user?.department_code ? ` ${user.department_code}` : ""}` : "Chấm công toàn cơ quan") : "Chấm công của tôi"}</h1>
           </div>
 
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4">
@@ -458,7 +469,7 @@ export default function AttendancePage() {
           </div> : null}
 
         <section className="rounded-xl border bg-white p-4">
-          {isOrganizationView ? (
+            {effectiveCanManage ? (
             <div className="mb-4 flex flex-col gap-3 rounded-xl border border-orange-200 bg-orange-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-900">Đồng bộ máy chấm công</p>
@@ -545,7 +556,7 @@ export default function AttendancePage() {
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{r.workday ?? 0}</td>
                   <td className="attendance-status-cell px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception === "sudden_work" ? "Đi muộn do việc phát sinh" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
-                  <td className="attendance-note-cell min-w-64 px-3 py-2"><div className="flex items-start gap-2"><div className="min-w-0 flex-1 whitespace-pre-wrap break-words">{r.note ?? ""}{!isOrganizationView && canQuickReport && !r.late_exception && (r.note ?? "").includes("Đi muộn") ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Đánh dấu việc phát sinh</button> : null}{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</div>{isOrganizationView ? <button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="attendance-note-action shrink-0 rounded border border-orange-300 p-1.5 text-orange-800 hover:bg-orange-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" title={r.admin_note ? "Sửa ghi chú Admin" : "Thêm ghi chú Admin"} aria-label={`${r.admin_note ? "Sửa" : "Thêm"} ghi chú Admin cho ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`}>{r.admin_note ? <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg> : <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>}</button> : null}</div></td>
+                  <td className="attendance-note-cell min-w-64 px-3 py-2"><div className="flex items-start gap-2"><div className="min-w-0 flex-1 whitespace-pre-wrap break-words">{r.note ?? ""}{!isOrganizationView && canQuickReport && !r.late_exception && (r.note ?? "").includes("Đi muộn") ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Đánh dấu việc phát sinh</button> : null}{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</div>{effectiveCanManage ? <button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="attendance-note-action shrink-0 rounded border border-orange-300 p-1.5 text-orange-800 hover:bg-orange-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" title={r.admin_note ? "Sửa ghi chú Admin" : "Thêm ghi chú Admin"} aria-label={`${r.admin_note ? "Sửa" : "Thêm"} ghi chú Admin cho ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`}>{r.admin_note ? <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1-1-4Z" /></svg> : <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>}</button> : null}</div></td>
                 </tr>
               ))}
               {visibleAttendanceRows.length === 0 ? (
@@ -612,7 +623,7 @@ export default function AttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {(isOrganizationView ? monthlySummary.filter((r) => isAttendanceListedStaff({ full_name: r.name, role_code: "employee" })) : monthlySummary).map((r) => (
+              {(isOrganizationView ? monthlySummary.filter((r) => isAttendanceListedStaff({ full_name: r.name, roleCode: "employee" })) : monthlySummary).map((r) => (
                 <tr key={`sum-${r.userId}`} className="border-t cursor-pointer" onClick={() => setSelectedSummaryEmployee({ userId: r.userId, name: r.name })} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedSummaryEmployee({ userId: r.userId, name: r.name }); } }} tabIndex={0} aria-label={`Xem chi tiết chấm công của ${r.name}`}>
                   <td className="px-3 py-2 font-semibold text-orange-700 underline-offset-2 hover:underline">{r.name}</td>
                   <td className="px-3 py-2 text-right">{r.daysPresent}</td>
@@ -621,7 +632,7 @@ export default function AttendancePage() {
                   <td className="px-3 py-2 text-right">{r.businessDays}</td>
                 </tr>
               ))}
-              {(isOrganizationView ? monthlySummary.filter((r) => isAttendanceListedStaff({ full_name: r.name, role_code: "employee" })) : monthlySummary).length === 0 ? (
+              {(isOrganizationView ? monthlySummary.filter((r) => isAttendanceListedStaff({ full_name: r.name, roleCode: "employee" })) : monthlySummary).length === 0 ? (
                 <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={5}>Chưa có dữ liệu tổng công.</td></tr>
               ) : null}
             </tbody>
