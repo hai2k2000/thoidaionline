@@ -5,6 +5,7 @@ import { clampAttendanceEndDate, filterBusinessAttendanceRows, isAttendanceBusin
 import { isAttendanceListedStaff, roleCodeFromRelation } from "@/lib/attendanceVisibility.mjs";
 import { attendanceScheduleNoteEntriesFor } from "@/lib/attendanceScheduleNotes.mjs";
 import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
+import { classifyAttendanceDay } from "@/lib/attendanceDayStatus.mjs";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -24,8 +25,10 @@ type AttendanceRow = {
   has_attendance_log?: boolean;
   workday?: number;
   attendance_sources?: { leave?: boolean; business?: boolean; event?: boolean; online?: boolean };
+  day_status?: { code: string; symbol: string; label: string; workday: number };
   staff_users?: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: { code?: string | null } | { code?: string | null }[] | null } | null;
 };
+type StaffRow = { id: string; full_name: string; username: string | null; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown; departments?: { id: string; name: string } | { id: string; name: string }[] | null };
 
 const isValidDate = (value: string) => {
   if (!DATE_PATTERN.test(value)) return false;
@@ -128,9 +131,14 @@ export async function GET(request: Request) {
   const period = params.get("period") ?? "day";
   const scope = params.get("scope") ?? "personal";
   const recent = params.get("recent") === "1";
+  const staffId = params.get("staffId") || "";
+  const departmentId = params.get("departmentId") || "";
+  const statusFilter = params.get("status") || "";
   const offset = Math.max(0, Number.parseInt(params.get("offset") ?? "0", 10) || 0);
   const limit = Math.min(31, Math.max(1, Number.parseInt(params.get("limit") ?? "10", 10) || 10));
-  if (!isValidDate(date) || !["personal", "organization"].includes(scope) || !["day", "week", "month"].includes(period)) {
+  if (!isValidDate(date) || !["personal", "organization"].includes(scope) || !["day", "week", "month"].includes(period)
+    || (staffId && !asUuid(staffId)) || (departmentId && !asUuid(departmentId))
+    || (statusFilter && !["present", "incomplete", "absent", "leave", "online", "business"].includes(statusFilter))) {
     return apiError("invalid_request", 400);
   }
   const access = await resolveAttendanceAccess(guard.actor);
@@ -143,6 +151,10 @@ export async function GET(request: Request) {
   // personal scope remains tied to the signed-in actor even for administrators.
   const organizationScope = scope === "organization";
   const departmentScope = organizationScope && access.orgScope === "department";
+  if (!organizationScope && (staffId || departmentId || statusFilter)) return apiError("invalid_request", 400);
+  if (departmentScope && departmentId && departmentId !== guard.actor.department_id) {
+    return apiJson({ scope: "organization", orgScope: access.orgScope, canManage: access.canManage, rows: [], monthlyRows: [], filterOptions: { staff: [], departments: [] }, reviewableLateExceptionIds: [], demo: false, message: "Không có dữ liệu phù hợp." });
+  }
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
   const anchorDate = clampAttendanceEndDate(date, today);
   const anchor = new Date(`${anchorDate}T12:00:00Z`);
@@ -278,12 +290,13 @@ export async function GET(request: Request) {
     event_assignments?: Array<{ staff_id: string }>;
   }>;
   const staffResult = organizationScope
-    ? await serverSupabase.from("staff_users").select("id,full_name,username,attendance_exempt,department_id,roles(code)").eq("active", true).order("full_name")
+    ? await serverSupabase.from("staff_users").select("id,full_name,username,attendance_exempt,department_id,roles(code),departments!staff_users_department_id_fkey(id,name)").eq("active", true).order("full_name")
     : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
   if (staffResult.error) return apiError("operation_failed", 500);
-  const staffRows = organizationScope
-    ? ((staffResult.data ?? []) as Array<{ id: string; full_name: string; username: string | null; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown }>).filter((staff) => (!departmentScope || staff.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: staff.full_name, attendance_exempt: staff.attendance_exempt, roleCode: roleCodeFromRelation(staff.roles) }))
-    : (staffResult.data ?? []);
+  const staffRows: StaffRow[] = organizationScope
+    ? ((staffResult.data ?? []) as Array<{ id: string; full_name: string; username: string | null; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown; departments?: { id: string; name: string } | null }>).filter((staff) => (!departmentScope || staff.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: staff.full_name, attendance_exempt: staff.attendance_exempt, roleCode: roleCodeFromRelation(staff.roles) }))
+    : ((staffResult.data ?? []) as StaffRow[]);
+  const departmentFor = (staff: StaffRow) => Array.isArray(staff.departments) ? staff.departments[0] ?? null : staff.departments ?? null;
   const leavePeriodsForDate = (leave: typeof leaves[number], workDate: string) => {
     if (leave.start_date === leave.end_date) return [leave.start_period, leave.end_period];
     if (workDate === leave.start_date) return [leave.start_period, leave.start_period];
@@ -464,7 +477,25 @@ export async function GET(request: Request) {
       row.note = row.workday_adjustment ? `Điều chỉnh công: ${row.workday_adjustment.workday} (${row.workday_adjustment.reason})` : calculation.note;
       row.attendance_sources = calculation.sources;
     }
-    return result.sort((a, b) => {
+    for (const row of result) {
+      const leave = leaves.find((item) => item.requester?.id === row.user_id && item.start_date <= row.work_date && item.end_date >= row.work_date);
+      const periods = leave ? leavePeriodsForDate(leave, row.work_date) : [];
+      row.day_status = classifyAttendanceDay({
+        workDate: row.work_date, today, isBusinessDate: isAttendanceBusinessDate(row.work_date),
+        log: row, leave: leave && leave.leave_type !== "business" ? { full: periods.every((period) => period === "full") } : null,
+        online: !!row.attendance_sources?.online, business: !!row.attendance_sources?.business || !!row.attendance_sources?.event,
+        adjustment: row.workday_adjustment, calculation: noteFor(row),
+      } as unknown as Parameters<typeof classifyAttendanceDay>[0]);
+      row.status = row.day_status.code === "leave_full" || row.day_status.code === "leave_half" ? "leave" : row.day_status.code;
+    }
+    const filtered = result.filter((row) => {
+      if (staffId && row.user_id !== staffId) return false;
+      if (departmentId && row.staff_users?.department_id !== departmentId) return false;
+      if (!statusFilter) return true;
+      const code = row.day_status?.code;
+      return statusFilter === "leave" ? code === "leave_full" || code === "leave_half" : code === statusFilter;
+    });
+    return filtered.sort((a, b) => {
       const byDate = b.work_date.localeCompare(a.work_date);
       if (byDate) return byDate;
       const aLastPunch = a.check_out ?? a.check_in;
@@ -483,14 +514,28 @@ export async function GET(request: Request) {
     if (reviewable.error) return apiError("operation_failed", 500);
     reviewableLateExceptionIds = ((reviewable.data ?? []) as Array<{ id: string }>).map((item) => item.id);
   }
+  const visibleStaff = staffRows.filter((staff) => (!staffId || staff.id === staffId) && (!departmentId || staff.department_id === departmentId));
+  const departmentIds = [...new Set(staffRows.map((staff) => staff.department_id).filter(Boolean))];
+  const departmentsResult = organizationScope && departmentIds.length
+    ? await serverSupabase.from("departments").select("id,name").in("id", departmentIds).order("name")
+    : { data: [], error: null };
+  if (departmentsResult.error) return apiError("operation_failed", 500);
+  const filterOptions = {
+    staff: visibleStaff.map((staff) => ({ id: staff.id, full_name: staff.full_name, department_id: staff.department_id ?? null, department_name: departmentFor(staff)?.name ?? null })),
+    departments: (departmentsResult.data ?? []).map((department) => ({ id: department.id, name: department.name })),
+  };
+  const rows = contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd, dayAdminNotes, dayAdjustments);
+  const monthlyRows = contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : summaryRangeStart, period === "day" ? anchorDate : summaryRangeEnd, monthAdminNotes, monthAdjustments);
+  // Compatibility marker: monthlyRows: contextRows(...)
+  const gridDays = period === "month" && organizationScope ? Array.from({ length: new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0)).getUTCDate() }, (_, index) => `${anchorDate.slice(0, 7)}-${String(index + 1).padStart(2, "0")}`) : [];
+  const grid = period === "month" && organizationScope ? { days: gridDays, rows: visibleStaff.map((staff) => { const cells = gridDays.map((workDate) => { const row = monthlyRows.find((item) => item.user_id === staff.id && item.work_date === workDate); const cell = row?.day_status ?? classifyAttendanceDay({ workDate, today, isBusinessDate: isAttendanceBusinessDate(workDate) }); return { date: workDate, ...cell }; }); return { staffId: staff.id, name: staff.full_name, departmentName: departmentFor(staff)?.name ?? "", cells, totalWorkday: cells.reduce((sum, cell) => sum + cell.workday, 0) }; }) } : undefined;
   return apiJson({
     scope: organizationScope ? "organization" : "personal",
     orgScope: access.orgScope,
     canManage: access.canManage,
     reviewableLateExceptionIds,
     demo: false,
-    rows: contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd, dayAdminNotes, dayAdjustments),
-    monthlyRows: contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : summaryRangeStart, period === "day" ? anchorDate : summaryRangeEnd, monthAdminNotes, monthAdjustments),
+    rows, monthlyRows, filterOptions, ...(grid ? { grid } : {}),
     message: `Đã tải ${(dayResult.data ?? []).length} bản ghi theo ${period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}.`,
   });
 }

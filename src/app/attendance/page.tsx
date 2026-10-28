@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { defaultLeaveRequestFilters, monthRange } from "@/lib/leaveRequestFilters.mjs";
 import { attendanceDetailsForEmployee } from "@/lib/attendanceSummaryDetails.mjs";
 import { isAttendanceListedStaff } from "@/lib/attendanceVisibility.mjs";
 import { canEditCreatorMutation, leaveLifecycleState } from "@/lib/creatorMutationPolicy.mjs";
+import AttendanceMonthGrid from "@/components/attendance/AttendanceMonthGrid";
 
 type AttendanceRow = {
   id: string;
@@ -25,6 +26,7 @@ type AttendanceRow = {
   has_attendance_log?: boolean;
   workday?: number;
   attendance_sources?: { leave?: boolean; business?: boolean; event?: boolean; online?: boolean };
+  day_status?: { code: string; symbol: string; label: string; workday: number };
   staff_users?: { full_name: string } | null;
 };
 
@@ -103,13 +105,20 @@ const formatAttendanceDate = (value?: string | null) => {
   return year && month && day ? `${day}/${month}/${year}` : value;
 };
 
-export default function AttendancePage() {
+function AttendancePageContent() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { loading: authLoading, user, logout, canAccessModule } = useAuth();
 
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
+  const [grid, setGrid] = useState<{ days: string[]; rows: Array<{ staffId: string; name: string; departmentName: string; cells: Array<{ date: string; code: string; symbol: string; label: string; workday: number }>; totalWorkday: number }> } | null>(null);
+  const [view, setView] = useState<"list" | "grid">(searchParams.get("view") === "grid" ? "grid" : "list");
+  const [staffFilter, setStaffFilter] = useState(searchParams.get("staffId") ?? "");
+  const [departmentFilter, setDepartmentFilter] = useState(searchParams.get("departmentId") ?? "");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "");
+  const [filterOptions, setFilterOptions] = useState<{ staff: Array<{ id: string; full_name: string; department_id: string | null; department_name: string | null }>; departments: Array<{ id: string; name: string }> }>({ staff: [], departments: [] });
   const [selectedDate, setSelectedDate] = useState(toDateInput());
   const [period, setPeriod] = useState<"day" | "week" | "month">("day");
   const [recentOffset, setRecentOffset] = useState(0);
@@ -214,7 +223,12 @@ export default function AttendancePage() {
   const loadAttendance = useCallback(async () => {
     const scope = isOrganizationView ? "organization" : "personal";
     const recentMode = period === "day";
-    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&period=${period}&scope=${scope}&recent=${recentMode ? "1" : "0"}&offset=${recentOffset}&limit=10`, {
+    const filterQuery = new URLSearchParams();
+    if (isOrganizationView && staffFilter) filterQuery.set("staffId", staffFilter);
+    if (isOrganizationView && departmentFilter) filterQuery.set("departmentId", departmentFilter);
+    if (isOrganizationView && statusFilter) filterQuery.set("status", statusFilter);
+    const filterSuffix = filterQuery.toString() ? `&${filterQuery.toString()}` : "";
+    const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&period=${period}&scope=${scope}&recent=${recentMode ? "1" : "0"}&offset=${recentOffset}&limit=10${filterSuffix}`, {
       cache: "no-store",
     });
     const payload = await response.json().catch(() => null) as {
@@ -224,6 +238,8 @@ export default function AttendancePage() {
       orgScope?: "all" | "department" | null;
       canManage?: boolean;
       reviewableLateExceptionIds?: string[];
+      grid?: { days: string[]; rows: Array<{ staffId: string; name: string; departmentName: string; cells: Array<{ date: string; code: string; symbol: string; label: string; workday: number }>; totalWorkday: number }> };
+      filterOptions?: typeof filterOptions;
     } | null;
     if (!response.ok || !payload) {
       setRows([]);
@@ -237,11 +253,19 @@ export default function AttendancePage() {
     setRows(dayList);
     setRecentRows((current) => !recentMode || recentOffset === 0 ? dayList : [...current, ...dayList.filter((row) => !current.some((item) => item.id === row.id))]);
     setMonthlyRows(payload.monthlyRows ?? []);
+    setGrid(payload.grid ?? null);
+    if (payload.filterOptions) setFilterOptions(payload.filterOptions);
     setAttendanceAccess({ orgScope: payload.orgScope ?? null, canManage: payload.canManage === true });
     setReviewableLateExceptionIds(payload.reviewableLateExceptionIds ?? []);
     setMessage(`✅ ${payload.message ?? `Đã tải ${dayList.length} bản ghi.`}`);
     setRecentLoading(false);
-  }, [isOrganizationView, period, recentOffset, selectedDate]);
+  }, [departmentFilter, isOrganizationView, period, recentOffset, selectedDate, staffFilter, statusFilter]);
+
+  const updateQuery = (updates: Record<string, string>) => {
+    const next = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => value ? next.set(key, value) : next.delete(key));
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  };
 
   const loadOlderAttendance = async () => {
     setRecentLoading(true);
@@ -578,11 +602,18 @@ export default function AttendancePage() {
             </div>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
+          {isOrganizationView ? <div className="mt-3 grid gap-2 rounded-lg border bg-slate-50 p-3 sm:grid-cols-4">
+            <label className="text-sm font-semibold">Nhân viên<input list="attendance-staff-options" value={staffFilter ? (filterOptions.staff.find((item) => item.id === staffFilter)?.full_name ?? "") : ""} onChange={(event) => { const match = filterOptions.staff.find((item) => item.full_name === event.target.value); setStaffFilter(match?.id ?? ""); updateQuery({ staffId: match?.id ?? "" }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal" placeholder="Tìm nhân viên" /><datalist id="attendance-staff-options">{filterOptions.staff.map((item) => <option key={item.id} value={item.full_name} />)}</datalist></label>
+            <label className="text-sm font-semibold">Phòng ban<select value={departmentFilter} onChange={(event) => { setDepartmentFilter(event.target.value); updateQuery({ departmentId: event.target.value }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả phòng ban</option>{filterOptions.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+            <label className="text-sm font-semibold">Trạng thái<select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); updateQuery({ status: event.target.value }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả trạng thái</option><option value="present">Đi làm</option><option value="incomplete">Đi làm (thiếu giờ/đi muộn/về sớm)</option><option value="absent">Nghỉ không phép</option><option value="leave">Nghỉ phép</option><option value="online">Làm việc online</option><option value="business">{"Công tác/Sự kiện"}</option></select></label>
+            <button type="button" className="self-end min-h-10 rounded border bg-white px-3 py-2 text-sm font-semibold" onClick={() => { setStaffFilter(""); setDepartmentFilter(""); setStatusFilter(""); updateQuery({ staffId: "", departmentId: "", status: "" }); }}>Xóa lọc</button>
+          </div> : null}
+          {isOrganizationView && period === "month" ? <div className="mt-3 flex gap-2"><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("list"); updateQuery({ view: "" }); }}>Danh sách</button><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "grid" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("grid"); updateQuery({ view: "grid" }); }}>Lưới</button></div> : null}
         </section>
 
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}</h2>
-          <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll min-w-0 max-w-full rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
+          {isOrganizationView && period === "month" && view === "grid" && grid ? <AttendanceMonthGrid days={grid.days} rows={grid.rows} /> : <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll min-w-0 max-w-full rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
           <table className={`data-table attendance-day-table ${isOrganizationView ? "attendance-organization-table" : "attendance-personal-table"} min-w-[820px] text-left text-sm`}>
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
@@ -612,7 +643,7 @@ export default function AttendancePage() {
               ) : null}
             </tbody>
           </table>
-          </div>
+          </div>}
           <div className="mt-3 flex justify-center">
             {period === "day" ? <button type="button" onClick={() => void loadOlderAttendance()} disabled={recentLoading} className="min-h-11 rounded border px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               {recentLoading ? "Đang tải..." : "Tải thêm 10 ngày cũ hơn"}
@@ -699,6 +730,10 @@ export default function AttendancePage() {
       </div>
     </main>
   );
+}
+
+export default function AttendancePage() {
+  return <Suspense fallback={<main className="min-h-screen bg-slate-50 p-6 text-slate-600">Đang tải chấm công...</main>}><AttendancePageContent /></Suspense>;
 }
 
 
