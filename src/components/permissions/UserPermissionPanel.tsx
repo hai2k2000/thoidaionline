@@ -5,7 +5,7 @@ import type { UserPermissionPanelProps } from "./types";
 export { default as UserListPanel } from "./UserListPanel";
 export { default as UserPermissionDetail } from "./UserPermissionDetail";
 export default function UserPermissionPanel({ users, selectedUserId, onSelect, currentUserId, onChanged, onToast, genericModules, scopeOptions, }: UserPermissionPanelProps) {
-    const selected = users.find((user) => user.id === selectedUserId) ?? users[0];
+    const selected = selectedUserId ? users.find((user) => user.id === selectedUserId) : undefined;
     return (<section className="grid gap-4 md:grid-cols-[280px_1fr]">
       <div className={selected ? "hidden md:block" : "block"}>
         <UserListPanel users={users} selectedUserId={selected?.id ?? ""} onSelect={onSelect}/>

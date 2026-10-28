@@ -18,7 +18,7 @@ export default function OtherPermissionsSection({ user, modules, active, self, s
   return <div key={permission.code} className="grid gap-3 border-t py-3 md:grid-cols-[1fr_auto]"><div><b>{permission.name}</b>
   <p className="font-mono text-xs text-slate-500">{permission.code}</p>
   <p className="text-xs text-slate-500">Hiệu lực: {effective?.scopes.map((scope) => labels[scope]).join(", ") || "Không có"}</p></div><div className="flex flex-wrap items-center gap-2">
-  <select aria-label={`Thiết lập ${permission.name}`} disabled={self || !active} value={state} onChange={(event) => onSet(permission.code, event.target.value,
+  <select aria-label={`Thiết lập: ${permission.name}`} disabled={self || !active} value={state} onChange={(event) => onSet(permission.code, event.target.value,
   override?.scope)} className="rounded-lg border px-2 py-2 text-sm"><option value="inherit">Kế thừa</option><option value="allow">Cấp riêng</option><option value="deny">Chặn riêng</option>
   </select>{state === "allow" ? <select aria-label={`Phạm vi ${permission.name}`} disabled={self || !active} value={override?.scope ?? options[0]}
   onChange={(event) => onSet(permission.code, "allow", event.target.value as Scope)} className="rounded-lg border px-2 py-2 text-sm">{options.map((scope) =>

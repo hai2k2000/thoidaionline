@@ -53,21 +53,23 @@ function dataText(data) {
 }
 
 export function historyLine(item, labels = {}) {
+  const timestamp = item.createdAt ? new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(item.createdAt)) : "";
+  const prefix = timestamp ? `${timestamp} ` : "";
   const actor = item.actor?.name || "Hệ thống";
   const action = actionLabel[item.action] || item.action;
   const code = item.newData?.permissionCode || item.oldData?.permissionCode || item.newData?.permission_code || item.oldData?.permission_code;
   const permission = code ? (labels[code] || APPROVAL_PERMISSION_LABELS[code] || code) : "quyền duyệt";
   if (item.action === "restore_permission_inheritance") {
-    return `${actor} đã khôi phục tất cả về mặc định (${item.newData?.changed ?? 0} mục).`;
+    return `${prefix}${actor} đã khôi phục tất cả về mặc định (${item.newData?.changed ?? 0} mục).`;
   }
   if (item.action === "clear_permission_override") {
-    return `${actor} đã xóa cấp riêng ${permission}: ${dataText(item.newData?.old || item.oldData)} → ${effectLabel.none}.`;
+    return `${prefix}${actor} đã xóa cấp riêng ${permission}: ${dataText(item.newData?.old || item.oldData)} → ${effectLabel.none}.`;
   }
   if (item.action === "set_permission_override") {
-    return `${actor} đã cập nhật ${permission}: ${dataText(item.newData?.old)} → ${dataText(item.newData?.new)}.`;
+    return `${prefix}${actor} đã cập nhật ${permission}: ${dataText(item.newData?.old)} → ${dataText(item.newData?.new)}.`;
   }
   const before = dataText(item.oldData); const after = dataText(item.newData);
-  return `${actor} đã ${action} ${permission}: ${before} → ${after}.`;
+  return `${prefix}${actor} đã ${action} ${permission}: ${before} → ${after}.`;
 }
 
 export function requiresTypedConfirmation(effect, scope) { return effect === "allow" && scope === "all"; }

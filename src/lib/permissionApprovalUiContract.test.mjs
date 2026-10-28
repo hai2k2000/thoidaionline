@@ -35,6 +35,21 @@ test("mobile user list and detail are separate screens and history is full-scree
   assert.match(sourceText, /sm:rounded-3xl/);
 });
 
+test("approval rows use dialogs and render the complete audit contract", () => {
+  assert.match(sourceText, /<GrantDialog/);
+  assert.match(sourceText, /<RevokeDialog/);
+  assert.doesNotMatch(sourceText, /onGrant=\{\(\) => undefined\}/);
+  assert.doesNotMatch(sourceText, /onRevoke=\{\(\) => undefined\}/);
+  assert.match(sourceText, /event\.target\.value === "allow" \? onGrant/);
+  assert.match(sourceText, /Hiệu lực/);
+  assert.match(sourceText, /SOURCE_LABELS/);
+  assert.match(sourceText, /Cấp bởi/);
+  assert.match(sourceText, /restrictions/);
+  assert.match(sourceText, /Khôi phục/);
+  assert.match(sourceText, /aria-label=\{`Thiết lập:/);
+  assert.match(sourceText, /selectedUserId \? users\.find/);
+});
+
 test("all permissions component files exist and stay readable", () => {
   for (const [name] of sources) assert.equal(existsSync(new URL(name, permissionDir)), true, name);
   const paths = [pagePath, ...sources.map(([name]) => new URL(name, permissionDir))];

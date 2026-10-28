@@ -41,10 +41,8 @@ export default function PermissionsPage() {
         const nextRoles = next.roles ?? next.roleCatalog ?? [];
         if (!selectedRoleId && nextRoles[0])
             setSelectedRoleId(nextRoles[0].id);
-        if (!selectedUserId && next.users?.[0])
-            setSelectedUserId(next.users[0].id);
         setMessage("Quyền hiệu lực được tính theo deny > allow > role grant.");
-    }, [router, selectedRoleId, selectedUserId]);
+    }, [router, selectedRoleId]);
     useEffect(() => {
         if (loading)
             return;
