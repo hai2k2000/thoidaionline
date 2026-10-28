@@ -108,6 +108,9 @@ export default function CanonicalAssignmentForm({
   const [batchId, setBatchId] = useState<string | null>(null);
   const [cardErrors, setCardErrors] = useState<Record<number, Record<string, string>>>({});
   const cardTitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const firstCardIdRef = useRef<string | undefined>(taskCards[0]?.cardId);
+  // Read via ref so the auto-focus effect does not re-run (and steal focus) on every card keystroke.
+  firstCardIdRef.current = taskCards[0]?.cardId;
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const selectedDepartment = departments.find((department) => department.id === departmentId);
@@ -125,8 +128,8 @@ export default function CanonicalAssignmentForm({
   const isTbt = actorRoleCode === "tong_bien_tap";
 
   useEffect(() => {
-    if (recipientReady && formActivated) window.requestAnimationFrame(() => cardTitleRefs.current[taskCards[0]?.cardId]?.focus());
-  }, [formActivated, recipientReady, taskCards]);
+    if (formActivated && recipientReady) window.requestAnimationFrame(() => cardTitleRefs.current[firstCardIdRef.current ?? ""]?.focus());
+  }, [formActivated, recipientReady]);
 
   const resetTransientState = () => {
     setCardErrors({});

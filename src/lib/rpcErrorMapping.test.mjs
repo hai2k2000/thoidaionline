@@ -6,6 +6,8 @@ import { mapRpcError } from "./rpcErrorMapping.ts";
 test("serialization failures map to HTTP 409 across Supabase error shapes", () => {
   assert.deepEqual(mapRpcError({ code: "40001" }), { code: "conflict", status: 409 });
   assert.deepEqual(mapRpcError({ details: "40001" }), { code: "conflict", status: 409 });
+  assert.deepEqual(mapRpcError({ code: "55000" }), { code: "conflict", status: 409 });
+  assert.deepEqual(mapRpcError({ details: "55000" }), { code: "conflict", status: 409 });
   assert.deepEqual(
     mapRpcError({ message: "Publication report changed before verification." }),
     { code: "conflict", status: 409 },

@@ -1,10 +1,12 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor, rpcFailure } from "@/lib/serverApi";
 import { completePersonalWeeklyReport } from "@/lib/personalWeeklyReportService";
 import { validatePersonalWeeklyDraft } from "@/lib/personalWeeklyReport";
+import { WORK_REPORTS_PAUSED, workReportsPausedResponse } from "@/lib/workReportsPause";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (WORK_REPORTS_PAUSED) return workReportsPausedResponse();
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
   const body = await readJsonObject(request);

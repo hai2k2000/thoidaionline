@@ -3,6 +3,8 @@ import { getSessionUser } from "@/lib/serverSession";
 import { loadPersonalWeeklyReport } from "@/lib/personalWeeklyReportService";
 import PersonalWeeklyReportPage from "@/components/PersonalWeeklyReportPage";
 import WeeklyReportLoadError from "@/components/WeeklyReportLoadError";
+import WorkReportsPausedNotice from "@/components/WorkReportsPausedNotice";
+import { WORK_REPORTS_PAUSED } from "@/lib/workReportsPause";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ export default async function PersonalWeeklyReportRoute({
 }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  if (WORK_REPORTS_PAUSED) return <WorkReportsPausedNotice />;
   const params = await searchParams;
   const periodStart = typeof params.periodStart === "string" ? params.periodStart : "";
   const report = typeof params.report === "string" ? params.report : "";

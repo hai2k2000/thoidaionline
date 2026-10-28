@@ -18,8 +18,7 @@ test("leave workflow is authenticated, approved by leadership, and conflict-safe
   assert.match(route, /"business"/);
   assert.match(migration, /overlapping leave request/);
   assert.match(migration, /status in \('pending','approved','rejected','cancelled'\)/);
-  assert.match(route, /GLOBAL_REVIEW_ROLES/);
-  assert.match(route, /query = query\.eq\("department_id", guard\.actor\.department_id/);
+  assert.match(route, /api_list_reviewable_leave_requests/);
   assert.match(scopedMigration, /v_department is not distinct from v_old\.department_id/);
   assert.match(scopedMigration, /v_days >= 3[\s\S]*tong_bien_tap/);
 });

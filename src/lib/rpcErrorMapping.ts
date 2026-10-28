@@ -20,7 +20,9 @@ export function mapRpcError(error: RpcError): RpcErrorMapping {
   }
   if (
     error.code === "40001"
+    || error.code === "55000"
     || error.details === "40001"
+    || error.details === "55000"
     || error.message === "Publication report changed before verification."
   ) {
     return { code: "conflict", status: 409 };

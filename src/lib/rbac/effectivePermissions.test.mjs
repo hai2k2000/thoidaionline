@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveEffectivePermission } from "./authorization.ts";
+import { supportedScopesForPermission } from "./permissionScopes.mjs";
+
+test("approval permissions only support department and all scopes", () => {
+  for (const code of ["leave.approve", "schedule.business.approve", "schedule.event.approve"]) {
+    assert.deepEqual(supportedScopesForPermission(code), ["department", "all"]);
+  }
+});
 
 test("active user inherits active role scopes", () => {
   assert.deepEqual(resolveEffectivePermission({
