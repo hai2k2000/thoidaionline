@@ -11,6 +11,14 @@ const filterApproval = readFileSync(fileURLToPath(new URL("../../../supabase/mig
 const listFilters = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027140000_database_management_v1_list_filters.sql", import.meta.url)), "utf8");
 const dropSourcePerson = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql", import.meta.url)), "utf8");
 const doanThe = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261028090000_database_management_v1_doan_the_types.sql", import.meta.url)), "utf8");
+const recordTypeSort = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261028120000_database_management_v1_record_type_sort_order.sql", import.meta.url)), "utf8");
+
+test("record type sort migration adds the nullable column and approved doan the order", () => {
+  assert.match(recordTypeSort, /alter table public\.db_record_types add column if not exists sort_order integer/i);
+  const codes = ["dang_van_ban_dinh_ky", "dang_dai_hoi", "dang_tong_ket_nam", "dang_bien_ban_sinh_hoat", "dang_sinh_hoat_chuyen_de", "dang_bao_cao_cong_van", "nha_bao_van_ban_den", "nha_bao_van_ban_di", "nha_bao_hoi_vien", "nha_bao_dai_hoi", "nha_bao_van_ban_khac", "doan_tn_van_ban", "cuc_bc_giay_phep_dai_han", "cuc_bc_giay_phep_ngan_han", "cuc_bc_bao_cao", "cuc_bc_the_nha_bao"];
+  for (const [index, code] of codes.entries()) assert.match(recordTypeSort, new RegExp(`'${code}'[\\s\\S]{0,160}${(index + 1) * 10}`));
+  assert.match(recordTypeSort, /update public\.db_record_types[\s\S]*where record_type\.code = type_order\.code/i);
+});
 
 test("doan the migration defines the approved flat catalog and admin-only sensitivity grant", () => {
   const codes = ["dang_van_ban_dinh_ky", "dang_dai_hoi", "dang_tong_ket_nam", "dang_bien_ban_sinh_hoat", "dang_sinh_hoat_chuyen_de", "dang_bao_cao_cong_van", "nha_bao_van_ban_den", "nha_bao_van_ban_di", "nha_bao_hoi_vien", "nha_bao_dai_hoi", "nha_bao_van_ban_khac", "doan_tn_van_ban", "cuc_bc_giay_phep_dai_han", "cuc_bc_giay_phep_ngan_han", "cuc_bc_bao_cao", "cuc_bc_the_nha_bao"];

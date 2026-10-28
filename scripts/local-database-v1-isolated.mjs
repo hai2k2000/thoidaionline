@@ -62,6 +62,7 @@ const v1Migrations = new Set([
   "20261024110000_database_management_v1_self_approval.sql",
   "20261027160000_database_management_v1_drop_source_person.sql",
   "20261028090000_database_management_v1_doan_the_types.sql",
+  "20261028120000_database_management_v1_record_type_sort_order.sql",
 ]);
 const selectedMigrations = new Set([...currentAppMigrations, ...v1Migrations]);
 const compatibilityName = "20260826195000_local_bootstrap_task_actor_compatibility.sql";

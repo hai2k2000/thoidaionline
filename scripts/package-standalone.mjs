@@ -150,6 +150,7 @@ const migrationReference = [
   "supabase/migrations/20261027140000_database_management_v1_list_filters.sql",
   "supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql",
   "supabase/migrations/20261028090000_database_management_v1_doan_the_types.sql",
+  "supabase/migrations/20261028120000_database_management_v1_record_type_sort_order.sql",
   "supabase/migrations/20261023130000_database_management_v1_workflow_ambiguity_fix.sql",
   "supabase/migrations/20261024110000_database_management_v1_self_approval.sql",
   "supabase/migrations/20261027090000_anon_access_lockdown.sql",

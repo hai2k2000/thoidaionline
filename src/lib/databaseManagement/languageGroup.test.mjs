@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { filterLanguageRecordTypes, getLanguageOption, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories } from "./languageGroup.mjs";
+import { filterLanguageRecordTypes, getLanguageOption, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories, sortRecordTypes } from "./languageGroup.mjs";
 
 const categories = [
   { id: "root", code: "phong_noi_dung", parent_id: null, name: "Phòng Nội dung" },
@@ -12,6 +12,16 @@ const categories = [
 test("selectable categories hide only the legacy foreign category", () => {
   const input = [...categories, { id: "legacy", code: "ngoai_ngu", parent_id: null, name: "legacy" }];
   assert.deepEqual(selectableCategories(input), categories);
+});
+
+test("record types sort by explicit sort order before name and keep unsorted types last", () => {
+  const types = [
+    { id: "name-first", name: "A", sort_order: null },
+    { id: "second", name: "Z", sort_order: 20 },
+    { id: "first", name: "Y", sort_order: 10 },
+    { id: "unsorted-b", name: "B", sort_order: null },
+  ];
+  assert.deepEqual(sortRecordTypes(types).map((type) => type.id), ["first", "second", "name-first", "unsorted-b"]);
 });
 
 test("language options expose stable codes and Vietnamese labels", () => {
