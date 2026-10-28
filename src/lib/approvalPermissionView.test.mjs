@@ -37,9 +37,11 @@ test("preview handles none, inactive, all, restrictions and several permissions"
 });
 
 test("history line describes actions and before-after values", () => {
-  const line = historyLine({ actor: { name: "An" }, action: "set_permission_override", newData: { permissionCode: "leave.approve", effect: "allow", scope: "department" }, oldData: { effect: "deny", scope: "all" }, createdAt: "2026-10-28T10:00:00Z" }, { "leave.approve": "Duyệt đơn xin nghỉ" });
-  assert.match(line, /An/); assert.match(line, /Duyệt đơn xin nghỉ/); assert.match(line, /phòng ban/); assert.match(line, /deny.*all.*→.*allow.*department/i);
-  assert.match(historyLine({ actor: { name: "An" }, action: "restore_user_inheritance", newData: null, oldData: null }, {}), /khôi phục tất cả/);
+  const line = historyLine({ actor: { name: "An" }, action: "set_permission_override", newData: { permission_code: "leave.approve", old: { effect: "deny", scope: "all" }, new: { effect: "allow", scope: "department" } }, oldData: null }, { "leave.approve": "Duyệt đơn xin nghỉ" });
+  assert.match(line, /An/); assert.match(line, /Duyệt đơn xin nghỉ/); assert.match(line, /phòng ban/); assert.match(line, /Chặn riêng.*toàn cơ quan.*→.*Cấp riêng.*phòng ban/);
+  assert.match(historyLine({ actor: { name: "An" }, action: "clear_permission_override", newData: { permission_code: "leave.approve", old: { effect: "allow", scope: "department" } }, oldData: null }, {}), /Cấp riêng.*phòng ban.*→.*Kế thừa/);
+  assert.match(historyLine({ actor: { name: "An" }, action: "restore_permission_inheritance", newData: { old: [{ permissionId: "p1", effect: "allow", scope: "all" }], changed: 1 }, oldData: null }, {}), /khôi phục tất cả về mặc định \(1 mục\)/);
+  assert.match(historyLine({ actor: { name: "An" }, action: "grant_permission", newData: { permission_code: "leave.approve", scope: "department", changed: 1 }, oldData: null }, {}), /cấp.*phòng ban/);
 });
 
 test("typed confirmation is required only for all-scope allows", () => {

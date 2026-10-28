@@ -43,14 +43,29 @@ export function previewSentence(items = [], userName = "người này", options 
 }
 
 const scopeLabel = { self: "bản thân", assigned: "được giao", department: "phòng ban", all: "toàn cơ quan" };
-const actionLabel = { set_permission_override: "cập nhật", clear_permission_override: "xóa cấp riêng", restore_user_inheritance: "khôi phục tất cả", grant_permission: "cấp", revoke_permission: "chặn" };
-function dataText(data) { if (!data) return "mặc định"; const effect = data.effect || data.userEffect || "mặc định"; const scope = data.scope || data.userScope; return `${effect}${scope ? ` (${scope}, ${scopeLabel[scope] || scope})` : ""}`; }
+const effectLabel = { allow: "Cấp riêng", deny: "Chặn riêng", none: "Kế thừa" };
+const actionLabel = { set_permission_override: "cập nhật", clear_permission_override: "xóa cấp riêng", restore_permission_inheritance: "khôi phục tất cả", grant_permission: "cấp", revoke_permission: "chặn" };
+function dataText(data) {
+  if (!data) return effectLabel.none;
+  const effect = data.effect || data.userEffect || "none";
+  const scope = data.scope || data.userScope;
+  return `${effectLabel[effect] || effect}${scope ? ` (${scopeLabel[scope] || scope})` : ""}`;
+}
 
 export function historyLine(item, labels = {}) {
   const actor = item.actor?.name || "Hệ thống";
   const action = actionLabel[item.action] || item.action;
   const code = item.newData?.permissionCode || item.oldData?.permissionCode || item.newData?.permission_code || item.oldData?.permission_code;
   const permission = code ? (labels[code] || APPROVAL_PERMISSION_LABELS[code] || code) : "quyền duyệt";
+  if (item.action === "restore_permission_inheritance") {
+    return `${actor} đã khôi phục tất cả về mặc định (${item.newData?.changed ?? 0} mục).`;
+  }
+  if (item.action === "clear_permission_override") {
+    return `${actor} đã xóa cấp riêng ${permission}: ${dataText(item.newData?.old || item.oldData)} → ${effectLabel.none}.`;
+  }
+  if (item.action === "set_permission_override") {
+    return `${actor} đã cập nhật ${permission}: ${dataText(item.newData?.old)} → ${dataText(item.newData?.new)}.`;
+  }
   const before = dataText(item.oldData); const after = dataText(item.newData);
   return `${actor} đã ${action} ${permission}: ${before} → ${after}.`;
 }
