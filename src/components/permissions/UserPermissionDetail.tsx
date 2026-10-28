@@ -55,7 +55,7 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b pb-4">
         <div>
           <h2 className="text-xl font-bold">{user.full_name}</h2>
-          <p className="text-sm text-slate-600">{user.job_title ?? "—"} · {user.role_name ?? user.role_code ?? "—"}</p>
+          <p className="text-sm text-slate-600">{user.department_name ?? "—"} · {user.job_title ?? "—"} · Vai trò: {user.role_name ?? user.role_code ?? "—"}</p>
           <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
             <span className={user.active ? "rounded-full bg-emerald-100 px-2 py-1 text-emerald-800" : "rounded-full bg-slate-200 px-2 py-1 text-slate-700"}>
               {user.active ? "Đang hoạt động" : "Không hoạt động"}
@@ -80,7 +80,8 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
       </>}
       {error ? <p role="alert">{error}</p> : null}
       {history ? <PermissionHistoryDrawer userId={user.id} onClose={() => setHistory(false)}/> : null}
-      {grantItem ? <GrantDialog item={grantItem} onClose={() => setGrantItem(null)} onSubmit={submitGrant}/> : null}
+      {grantItem ? <GrantDialog item={grantItem} userName={user.full_name} departmentName={user.department_name}
+        active={user.active} onClose={() => setGrantItem(null)} onSubmit={submitGrant}/> : null}
       {revokeItem ? <RevokeDialog item={revokeItem} onClose={() => setRevokeItem(null)} onSubmit={submitRevoke}/> : null}
     </div>);
 }

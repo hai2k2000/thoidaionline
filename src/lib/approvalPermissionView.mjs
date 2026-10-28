@@ -13,6 +13,10 @@ export const APPROVAL_PERMISSION_DESCRIPTIONS = {
   "schedule.event.approve": "Duyệt kế hoạch tham gia sự kiện cá nhân.",
 };
 export const SOURCE_LABELS = { role: "Vai trò", structural: "Chức vụ Trưởng phòng", user_allow: "Cấp riêng", user_deny: "Chặn riêng", none: "Không có" };
+export const RESTRICTION_LABELS = {
+  no_self_approval: "Không tự duyệt hồ sơ của chính mình.",
+  leave_ge_3_days_tbt_only: "Đơn từ 3 ngày trở lên chỉ Tổng biên tập duyệt.",
+};
 
 /** @param {ApprovalPermissionCode|string} code */
 export function defaultGrantScope(code) { return APPROVAL_PERMISSION_CODES.includes(code) ? "department" : null; }
@@ -30,9 +34,11 @@ function permissionPhrase(item) {
   if (!scopes.length) return null;
   let target = "toàn cơ quan";
   if (!scopes.includes("all")) target = `nhân sự ${item.effectiveDepartment?.name || "phòng ban của mình"}`;
-  const phrase = code === "leave.approve" ? `${label.toLowerCase()} của ${target}` : `${label.toLowerCase()} của ${target}`;
-  const restriction = (item.restrictions || []).includes("leave_ge_3_days_tbt_only") ? " (đơn từ 3 ngày trở lên chỉ Tổng biên tập được duyệt)" : "";
-  return `${phrase}${restriction}`;
+  const phrase = `${label.replace(/^Duyệt\s+/i, "").toLowerCase()} của ${target}`;
+  const restriction = (item.restrictions || []).map((value) => value === "no_self_approval"
+    ? "trừ hồ sơ của chính mình"
+    : RESTRICTION_LABELS[value]).filter(Boolean).join(" ");
+  return restriction ? `${phrase} (${restriction.replace(/\.$/, "")})` : phrase;
 }
 
 export function previewSentence(items = [], userName = "người này", options = {}) {

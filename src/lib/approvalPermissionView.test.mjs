@@ -31,7 +31,9 @@ test("narrowing allow compares inherited union", () => {
 
 test("preview handles none, inactive, all, restrictions and several permissions", () => {
   assert.equal(previewSentence([], "Mai"), "Người này hiện không có quyền duyệt đơn hoặc kế hoạch nào.");
-  assert.match(previewSentence([{ permissionCode: "schedule.business.approve", label: "Duyệt kế hoạch công tác cá nhân", effectiveScopes: ["department"], effectiveDepartment: { name: "Phòng X" }, restrictions: [] }], "Mai"), /kế hoạch công tác cá nhân của nhân sự Phòng X/);
+  assert.equal(previewSentence([{ permissionCode: "schedule.business.approve", label: "Duyệt kế hoạch công tác cá nhân", effectiveScopes: ["department"], effectiveDepartment: { name: "Phòng X" }, restrictions: [] }], "Mai"), "Người này duyệt được: kế hoạch công tác cá nhân của nhân sự Phòng X.");
+  assert.match(previewSentence([{ permissionCode: "leave.approve", effectiveScopes: ["self"], restrictions: ["no_self_approval", "unknown_code"] }], "Mai"), /trừ hồ sơ của chính mình/);
+  assert.doesNotMatch(previewSentence([{ permissionCode: "leave.approve", effectiveScopes: ["self"], restrictions: ["no_self_approval", "unknown_code"] }], "Mai"), /no_self_approval|unknown_code/);
   assert.match(previewSentence([{ permissionCode: "leave.approve", label: "Duyệt đơn xin nghỉ", effectiveScopes: ["all"], restrictions: ["leave_ge_3_days_tbt_only"] }, { permissionCode: "schedule.event.approve", label: "Duyệt kế hoạch sự kiện cá nhân", effectiveScopes: ["department"], effectiveDepartment: { name: "Phòng X" }, restrictions: [] }], "Mai"), /toàn cơ quan/);
   assert.match(previewSentence([{ permissionCode: "leave.approve", effectiveScopes: ["all"], restrictions: ["leave_ge_3_days_tbt_only"] }], "Mai", { active: false }), /không hoạt động/);
 });

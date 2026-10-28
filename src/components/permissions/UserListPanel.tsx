@@ -22,12 +22,14 @@ export default function UserListPanel({ users, selectedUserId, onSelect }: {
     return (<aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <input aria-label="Tìm tên hoặc tài khoản" value={query} onChange={(event) => setQuery(event.target.value)} className="w-full rounded-xl border px-3 py-2"/>
       <div className="mt-3 grid gap-2">
-        <select value={department} onChange={(event) => setDepartment(event.target.value)}>
+        <select aria-label="Phòng ban" value={department} onChange={(event) => setDepartment(event.target.value)}>
           <option value="">Phòng ban</option>
           {departments.map((value) => <option key={value}>{value}</option>)}
         </select>
-        <select value={role} onChange={(event) => setRole(event.target.value)}><option value="">Vai trò</option>{roles.map((value) => <option key={value}>{value}</option>)}</select>
-        <select value={status} onChange={(event) => setStatus(event.target.value)}>
+        <select aria-label="Vai trò" value={role} onChange={(event) => setRole(event.target.value)}>
+          <option value="">Vai trò</option>{roles.map((value) => <option key={value}>{value}</option>)}
+        </select>
+        <select aria-label="Trạng thái" value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="active">Đang hoạt động</option>
           <option value="inactive">Không hoạt động</option>
           <option value="all">Tất cả</option>

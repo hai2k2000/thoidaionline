@@ -45,9 +45,15 @@ test("approval rows use dialogs and render the complete audit contract", () => {
   assert.match(sourceText, /SOURCE_LABELS/);
   assert.match(sourceText, /Cấp bởi/);
   assert.match(sourceText, /restrictions/);
+  assert.match(sourceText, /RESTRICTION_LABELS/);
+  assert.match(sourceText, /Người này sẽ duyệt được hồ sơ của MỌI phòng ban/);
+  assert.match(sourceText, />Hủy<\/button>/);
   assert.match(sourceText, /Khôi phục/);
   assert.match(sourceText, /aria-label=\{`Thiết lập:/);
   assert.match(sourceText, /selectedUserId \? users\.find/);
+  assert.match(sourceText, /aria-label="Phòng ban"/);
+  assert.match(sourceText, /aria-label="Vai trò"/);
+  assert.match(sourceText, /aria-label="Trạng thái"/);
 });
 
 test("all permissions component files exist and stay readable", () => {
