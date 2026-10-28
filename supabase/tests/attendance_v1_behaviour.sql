@@ -23,7 +23,7 @@ from (values
   ('staff_a1','nhan_vien','a'), ('staff_a2','nhan_vien','a'), ('staff_b1','nhan_vien','b'),
   ('nodept1','nhan_vien',null), ('nodept2','nhan_vien',null)
 ) x(key, role_code, department_key);
-insert into zz_att_test_users select substring(username from 14), id from public.staff_users where username like 'zz_att_test_%';
+insert into zz_att_test_users select substring(username from 13), id from public.staff_users where username like 'zz_att_test_%';
 
 insert into public.user_permission_grants(user_id, permission_id, scope, effect, created_by)
 select u.id, p.id, x.scope, 'allow', (select id from zz_att_test_users where key='admin')
@@ -33,14 +33,12 @@ join zz_att_test_users u on u.key=x.user_key
 join public.permissions p on p.code=x.permission_code;
 
 insert into public.attendance_logs(user_id, work_date, check_in, status, source)
-select u.id, current_date, x.check_in, x.status, 'zz_att_test'
-from (values ('staff_a1', time '08:30', 'present'), ('staff_a2', time '08:30', 'present'),
-             ('staff_b1', time '08:30', 'present'), ('nodept2', time '08:30', 'present'),
-             ('staff_a2_leave', time '08:30', 'leave')) x(key, check_in, status)
+select u.id, current_date + x.day_offset, x.check_in, x.status, 'zz_att_test'
+from (values ('staff_a1', time '08:30', 'present', 0), ('staff_a2', time '08:30', 'present', 0),
+             ('staff_b1', time '08:30', 'present', 0), ('nodept2', time '08:30', 'present', 0),
+             ('staff_a2_leave', time '08:30', 'leave', 1)) x(key, check_in, status, day_offset)
 join zz_att_test_users u on u.key=case when x.key='staff_a2_leave' then 'staff_a2' else x.key end
 on conflict (user_id, work_date) do update set check_in=excluded.check_in, status=excluded.status;
-update public.attendance_logs l set work_date=current_date + 1
-where l.user_id=(select id from zz_att_test_users where key='staff_a2') and l.status='leave';
 insert into zz_att_test_logs
 select case when l.status='leave' then 'leave' else u.key end, l.id
 from public.attendance_logs l join zz_att_test_users u on u.id=l.user_id
@@ -66,6 +64,7 @@ do $$ declare v jsonb; begin
   begin perform public.api_review_late_exception((select id from zz_att_test_users where key='staff_a1'),(select id from zz_att_test_logs where key='staff_a1'),'approved','ok'); raise notice 'ATT_TEST_FAIL review_self'; exception when sqlstate '42501' then raise notice 'ATT_TEST_PASS review_self'; end;
   v:=public.api_review_late_exception((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_logs where key='staff_a1'),'approved','ok');
   if v->>'late_exception_status'='approved' then raise notice 'ATT_TEST_PASS review_head_same_department'; else raise notice 'ATT_TEST_FAIL review_head_same_department'; end if;
+  update public.attendance_logs set late_exception='sudden_work', late_exception_status='pending', late_exception_reviewed_by=null, late_exception_reviewed_at=null where id=(select id from zz_att_test_logs where key='staff_b1');
   begin perform public.api_review_late_exception((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_logs where key='staff_b1'),'approved','ok'); raise notice 'ATT_TEST_FAIL review_head_cross_department'; exception when sqlstate '42501' then raise notice 'ATT_TEST_PASS review_head_cross_department'; end;
   v:=public.api_review_late_exception((select id from zz_att_test_users where key='viewer_all'),(select id from zz_att_test_logs where key='staff_b1'),'approved','ok');
   if v->>'late_exception_status'='approved' then raise notice 'ATT_TEST_PASS review_viewer_all'; else raise notice 'ATT_TEST_FAIL review_viewer_all'; end if;

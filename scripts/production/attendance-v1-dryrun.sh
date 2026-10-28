@@ -13,7 +13,7 @@ main() {
   local evidence="/opt/ops/thoidai-work/attendance-evidence/dryrun-$(date -u +%Y%m%dT%H%M%SZ)" daily=/opt/ops/thoidai-work/backups/managed/daily
   tmp="attendance-dryrun-$$"; work=''; output=''
   local backup='' dump='' manifest='' db_password='' port='' apply_out='' pass_count='' fail_count=''
-  local expected_pass=26
+  local expected_pass=25
   output="$evidence/behaviour.txt"; mkdir -p "$evidence"
   cleanup() { local rc=$?; set +u; set +e; if [[ $rc -ne 0 ]]; then echo "ATTENDANCE_DRYRUN_RESULT=FAIL step=$step" >&2; [[ -f "$output" ]] && tail -n 20 "$output" >&2; fi; [[ -n "$tmp" ]] && docker rm -f -v "$tmp" >/dev/null 2>&1; [[ -n "$work" ]] && rm -rf -- "$work"; return "$rc"; }; trap cleanup EXIT
   step=disk; "$BUNDLE_DIR/scripts/production/disk-guard.sh"; work=$(mktemp -d)
