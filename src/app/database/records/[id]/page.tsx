@@ -10,7 +10,7 @@ import { presentWorkflowAction, validateReturnReason, workflowErrorMessage } fro
 import { validateSelectedFiles } from "@/lib/databaseManagement/uploadClient.mjs";
 
 type FormField = { field_key: string; label: string; data_type: string; required: boolean; options?: Array<{ value: string; label: string }> };
-type Catalog = { forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }>; categories: Array<{ id: string; parent_id?: string | null; code: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; name: string }> };
+    type Catalog = { forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }>; categories: Array<{ id: string; parent_id?: string | null; code: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; name: string; sort_order?: number | null }> };
 type DetailRecord = { id: string; category_id: string; record_type_id: string; record_code: string; title: string; summary: string | null; status: string; created_by: string; language_code?: string | null; metadata: Record<string, unknown> };
 type HistoryItem = { id: string; actor_id: string; actor_name?: string | null; action: string; new_data?: Record<string, unknown> | null; created_at: string };
 type Detail = { record: DetailRecord; canSubmit?: boolean; canApprove?: boolean; canDelete?: boolean; canRestore?: boolean; canManageAcl?: boolean; approvalBlockReason?: string | null; approvedBy?: { name?: string | null; at: string } | null; files: Array<{ id: string; original_name: string; mime_type: string; size_bytes: number; sha256: string }>; externalLinks: Array<{ id: string; provider: string; url: string }>; keywords: string[]; history: HistoryItem[] };

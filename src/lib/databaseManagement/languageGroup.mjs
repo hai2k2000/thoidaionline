@@ -10,6 +10,14 @@ export function selectableCategories(categories) {
   return categories.filter((category) => category.code !== LEGACY_FOREIGN_CATEGORY_CODE);
 }
 
+export function sortRecordTypes(recordTypes) {
+  return [...recordTypes].sort((left, right) => {
+    const leftOrder = left.sort_order ?? Number.POSITIVE_INFINITY;
+    const rightOrder = right.sort_order ?? Number.POSITIVE_INFINITY;
+    return leftOrder - rightOrder || left.name.localeCompare(right.name);
+  });
+}
+
 export const LANGUAGE_OPTIONS = Object.freeze([
   { value: "vi", label: "Tiếng Việt", categoryCode: "noi_dung_tieng_viet", typeCategoryCode: "noi_dung_tieng_viet" },
   { value: "en", label: "Tiếng Anh", categoryCode: "noi_dung_tieng_anh", typeCategoryCode: LEGACY_FOREIGN_CATEGORY_CODE },
@@ -48,9 +56,9 @@ export function resolveLanguageCategory(categories, selectedCategoryId, language
 export function filterLanguageRecordTypes(recordTypes, categories, selectedCategoryId, languageCode) {
   const selected = categories.find((category) => category.id === selectedCategoryId);
   if (!selected) return [];
-  if (selected.code !== CONTENT_ROOT_CODE) return recordTypes.filter((type) => type.category_id === selected.id);
+  if (selected.code !== CONTENT_ROOT_CODE) return sortRecordTypes(recordTypes.filter((type) => type.category_id === selected.id));
   const option = LANGUAGE_OPTIONS.find((item) => item.value === languageCode);
   if (!option) return [];
   const typeCategory = categories.find((category) => category.code === option.typeCategoryCode);
-  return typeCategory ? recordTypes.filter((type) => type.category_id === typeCategory.id) : [];
+  return typeCategory ? sortRecordTypes(recordTypes.filter((type) => type.category_id === typeCategory.id)) : [];
 }

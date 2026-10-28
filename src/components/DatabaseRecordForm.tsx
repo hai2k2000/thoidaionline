@@ -7,7 +7,7 @@ import { validateRecordForm } from "@/lib/databaseManagement/formValidation.mjs"
 import { CONTENT_ROOT_CODE, filterLanguageRecordTypes, LANGUAGE_OPTIONS, selectableCategories } from "@/lib/databaseManagement/languageGroup.mjs";
 
 type FormField = { field_key: string; label: string; data_type: string; required: boolean; options?: Array<{ value: string; label: string }>; validation?: Record<string, unknown> };
-type Catalog = { categories: Array<{ id: string; parent_id?: string | null; code: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; name: string }>; forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }> };
+type Catalog = { categories: Array<{ id: string; parent_id?: string | null; code: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; name: string; sort_order?: number | null }>; forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }> };
 type FieldError = { field: string; code: string };
 type UploadItem = { file: File; uploadId: string; state: "pending" | "uploading" | "uploaded" | "failed" | "unknown"; code?: string };
 
