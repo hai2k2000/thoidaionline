@@ -54,28 +54,28 @@ end $$;
 
 do $$ declare v jsonb; begin
   update public.attendance_logs set check_in=time '08:10', status='present' where id=(select id from zz_att_test_logs where key='staff_a1');
-  begin perform public.api_request_late_exception((select id from zz_att_test_users where key='staff_a1'), current_date, 'too early'); raise notice 'ATT_TEST_FAIL request_0810'; exception when sqlstate='22023' then raise notice 'ATT_TEST_PASS request_0810'; end;
+  begin perform public.api_request_late_exception((select id from zz_att_test_users where key='staff_a1'), current_date, 'too early'); raise notice 'ATT_TEST_FAIL request_0810'; exception when sqlstate '22023' then raise notice 'ATT_TEST_PASS request_0810'; end;
   update public.attendance_logs set check_in=time '08:30', status='present' where id=(select id from zz_att_test_logs where key='staff_a1');
   v:=public.api_request_late_exception((select id from zz_att_test_users where key='staff_a1'),current_date,'traffic');
   if v->>'late_exception_status'='pending' then raise notice 'ATT_TEST_PASS request_0830'; else raise notice 'ATT_TEST_FAIL request_0830'; end if;
-  begin perform public.api_request_late_exception((select id from zz_att_test_users where key='staff_a1'),current_date,'again'); raise notice 'ATT_TEST_FAIL request_duplicate'; exception when sqlstate='40001' then raise notice 'ATT_TEST_PASS request_duplicate'; end;
-  begin perform public.api_request_late_exception((select id from zz_att_test_users where key='staff_a2'),current_date+1,'leave'); raise notice 'ATT_TEST_FAIL request_leave'; exception when sqlstate='22023' then raise notice 'ATT_TEST_PASS request_leave'; end;
+  begin perform public.api_request_late_exception((select id from zz_att_test_users where key='staff_a1'),current_date,'again'); raise notice 'ATT_TEST_FAIL request_duplicate'; exception when sqlstate '40001' then raise notice 'ATT_TEST_PASS request_duplicate'; end;
+  begin perform public.api_request_late_exception((select id from zz_att_test_users where key='staff_a2'),current_date+1,'leave'); raise notice 'ATT_TEST_FAIL request_leave'; exception when sqlstate '22023' then raise notice 'ATT_TEST_PASS request_leave'; end;
 end $$;
 
 do $$ declare v jsonb; begin
-  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='staff_a1'),(select id from zz_att_test_logs where key='staff_a1'),'approved','ok'); raise notice 'ATT_TEST_FAIL review_self'; exception when sqlstate='42501' then raise notice 'ATT_TEST_PASS review_self'; end;
+  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='staff_a1'),(select id from zz_att_test_logs where key='staff_a1'),'approved','ok'); raise notice 'ATT_TEST_FAIL review_self'; exception when sqlstate '42501' then raise notice 'ATT_TEST_PASS review_self'; end;
   v:=public.api_review_late_exception((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_logs where key='staff_a1'),'approved','ok');
   if v->>'late_exception_status'='approved' then raise notice 'ATT_TEST_PASS review_head_same_department'; else raise notice 'ATT_TEST_FAIL review_head_same_department'; end if;
-  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_logs where key='staff_b1'),'approved','ok'); raise notice 'ATT_TEST_FAIL review_head_cross_department'; exception when sqlstate='42501' then raise notice 'ATT_TEST_PASS review_head_cross_department'; end;
+  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_logs where key='staff_b1'),'approved','ok'); raise notice 'ATT_TEST_FAIL review_head_cross_department'; exception when sqlstate '42501' then raise notice 'ATT_TEST_PASS review_head_cross_department'; end;
   v:=public.api_review_late_exception((select id from zz_att_test_users where key='viewer_all'),(select id from zz_att_test_logs where key='staff_b1'),'approved','ok');
   if v->>'late_exception_status'='approved' then raise notice 'ATT_TEST_PASS review_viewer_all'; else raise notice 'ATT_TEST_FAIL review_viewer_all'; end if;
   update public.attendance_logs set late_exception_status='pending', late_exception_reviewed_by=null, late_exception_reviewed_at=null where id=(select id from zz_att_test_logs where key='nodept2');
   update public.attendance_logs set late_exception='sudden_work', late_exception_status='pending' where id=(select id from zz_att_test_logs where key='nodept2');
-  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='nodept1'),(select id from zz_att_test_logs where key='nodept2'),'approved','ok'); raise notice 'ATT_TEST_FAIL review_null_department'; exception when sqlstate='42501' then raise notice 'ATT_TEST_PASS review_null_department'; end;
+  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='nodept1'),(select id from zz_att_test_logs where key='nodept2'),'approved','ok'); raise notice 'ATT_TEST_FAIL review_null_department'; exception when sqlstate '42501' then raise notice 'ATT_TEST_PASS review_null_department'; end;
   update public.attendance_logs set late_exception_status='pending', late_exception_reviewed_by=null, late_exception_reviewed_at=null where id=(select id from zz_att_test_logs where key='staff_b1');
-  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='viewer_all'),(select id from zz_att_test_logs where key='staff_b1'),'rejected',''); raise notice 'ATT_TEST_FAIL review_no_note'; exception when sqlstate='22023' then raise notice 'ATT_TEST_PASS review_no_note'; end;
+  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='viewer_all'),(select id from zz_att_test_logs where key='staff_b1'),'rejected',''); raise notice 'ATT_TEST_FAIL review_no_note'; exception when sqlstate '22023' then raise notice 'ATT_TEST_PASS review_no_note'; end;
   perform public.api_review_late_exception((select id from zz_att_test_users where key='viewer_all'),(select id from zz_att_test_logs where key='staff_b1'),'rejected','not enough evidence');
-  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='viewer_all'),(select id from zz_att_test_logs where key='staff_b1'),'approved','again'); raise notice 'ATT_TEST_FAIL review_terminal'; exception when sqlstate='40001' then raise notice 'ATT_TEST_PASS review_terminal'; end;
+  begin perform public.api_review_late_exception((select id from zz_att_test_users where key='viewer_all'),(select id from zz_att_test_logs where key='staff_b1'),'approved','again'); raise notice 'ATT_TEST_FAIL review_terminal'; exception when sqlstate '40001' then raise notice 'ATT_TEST_PASS review_terminal'; end;
 end $$;
 
 do $$ declare v uuid[]; begin
@@ -86,7 +86,7 @@ end $$;
 
 do $$ begin
   if public.api_upsert_attendance_admin_note((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='staff_a1'),current_date,'admin note') is not null then raise notice 'ATT_TEST_PASS admin_note_admin'; else raise notice 'ATT_TEST_FAIL admin_note_admin'; end if;
-  begin perform public.api_upsert_attendance_admin_note((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_users where key='staff_a1'),current_date,'no'); raise notice 'ATT_TEST_FAIL admin_note_forbidden'; exception when sqlstate='42501' then raise notice 'ATT_TEST_PASS admin_note_forbidden'; end;
+  begin perform public.api_upsert_attendance_admin_note((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_users where key='staff_a1'),current_date,'no'); raise notice 'ATT_TEST_FAIL admin_note_forbidden'; exception when sqlstate '42501' then raise notice 'ATT_TEST_PASS admin_note_forbidden'; end;
 end $$;
 
 do $$ declare v jsonb; d date:=current_date; begin
@@ -94,10 +94,10 @@ do $$ declare v jsonb; d date:=current_date; begin
   if (v->>'workday')::numeric=0.5 then raise notice 'ATT_TEST_PASS adjustment_create'; else raise notice 'ATT_TEST_FAIL adjustment_create'; end if;
   v:=public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='staff_a1'),d,1,'full day');
   if (v->>'workday')::numeric=1 then raise notice 'ATT_TEST_PASS adjustment_update'; else raise notice 'ATT_TEST_FAIL adjustment_update'; end if;
-  begin perform public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='staff_a1'),date '2026-11-01',0.5,'weekend'); raise notice 'ATT_TEST_FAIL adjustment_weekend'; exception when sqlstate='22023' then raise notice 'ATT_TEST_PASS adjustment_weekend'; end;
-  begin perform public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='admin'),d,0.5,'self'); raise notice 'ATT_TEST_FAIL adjustment_self'; exception when sqlstate='42501' then raise notice 'ATT_TEST_PASS adjustment_self'; end;
-  begin perform public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_users where key='staff_a1'),d,0.5,'forbidden'); raise notice 'ATT_TEST_FAIL adjustment_permission'; exception when sqlstate='42501' then raise notice 'ATT_TEST_PASS adjustment_permission'; end;
-  begin perform public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='staff_a1'),d,0.7,'bad value'); raise notice 'ATT_TEST_FAIL adjustment_value'; exception when sqlstate='23514' then raise notice 'ATT_TEST_PASS adjustment_value'; when sqlstate='22023' then raise notice 'ATT_TEST_PASS adjustment_value'; end;
+  begin perform public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='staff_a1'),date '2026-11-01',0.5,'weekend'); raise notice 'ATT_TEST_FAIL adjustment_weekend'; exception when sqlstate '22023' then raise notice 'ATT_TEST_PASS adjustment_weekend'; end;
+  begin perform public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='admin'),d,0.5,'self'); raise notice 'ATT_TEST_FAIL adjustment_self'; exception when sqlstate '42501' then raise notice 'ATT_TEST_PASS adjustment_self'; end;
+  begin perform public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='head_a'),(select id from zz_att_test_users where key='staff_a1'),d,0.5,'forbidden'); raise notice 'ATT_TEST_FAIL adjustment_permission'; exception when sqlstate '42501' then raise notice 'ATT_TEST_PASS adjustment_permission'; end;
+  begin perform public.api_upsert_attendance_workday_adjustment((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='staff_a1'),d,0.7,'bad value'); raise notice 'ATT_TEST_FAIL adjustment_value'; exception when sqlstate '23514' then raise notice 'ATT_TEST_PASS adjustment_value'; when sqlstate '22023' then raise notice 'ATT_TEST_PASS adjustment_value'; end;
   perform public.api_delete_attendance_workday_adjustment((select id from zz_att_test_users where key='admin'),(select id from zz_att_test_users where key='staff_a1'),d);
   if not exists(select 1 from public.attendance_workday_adjustments where user_id=(select id from zz_att_test_users where key='staff_a1') and work_date=d) then raise notice 'ATT_TEST_PASS adjustment_delete'; else raise notice 'ATT_TEST_FAIL adjustment_delete'; end if;
 end $$;
