@@ -40,8 +40,8 @@ async function aclForRecord(recordId: string) {
   return (data ?? []).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>;
 }
 
-async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
-  if (!canAccessRecordType(actor, record.record_type_code)) return false;
+async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code" | "category_code">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
+  if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return false;
   if (!actor.rbacPermissions.includes(`record.${capability}`)) return false;
   const context = await actorContext(actor);
   const rows = await aclForRecord(recordId);
@@ -78,7 +78,7 @@ export type DatabaseRecordApprovalBlockReason =
 
 async function approvalBlockReason(actor: DatabaseRecordActor, record: RecordRow, recordId: string): Promise<DatabaseRecordApprovalBlockReason | null> {
   if (record.status !== "pending_review") return "record_not_pending";
-  if (!canAccessRecordType(actor, record.record_type_code)) return "record_type_restricted";
+  if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return "record_type_restricted";
   if (!actor.rbacPermissions.includes("record.approve")) return "missing_record_approve_permission";
   const context = await actorContext(actor);
   const rows = await aclForRecord(recordId);
@@ -95,7 +95,7 @@ async function approvalBlockReason(actor: DatabaseRecordActor, record: RecordRow
 
 export async function canAccessDatabaseRecordForActor(actor: DatabaseRecordActor, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
   const record = await getRecord(recordId);
-  return Boolean(record && record.status !== "deleted" && canAccessRecordType(actor, record.record_type_code) && await canRecord(actor, record, recordId, capability));
+  return Boolean(record && record.status !== "deleted" && canAccessRecordType(actor, record.record_type_code, record.category_code) && await canRecord(actor, record, recordId, capability));
 }
 
 async function getRecord(recordId: string) {
@@ -121,7 +121,7 @@ async function validateFormMetadata(formDefinitionId: string | null | undefined,
 export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recordId: string) {
   const record = await getRecord(recordId);
   if (!record) return null;
-  if (!canAccessRecordType(actor, record.record_type_code)) return null;
+  if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return null;
   const canRestore = record.status === "deleted" && await canRecord(actor, record, recordId, "restore");
   if (record.status === "deleted" && !canRestore) return null;
   const metadataAllowed = await canRecord(actor, record, recordId, "metadata.view");
@@ -249,7 +249,7 @@ export async function listVisibleApprovalQueue(actor: DatabaseRecordActor, filte
     const page = await listVisibleDatabaseRecords(actor, { ...filters, status: "pending_review", limit: 100, offset });
     total = Number(page[0]?.total_count ?? offset + page.length);
     for (const row of page) {
-      if (canAccessRecordType(actor, row.record_type_code) && await canApproveRecord(actor, row, row.id)) {
+      if (canAccessRecordType(actor, row.record_type_code, row.category_code) && await canApproveRecord(actor, row, row.id)) {
         approved.push(row);
       }
     }
@@ -300,7 +300,7 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
   const typeCategory = await serverSupabase.from("db_categories").select("code").eq("id", type.category_id).maybeSingle();
   if (typeCategory.error) throw typeCategory.error;
   if (!effectiveCategoryCode || !isCompatibleLanguageSelection(effectiveCategoryCode, typeCategory.data?.code ?? "", languageCode)) throw new Error(category.code === "phong_noi_dung" || category.parent_id ? "language_required" : "record_scope_forbidden");
-  if (!canAccessRecordType(actor, type.code)) throw new Error("record_type_restricted");
+  if (!canAccessRecordType(actor, type.code, typeCategory.data?.code)) throw new Error("record_type_restricted");
   const { data: form, error: formError } = await serverSupabase.from("db_form_definitions").select("id").eq("record_type_id", input.recordTypeId).eq("status", "published").order("version", { ascending: false }).limit(1).maybeSingle();
   if (formError) throw formError;
   await validateFormMetadata(form?.id, { ...input.metadata, record_code: "HS-0000-000000", title: input.title, summary: input.summary ?? "", status: "draft" });

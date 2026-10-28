@@ -11,10 +11,14 @@ export function isSensitiveRecordTypeCode(code: string | null | undefined) {
   return Boolean(code && SENSITIVE_RECORD_TYPE_CODES.has(code));
 }
 
+export function isSensitiveRecordType(code: string | null | undefined, categoryCode?: string | null) {
+  return categoryCode === "doan_the_quan_ly" || isSensitiveRecordTypeCode(code);
+}
+
 export function canAccessSensitiveRecordType(actor: { rbacPermissions: readonly string[] }) {
   return actor.rbacPermissions.includes(SENSITIVE_RECORD_PERMISSION);
 }
 
-export function canAccessRecordType(actor: { rbacPermissions: readonly string[] }, code: string | null | undefined) {
-  return !isSensitiveRecordTypeCode(code) || canAccessSensitiveRecordType(actor);
+export function canAccessRecordType(actor: { rbacPermissions: readonly string[] }, code: string | null | undefined, categoryCode?: string | null) {
+  return !isSensitiveRecordType(code, categoryCode) || canAccessSensitiveRecordType(actor);
 }

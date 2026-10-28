@@ -87,6 +87,7 @@ test("release metadata uses the complete ordered migration reference", () => {
   assert.ok(migrations.includes("supabase/migrations/20261027120100_h03_batch_idempotency_lockdown.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261027140000_database_management_v1_list_filters.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql"));
+  assert.ok(migrations.includes("supabase/migrations/20261028090000_database_management_v1_doan_the_types.sql"));
   assert.equal(migrations.at(-1), "supabase/migrations/20261027090100_storage_anon_lockdown.sql");
   assert.match(packager, /"migration_reference=" \+ migrationReference\.join\(\",\"\)/);
   assert.doesNotMatch(packager, /20261016110000_asset_locations_expansion\.sql",\s*\n\s*"migration_reference=/);

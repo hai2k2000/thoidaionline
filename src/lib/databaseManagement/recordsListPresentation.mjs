@@ -26,7 +26,7 @@ export const categoryLabels = {
   tong_hop: "Phòng Tổng hợp",
   truyen_thong: "Phòng Truyền thông",
   phong_noi_dung: "Phòng Nội dung",
-  doan_the_quan_ly: "Tổ chức đoàn thể và hồ sơ quản lý chuyên biệt",
+  doan_the_quan_ly: "Các tổ chức đoàn thể",
   ngoai_ngu: "Các tổ Ngoại ngữ",
 };
 
