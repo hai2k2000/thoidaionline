@@ -105,6 +105,8 @@ const formatAttendanceDate = (value?: string | null) => {
   return year && month && day ? `${day}/${month}/${year}` : value;
 };
 
+const weekdayLabel = (value: string) => new Intl.DateTimeFormat("vi-VN", { weekday: "long", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`));
+
 function AttendancePageContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -116,6 +118,7 @@ function AttendancePageContent() {
   const [grid, setGrid] = useState<{ days: string[]; rows: Array<{ staffId: string; name: string; departmentName: string; cells: Array<{ date: string; code: string; symbol: string; label: string; workday: number }>; totalWorkday: number }> } | null>(null);
   const [view, setView] = useState<"list" | "grid">(searchParams.get("view") === "grid" ? "grid" : "list");
   const [staffFilter, setStaffFilter] = useState(searchParams.get("staffId") ?? "");
+  const [staffQuery, setStaffQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState(searchParams.get("departmentId") ?? "");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "");
   const [filterOptions, setFilterOptions] = useState<{ staff: Array<{ id: string; full_name: string; department_id: string | null; department_name: string | null }>; departments: Array<{ id: string; name: string }> }>({ staff: [], departments: [] });
@@ -155,6 +158,7 @@ function AttendancePageContent() {
   const [leaveMonth, setLeaveMonth] = useState(initialLeaveFilters.month);
   const [leaveStatus, setLeaveStatus] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled">(initialLeaveFilters.status as "all" | "pending" | "approved" | "rejected" | "cancelled");
   const [selectedSummaryEmployee, setSelectedSummaryEmployee] = useState<{ userId: string; name: string } | null>(null);
+  const [selectedAttendanceRow, setSelectedAttendanceRow] = useState<AttendanceRow | null>(null);
   const [attendanceAccess, setAttendanceAccess] = useState<{ orgScope: "all" | "department" | null; canManage: boolean }>({ orgScope: null, canManage: false });
   const userOrgScope = user?.rbacPermissionScopes?.["attendance.view_all"]?.includes("all")
     ? "all" as const
@@ -165,6 +169,12 @@ function AttendancePageContent() {
   const effectiveCanManage = attendanceAccess.canManage || user?.rbacPermissions?.includes("attendance.manage") === true;
   const isOrganizationView = pathname === "/attendance" && effectiveOrgScope !== null;
   const canQuickReport = !!user?.rbacPermissions?.includes("task.quick_report.create");
+
+  useEffect(() => {
+    if (!staffFilter || !filterOptions.staff.length) return;
+    const selected = filterOptions.staff.find((item) => item.id === staffFilter);
+    if (selected) setStaffQuery(selected.full_name);
+  }, [filterOptions.staff, staffFilter]);
 
   const canMutateLeave = (item: LeaveRequest) => canEditCreatorMutation({
     actorId: user?.id,
@@ -301,13 +311,14 @@ function AttendancePageContent() {
   const submitLateException = async (event: React.FormEvent) => {
     event.preventDefault();
     const note = lateExceptionNote.trim();
-    if (!lateExceptionRow || note.length < 3) {
+    const targetRow = lateExceptionRow ?? selectedAttendanceRow;
+    if (!targetRow || note.length < 3) {
       setLateExceptionError("Vui lòng nhập ghi chú từ 3 ký tự.");
       return;
     }
     setLateExceptionBusy(true); setLateExceptionError("");
     try {
-      const response = await fetch("/api/attendance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workDate: lateExceptionRow.work_date, note }) });
+      const response = await fetch("/api/attendance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workDate: targetRow.work_date, note }) });
       if (!response.ok) throw new Error("Chưa ghi nhận được ngoại lệ. Vui lòng tải lại và thử lại.");
       setLateExceptionRow(null); setLateExceptionNote(""); await loadAttendance();
     } catch (error) { setLateExceptionError(error instanceof Error ? error.message : "Chưa ghi nhận được ngoại lệ."); }
@@ -317,7 +328,8 @@ function AttendancePageContent() {
   const submitAdminNote = async (event: React.FormEvent) => {
     event.preventDefault();
     const note = adminNoteText.trim();
-    if (!adminNoteRow || note.length < 3) {
+    const targetRow = adminNoteRow ?? selectedAttendanceRow;
+    if (!targetRow || note.length < 3) {
       setAdminNoteError("Vui lòng nhập ghi chú từ 3 ký tự.");
       return;
     }
@@ -326,7 +338,7 @@ function AttendancePageContent() {
       const response = await fetch("/api/attendance", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: adminNoteRow.user_id, workDate: adminNoteRow.work_date, note }),
+        body: JSON.stringify({ userId: targetRow.user_id, workDate: targetRow.work_date, note }),
       });
       if (!response.ok) throw new Error("Chưa lưu được ghi chú Admin. Vui lòng thử lại.");
       setAdminNoteRow(null); setAdminNoteText("");
@@ -429,7 +441,7 @@ function AttendancePageContent() {
   useEffect(() => {
     if (!selectedSummaryEmployee) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedSummaryEmployee(null);
+      if (event.key === "Escape") { setSelectedSummaryEmployee(null); setSelectedAttendanceRow(null); }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
@@ -500,24 +512,16 @@ function AttendancePageContent() {
               {canQuickReport && !isOrganizationView ? <a href={`/tasks/quick-report?returnTo=${encodeURIComponent(pathname)}`} className="inline-flex min-h-11 items-center rounded-lg border border-orange-300 bg-white px-4 py-2 text-sm font-semibold text-orange-800">Báo việc phát sinh</a> : null}
             </div>
           </div>
-          {lateExceptionRow ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="late-exception-title">
-            <form onSubmit={submitLateException} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
-              <div className="flex items-center justify-between"><h2 id="late-exception-title" className="text-lg font-semibold">Đi muộn do việc phát sinh</h2><button type="button" onClick={() => setLateExceptionRow(null)} className="rounded px-2 py-1 text-slate-500" aria-label="Đóng">×</button></div>
-              <p className="mt-1 text-sm text-slate-600">{formatAttendanceDate(lateExceptionRow.work_date)} · Giờ vào {lateExceptionRow.check_in ?? "-"}</p>
-              <label className="mt-4 block text-sm font-semibold">Ghi chú bắt buộc<textarea required minLength={3} maxLength={2000} value={lateExceptionNote} onChange={(event) => setLateExceptionNote(event.target.value)} className="mt-1 min-h-24 w-full rounded border px-3 py-2 font-normal" /></label>
-              {lateExceptionError ? <p className="mt-2 text-sm font-medium text-red-700" role="alert">{lateExceptionError}</p> : null}
-              <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setLateExceptionRow(null)} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={lateExceptionBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{lateExceptionBusy ? "Đang lưu..." : "Xác nhận"}</button></div>
-            </form>
-          </div> : null}
-          {adminNoteRow ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="admin-note-title">
-            <form onSubmit={submitAdminNote} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
-              <div className="flex items-center justify-between"><h2 id="admin-note-title" className="text-lg font-semibold">Ghi chú Admin</h2><button type="button" onClick={() => setAdminNoteRow(null)} className="rounded px-2 py-1 text-slate-500" aria-label="Đóng">×</button></div>
-              <p className="mt-1 text-sm text-slate-600">{adminNoteRow.staff_users?.full_name ?? "Nhân sự"} · {formatAttendanceDate(adminNoteRow.work_date)}</p>
-              <div className="mt-3 grid gap-2 rounded-lg border bg-slate-50 p-3 text-sm sm:grid-cols-2"><div>Giờ vào: <strong>{adminNoteRow.check_in ?? "-"}</strong></div><div>Giờ ra: <strong>{adminNoteRow.check_out ?? "-"}</strong></div></div>
-              <label className="mt-4 block text-sm font-semibold">Nội dung ghi chú<textarea required minLength={3} maxLength={2000} value={adminNoteText} onChange={(event) => setAdminNoteText(event.target.value)} className="mt-1 min-h-28 w-full rounded border px-3 py-2 font-normal" /></label>
-              {adminNoteError ? <p className="mt-2 text-sm font-medium text-red-700" role="alert">{adminNoteError}</p> : null}
-              <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setAdminNoteRow(null)} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={adminNoteBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{adminNoteBusy ? "Đang lưu..." : "Lưu ghi chú"}</button></div>
-            </form>
+          {selectedAttendanceRow ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="attendance-row-dialog-title" onClick={(event) => { if (event.target === event.currentTarget) setSelectedAttendanceRow(null); }}>
+            <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
+              <div className="flex items-center justify-between"><h2 id="attendance-row-dialog-title" className="text-lg font-semibold">{selectedAttendanceRow.staff_users?.full_name ?? "Nhân sự"} — {weekdayLabel(selectedAttendanceRow.work_date)}, {formatAttendanceDate(selectedAttendanceRow.work_date)}</h2><button type="button" onClick={() => setSelectedAttendanceRow(null)} className="rounded px-2 py-1 text-slate-500" aria-label="Đóng">×</button></div>
+              <div className="mt-3 grid gap-2 rounded-lg border bg-slate-50 p-3 text-sm sm:grid-cols-2"><div>Giờ vào: <strong>{selectedAttendanceRow.check_in ?? "-"}</strong></div><div>Giờ ra: <strong>{selectedAttendanceRow.check_out ?? "-"}</strong></div><div>Ngày công: <strong>{selectedAttendanceRow.workday ?? 0}</strong></div><div>Trạng thái: <strong>{attendanceStatusLabel[(selectedAttendanceRow.status ?? "").toLowerCase()] ?? selectedAttendanceRow.status ?? "-"}</strong></div></div>
+              <p className="mt-3 text-sm"><strong>Ghi chú:</strong> {selectedAttendanceRow.note ?? "-"}</p>
+              {selectedAttendanceRow.attendance_sources ? <p className="mt-2 text-sm text-slate-600">{selectedAttendanceRow.attendance_sources.leave ? "Nghỉ phép · " : ""}{selectedAttendanceRow.attendance_sources.online ? "Làm việc online · " : ""}{selectedAttendanceRow.attendance_sources.business ? "Công tác · " : ""}{selectedAttendanceRow.attendance_sources.event ? "Sự kiện" : ""}</p> : null}
+              {isOrganizationView && reviewableLateExceptionIds.includes(selectedAttendanceRow.id) ? <div className="mt-3 flex gap-2"><button type="button" onClick={() => void reviewLateException(selectedAttendanceRow, "approved")} className="rounded bg-emerald-700 px-3 py-2 text-xs font-semibold text-white">Duyệt</button><button type="button" onClick={() => void reviewLateException(selectedAttendanceRow, "rejected")} className="rounded border border-red-300 px-3 py-2 text-xs font-semibold text-red-700">Từ chối</button></div> : null}
+              {!isOrganizationView && (!selectedAttendanceRow.late_exception_status || selectedAttendanceRow.late_exception_status === "rejected") && !!selectedAttendanceRow.check_in && selectedAttendanceRow.check_in > "08:15:00" ? <form onSubmit={submitLateException} className="mt-3"><input type="hidden" value={selectedAttendanceRow.id} readOnly /><label className="block text-sm font-semibold">Báo đi muộn do việc phát sinh<textarea required minLength={3} maxLength={2000} value={lateExceptionNote} onChange={(event) => { setLateExceptionRow(selectedAttendanceRow); setLateExceptionNote(event.target.value); }} className="mt-1 min-h-20 w-full rounded border px-3 py-2 font-normal" /></label>{lateExceptionError ? <p className="mt-2 text-sm text-red-700" role="alert">{lateExceptionError}</p> : null}<button disabled={lateExceptionBusy} className="mt-2 rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white">{lateExceptionBusy ? "Đang lưu..." : "Gửi báo cáo"}</button></form> : null}
+              <form onSubmit={(event) => { setAdminNoteRow(selectedAttendanceRow); void submitAdminNote(event); }} className="mt-4"><label className="block text-sm font-semibold">Ghi chú Admin<textarea readOnly={!effectiveCanManage} required={effectiveCanManage} minLength={3} maxLength={2000} value={adminNoteText} onChange={(event) => setAdminNoteText(event.target.value)} className="mt-1 min-h-24 w-full rounded border px-3 py-2 font-normal" /></label>{adminNoteError ? <p className="mt-2 text-sm text-red-700" role="alert">{adminNoteError}</p> : null}{effectiveCanManage ? <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setAdminNoteText(selectedAttendanceRow.admin_note ?? "")} className="rounded border px-3 py-2 text-sm font-semibold">Hủy</button><button disabled={adminNoteBusy} className="rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white">{adminNoteBusy ? "Đang lưu..." : "Lưu ghi chú"}</button></div> : null}</form>
+            </div>
           </div> : null}
           {adjustmentRow ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="adjustment-title"><form onSubmit={submitAdjustment} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl"><h2 id="adjustment-title" className="text-lg font-semibold">Điều chỉnh công</h2><p className="mt-1 text-sm text-slate-600">{adjustmentRow.staff_users?.full_name ?? "Nhân sự"} · {formatAttendanceDate(adjustmentRow.work_date)}</p><label className="mt-4 block text-sm font-semibold">Ngày công<select value={adjustmentWorkday} onChange={(event) => setAdjustmentWorkday(event.target.value)} className="mt-1 w-full rounded border px-3 py-2 font-normal"><option value="1">1</option><option value="0.5">0.5</option><option value="0">0</option></select></label><label className="mt-3 block text-sm font-semibold">Lý do<textarea required minLength={3} maxLength={2000} value={adjustmentReason} onChange={(event) => setAdjustmentReason(event.target.value)} className="mt-1 min-h-24 w-full rounded border px-3 py-2 font-normal" /></label>{adjustmentError ? <p className="mt-2 text-sm text-red-700" role="alert">{adjustmentError}</p> : null}<div className="mt-4 flex justify-between gap-2"><button type="button" onClick={deleteAdjustment} disabled={adjustmentBusy || !adjustmentRow.workday_adjustment} className="rounded border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Xóa điều chỉnh</button><div className="flex gap-2"><button type="button" onClick={() => setAdjustmentRow(null)} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={adjustmentBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Lưu điều chỉnh</button></div></div></form></div> : null}
           {leaveModalOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="leave-dialog-title">
@@ -603,10 +607,10 @@ function AttendancePageContent() {
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
           {isOrganizationView ? <div className="mt-3 grid gap-2 rounded-lg border bg-slate-50 p-3 sm:grid-cols-4">
-            <label className="text-sm font-semibold">Nhân viên<input list="attendance-staff-options" value={staffFilter ? (filterOptions.staff.find((item) => item.id === staffFilter)?.full_name ?? "") : ""} onChange={(event) => { const match = filterOptions.staff.find((item) => item.full_name === event.target.value); setStaffFilter(match?.id ?? ""); updateQuery({ staffId: match?.id ?? "" }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal" placeholder="Tìm nhân viên" /><datalist id="attendance-staff-options">{filterOptions.staff.map((item) => <option key={item.id} value={item.full_name} />)}</datalist></label>
+            <label className="text-sm font-semibold">Nhân viên<input list="attendance-staff-options" value={staffQuery} onChange={(event) => { const query = event.target.value; setStaffQuery(query); const match = filterOptions.staff.find((item) => item.full_name === query); if (match || query === "") { setStaffFilter(match?.id ?? ""); updateQuery({ staffId: match?.id ?? "" }); } }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal" placeholder="Tìm nhân viên" /><datalist id="attendance-staff-options">{filterOptions.staff.map((item) => <option key={item.id} value={item.full_name} />)}</datalist></label>
             <label className="text-sm font-semibold">Phòng ban<select value={departmentFilter} onChange={(event) => { setDepartmentFilter(event.target.value); updateQuery({ departmentId: event.target.value }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả phòng ban</option>{filterOptions.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label className="text-sm font-semibold">Trạng thái<select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); updateQuery({ status: event.target.value }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả trạng thái</option><option value="present">Đi làm</option><option value="incomplete">Đi làm (thiếu giờ/đi muộn/về sớm)</option><option value="absent">Nghỉ không phép</option><option value="leave">Nghỉ phép</option><option value="online">Làm việc online</option><option value="business">{"Công tác/Sự kiện"}</option></select></label>
-            <button type="button" className="self-end min-h-10 rounded border bg-white px-3 py-2 text-sm font-semibold" onClick={() => { setStaffFilter(""); setDepartmentFilter(""); setStatusFilter(""); updateQuery({ staffId: "", departmentId: "", status: "" }); }}>Xóa lọc</button>
+            <button type="button" className="self-end min-h-10 rounded border bg-white px-3 py-2 text-sm font-semibold" onClick={() => { setStaffFilter(""); setStaffQuery(""); setDepartmentFilter(""); setStatusFilter(""); updateQuery({ staffId: "", departmentId: "", status: "" }); }}>Xóa lọc</button>
           </div> : null}
           {isOrganizationView && period === "month" ? <div className="mt-3 flex gap-2"><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("list"); updateQuery({ view: "" }); }}>Danh sách</button><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "grid" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("grid"); updateQuery({ view: "grid" }); }}>Lưới</button></div> : null}
         </section>
@@ -614,32 +618,32 @@ function AttendancePageContent() {
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}</h2>
           {isOrganizationView && period === "month" && view === "grid" && grid ? <AttendanceMonthGrid days={grid.days} rows={grid.rows} /> : <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll min-w-0 max-w-full rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
-          <table className={`data-table attendance-day-table ${isOrganizationView ? "attendance-organization-table" : "attendance-personal-table"} min-w-[820px] text-left text-sm`}>
+          <table className={`data-table attendance-day-table ${isOrganizationView ? "attendance-organization-table" : "attendance-personal-table"} table-fixed text-left text-sm`}>
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Nhân sự</th>
-                <th scope="col" className="whitespace-nowrap px-3 py-2">Ngày</th>
+                {period !== "day" ? <th scope="col" className="px-3 py-2">Ngày</th> : null}
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Giờ vào</th>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Giờ ra</th>
                 <th scope="col" className="whitespace-nowrap px-3 py-2 text-right">Ngày công</th>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Trạng thái</th>
-                <th scope="col" className="min-w-64 px-3 py-2">Ghi chú</th>
+                <th scope="col" className="px-3 py-2">Ghi chú</th>
               </tr>
             </thead>
             <tbody>
               {visibleAttendanceRows.map((r) => (
-                <tr key={r.id} className="border-t">
-                  <td className="whitespace-nowrap px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
-                  <td className="whitespace-nowrap px-3 py-2">{formatAttendanceDate(r.work_date)}</td>
+                <tr key={r.id} className="cursor-pointer border-t hover:bg-orange-50 focus:bg-orange-50" tabIndex={0} role="button" aria-label={`Xem chi tiết ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`} onClick={() => { setSelectedAttendanceRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedAttendanceRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); } }}>
+                  <td className="px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
+                  {period !== "day" ? <td className="px-3 py-2">{formatAttendanceDate(r.work_date)}</td> : null}
                   <td className="whitespace-nowrap px-3 py-2">{r.check_in ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{r.workday ?? 0}</td>
                   <td className="attendance-status-cell px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception_status === "approved" ? "Đi muộn do việc phát sinh" : r.late_exception_status === "pending" ? "Đi muộn (chờ duyệt lý do phát sinh)" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
-                  <td className="attendance-note-cell min-w-64 px-3 py-2"><div className="flex items-start gap-2"><div className="min-w-0 flex-1 whitespace-pre-wrap break-words">{r.note ?? ""}{!isOrganizationView && (!r.late_exception_status || r.late_exception_status === "rejected") && !!r.check_in && r.check_in > "08:15:00" ? <button type="button" onClick={() => { setLateExceptionRow(r); setLateExceptionNote(""); setLateExceptionError(""); }} className="ml-2 rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-800">Báo đi muộn do việc phát sinh</button> : null}{isOrganizationView && reviewableLateExceptionIds.includes(r.id) ? <span className="ml-2 inline-flex gap-2"><button type="button" disabled={lateExceptionBusy} onClick={() => void reviewLateException(r, "approved")} className="rounded bg-emerald-700 px-2 py-1 text-xs font-semibold text-white">Duyệt</button><button type="button" disabled={lateExceptionBusy} onClick={() => void reviewLateException(r, "rejected")} className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700">Từ chối</button></span> : null}{r.admin_note ? <div className="mt-1 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</div>{effectiveCanManage ? <button type="button" onClick={() => { setAdminNoteRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} className="attendance-note-action shrink-0 rounded border border-orange-300 p-1.5 text-orange-800 hover:bg-orange-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" title={r.admin_note ? "Sửa ghi chú Admin" : "Thêm ghi chú Admin"} aria-label={`${r.admin_note ? "Sửa" : "Thêm"} ghi chú Admin cho ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`}><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1-1-4Z" /></svg></button> : null}</div></td>
+                  <td className="attendance-note-cell px-3 py-2"><div className="line-clamp-2 whitespace-pre-wrap break-words">{r.note ?? ""}</div></td>
                 </tr>
               ))}
               {visibleAttendanceRows.length === 0 ? (
-                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={7}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
+                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={period === "day" ? 6 : 7}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
               ) : null}
             </tbody>
           </table>
