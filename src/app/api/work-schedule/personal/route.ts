@@ -2,6 +2,8 @@ import { TIME_24H_REGEX } from "@/lib/time24h.mjs";
 import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
 import { isValidLocalDate, validateLocalPlanInterval } from "@/lib/personalPlanValidation";
 import { workScheduleRepository, type WorkScheduleInput } from "@/lib/workScheduleRepository";
+import { canReviewAnyPersonalPlan, getApprovalCapabilities } from "@/lib/rbac/approval";
+import type { RpcError } from "@/lib/rpcErrorMapping";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -48,15 +50,14 @@ export async function GET(request: Request) {
   if (!validRange(from, to)) return apiError("invalid_request", 400);
   const scope = params.get("scope") ?? "self";
   if (scope === "approval") {
-    const canReview = guard.actor.role_code === "admin"
-      || guard.actor.role_code === "tong_bien_tap"
-      || guard.actor.role_code === "pho_tong_bien_tap"
-      || guard.actor.is_department_manager;
-    if (!canReview) return apiError("forbidden", 403);
-    const result = await workScheduleRepository.listPendingPersonal(
-      ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(guard.actor.role_code)
-        ? undefined : guard.actor.department_id,
-    );
+    let capabilities;
+    try {
+      capabilities = await getApprovalCapabilities(guard.actor.id);
+    } catch (error) {
+      return rpcFailure(error as RpcError);
+    }
+    if (!canReviewAnyPersonalPlan(capabilities)) return apiError("forbidden", 403);
+    const result = await workScheduleRepository.listReviewablePersonal(guard.actor.id);
     return result.ok ? apiJson({ rows: result.rows }) : rpcFailure(result.error);
   }
   if (scope !== "self") return apiError("invalid_request", 400);
