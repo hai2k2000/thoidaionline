@@ -46,6 +46,16 @@ test("review contracts retain locking, self approval, revision and legacy rules"
   assert.doesNotMatch(migration, /drop\s+(table|function|policy)|truncate\s+/i); assert.doesNotMatch(migration, /delete\s+from/i);
 });
 
+test("review business-rule conflicts use non-retryable SQLSTATE 55000", () => {
+  for (const name of ["api_review_leave_request", "api_review_personal_work_schedule"]) {
+    const start = migration.toLowerCase().indexOf(`create or replace function public.${name}`);
+    const next = migration.indexOf("create or replace function public.", start + 1);
+    const section = migration.slice(start, next < 0 ? migration.length : next);
+    assert.doesNotMatch(section, /errcode\s*=\s*'40001'/i);
+    assert.match(section, /errcode\s*=\s*'55000'/i);
+  }
+});
+
 test("permission display structural scopes require active users", () => {
   const permissionList = migration.slice(migration.indexOf("create or replace function public.api_list_user_approval_permissions"));
   assert.match(permissionList, /p\.code='leave\.approve'\s+and\s+j\.code='truong_phong'\s+and\s+u\.active/i);

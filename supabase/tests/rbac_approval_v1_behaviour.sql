@@ -128,14 +128,14 @@ do $$ begin
 end $$;
 do $$ begin
   update public.leave_requests set status='approved' where id=(select id from zz_rbac_test_leaves where key='one');
-  begin perform public.api_review_leave_request((select id from zz_rbac_test_users where key='staff_b'), (select id from zz_rbac_test_leaves where key='one'), 'approved', 'x'); raise exception 'RBAC_TEST_FAIL 10 terminal'; exception when sqlstate '40001' then raise notice 'RBAC_TEST_PASS 10'; end;
+  begin perform public.api_review_leave_request((select id from zz_rbac_test_users where key='staff_b'), (select id from zz_rbac_test_leaves where key='one'), 'approved', 'x'); raise exception 'RBAC_TEST_FAIL 10 terminal'; exception when sqlstate '55000' then raise notice 'RBAC_TEST_PASS 10'; end;
 end $$;
 do $$ begin
   update public.leave_requests set status='cancelled' where id=(select id from zz_rbac_test_leaves where key='half');
-  begin perform public.api_review_leave_request((select id from zz_rbac_test_users where key='staff_b'), (select id from zz_rbac_test_leaves where key='half'), 'approved', 'x'); raise exception 'RBAC_TEST_FAIL 11 cancelled'; exception when sqlstate '40001' then raise notice 'RBAC_TEST_PASS 11'; end;
+  begin perform public.api_review_leave_request((select id from zz_rbac_test_users where key='staff_b'), (select id from zz_rbac_test_leaves where key='half'), 'approved', 'x'); raise exception 'RBAC_TEST_FAIL 11 cancelled'; exception when sqlstate '55000' then raise notice 'RBAC_TEST_PASS 11'; end;
 end $$;
 do $$ begin
-  begin perform public.api_review_personal_work_schedule((select id from zz_rbac_test_users where key='manager'), (select id from zz_rbac_test_plans where key='work'), 'approve', 'x', 0); raise exception 'RBAC_TEST_FAIL 12 revision'; exception when sqlstate '40001' then raise notice 'RBAC_TEST_PASS 12'; end;
+  begin perform public.api_review_personal_work_schedule((select id from zz_rbac_test_users where key='manager'), (select id from zz_rbac_test_plans where key='work'), 'approve', 'x', 0); raise exception 'RBAC_TEST_FAIL 12 revision'; exception when sqlstate '55000' then raise notice 'RBAC_TEST_PASS 12'; end;
 end $$;
 do $$ begin
   if has_function_privilege('anon','public.approval_review_basis(uuid,text,uuid,uuid,integer)','execute') or has_function_privilege('authenticated','public.api_review_leave_request(uuid,uuid,text,text)','execute') or has_function_privilege('public','public.api_review_personal_work_schedule(uuid,uuid,text,text,bigint)','execute') then raise exception 'RBAC_TEST_FAIL 14 public privilege'; end if;

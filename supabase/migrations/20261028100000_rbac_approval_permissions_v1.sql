@@ -82,7 +82,7 @@ as $function$
 declare v_row public.leave_requests; v_old public.leave_requests; v_basis text; v_days integer;
 begin
   if p_decision not in ('approved','rejected') or length(coalesce(p_note,''))>1000 then raise exception 'invalid review' using errcode='22023'; end if;
-  select * into v_old from public.leave_requests where id=p_request_id and status='pending' for update; if not found then raise exception 'leave request unavailable' using errcode='40001'; end if;
+  select * into v_old from public.leave_requests where id=p_request_id and status='pending' for update; if not found then raise exception 'leave request unavailable' using errcode='55000'; end if;
   v_days := (v_old.end_date-v_old.start_date)+1; v_basis := public.approval_assert_can_review(p_actor,'leave.approve',v_old.requester_id,v_old.department_id,v_days);
   update public.leave_requests set status=p_decision,reviewed_by=p_actor,reviewed_at=now(),review_note=nullif(trim(coalesce(p_note,'')),''),updated_at=now() where id=p_request_id returning * into v_row;
   insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,old_data,new_data) values(p_actor,'admin','leave_requests',v_row.id,'review_leave_request',to_jsonb(v_old),to_jsonb(v_row)||jsonb_build_object('approval_basis',v_basis)); return v_row;
@@ -95,7 +95,7 @@ declare v_row public.work_schedules; v_old public.work_schedules; v_basis text; 
 begin
   if p_action not in ('approve','reject') or p_expected_revision is null or (p_action='reject' and length(trim(coalesce(p_note,''))) not between 3 and 1000) or (p_action='approve' and length(coalesce(p_note,''))>1000) then raise exception 'invalid review' using errcode='22023'; end if;
   select * into v_old from public.work_schedules where id=p_id for update; if not found then raise exception 'personal plan unavailable' using errcode='P0002'; end if;
-  if v_old.schedule_scope <> 'personal' or v_old.approval_status <> 'PENDING_APPROVAL' or v_old.workflow_revision <> p_expected_revision then raise exception 'personal plan is stale or not pending' using errcode='40001'; end if;
+  if v_old.schedule_scope <> 'personal' or v_old.approval_status <> 'PENDING_APPROVAL' or v_old.workflow_revision <> p_expected_revision then raise exception 'personal plan is stale or not pending' using errcode='55000'; end if;
   if v_old.created_by=p_actor then raise exception 'forbidden' using errcode='42501'; end if;
   select department_id into v_subject_department from public.staff_users where id=v_old.created_by and active=true;
   if v_old.plan_type='business' then v_basis := public.approval_assert_can_review(p_actor,'schedule.business.approve',v_old.created_by,v_subject_department); elsif v_old.plan_type='event' then v_basis := public.approval_assert_can_review(p_actor,'schedule.event.approve',v_old.created_by,v_subject_department); else

@@ -10,3 +10,5 @@ Run the sequence from a clean Claude shell. All values below are environment var
 6. Set `BASE_URL=http://127.0.0.1:3000` and `RBAC_E2E_PASSWORD` in the matrix shell, then run `node scripts/production/rbac-approval-e2e-matrix.mjs`.
 7. Spot-check the UI: login as `rep_a1`, `rep_a2`, `manager_a`, `ptbt`, and `tbt`; verify queue visibility; approve/reject controls; stale revision conflict; permission detail/history; revoke of `rep_a1`; and inactive-user login denial.
 8. When finished, stop Next/proxy/tunnel and run `bash scripts/production/rbac-approval-e2e-rig.sh down` on the VPS. Confirm `status` shows no `rbac-e2e-*` containers.
+
+If a stale or already-reviewed mutation is mistakenly raised with SQLSTATE `40001`, PostgREST retries the transaction and the request can loop instead of returning a conflict. The matrix has a 20-second request timeout; if the backend is looping, run the rig `down` command to clear the looping backend before restarting the rig.
