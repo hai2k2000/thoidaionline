@@ -67,6 +67,17 @@ test("dry-run exercises real apply, direct idempotency, revert, re-apply, and no
   assert.match(script, /NOTICE:  RBAC_TEST_PASS/);
   assert.match(script, /EXPECTED_RBAC_TEST_PASS/);
   assert.match(script, /SHADOW_TOTAL/);
+  assert.match(script, /SHADOW_LIST_MISMATCH/);
+  for (const name of ["EXPECTED_INACTIVE_ROLE", "EXPECTED_D6_PHO_TP_JOB", "SECURITY_CRITICAL", "UNEXPECTED_RESTRICTIVE"]) {
+    assert.match(script, new RegExp(`SHADOW_CLASS_${name}`));
+    assert.match(shadow, new RegExp(`shadow_class_${name.toLowerCase()}`));
+  }
+  assert.match(script, /shadow_security" == 0/);
+  assert.match(script, /shadow_unexpected" == 0/);
+  assert.match(script, /shadow_inactive.*\[\[.*\^\[1-9\]/);
+  assert.match(shadow, /pho_tong_bien_tap/);
+  assert.match(shadow, /inactive_role_a','phu_trach_phong_bien_tap/);
+  assert.match(shadow, /shadow_list_mismatch/);
   assert.match(script, /RBAC_DRYRUN_RESULT=FAIL step=\$step/);
 });
 

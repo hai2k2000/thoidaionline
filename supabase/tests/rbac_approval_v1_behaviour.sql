@@ -86,7 +86,7 @@ set requester_id=(select id from zz_rbac_test_users where key='pho_role'), depar
 where reason='zz_rbac_test_two';
 
 insert into public.work_schedules(work_date, end_date, plan_type, start_time, end_time, title, participant_ids, created_by, schedule_scope, approval_status, workflow_revision)
-select current_date + row_number() over (), current_date + row_number() over (), x.plan_type, '09:00', '10:00', 'zz_rbac_test_' || x.plan_type, array[(select id from zz_rbac_test_users where key='pho_role')], (select id from zz_rbac_test_users where key='pho_role'), 'personal', 'PENDING_APPROVAL', 1
+select current_date + (row_number() over ())::int, current_date + (row_number() over ())::int, x.plan_type, '09:00', '10:00', 'zz_rbac_test_' || x.plan_type, array[(select id from zz_rbac_test_users where key='pho_role')], (select id from zz_rbac_test_users where key='pho_role'), 'personal', 'PENDING_APPROVAL', 1
 from (values ('business'), ('event'), ('work')) x(plan_type)
 returning id, plan_type;
 insert into zz_rbac_test_plans
