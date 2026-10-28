@@ -1,4 +1,4 @@
-import { apiError, apiJson, requireMutationActor } from "@/lib/serverApi";
+import { apiError, apiJson, requireMutationActor, rpcFailure } from "@/lib/serverApi";
 import { dutyTaskRepository } from "@/lib/dutyTaskRepository";
 import { readDutyRosterWorkbook } from "@/lib/dutyRosterExcel.mjs";
 import { groupDutyImportRows, resolveDutyImportRows, summarizeDutyImport, validateDutyImportRows } from "@/lib/dutyRosterImport.mjs";
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     if (summary.locked) return invalid("Lịch hiện tại có ca đã bắt đầu hoặc đã duyệt, không thể thay thế tự động.");
     if (!departmentId || !reviewerId) return invalid("Thiếu phòng ban hoặc người duyệt lịch trực.");
     const saved = await dutyTaskRepository.save(guard.actor.id, { month: parsed.month, departmentId, reviewerId, days: groupDutyImportRows(resolved.resolved) });
-    return saved.ok ? apiJson({ month: parsed.month, imported: resolved.resolved.length, summary: saved.summary }) : apiError("operation_failed", 500);
+    return saved.ok ? apiJson({ month: parsed.month, imported: resolved.resolved.length, summary: saved.summary }) : rpcFailure(saved.error);
   } catch (error) {
     return invalid(error instanceof Error ? error.message : "Không đọc được file Excel.");
   }
