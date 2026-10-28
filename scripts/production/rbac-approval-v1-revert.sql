@@ -1,3 +1,4 @@
+-- If the attendance-RBAC migrations (PR #63; they redefine `rbac_v2_scope_supported` on top of this one) are applied, run their revert FIRST, then this file. This file restores the P1 production definition, which would otherwise drop attendance's scope branch.
 begin;
 
 -- FN api_review_leave_request
