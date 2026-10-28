@@ -13,7 +13,8 @@ export async function GET() {
     serverSupabase.from("db_form_definitions").select("id,record_type_id,version,status,search_config,display_config,db_form_fields(id,field_key,label,data_type,required,searchable,options,validation,sort_order)").eq("status", "published").eq("version", 1),
   ]);
   if (categories.error || types.error || forms.error) return NextResponse.json({ error: "catalog_read_failed" }, { status: 500 });
-  const visibleTypes = (types.data ?? []).filter((type) => canAccessRecordType(actor, type.code));
+  const categoryCodes = new Map((categories.data ?? []).map((category) => [category.id, category.code]));
+  const visibleTypes = (types.data ?? []).filter((type) => canAccessRecordType(actor, type.code, categoryCodes.get(type.category_id)));
   const visibleTypeIds = new Set(visibleTypes.map((type) => type.id));
   const visibleForms = (forms.data ?? []).filter((form) => visibleTypeIds.has(form.record_type_id));
   const needsDepartments = visibleForms.some((form) => (form.db_form_fields ?? []).some((field) => field.data_type === "department"));

@@ -10,6 +10,22 @@ const autocode = readFileSync(fileURLToPath(new URL("../../../supabase/migration
 const filterApproval = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261021100000_database_management_v1_filter_approval.sql", import.meta.url)), "utf8");
 const listFilters = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027140000_database_management_v1_list_filters.sql", import.meta.url)), "utf8");
 const dropSourcePerson = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql", import.meta.url)), "utf8");
+const doanThe = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261028090000_database_management_v1_doan_the_types.sql", import.meta.url)), "utf8");
+
+test("doan the migration defines the approved flat catalog and admin-only sensitivity grant", () => {
+  const codes = ["dang_van_ban_dinh_ky", "dang_dai_hoi", "dang_tong_ket_nam", "dang_bien_ban_sinh_hoat", "dang_sinh_hoat_chuyen_de", "dang_bao_cao_cong_van", "nha_bao_van_ban_den", "nha_bao_van_ban_di", "nha_bao_hoi_vien", "nha_bao_dai_hoi", "nha_bao_van_ban_khac", "doan_tn_van_ban", "cuc_bc_giay_phep_dai_han", "cuc_bc_giay_phep_ngan_han", "cuc_bc_bao_cao", "cuc_bc_the_nha_bao"];
+  assert.match(doanThe, /update public\.db_categories[\s\S]*Các tổ chức đoàn thể/);
+  for (const code of codes) assert.match(doanThe, new RegExp(`'${code}'`));
+  assert.match(doanThe, /active = false/);
+  assert.match(doanThe, /code='admin'/);
+  assert.match(doanThe, /code='record\.sensitive\.access'/);
+  assert.match(doanThe, /perm_id,'all'/);
+  assert.match(doanThe, /code\s*=\s*'doan_the_quan_ly'/i);
+  assert.doesNotMatch(doanThe, /regexp_replace|\bexecute\s+(?:fn|format)/i);
+  assert.match(doanThe, /create or replace function public\.api_search_database_records\([\s\S]*doan_the_quan_ly/);
+  assert.match(doanThe, /create or replace function public\.api_transition_database_record\([\s\S]*doan_the_quan_ly/);
+  assert.match(doanThe, /do \$assert_sensitive\$[\s\S]*pg_get_functiondef[\s\S]*prokind = 'f'[\s\S]*admin-only/);
+});
 
 test("source_person retirement removes obsolete fields and strips orphaned metadata", () => {
   assert.match(dropSourcePerson, /^begin;[\s\S]*delete from public\.db_form_fields\s+where field_key = 'source_person';[\s\S]*commit;\s*$/i);
