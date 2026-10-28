@@ -33,3 +33,9 @@ export async function getApprovalCapabilities(actorId: string): Promise<Approval
 export function canReviewAnyLeave(caps: ApprovalCapabilities): boolean {
   return caps["leave.approve"].scopes.length > 0 || caps.leaveLongTbt;
 }
+
+export function canReviewAnyPersonalPlan(caps: ApprovalCapabilities): boolean {
+  return caps["schedule.business.approve"].scopes.length > 0
+    || caps["schedule.event.approve"].scopes.length > 0
+    || caps.personalWorkLegacy;
+}

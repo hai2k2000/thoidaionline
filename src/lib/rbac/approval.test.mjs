@@ -10,3 +10,10 @@ test("approval capability helper uses the database capability RPC", () => {
   assert.match(source, /scopes\.length\s*>\s*0/);
   assert.match(source, /leaveLongTbt/);
 });
+
+test("personal plan review capability includes scoped approvals and legacy access", () => {
+  assert.match(source, /canReviewAnyPersonalPlan/);
+  assert.match(source, /schedule\.business\.approve/);
+  assert.match(source, /schedule\.event\.approve/);
+  assert.match(source, /personalWorkLegacy/);
+});

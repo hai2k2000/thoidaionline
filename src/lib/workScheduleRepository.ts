@@ -88,14 +88,22 @@ export const workScheduleRepository = {
     };
   },
 
-  async listPendingPersonal(departmentId?: string | null) {
-    let query = serverSupabase.from("work_schedules").select(fields)
-      .eq("schedule_scope", "personal")
-      .eq("approval_status", "PENDING_APPROVAL")
-      .order("submitted_at", { ascending: true });
-    if (departmentId) query = query.eq("creator.department_id", departmentId);
-    const { data, error } = await query;
-    return error ? { ok: false as const, error } : { ok: true as const, rows: data ?? [] };
+  async listReviewablePersonal(actorId: string) {
+    const reviewable = await serverSupabase.rpc("api_list_reviewable_personal_plans", { p_actor: actorId });
+    if (reviewable.error) return { ok: false as const, error: reviewable.error };
+    const ids = (reviewable.data ?? []) as unknown as Array<{ id: string; approval_basis: string }>;
+    if (ids.length === 0) return { ok: true as const, rows: [] };
+    const result = await serverSupabase.from("work_schedules").select(fields).in("id", ids.map((row) => row.id));
+    if (result.error) return { ok: false as const, error: result.error };
+    const byId = new Map((result.data ?? []).map((row) => {
+      const value = row as unknown as Record<string, unknown>;
+      return [String(value.id), value] as const;
+    }));
+    const rows = ids.flatMap((item) => {
+      const row = byId.get(item.id);
+      return row ? [{ ...row, approval_basis: item.approval_basis }] : [];
+    });
+    return { ok: true as const, rows };
   },
 
   async listEventAssignments(from: string, to: string, actorId: string, scope: "global" | "department" | "self", departmentId?: string | null) {

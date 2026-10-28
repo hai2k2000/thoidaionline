@@ -17,7 +17,8 @@ test("personal schedule read path authenticates and preserves legacy rows", () =
   assert.match(route, /workScheduleRepository\.listPersonal\(from, to, guard\.actor\.id\)/);
   assert.match(serverApi, /apiError\("unauthenticated", 401\)/);
   assert.match(repository, /schedule_scope\.eq\.personal,schedule_scope\.is\.null/);
-  assert.match(repository, /listPendingPersonal/);
+  assert.match(repository, /listReviewablePersonal/);
+  assert.match(repository, /api_list_reviewable_personal_plans/);
 });
 
 test("adjacent production routes remain isolated", () => {

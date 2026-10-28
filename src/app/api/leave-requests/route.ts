@@ -2,6 +2,7 @@ import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadAct
 import { serverSupabase } from "@/lib/serverSupabase";
 import { parseMineLeaveFilters } from "@/lib/leaveRequestFilters.mjs";
 import { canReviewAnyLeave, getApprovalCapabilities } from "@/lib/rbac/approval";
+import type { RpcError } from "@/lib/rpcErrorMapping";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const PERIODS = new Set(["full", "morning", "afternoon"]);
@@ -21,7 +22,12 @@ export async function GET(request: Request) {
   if (!isValidDate(from) || !isValidDate(to) || from > to) return apiError("invalid_request", 400);
   const mineScope = parseMineLeaveFilters(params, from, to);
   if (!mineScope) return apiError("invalid_request", 400);
-  const capabilities = await getApprovalCapabilities(guard.actor.id);
+  let capabilities;
+  try {
+    capabilities = await getApprovalCapabilities(guard.actor.id);
+  } catch (error) {
+    return rpcFailure(error as RpcError);
+  }
   const fields = "id,requester_id,department_id,start_date,end_date,start_period,end_period,leave_type,reason,status,reviewed_by,reviewed_at,review_note,created_at,requester:staff_users!leave_requests_requester_id_fkey(full_name),reviewer:staff_users!leave_requests_reviewed_by_fkey(full_name)";
   let mineQuery = serverSupabase.from("leave_requests").select(fields).eq("requester_id", guard.actor.id).order("created_at", { ascending: false }).limit(1000);
   if (mineScope.from && mineScope.to) mineQuery = mineQuery.lte("start_date", mineScope.to).gte("end_date", mineScope.from);
