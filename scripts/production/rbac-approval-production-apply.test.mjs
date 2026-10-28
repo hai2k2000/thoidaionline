@@ -39,3 +39,22 @@ test("production apply pins the exact P1 md5 values and uses the supabase_admin 
   assert.match(script, /psql -q -h 127\.0\.0\.1 -U supabase_admin/);
   assert.doesNotMatch(script, /-U postgres\b/);
 });
+
+test("every SQL string in the production apply script has balanced parentheses", () => {
+  // Regression: the role-grants post-check shipped with an extra ')' and failed on production (2026-10-28).
+  const script = readFileSync(new URL("./rbac-approval-production-apply.sh", import.meta.url), "utf8");
+  const sqlStrings = [
+    ...script.matchAll(/(?:scalar|ro_sql) "((?:[^"\\]|\\.)*)"/g),
+    ...script.matchAll(/(?:approval_codes|seeded_grant|approval_grants)="((?:[^"\\]|\\.)*)"/g),
+  ].map((match) => match[1]);
+  assert.ok(sqlStrings.length >= 10, `expected to find the SQL strings, found ${sqlStrings.length}`);
+  for (const sql of sqlStrings) {
+    let depth = 0;
+    for (const char of sql.replace(/'[^']*'/g, "''")) {
+      if (char === "(") depth += 1;
+      if (char === ")") depth -= 1;
+      assert.ok(depth >= 0, `unbalanced ')' in: ${sql.slice(0, 120)}`);
+    }
+    assert.equal(depth, 0, `unbalanced '(' in: ${sql.slice(0, 120)}`);
+  }
+});
