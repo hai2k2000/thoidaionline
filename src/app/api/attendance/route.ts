@@ -1,6 +1,5 @@
 import { apiError, apiJson, asUuid, readJsonObject, requireMutationActor, requireReadActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { isForeignReporter } from "@/lib/onlineWorkLanguage.mjs";
 import { calculateAttendance } from "@/lib/attendanceWorkday";
 import { clampAttendanceEndDate, filterBusinessAttendanceRows, isAttendanceBusinessDate, recentAttendanceRange } from "@/lib/attendanceRecentRange.mjs";
 import { isAttendanceListedStaff, roleCodeFromRelation } from "@/lib/attendanceVisibility.mjs";
@@ -256,17 +255,6 @@ export async function GET(request: Request) {
   const staffRows = organizationScope
     ? (staffResult.data ?? []).filter((staff) => isAttendanceListedStaff({ full_name: staff.full_name, role_code: "roles" in staff ? roleCodeFromRelation(staff.roles) : null }))
     : (staffResult.data ?? []);
-  const foreignStaff = staffRows.filter((staff) => isForeignReporter(staff.username));
-  const foreignById = new Map(foreignStaff.filter((staff) => isForeignReporter(staff.username)).map((staff) => [staff.id, staff]));
-  // A blank weekend schedule means the whole foreign-language team works online by default.
-  for (const staff of foreignById.values()) {
-    for (const cursor = new Date(`${contextStart}T12:00:00Z`); cursor <= new Date(`${contextEnd}T12:00:00Z`); cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-      const workDate = cursor.toISOString().slice(0, 10);
-      if (isAttendanceBusinessDate(workDate) && !online.some((row) => row.work_date === workDate && row.staff?.id === staff.id)) {
-        online.push({ id: `default-online-${staff.id}-${workDate}`, work_date: workDate, staff_id: staff.id, staff: { id: staff.id, full_name: staff.full_name } });
-      }
-    }
-  }
   const leavePeriodsForDate = (leave: typeof leaves[number], workDate: string) => {
     if (leave.start_date === leave.end_date) return [leave.start_period, leave.end_period];
     if (workDate === leave.start_date) return [leave.start_period, leave.start_period];
