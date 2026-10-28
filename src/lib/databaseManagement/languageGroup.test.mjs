@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { filterLanguageRecordTypes, getLanguageOption, isCompatibleLanguageSelection, resolveLanguageCategory } from "./languageGroup.mjs";
+import { filterLanguageRecordTypes, getLanguageOption, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories } from "./languageGroup.mjs";
 
 const categories = [
   { id: "root", code: "phong_noi_dung", parent_id: null, name: "Phòng Nội dung" },
@@ -8,6 +8,11 @@ const categories = [
   { id: "en", code: "noi_dung_tieng_anh", parent_id: "root", name: "Tổ Tiếng Anh" },
   { id: "other", code: "tong_hop", parent_id: null, name: "Phòng Tổng hợp" },
 ];
+
+test("selectable categories hide only the legacy foreign category", () => {
+  const input = [...categories, { id: "legacy", code: "ngoai_ngu", parent_id: null, name: "legacy" }];
+  assert.deepEqual(selectableCategories(input), categories);
+});
 
 test("language options expose stable codes and Vietnamese labels", () => {
   assert.deepEqual(getLanguageOption("vi"), { value: "vi", label: "Tiếng Việt" });

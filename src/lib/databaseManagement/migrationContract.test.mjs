@@ -8,6 +8,14 @@ const catalog = readFileSync(fileURLToPath(new URL("../../../supabase/migrations
 const languageGroup = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020130000_database_management_v1_language_groups.sql", import.meta.url)), "utf8");
 const autocode = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261020100000_database_management_v1_autocode.sql", import.meta.url)), "utf8");
 const filterApproval = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261021100000_database_management_v1_filter_approval.sql", import.meta.url)), "utf8");
+const listFilters = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027140000_database_management_v1_list_filters.sql", import.meta.url)), "utf8");
+const dropSourcePerson = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql", import.meta.url)), "utf8");
+
+test("source_person retirement removes obsolete fields and strips orphaned metadata", () => {
+  assert.match(dropSourcePerson, /^begin;[\s\S]*delete from public\.db_form_fields\s+where field_key = 'source_person';[\s\S]*commit;\s*$/i);
+  assert.match(dropSourcePerson, /update public\.db_records\s+set metadata = metadata - 'source_person'\s+where metadata \? 'source_person'/i);
+  assert.doesNotMatch(dropSourcePerson, /owner_id|permission|rpc/i);
+});
 
 test("foundation migration is additive, indexed, server-only and ACL-capable", () => {
   for (const table of ["db_categories", "db_record_types", "db_form_definitions", "db_form_fields", "db_records", "db_record_files", "db_record_external_links", "db_record_acl", "db_record_history", "db_saved_search_filters"]) assert.match(migration, new RegExp(`create table if not exists public\\.${table}`));
@@ -76,4 +84,21 @@ test("filter and approval migration is additive and fail-closed", () => {
   assert.match(filterApproval, /Return reason is required/);
   assert.match(filterApproval, /for update/);
   assert.doesNotMatch(filterApproval, /drop table|delete from public\.db_records/i);
+});
+
+test("list filters replace the old RPC signature without weakening visibility", () => {
+  assert.match(listFilters, /drop function if exists public\.api_search_database_records\(uuid, text, text, uuid, uuid, integer, integer\)/i);
+  assert.match(listFilters, /p_created_from date default null[\s\S]*p_has_files boolean default null[\s\S]*p_keyword text default null/i);
+  assert.match(listFilters, /p_sort in \('updated_at','created_at','record_code','title','status'\)/);
+  assert.match(listFilters, /lower\(p_sort_dir\) in \('asc','desc'\)/);
+  assert.doesNotMatch(listFilters, /execute\s+format|execute\s+[^;]*p_sort/i);
+  for (const invariant of [
+    "r.status <> 'deleted'",
+    "c.explicitly_allowed or ps.can_all or (ps.can_department and c.same_department) or (ps.can_assigned and c.is_owner) or (ps.can_self and c.is_owner)",
+    "and not c.explicitly_denied",
+  ]) assert.ok(filterApproval.includes(invariant) && listFilters.includes(invariant), invariant);
+  assert.match(listFilters, /revoke all on function public\.api_search_database_records[\s\S]*from public, anon, authenticated/i);
+  assert.match(listFilters, /grant execute on function public\.api_search_database_records[\s\S]*to service_role/i);
+  assert.match(listFilters, /security definer set search_path = public, pg_temp/i);
+  assert.match(listFilters, /owner to postgres/i);
 });

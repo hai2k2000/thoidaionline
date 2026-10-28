@@ -85,8 +85,14 @@ test("release metadata uses the complete ordered migration reference", () => {
   assert.ok(migrations.includes("supabase/migrations/20261027090000_anon_access_lockdown.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261027120000_h03_corrective_partial_objects.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261027120100_h03_batch_idempotency_lockdown.sql"));
+  assert.ok(migrations.includes("supabase/migrations/20261027140000_database_management_v1_list_filters.sql"));
+  assert.ok(migrations.includes("supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql"));
   assert.equal(migrations.at(-1), "supabase/migrations/20261027090100_storage_anon_lockdown.sql");
   assert.ok(migrations.includes("supabase/migrations/20261028100000_rbac_approval_permissions_v1.sql"));
   assert.match(packager, /"migration_reference=" \+ migrationReference\.join\(\",\"\)/);
   assert.doesNotMatch(packager, /20261016110000_asset_locations_expansion\.sql",\s*\n\s*"migration_reference=/);
+});
+
+test("artifact migration reference includes database list filters", () => {
+  for (const path of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.match(readFileSync(path, "utf8"), /20261027140000_database_management_v1_list_filters\.sql/);
 });

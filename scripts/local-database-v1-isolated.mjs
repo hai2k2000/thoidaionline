@@ -60,6 +60,7 @@ const v1Migrations = new Set([
   "20261020110000_database_management_v1_idempotency.sql",
   "20261023130000_database_management_v1_workflow_ambiguity_fix.sql",
   "20261024110000_database_management_v1_self_approval.sql",
+  "20261027160000_database_management_v1_drop_source_person.sql",
 ]);
 const selectedMigrations = new Set([...currentAppMigrations, ...v1Migrations]);
 const compatibilityName = "20260826195000_local_bootstrap_task_actor_compatibility.sql";

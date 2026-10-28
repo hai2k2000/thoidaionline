@@ -1,6 +1,15 @@
 export const CONTENT_ROOT_CODE = "phong_noi_dung";
 export const LEGACY_FOREIGN_CATEGORY_CODE = "ngoai_ngu";
 
+/**
+ * @template {{ code: string }} T
+ * @param {T[]} categories
+ * @returns {T[]}
+ */
+export function selectableCategories(categories) {
+  return categories.filter((category) => category.code !== LEGACY_FOREIGN_CATEGORY_CODE);
+}
+
 export const LANGUAGE_OPTIONS = Object.freeze([
   { value: "vi", label: "Tiếng Việt", categoryCode: "noi_dung_tieng_viet", typeCategoryCode: "noi_dung_tieng_viet" },
   { value: "en", label: "Tiếng Anh", categoryCode: "noi_dung_tieng_anh", typeCategoryCode: LEGACY_FOREIGN_CATEGORY_CODE },
