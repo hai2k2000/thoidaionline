@@ -42,7 +42,7 @@ export async function GET() {
     serverSupabase.from("roles").select("id,code,name,level,active").order("level", { ascending: false }).order("name"),
     serverSupabase.from("permissions").select("id,code,name,module,description").order("module").order("code"),
     serverSupabase.from("role_permission_grants").select("role_id,permission_id,scope").order("role_id").order("permission_id").order("scope"),
-    serverSupabase.from("staff_users").select("id,username,full_name,active,role_id,roles(code,name,active),departments!staff_users_department_id_fkey(name)").order("full_name"),
+    serverSupabase.from("staff_users").select("id,username,full_name,active,role_id,roles(code,name,active),departments!staff_users_department_id_fkey(id,name),job_titles!staff_users_job_title_id_fkey(name)").order("full_name"),
     serverSupabase.from("user_permission_grants").select("user_id,permission_id,effect,scope").order("user_id").order("permission_id"),
   ]);
   const error = rolesResult.error ?? permissionsResult.error ?? grantsResult.error ?? usersResult.error ?? userGrantsResult.error;
@@ -54,14 +54,26 @@ export async function GET() {
     roles: (rolesResult.data ?? []) as PermissionMatrixRoleRow[],
     permissions,
     roleGrants,
-    users: ((usersResult.data ?? []) as unknown as Array<PermissionMatrixUserRow & { departments?: { name: string }[] | null }>).map((entry) => ({ ...entry, department_name: entry.departments?.[0]?.name ?? null })),
+    users: ((usersResult.data ?? []) as unknown as Array<PermissionMatrixUserRow & { departments?: { id?: string; name: string } | { id?: string; name: string }[] | null; job_titles?: { name: string } | { name: string }[] | null }>).map((entry) => {
+      const department = Array.isArray(entry.departments) ? entry.departments[0] : entry.departments;
+      const jobTitle = Array.isArray(entry.job_titles) ? entry.job_titles[0] : entry.job_titles;
+      return { ...entry, department_id: department?.id ?? null, department_name: department?.name ?? null, job_title: jobTitle?.name ?? null };
+    }),
     userGrants,
   });
   return apiJson({
     ...payload,
     roleCatalog: payload.roles,
     effectiveCatalog: await loadEffectivePermissionCatalog(guard.actor),
-    users: payload.users,
+    users: payload.users.map((user) => ({
+      ...user,
+      username: user.username,
+      department_id: (user as PermissionMatrixUserRow & { department_id?: string | null }).department_id ?? null,
+      department_name: user.department_name ?? null,
+      job_title: (user as PermissionMatrixUserRow & { job_title?: string | null }).job_title ?? null,
+      role_code: (Array.isArray(user.roles) ? user.roles[0] : user.roles)?.code ?? null,
+      override_count: Object.keys(user.overrides).length,
+    })),
     assetUsers: buildPermissionUsers((usersResult.data ?? []) as PermissionMatrixUserRow[], permissions, roleGrants, userGrants, "asset.manage"),
     quickReportUsers: buildQuickReportUserPermissions((usersResult.data ?? []) as PermissionMatrixUserRow[], permissions, roleGrants, userGrants),
   });
