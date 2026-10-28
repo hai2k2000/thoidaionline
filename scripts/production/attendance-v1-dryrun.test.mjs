@@ -33,7 +33,7 @@ test("attendance dry-run records revert order and md5 restoration", () => {
 });
 
 test("expected_pass equals SQL PASS emitters", () => {
-  const expected = [...behaviour.matchAll(/raise notice\s+'ATT_TEST_PASS\b/gi)].length;
+  const expected = new Set([...behaviour.matchAll(/raise notice\s+'ATT_TEST_PASS ([a-z0-9_]+)/gi)].map((m) => m[1])).size;
   const match = script.match(/expected_pass=(\d+)/);
   assert.ok(match, "expected_pass constant is required");
   assert.equal(Number(match[1]), expected);
