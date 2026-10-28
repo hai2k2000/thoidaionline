@@ -38,7 +38,7 @@ select current_date + v.day_offset, current_date + v.day_offset, v.plan_type, '0
        'zz_e2e_' || v.owner || '_' || v.plan_type, array[u.id], u.id, 'personal', 'PENDING_APPROVAL', 1
 from (values
   ('rep_a1','business',20), ('rep_a1','event',21), ('rep_a1','work',22), ('rep_a2','business',25),
-  ('rep_b1','business',23), ('rep_b1','event',24)
+  ('rep_b1','business',23), ('rep_b1','event',24), ('staff_a','business',26)
 ) v(owner,plan_type,day_offset)
 join public.staff_users u on u.username='zz_e2e_' || v.owner;
 
