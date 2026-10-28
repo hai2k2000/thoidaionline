@@ -39,7 +39,7 @@ test("review contracts retain locking, self approval, revision and legacy rules"
   assert.match(migration, /for update/i); assert.match(migration, /created_by\s*=\s*p_actor|v_old\.created_by\s*=\s*p_actor|p_actor\s*=\s*v_old\.requester_id/i);
   assert.match(migration, /workflow_revision <> p_expected_revision/i); assert.match(migration, />= 3/); assert.match(migration, /tong_bien_tap/);
   assert.match(migration, /plan_type = 'work'|plan_type='work'/i); assert.match(migration, /legacy_work/); assert.match(migration, /approval_basis/);
-  const workBranch = migration.slice(migration.indexOf("else\n    select lower(r.code) into v_role"));
+  const workBranch = migration.slice(migration.indexOf("select lower(r.code) into v_role"));
   assert.match(workBranch, /select[\s\S]*from public\.staff_users u[\s\S]*where u\.id=p_actor and u\.active=true[\s\S]*if not found then[\s\S]*raise exception 'forbidden'/i);
   assert.match(workBranch, /coalesce\(v_role,''\)\s+not in/i);
   assert.match(workBranch, /join public\.departments d on d\.id=u\.department_id and d\.active and d\.manager_id=u\.id[\s\S]*where u\.id=p_actor and u\.active=true/i);

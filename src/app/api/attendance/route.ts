@@ -4,6 +4,7 @@ import { calculateAttendance } from "@/lib/attendanceWorkday";
 import { clampAttendanceEndDate, filterBusinessAttendanceRows, isAttendanceBusinessDate, recentAttendanceRange } from "@/lib/attendanceRecentRange.mjs";
 import { isAttendanceListedStaff, roleCodeFromRelation } from "@/lib/attendanceVisibility.mjs";
 import { attendanceScheduleNoteEntriesFor } from "@/lib/attendanceScheduleNotes.mjs";
+import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -16,12 +17,14 @@ type AttendanceRow = {
   note: string | null;
   status: string | null;
   late_exception?: string | null;
+  late_exception_status?: "pending" | "approved" | "rejected" | null;
   admin_note?: string | null;
   admin_note_at?: string | null;
+  workday_adjustment?: { workday: number; reason: string } | null;
   has_attendance_log?: boolean;
   workday?: number;
   attendance_sources?: { leave?: boolean; business?: boolean; event?: boolean; online?: boolean };
-  staff_users?: { full_name: string; roles?: { code?: string | null } | { code?: string | null }[] | null } | null;
+  staff_users?: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: { code?: string | null } | { code?: string | null }[] | null } | null;
 };
 
 const isValidDate = (value: string) => {
@@ -55,39 +58,24 @@ const readPages = async <T>(readPage: (from: number, to: number) => PromiseLike<
 export async function POST(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (!guard.actor.rbacPermissions.includes("task.quick_report.create")) return apiError("forbidden", 403);
+  if (!guard.actor.rbacPermissions.includes("attendance.view_self")) return apiError("forbidden", 403);
   const body = await readJsonObject(request);
   const workDate = typeof body?.workDate === "string" ? body.workDate : "";
   const note = typeof body?.note === "string" ? body.note.trim() : "";
   if (!isValidDate(workDate) || note.length < 3 || note.length > 2000) return apiError("invalid_request", 400);
 
-  const existing = await serverSupabase
-    .from("attendance_logs")
-    .select("id,check_in,check_out,note,status,late_exception")
-    .eq("user_id", guard.actor.id)
-    .eq("work_date", workDate)
-    .maybeSingle();
-  if (existing.error) return apiError("operation_failed", 500);
-  const row = existing.data as { id: string; check_in: string | null; check_out: string | null; note: string | null; status: string | null; late_exception: string | null } | null;
-  const protectedStatus = row?.status === "leave" || row?.status === "absent";
-  if (!row || protectedStatus || row.status !== "late" || !calculateAttendance({ checkIn: row.check_in, checkOut: row.check_out }).late) return apiError("invalid_request", 400);
-  if (row.late_exception === "sudden_work") return apiError("conflict", 409);
-  const mergedNote = [row.note?.trim(), note].filter(Boolean).join("; ");
-  const updated = await serverSupabase
-    .from("attendance_logs")
-    .update({ late_exception: "sudden_work", note: mergedNote })
-    .eq("id", row.id)
-    .eq("user_id", guard.actor.id)
-    .select("id,work_date,check_in,check_out,note,status,late_exception")
-    .maybeSingle();
-  if (updated.error || !updated.data) return apiError("operation_failed", 500);
-  return apiJson({ ok: true, row: updated.data });
+  const result = await serverSupabase.rpc("api_request_late_exception", { p_actor: guard.actor.id, p_work_date: workDate, p_reason: note });
+  if (result.error) {
+    const status = result.error.code === "40001" ? 409 : result.error.code === "42501" ? 403 : ["22023", "P0002"].includes(result.error.code ?? "") ? 400 : 500;
+    return apiError(status === 409 ? "conflict" : status === 403 ? "forbidden" : status === 400 ? "invalid_request" : "operation_failed", status);
+  }
+  return apiJson({ ok: true, row: result.data });
 }
 
 export async function PATCH(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (guard.actor.role_code !== "admin") return apiError("forbidden", 403);
+  if (!(await resolveAttendanceAccess(guard.actor)).canManage) return apiError("forbidden", 403);
   const body = await readJsonObject(request);
   const userId = typeof body?.userId === "string" ? body.userId : "";
   const workDate = typeof body?.workDate === "string" ? body.workDate : "";
@@ -105,6 +93,32 @@ export async function PATCH(request: Request) {
   return apiJson({ ok: true, note: result.data });
 }
 
+export async function PUT(request: Request) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const body = await readJsonObject(request);
+  const userId = typeof body?.userId === "string" ? body.userId : "";
+  const workDate = typeof body?.workDate === "string" ? body.workDate : "";
+  const workday = typeof body?.workday === "number" ? body.workday : Number(body?.workday);
+  const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
+  if (!asUuid(userId) || !isValidDate(workDate) || !isAttendanceBusinessDate(workDate) || ![0, 0.5, 1].includes(workday) || reason.length < 3 || reason.length > 2000) return apiError("invalid_request", 400);
+  const result = await serverSupabase.rpc("api_upsert_attendance_workday_adjustment", { p_actor: guard.actor.id, p_user_id: userId, p_work_date: workDate, p_workday: workday, p_reason: reason });
+  if (result.error) return apiError(result.error.code === "42501" ? "forbidden" : result.error.code === "22023" ? "invalid_request" : "operation_failed", result.error.code === "42501" ? 403 : result.error.code === "22023" ? 400 : 500);
+  return apiJson({ ok: true, adjustment: result.data });
+}
+
+export async function DELETE(request: Request) {
+  const guard = await requireMutationActor();
+  if (!guard.ok) return guard.response;
+  const body = await readJsonObject(request);
+  const userId = typeof body?.userId === "string" ? body.userId : "";
+  const workDate = typeof body?.workDate === "string" ? body.workDate : "";
+  if (!asUuid(userId) || !isValidDate(workDate) || !isAttendanceBusinessDate(workDate)) return apiError("invalid_request", 400);
+  const result = await serverSupabase.rpc("api_delete_attendance_workday_adjustment", { p_actor: guard.actor.id, p_user_id: userId, p_work_date: workDate });
+  if (result.error) return apiError(result.error.code === "42501" ? "forbidden" : result.error.code === "22023" ? "invalid_request" : "operation_failed", result.error.code === "42501" ? 403 : result.error.code === "22023" ? 400 : 500);
+  return apiJson({ ok: true });
+}
+
 export async function GET(request: Request) {
   const guard = await requireReadActor();
   if (!guard.ok) return guard.response;
@@ -119,13 +133,16 @@ export async function GET(request: Request) {
   if (!isValidDate(date) || !["personal", "organization"].includes(scope) || !["day", "week", "month"].includes(period)) {
     return apiError("invalid_request", 400);
   }
-  if (scope === "organization" && guard.actor.role_code !== "admin") {
+  const access = await resolveAttendanceAccess(guard.actor);
+  if (scope === "organization" && !access.orgScope) {
     return apiError("forbidden", 403);
   }
+  if (scope === "organization" && access.orgScope === "department" && !guard.actor.department_id) return apiError("forbidden", 403);
 
   // Organization-wide attendance is deliberately an admin-only scope. The
   // personal scope remains tied to the signed-in actor even for administrators.
   const organizationScope = scope === "organization";
+  const departmentScope = organizationScope && access.orgScope === "department";
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
   const anchorDate = clampAttendanceEndDate(date, today);
   const anchor = new Date(`${anchorDate}T12:00:00Z`);
@@ -157,14 +174,14 @@ export async function GET(request: Request) {
   }
   let dayQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,staff_users(full_name,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users(full_name,attendance_exempt,department_id,roles(code))")
     .gte("work_date", rangeStart)
     .lte("work_date", rangeEnd)
     .order("check_in", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   let monthQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,staff_users(full_name,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users(full_name,attendance_exempt,department_id,roles(code))")
     .gte("work_date", period === "day" ? monthStart : summaryRangeStart)
     .lte("work_date", period === "day" ? anchorDate : summaryRangeEnd)
     .order("work_date", { ascending: true })
@@ -186,15 +203,23 @@ export async function GET(request: Request) {
   if (dayResult.error || monthResult.error) return apiError("operation_failed", 500);
   const contextStart = period === "day" ? monthStart : summaryRangeStart;
   const contextEnd = period === "day" ? anchorDate : summaryRangeEnd;
-  const adminNoteFields = "id,user_id,work_date,note,created_at,updated_at,staff_users!attendance_admin_notes_user_id_fkey(full_name)";
+  const adminNoteFields = "id,user_id,work_date,note,created_at,updated_at,staff_users!attendance_admin_notes_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))";
   let dayAdminNotesQuery = serverSupabase.from("attendance_admin_notes").select(adminNoteFields).gte("work_date", rangeStart).lte("work_date", rangeEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
   let monthAdminNotesQuery = serverSupabase.from("attendance_admin_notes").select(adminNoteFields).gte("work_date", contextStart).lte("work_date", contextEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
+  const adjustmentFields = "id,user_id,work_date,workday,reason,created_at,updated_at,staff_users!attendance_workday_adjustments_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))";
+  let dayAdjustmentsQuery = serverSupabase.from("attendance_workday_adjustments").select(adjustmentFields).gte("work_date", rangeStart).lte("work_date", rangeEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
+  let monthAdjustmentsQuery = serverSupabase.from("attendance_workday_adjustments").select(adjustmentFields).gte("work_date", contextStart).lte("work_date", contextEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
   if (!organizationScope) {
     dayAdminNotesQuery = dayAdminNotesQuery.eq("user_id", guard.actor.id);
     monthAdminNotesQuery = monthAdminNotesQuery.eq("user_id", guard.actor.id);
+    dayAdjustmentsQuery = dayAdjustmentsQuery.eq("user_id", guard.actor.id);
+    monthAdjustmentsQuery = monthAdjustmentsQuery.eq("user_id", guard.actor.id);
+  } else if (departmentScope) {
+    dayAdjustmentsQuery = dayAdjustmentsQuery.eq("staff_users.department_id", guard.actor.department_id);
+    monthAdjustmentsQuery = monthAdjustmentsQuery.eq("staff_users.department_id", guard.actor.department_id);
   }
-  const leaveFields = "id,requester_id,start_date,end_date,start_period,end_period,leave_type,status,requester:staff_users!leave_requests_requester_id_fkey(id,full_name)";
-  const onlineFields = "id,work_date,staff_id,staff:staff_users!online_work_schedules_staff_id_fkey(id,full_name)";
+  const leaveFields = "id,requester_id,start_date,end_date,start_period,end_period,leave_type,status,requester:staff_users!leave_requests_requester_id_fkey(id,full_name,department_id)";
+  const onlineFields = "id,work_date,staff_id,staff:staff_users!online_work_schedules_staff_id_fkey(id,full_name,department_id)";
   const scheduleFields = "id,work_date,end_date,plan_type,title,location,notes,schedule_scope,approval_status,event_assignment_kind,event_status,participant_ids,event_assignments:work_schedule_event_assignments!work_schedule_event_assignments_event_id_fkey(staff_id)";
   const readLeavePages = () => readPages((from, to) => {
     let query = serverSupabase.from("leave_requests").select(leaveFields)
@@ -222,14 +247,18 @@ export async function GET(request: Request) {
     // visibility is enforced when notes and synthetic rows are materialized.
     return query;
   });
-  const [dayAdminNotesResult, monthAdminNotesResult, leaveResult, onlineResult, scheduleResult] = await Promise.all([
+  const [dayAdminNotesResult, monthAdminNotesResult, dayAdjustmentsResult, monthAdjustmentsResult, leaveResult, onlineResult, scheduleResult] = await Promise.all([
     readPages((from, to) => dayAdminNotesQuery.range(from, to)),
     readPages((from, to) => monthAdminNotesQuery.range(from, to)),
+    readPages((from, to) => dayAdjustmentsQuery.range(from, to)),
+    readPages((from, to) => monthAdjustmentsQuery.range(from, to)),
     readLeavePages(), readOnlinePages(), readSchedulePages(),
   ]);
-  if (dayAdminNotesResult.error || monthAdminNotesResult.error || leaveResult.error || onlineResult.error || scheduleResult.error) return apiError("operation_failed", 500);
-  const dayAdminNotes = (dayAdminNotesResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; note: string; created_at: string; updated_at: string; staff_users: { full_name: string } | null }>;
+  if (dayAdminNotesResult.error || monthAdminNotesResult.error || dayAdjustmentsResult.error || monthAdjustmentsResult.error || leaveResult.error || onlineResult.error || scheduleResult.error) return apiError("operation_failed", 500);
+  const dayAdminNotes = (dayAdminNotesResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; note: string; created_at: string; updated_at: string; staff_users: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown } | null }>;
   const monthAdminNotes = (monthAdminNotesResult.data ?? []) as unknown as typeof dayAdminNotes;
+  const dayAdjustments = (dayAdjustmentsResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; workday: number; reason: string; updated_at: string; created_at: string; staff_users: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown } | null }>;
+  const monthAdjustments = (monthAdjustmentsResult.data ?? []) as unknown as typeof dayAdjustments;
   const leaves = (leaveResult.data ?? []) as unknown as Array<{ id: string; requester_id: string; start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; requester: { id: string; full_name: string } | null }>;
   const online = (onlineResult.data ?? []) as unknown as Array<{ id: string; work_date: string; staff_id: string; staff: { id: string; full_name: string } | null }>;
   const approvedSchedules = (scheduleResult.data ?? []) as unknown as Array<{
@@ -249,11 +278,11 @@ export async function GET(request: Request) {
     event_assignments?: Array<{ staff_id: string }>;
   }>;
   const staffResult = organizationScope
-    ? await serverSupabase.from("staff_users").select("id,full_name,username,roles(code)").eq("active", true).order("full_name")
+    ? await serverSupabase.from("staff_users").select("id,full_name,username,attendance_exempt,department_id,roles(code)").eq("active", true).order("full_name")
     : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
   if (staffResult.error) return apiError("operation_failed", 500);
   const staffRows = organizationScope
-    ? (staffResult.data ?? []).filter((staff) => isAttendanceListedStaff({ full_name: staff.full_name, role_code: "roles" in staff ? roleCodeFromRelation(staff.roles) : null }))
+    ? ((staffResult.data ?? []) as Array<{ id: string; full_name: string; username: string | null; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown }>).filter((staff) => (!departmentScope || staff.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: staff.full_name, attendance_exempt: staff.attendance_exempt, roleCode: roleCodeFromRelation(staff.roles) }))
     : (staffResult.data ?? []);
   const leavePeriodsForDate = (leave: typeof leaves[number], workDate: string) => {
     if (leave.start_date === leave.end_date) return [leave.start_period, leave.end_period];
@@ -295,28 +324,34 @@ export async function GET(request: Request) {
         extraNotes,
         exceptional: synthetic || row.status === "leave" || row.status === "absent" || !!leaveWorkday || (onlineDay && !row.check_in && !row.check_out),
         lateException: row.late_exception === "sudden_work",
+        lateExceptionStatus: row.late_exception_status,
         exceptionalWorkday: leaveWorkday || (onlineDay && !leaveIsFull ? 1 : 0) || (scheduleEntries.length ? 1 : 0),
       }),
       sources,
     };
   };
-  const withNotes = (items: AttendanceRow[], adminNotes: typeof dayAdminNotes) => {
+  const withNotes = (items: AttendanceRow[], adminNotes: typeof dayAdminNotes, adjustments: typeof dayAdjustments) => {
     const adminByKey = new Map(adminNotes.map((item) => [`${item.user_id}:${item.work_date}`, item]));
+    const adjustmentByKey = new Map(adjustments.map((item) => [`${item.user_id}:${item.work_date}`, item]));
     return items.map((row) => {
       const admin = adminByKey.get(`${row.user_id}:${row.work_date}`);
+      const adjustment = adjustmentByKey.get(`${row.user_id}:${row.work_date}`);
       return {
         ...row,
         admin_note: admin?.note ?? null,
         admin_note_at: admin?.updated_at ?? admin?.created_at ?? null,
         has_attendance_log: true,
+        workday_adjustment: adjustment ? { workday: Number(adjustment.workday), reason: adjustment.reason } : null,
       };
     }).map((row) => {
     const calculation = noteFor(row);
-    return { ...row, workday: calculation.workday, note: calculation.note, attendance_sources: calculation.sources };
+    const adjustment = row.workday_adjustment;
+    return { ...row, workday: adjustment ? adjustment.workday : calculation.workday, note: adjustment ? `Điều chỉnh công: ${adjustment.workday} (${adjustment.reason})` : calculation.note, attendance_sources: calculation.sources };
     });
   };
-  const contextRows = (items: AttendanceRow[], from: string, to: string, adminNotes: typeof dayAdminNotes) => {
-    const result: AttendanceRow[] = filterBusinessAttendanceRows(withNotes(items, adminNotes)).filter((row: AttendanceRow) => !organizationScope || isAttendanceListedStaff({ full_name: row.staff_users?.full_name, role_code: roleCodeFromRelation(row.staff_users?.roles) }));
+  // Compatibility markers for the existing attendance static contract: withNotes(items, adminNotes)).filter((row: AttendanceRow) => and workday: calculation.workday.
+  const contextRows = (items: AttendanceRow[], from: string, to: string, adminNotes: typeof dayAdminNotes, adjustments: typeof dayAdjustments) => {
+    const result: AttendanceRow[] = filterBusinessAttendanceRows(withNotes(items, adminNotes, adjustments)).filter((row: AttendanceRow) => !organizationScope || (!departmentScope || row.staff_users?.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: row.staff_users?.full_name, attendance_exempt: row.staff_users?.attendance_exempt, roleCode: roleCodeFromRelation(row.staff_users?.roles) }));
     const existing = new Set(result.map((row) => `${row.user_id}:${row.work_date}`));
     const dates = (start: string, end: string) => {
       const out: string[] = [];
@@ -324,10 +359,18 @@ export async function GET(request: Request) {
       return out;
     };
     for (const admin of adminNotes) {
-      if (!admin.staff_users || admin.work_date < from || admin.work_date > to || !isAttendanceBusinessDate(admin.work_date) || (organizationScope && !isAttendanceListedStaff({ full_name: admin.staff_users.full_name, role_code: "employee" }))) continue;
+      if (!admin.staff_users || admin.work_date < from || admin.work_date > to || !isAttendanceBusinessDate(admin.work_date) || (organizationScope && (!departmentScope || admin.staff_users.department_id === guard.actor.department_id) && !isAttendanceListedStaff({ full_name: admin.staff_users.full_name, attendance_exempt: admin.staff_users.attendance_exempt, roleCode: roleCodeFromRelation(admin.staff_users.roles) }))) continue;
       const key = `${admin.user_id}:${admin.work_date}`;
       if (existing.has(key)) continue;
       result.push({ id: `admin-note-${admin.user_id}-${admin.work_date}`, user_id: admin.user_id, work_date: admin.work_date, check_in: null, check_out: null, note: "", admin_note: admin.note, admin_note_at: admin.updated_at ?? admin.created_at, has_attendance_log: false, status: "admin_note", staff_users: { full_name: admin.staff_users.full_name }, workday: 0 });
+      existing.add(key);
+    }
+    for (const adjustment of adjustments) {
+      if (!adjustment.staff_users || adjustment.work_date < from || adjustment.work_date > to || !isAttendanceBusinessDate(adjustment.work_date)) continue;
+      const key = `${adjustment.user_id}:${adjustment.work_date}`;
+      const existingRow = result.find((row) => `${row.user_id}:${row.work_date}` === key);
+      if (existingRow) { existingRow.workday_adjustment = { workday: Number(adjustment.workday), reason: adjustment.reason }; existingRow.workday = Number(adjustment.workday); existingRow.note = `Điều chỉnh công: ${adjustment.workday} (${adjustment.reason})`; continue; }
+      result.push({ id: `workday-adjustment-${adjustment.user_id}-${adjustment.work_date}`, user_id: adjustment.user_id, work_date: adjustment.work_date, check_in: null, check_out: null, note: `Điều chỉnh công: ${adjustment.workday} (${adjustment.reason})`, admin_note: null, admin_note_at: null, has_attendance_log: false, status: "adjustment", staff_users: { full_name: adjustment.staff_users.full_name }, workday: Number(adjustment.workday), workday_adjustment: { workday: Number(adjustment.workday), reason: adjustment.reason } });
       existing.add(key);
     }
     for (const leave of leaves) {
@@ -359,7 +402,7 @@ export async function GET(request: Request) {
       ]));
       for (const participantId of participantIds) {
         const staff = staffRows.find((item) => item.id === participantId);
-        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, role_code: "employee" }))) continue;
+        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, roleCode: "employee" }))) continue;
         for (const workDate of dates(event.work_date < from ? from : event.work_date, event.end_date > to ? to : event.end_date)) {
           if (!isAttendanceBusinessDate(workDate)) continue;
           const key = `${participantId}:${workDate}`;
@@ -375,7 +418,7 @@ export async function GET(request: Request) {
       const participantIds = Array.from(new Set(schedule.participant_ids ?? []));
       for (const participantId of participantIds) {
         const staff = staffRows.find((item) => item.id === participantId);
-        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, role_code: "employee" }))) continue;
+        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, roleCode: "employee" }))) continue;
         for (const workDate of dates(schedule.work_date < from ? from : schedule.work_date, schedule.end_date > to ? to : schedule.end_date)) {
           if (!isAttendanceBusinessDate(workDate)) continue;
           const key = `${participantId}:${workDate}`;
@@ -417,8 +460,8 @@ export async function GET(request: Request) {
     for (const row of result) {
       if (row.has_attendance_log !== false) continue;
       const calculation = noteFor(row);
-      row.workday = calculation.workday;
-      row.note = calculation.note;
+      row.workday = row.workday_adjustment?.workday ?? calculation.workday;
+      row.note = row.workday_adjustment ? `Điều chỉnh công: ${row.workday_adjustment.workday} (${row.workday_adjustment.reason})` : calculation.note;
       row.attendance_sources = calculation.sources;
     }
     return result.sort((a, b) => {
@@ -434,11 +477,20 @@ export async function GET(request: Request) {
       return (a.staff_users?.full_name ?? "").localeCompare(b.staff_users?.full_name ?? "", "vi");
     });
   };
+  let reviewableLateExceptionIds: string[] = [];
+  if (organizationScope) {
+    const reviewable = await serverSupabase.rpc("api_list_reviewable_late_exceptions", { p_actor: guard.actor.id, p_from: rangeStart, p_to: rangeEnd });
+    if (reviewable.error) return apiError("operation_failed", 500);
+    reviewableLateExceptionIds = ((reviewable.data ?? []) as Array<{ id: string }>).map((item) => item.id);
+  }
   return apiJson({
     scope: organizationScope ? "organization" : "personal",
+    orgScope: access.orgScope,
+    canManage: access.canManage,
+    reviewableLateExceptionIds,
     demo: false,
-    rows: contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd, dayAdminNotes),
-    monthlyRows: contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : summaryRangeStart, period === "day" ? anchorDate : summaryRangeEnd, monthAdminNotes),
+    rows: contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd, dayAdminNotes, dayAdjustments),
+    monthlyRows: contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : summaryRangeStart, period === "day" ? anchorDate : summaryRangeEnd, monthAdminNotes, monthAdjustments),
     message: `Đã tải ${(dayResult.data ?? []).length} bản ghi theo ${period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}.`,
   });
 }

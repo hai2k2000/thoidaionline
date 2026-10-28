@@ -6,6 +6,10 @@ import { calculateAttendance } from "./attendanceWorkday.ts";
 import { vietnamTime, vietnamWorkDate } from "./attendanceReconciliation.ts";
 
 const calculate = (checkIn, checkOut, options = {}) => calculateAttendance({ checkIn, checkOut, ...options });
+const attendanceRoute = readFileSync(new URL("../app/api/attendance/route.ts", import.meta.url), "utf8");
+const exportRoute = readFileSync(new URL("../app/api/attendance/export/route.ts", import.meta.url), "utf8");
+const adjustmentRoute = readFileSync(new URL("../app/api/attendance/workday-adjustment/route.ts", import.meta.url), "utf8");
+const adjustmentMigration = readFileSync(new URL("../../supabase/migrations/20261028170000_attendance_workday_adjustments.sql", import.meta.url), "utf8");
 
 test("complete normal attendance counts one workday", () => {
   assert.equal(calculate("08:00", "17:00").workday, 1);
@@ -24,6 +28,12 @@ test("08:15 and 16:30 boundaries are on time", () => {
 test("strictly late check-in keeps one workday and adds the late note", () => {
   assert.deepEqual(calculate("08:16", "17:00"), { workday: 1, late: true, early: false, note: "Đi muộn" });
   assert.equal(calculate("08:15:01", "17:00").late, true);
+});
+
+test("late exception status controls the generated note", () => {
+  assert.equal(calculate("08:16", "17:00", { lateExceptionStatus: "pending" }).note, "Đi muộn (chờ duyệt lý do phát sinh)");
+  assert.equal(calculate("08:16", "17:00", { lateExceptionStatus: "approved" }).note, "Đi muộn do việc phát sinh");
+  assert.equal(calculate("08:16", "17:00", { lateExceptionStatus: "rejected" }).note, "Đi muộn");
 });
 
 test("strictly early check-out keeps one workday and adds the early note", () => {
@@ -138,4 +148,55 @@ test("Wise On 39 cleanup does not change workday calculation", () => {
   assert.equal(result.workday, 1);
   assert.equal(result.late, true);
   assert.equal(result.early, true);
+});
+
+test("workday adjustments override the calculated workday and add the adjustment note", () => {
+  assert.match(attendanceRoute, /row\.workday\s*=\s*row\.workday_adjustment\?\.workday\s*\?\?\s*calculation\.workday/);
+  assert.match(attendanceRoute, /row\.note\s*=\s*row\.workday_adjustment\s*\?\s*`Điều chỉnh công: \$\{row\.workday_adjustment\.workday\} \(\$\{row\.workday_adjustment\.reason\}\)`/);
+  assert.match(attendanceRoute, /existingRow\.workday\s*=\s*Number\(adjustment\.workday\)/);
+});
+
+test("monthly summary consumes the adjusted workday value", () => {
+  assert.match(attendanceRoute, /monthlyRows:\s*contextRows\(/);
+  assert.match(attendanceRoute, /const withNotes = \(items: AttendanceRow\[\],[\s\S]*adjustments: typeof dayAdjustments\)/);
+  assert.match(attendanceRoute, /withNotes[\s\S]*return \{ \.\.\.row, workday: adjustment \? adjustment\.workday : calculation\.workday/);
+});
+
+test("October 2026 export has one column per weekday", () => {
+  const weekdays = [];
+  for (let day = 1; day <= 31; day += 1) {
+    const weekday = new Date(Date.UTC(2026, 9, day)).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) weekdays.push(day);
+  }
+  assert.equal(weekdays.length, 22);
+  assert.match(exportRoute, /if \(!\[0, 6\]\.includes\(cursor\.getUTCDay\(\)\)\) days\.push/);
+});
+
+test("CSV export emits UTF-8 BOM, escapes values, and protects formulas", () => {
+  assert.ok(exportRoute.includes("new Response(`\\uFEFF${lines.join(\"\\n\")}\\n`"));
+  assert.ok(exportRoute.includes('text.replace(/"/g, \'\"\"\')'));
+  assert.ok(exportRoute.includes('/[",\\n]/.test(text)'));
+  assert.ok(exportRoute.includes('/^[=+\\-@]/.test(text)'));
+  assert.ok(exportRoute.includes("text = `'${text}`"));
+});
+
+test("attendance routes use resolved access and actor-scoped adjustment RPCs", () => {
+  assert.match(exportRoute, /resolveAttendanceAccess\(guard\.actor\)/);
+  assert.doesNotMatch(exportRoute, /role_code/);
+  assert.match(attendanceRoute, /p_actor:\s*guard\.actor\.id/);
+  assert.match(adjustmentRoute, /export \{ PUT, DELETE \} from "\.\.\/route"/);
+  assert.match(attendanceRoute, /42501[\s\S]*403/);
+  assert.match(attendanceRoute, /22023[\s\S]*400/);
+});
+
+test("workday adjustment migration locks down RLS, RPC execution, and validation", () => {
+  assert.match(adjustmentMigration, /alter table public\.attendance_workday_adjustments enable row level security/i);
+  assert.match(adjustmentMigration, /revoke all privileges on table public\.attendance_workday_adjustments from public, anon, authenticated/i);
+  for (const fn of ["api_upsert_attendance_workday_adjustment", "api_delete_attendance_workday_adjustment"]) {
+    assert.match(adjustmentMigration, new RegExp(`create or replace function public\\.${fn}[\\s\\S]*security definer`, "i"));
+    assert.match(adjustmentMigration, new RegExp(`revoke all on function public\\.${fn}[\\s\\S]*grant execute on function public\\.${fn}[\\s\\S]*service_role`, "i"));
+  }
+  assert.match(adjustmentMigration, /if p_actor = p_user_id then raise exception 'Self adjustment forbidden\.'/i);
+  assert.match(adjustmentMigration, /extract\(isodow from p_work_date\) > 5/);
+  assert.match(adjustmentMigration, /check \(workday in \(0, 0\.5, 1\)\)/i);
 });

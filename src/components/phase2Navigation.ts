@@ -13,6 +13,7 @@
   canViewAssets?: boolean;
   canManageAssets?: boolean;
   canViewDatabase?: boolean;
+  rbacPermissionScopes?: Record<string, string[]>;
 };
 
 export type Phase2NavigationItem = {
@@ -51,7 +52,7 @@ export function getPhase2Navigation(
       ...(access.isDepartmentManager || ["admin", "tong_bien_tap", "tbt_read_only"].includes(access.roleCode) ? [{ id: "work-report", href: "/reports/work" } as const] : []),
       ...(canAccessDepartmentPlan ? [{ id: "department-plan", href: "/planning/department" } as const] : []),
       { id: "attendance", href: "/my-attendance" },
-      ...(access.roleCode === "admin" ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
+      ...(access.rbacPermissionScopes?.["attendance.view_all"]?.some((scope) => ["department", "all"].includes(scope)) ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
         || (access.roleCode === "tong_bien_tap" && access.canEvaluateStep2)
         ? [{ id: "evaluations", href: "/evaluations" } as const]

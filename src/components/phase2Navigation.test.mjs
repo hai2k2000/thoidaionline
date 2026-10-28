@@ -29,6 +29,10 @@ test("work and schedule navigation is preserved", () => {
   assert.deepEqual(navigation.account, [{ id: "account", href: "/account" }]);
   assert.deepEqual(navigation.configuration, []);
 });
+test("attendance admin navigation follows view_all scopes", () => {
+  assert.equal(getPhase2Navigation({ ...employee, rbacPermissionScopes: { "attendance.view_all": ["department"] } }).primary.some((item) => item.id === "attendance-admin"), true);
+  assert.equal(getPhase2Navigation({ ...employee, rbacPermissionScopes: { "attendance.view_all": ["self"] } }).primary.some((item) => item.id === "attendance-admin"), false);
+});
 test("Department Plan navigation follows its existing authorization scope", () => {
   const base = { ...employee, departmentCode: "editorial" };
   for (const roleCode of ["admin", "tong_bien_tap", "pho_tong_bien_tap"]) {

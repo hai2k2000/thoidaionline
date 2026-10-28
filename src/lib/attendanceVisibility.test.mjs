@@ -6,16 +6,16 @@ import { readFileSync } from "node:fs";
 const route = readFileSync(new URL("../app/api/attendance/route.ts", import.meta.url), "utf8");
 
 test("excludes named staff and admin from organization attendance", () => {
-  assert.equal(isAttendanceListedStaff({ full_name: "Đặng Quang Minh", role_code: "employee" }), false);
-  assert.equal(isAttendanceListedStaff({ full_name: "Nguyễn Văn Linh", role_code: "employee" }), false);
-  assert.equal(isAttendanceListedStaff({ full_name: "Nguyễn Hồng Khánh", role_code: "employee" }), false);
-  assert.equal(isAttendanceListedStaff({ full_name: "Nhân viên khác", role_code: "admin" }), false);
-  assert.equal(isAttendanceListedStaff({ full_name: "Nhân viên khác", role_code: "employee" }), true);
+  assert.equal(isAttendanceListedStaff({ full_name: "Đặng Quang Minh", roleCode: "employee", attendance_exempt: true }), false);
+  assert.equal(isAttendanceListedStaff({ full_name: "Nguyễn Văn Linh", roleCode: "employee", attendance_exempt: true }), false);
+  assert.equal(isAttendanceListedStaff({ full_name: "Nguyễn Hồng Khánh", roleCode: "employee", attendance_exempt: true }), false);
+  assert.equal(isAttendanceListedStaff({ full_name: "Nhân viên khác", roleCode: "admin" }), false);
+  assert.equal(isAttendanceListedStaff({ full_name: "Nhân viên khác", roleCode: "employee", attendance_exempt: false }), true);
 });
 
 test("user-level filtering uses the same organization visibility rule", () => {
-  assert.equal(isAttendanceListedUser({ full_name: "Đặng Quang Minh", role_code: "employee" }), false);
-  assert.equal(isAttendanceListedUser({ full_name: "Nhân viên khác", role_code: "employee" }), true);
+  assert.equal(isAttendanceListedUser({ full_name: "Đặng Quang Minh", roleCode: "employee", attendance_exempt: true }), false);
+  assert.equal(isAttendanceListedUser({ full_name: "Nhân viên khác", roleCode: "employee", attendance_exempt: false }), true);
 });
 
 test("role relation supports Supabase object and array shapes", () => {

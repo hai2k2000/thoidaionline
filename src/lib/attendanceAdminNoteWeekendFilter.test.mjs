@@ -36,7 +36,7 @@ test("migration stores admin notes separately without destructive staff cascades
 
 test("admin note mutation is canonical-admin-only, audited, and does not touch attendance logs", () => {
   assert.match(route, /export async function PATCH/);
-  assert.match(route, /guard\.actor\.role_code !== "admin"/);
+  assert.match(route, /resolveAttendanceAccess[\s\S]*canManage/);
   assert.match(route, /api_upsert_attendance_admin_note/);
   assert.doesNotMatch(route, /attendance_logs[\s\S]{0,240}\.update\(\{[\s\S]{0,160}admin_note/);
   assert.match(migration, /insert into public\.audit_logs/i);
@@ -46,7 +46,7 @@ test("admin note mutation is canonical-admin-only, audited, and does not touch a
 
 test("attendance reads expose separate admin notes and preserve employee notes", () => {
   assert.match(route, /attendance_admin_notes/);
-  assert.match(route, /staff_users!attendance_admin_notes_user_id_fkey\(full_name\)/);
+  assert.match(route, /staff_users!attendance_admin_notes_user_id_fkey\(full_name/);
   assert.match(route, /admin_note/);
   assert.match(page, /Ghi chú Admin/);
   assert.match(page, /Không có dữ liệu chấm công/);

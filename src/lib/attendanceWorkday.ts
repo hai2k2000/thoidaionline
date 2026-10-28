@@ -9,6 +9,7 @@ export type AttendanceCalculationInput = {
   exceptional?: boolean;
   exceptionalWorkday?: number;
   lateException?: boolean;
+  lateExceptionStatus?: "pending" | "approved" | "rejected" | null;
 };
 
 export type AttendanceCalculation = {
@@ -34,7 +35,7 @@ export const sanitizeAttendanceNotes = (values: Array<string | null | undefined>
   .flatMap(splitNotes)
   .filter((note) => !WISE_ON_39_SYNC_NOTE.test(note));
 
-export const calculateAttendance = ({ checkIn, checkOut, existingNote, extraNotes = [], exceptional = false, exceptionalWorkday = 0, lateException = false }: AttendanceCalculationInput): AttendanceCalculation => {
+export const calculateAttendance = ({ checkIn, checkOut, existingNote, extraNotes = [], exceptional = false, exceptionalWorkday = 0, lateException = false, lateExceptionStatus = null }: AttendanceCalculationInput): AttendanceCalculation => {
   const checkInSeconds = timeToSeconds(checkIn);
   const checkOutSeconds = timeToSeconds(checkOut);
   const complete = checkInSeconds !== null && checkOutSeconds !== null;
@@ -43,7 +44,7 @@ export const calculateAttendance = ({ checkIn, checkOut, existingNote, extraNote
   const generated = exceptional
     ? []
     : [
-        ...(late ? [lateException ? "Đi muộn do việc phát sinh" : "Đi muộn"] : []),
+        ...(late ? [lateExceptionStatus === "pending" ? "Đi muộn (chờ duyệt lý do phát sinh)" : lateExceptionStatus === "approved" || (lateException && !lateExceptionStatus) ? "Đi muộn do việc phát sinh" : "Đi muộn"] : []),
         ...(early ? ["Về sớm"] : []),
         ...(checkInSeconds === null && checkOutSeconds === null ? ["Thiếu giờ vào", "Thiếu giờ ra"] : checkInSeconds === null ? ["Thiếu giờ vào"] : checkOutSeconds === null ? ["Thiếu giờ ra"] : []),
       ];
