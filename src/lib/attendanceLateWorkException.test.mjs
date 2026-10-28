@@ -57,7 +57,7 @@ test("schema persists the exception and sync preserves its note", () => {
 });
 
 test("late exception review migration is security-definer and scope-safe", () => {
-  const nextMigration = readFileSync(new URL("../../supabase/migrations/20261028130000_attendance_late_exception_review.sql", import.meta.url), "utf8");
+  const nextMigration = readFileSync(new URL("../../supabase/migrations/20261028160000_attendance_late_exception_review.sql", import.meta.url), "utf8");
   for (const fn of ["api_request_late_exception", "api_review_late_exception", "api_list_reviewable_late_exceptions"]) {
     assert.match(nextMigration, new RegExp(`create or replace function public\\.${fn}[\\s\\S]*security definer`, "i"));
     assert.match(nextMigration, /revoke all on function public\.[\s\S]*grant execute on function public\.[\s\S]*service_role/i);

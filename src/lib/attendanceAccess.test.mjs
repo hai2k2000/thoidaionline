@@ -9,7 +9,7 @@ const attendanceLayout = readFileSync(new URL("../app/attendance/layout.tsx", im
 const myAttendanceLayout = readFileSync(new URL("../app/my-attendance/layout.tsx", import.meta.url), "utf8");
 const evaluationRoute = readFileSync(new URL("../app/api/public-evaluation-summary/route.ts", import.meta.url), "utf8");
 const navigation = readFileSync(new URL("../components/phase2Navigation.ts", import.meta.url), "utf8");
-const migration = readFileSync(new URL("../../supabase/migrations/20261028120000_attendance_rbac_v1.sql", import.meta.url), "utf8");
+const migration = readFileSync(new URL("../../supabase/migrations/20261028150000_attendance_rbac_v1.sql", import.meta.url), "utf8");
 
 test("attendance access resolves all, department, none and manage", () => {
   assert.deepEqual(resolveAttendanceAccessFromScopes({ "attendance.view_all": ["department"], "attendance.manage": [] }), { orgScope: "department", canManage: false });

@@ -9,7 +9,7 @@ const calculate = (checkIn, checkOut, options = {}) => calculateAttendance({ che
 const attendanceRoute = readFileSync(new URL("../app/api/attendance/route.ts", import.meta.url), "utf8");
 const exportRoute = readFileSync(new URL("../app/api/attendance/export/route.ts", import.meta.url), "utf8");
 const adjustmentRoute = readFileSync(new URL("../app/api/attendance/workday-adjustment/route.ts", import.meta.url), "utf8");
-const adjustmentMigration = readFileSync(new URL("../../supabase/migrations/20261028140000_attendance_workday_adjustments.sql", import.meta.url), "utf8");
+const adjustmentMigration = readFileSync(new URL("../../supabase/migrations/20261028170000_attendance_workday_adjustments.sql", import.meta.url), "utf8");
 
 test("complete normal attendance counts one workday", () => {
   assert.equal(calculate("08:00", "17:00").workday, 1);
