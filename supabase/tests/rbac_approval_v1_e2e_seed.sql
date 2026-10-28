@@ -4,9 +4,9 @@ begin;
 insert into public.departments(code, name, active)
 values ('zz_e2e_a', 'zz_e2e_A', true), ('zz_e2e_b', 'zz_e2e_B', true);
 
-insert into public.staff_users(full_name, username, email, password, role_id, department_id, job_title_id, active, list_order)
+insert into public.staff_users(full_name, username, email, password_hash, must_change_password, role_id, department_id, job_title_id, active, list_order)
 select 'zz_e2e_' || x.username, 'zz_e2e_' || x.username, 'zz_e2e_' || x.username || '@zz-e2e.invalid',
-       :'e2e_password',
+       extensions.crypt(:'e2e_password', extensions.gen_salt('bf', 10)), false,
        (select id from public.roles where code=x.role_code limit 1),
        (select id from public.departments where code='zz_e2e_' || x.department_code),
        (select id from public.job_titles where code=x.job_code limit 1), x.active, x.ord
