@@ -51,6 +51,13 @@ test("initial values cover compatible canonical fields and submit remains caller
   assert.match(form, /type=\"button\"[^>]*onClick=\{onCancel\}/);
 });
 
+test("auto-focuses the first card only when the active recipient is ready", async () => {
+  const form = await read("CanonicalAssignmentForm.tsx");
+  assert.match(form, /if \(formActivated && recipientReady\)\s*window\.requestAnimationFrame\(\(\) => cardTitleRefs\.current\[firstCardIdRef\.current \?\? ""\]\?\.focus\(\)\)/);
+  assert.match(form, /\}, \[formActivated, recipientReady\]\);/);
+  assert.doesNotMatch(form, /\}, \[[^\]]*taskCards[^\]]*\]\);/);
+});
+
 test("shell keeps API, attachment, notification, and redirect lifecycle outside the reusable form", async () => {
   const shell = await read("TaskAssignShell.tsx");
   assert.match(shell, /responseErrorMessage/);
