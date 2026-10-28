@@ -186,14 +186,14 @@ export async function GET(request: Request) {
   }
   let dayQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users(full_name,attendance_exempt,department_id,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users!attendance_logs_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))")
     .gte("work_date", rangeStart)
     .lte("work_date", rangeEnd)
     .order("check_in", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   let monthQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users(full_name,attendance_exempt,department_id,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users!attendance_logs_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))")
     .gte("work_date", period === "day" ? monthStart : summaryRangeStart)
     .lte("work_date", period === "day" ? anchorDate : summaryRangeEnd)
     .order("work_date", { ascending: true })
