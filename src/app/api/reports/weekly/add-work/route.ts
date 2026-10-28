@@ -1,10 +1,12 @@
 import { apiError, readJsonObject, requireMutationActor } from "@/lib/serverApi";
 import { personalWeeklyPeriod } from "@/lib/personalWeeklyReport";
 import { taskHandlers } from "@/lib/taskHandlers";
+import { WORK_REPORTS_PAUSED, workReportsPausedResponse } from "@/lib/workReportsPause";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (WORK_REPORTS_PAUSED) return workReportsPausedResponse();
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
   if (!guard.actor.rbacPermissions.includes("task.quick_report.create")) return apiError("forbidden", 403);
