@@ -11,7 +11,8 @@ test("attendance page lets the content track shrink around the scrollable table"
   assert.match(page, /<div className="min-w-0">/);
   assert.match(page, /table-scroll min-w-0 max-w-full/);
   assert.doesNotMatch(page, /<th scope="col"[^>]*>Thao tác<\/th>/);
-  assert.match(page, /<th scope="col" className="min-w-64 px-3 py-2">Ghi chú<\/th>/);
+  assert.match(page, /<th scope="col" className="px-3 py-2">Ghi chú<\/th>/);
+  assert.match(page, /table-fixed/);
 });
 
 test("attendance page does not clip intentional horizontal table scrolling on mobile", () => {

@@ -120,19 +120,18 @@ table {
    surrounding .table-scroll provides the intentional horizontal overflow. */
 .attendance-day-table {
   table-layout: fixed;
-  min-width: 68rem;
 }
 
 .attendance-day-table th:first-child,
 .attendance-day-table td:first-child {
   width: 11rem;
-  min-width: 11rem;
+  width: 20%;
 }
 
 .attendance-day-table th:nth-child(2),
 .attendance-day-table td:nth-child(2) {
   width: 7.5rem;
-  min-width: 7.5rem;
+  width: 10%;
 }
 
 .attendance-day-table th:nth-child(3),
@@ -140,47 +139,46 @@ table {
 .attendance-day-table th:nth-child(4),
 .attendance-day-table td:nth-child(4) {
   width: 6.5rem;
-  min-width: 6.5rem;
+  width: 10%;
 }
 
 .attendance-day-table th:nth-child(5),
 .attendance-day-table td:nth-child(5) {
   width: 6rem;
-  min-width: 6rem;
+  width: 9%;
 }
 
 .attendance-day-table th:nth-child(6),
 .attendance-day-table td:nth-child(6) {
   width: 10rem;
-  min-width: 10rem;
+  width: 16%;
 }
 
 .attendance-day-table th:nth-child(7),
 .attendance-day-table td:nth-child(7) {
-  width: 16rem;
-  min-width: 16rem;
+  width: 35%;
 }
 
 /* The organization table reserves more note space for the Admin label and icon. */
 .attendance-day-table.attendance-organization-table {
-  min-width: 70rem;
 }
 
 .attendance-day-table.attendance-organization-table th:nth-child(7),
 .attendance-day-table.attendance-organization-table td:nth-child(7) {
-  width: 22rem;
-  min-width: 22rem;
+  width: 35%;
 }
 
 /* Keep the personal view compact while preserving the same seven-column grid. */
 .attendance-day-table.attendance-personal-table {
-  min-width: 68rem;
 }
 
 .attendance-day-table.attendance-personal-table th:nth-child(7),
 .attendance-day-table.attendance-personal-table td:nth-child(7) {
-  width: 16rem;
-  min-width: 16rem;
+  width: 35%;
+}
+
+@media (max-width: 767px) {
+  .attendance-day-table { min-width: 42rem; }
 }
 
 /* Keep the schedule's identity columns readable while the day columns scroll. */

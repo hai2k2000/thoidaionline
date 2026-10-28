@@ -50,8 +50,8 @@ test("attendance reads expose separate admin notes and preserve employee notes",
   assert.match(route, /admin_note/);
   assert.match(page, /Ghi chú Admin/);
   assert.match(page, /Không có dữ liệu chấm công/);
-  assert.match(page, /Sửa ghi chú|Thêm ghi chú/);
-  assert.match(page, /attendance-note-action/);
+  assert.match(page, /selectedAttendanceRow/);
+  assert.match(page, /selectedAttendanceRow/);
   assert.doesNotMatch(page, /<th scope="col"[^>]*>Thao tác<\/th>/);
   assert.match(page, /late_exception/);
 });

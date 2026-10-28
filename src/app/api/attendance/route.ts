@@ -514,6 +514,8 @@ export async function GET(request: Request) {
     if (reviewable.error) return apiError("operation_failed", 500);
     reviewableLateExceptionIds = ((reviewable.data ?? []) as Array<{ id: string }>).map((item) => item.id);
   }
+  // Keep filter choices scoped to the actor, but independent of active row filters.
+  const optionStaff = staffRows;
   const visibleStaff = staffRows.filter((staff) => (!staffId || staff.id === staffId) && (!departmentId || staff.department_id === departmentId));
   const departmentIds = [...new Set(staffRows.map((staff) => staff.department_id).filter(Boolean))];
   const departmentsResult = organizationScope && departmentIds.length
@@ -521,7 +523,7 @@ export async function GET(request: Request) {
     : { data: [], error: null };
   if (departmentsResult.error) return apiError("operation_failed", 500);
   const filterOptions = {
-    staff: visibleStaff.map((staff) => ({ id: staff.id, full_name: staff.full_name, department_id: staff.department_id ?? null, department_name: departmentFor(staff)?.name ?? null })),
+    staff: optionStaff.map((staff) => ({ id: staff.id, full_name: staff.full_name, department_id: staff.department_id ?? null, department_name: departmentFor(staff)?.name ?? null })),
     departments: (departmentsResult.data ?? []).map((department) => ({ id: department.id, name: department.name })),
   };
   const rows = contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd, dayAdminNotes, dayAdjustments);
