@@ -29,6 +29,9 @@ export type Phase2Navigation = {
   showEvaluationTab: boolean;
 };
 
+// @ts-expect-error Node source-text tests import this TypeScript module directly.
+import { PAUSED_WORK_REPORT_NAV_IDS, WORK_REPORTS_PAUSED } from "../lib/workReportsPause.ts";
+
 export function getPhase2Navigation(
   access: Phase2NavigationAccess,
 ): Phase2Navigation {
@@ -37,7 +40,7 @@ export function getPhase2Navigation(
     || (access.isDepartmentManager === true && Boolean(access.departmentCode));
   const canAccessJournalism = access.canAccessJournalism === true
     && (["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode) || access.departmentCode === "editorial");
-  return {
+  const navigation: Phase2Navigation = {
     primary: [
       ...(access.canAssignTask || ["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
         ? [
@@ -98,6 +101,16 @@ export function getPhase2Navigation(
     ],
     showEvaluationTab:
       access.canEvaluateStep1 || access.canEvaluateStep2,
+  };
+  const filterPaused = (items: Phase2NavigationItem[]) => WORK_REPORTS_PAUSED
+    ? items.filter((item) => !(PAUSED_WORK_REPORT_NAV_IDS as readonly string[]).includes(item.id))
+    : items;
+  return {
+    ...navigation,
+    primary: filterPaused(navigation.primary),
+    journalism: filterPaused(navigation.journalism),
+    account: filterPaused(navigation.account),
+    configuration: filterPaused(navigation.configuration),
   };
 }
 

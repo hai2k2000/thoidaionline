@@ -1,10 +1,12 @@
 import { apiError } from "@/lib/serverApi";
 import { loadPersonalWeeklyReport } from "@/lib/personalWeeklyReportService";
 import { exportPersonalWeeklyReportDocx, personalWeeklyReportDocxFilename } from "@/lib/personalWeeklyReportDocx";
+import { WORK_REPORTS_PAUSED, workReportsPausedResponse } from "@/lib/workReportsPause";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  if (WORK_REPORTS_PAUSED) return workReportsPausedResponse();
   const result = await loadPersonalWeeklyReport(request);
   if (!result.ok) return result.response;
   if (result.data.report?.status !== "COMPLETED") return apiError("conflict", 409);
