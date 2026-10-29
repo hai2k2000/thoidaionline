@@ -88,6 +88,6 @@ export async function PATCH(request: Request) {
   const reviewNote = typeof body?.review_note === "string" ? body.review_note.trim() : null;
   if (!requestId || !decision) return json({ error: "invalid_review" }, { status: 400 });
   const { data, error } = await serverSupabase.rpc("api_asset_status_request_review", { p_actor_id: actor.id, p_request_id: requestId, p_decision: decision, p_review_note: reviewNote });
-  if (error) return json({ error: error.message || "status_review_failed" }, { status: error.code === "42501" ? 403 : error.code === "40001" ? 409 : 400 });
+  if (error) return json({ error: error.message || "status_review_failed" }, { status: error.code === "42501" ? 403 : error.code === "40001" || error.code === "55000" ? 409 : 400 });
   return json(data);
 }

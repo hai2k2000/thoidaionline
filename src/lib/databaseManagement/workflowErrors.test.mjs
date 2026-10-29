@@ -4,6 +4,7 @@ import { classifyWorkflowRpcError, workflowHttpStatus } from "./workflowErrors.m
 
 test("only serialization conflicts are classified as stale conflicts", () => {
   assert.equal(classifyWorkflowRpcError({ code: "40001", message: "serialization failure" }), "stale_conflict");
+  assert.equal(classifyWorkflowRpcError({ code: "55000", message: "business conflict" }), "stale_conflict");
   assert.equal(classifyWorkflowRpcError({ code: "22023", message: "Invalid transition." }), "invalid_transition");
   assert.equal(workflowHttpStatus("stale_conflict"), 409);
   assert.equal(workflowHttpStatus("invalid_transition"), 409);
