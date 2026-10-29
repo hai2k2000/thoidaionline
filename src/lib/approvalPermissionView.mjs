@@ -2,6 +2,22 @@
 /** @typedef {'self'|'assigned'|'department'|'all'} Scope */
 
 export const APPROVAL_PERMISSION_CODES = ["leave.approve", "schedule.business.approve", "schedule.event.approve"];
+export const PERMISSION_PRESETS = [{
+  key: "record_department_editor",
+  label: "Người nhập CSDL của phòng",
+  description: "Tạo hồ sơ, tải tệp lên và gửi duyệt CSDL của phòng mình.",
+  items: [
+    { code: "record.discover", scope: "department", tier: "required", name: "Tìm hồ sơ" },
+    { code: "record.create", scope: "all", tier: "required", name: "Tạo hồ sơ" },
+    { code: "record.edit", scope: "all", tier: "required", name: "Chỉnh sửa hồ sơ" },
+    { code: "record.metadata.view", scope: "department", tier: "recommended", name: "Xem siêu dữ liệu" },
+    { code: "record.preview", scope: "department", tier: "recommended", name: "Xem trước hồ sơ" },
+    { code: "record.download", scope: "department", tier: "recommended", name: "Tải tệp xuống" },
+    { code: "record.delete", scope: "all", tier: "optional", name: "Xóa hồ sơ" },
+    { code: "record.restore", scope: "all", tier: "optional", name: "Khôi phục hồ sơ" },
+    { code: "record.export", scope: "all", tier: "optional", name: "Xuất hồ sơ" },
+  ],
+}];
 export const PERMISSION_GROUP_DEFINITIONS = [
   { key: "task", label: "Giao việc", matches: (code) => code.startsWith("task.") },
   { key: "record", label: "Dữ liệu (CSDL)", matches: (code) => code.startsWith("record.") },
@@ -105,3 +121,28 @@ export function historyLine(item, labels = {}) {
 }
 
 export function requiresTypedConfirmation(effect, scope) { return effect === "allow" && scope === "all"; }
+
+const presetScopeRank = { self: 0, assigned: 1, department: 2, all: 3 };
+const presetBlockedMessages = {
+  no_department: "Cần gán phòng ban cho người dùng trước khi áp dụng gói này.",
+  inactive: "Người dùng không hoạt động nên không thể áp dụng gói này.",
+};
+
+export function planPresetApplication(preset, user, selectedOptionalCodes = []) {
+  const selected = new Set(selectedOptionalCodes);
+  const items = preset.items.map((item) => {
+      const override = user?.overrides?.[item.code];
+      const scopes = user?.effective?.[item.code]?.scopes ?? [];
+      const already = !override || override.effect !== "deny"
+        ? scopes.some((scope) => presetScopeRank[scope] >= presetScopeRank[item.scope])
+        : false;
+      const status = already ? "already" : override?.effect === "deny" ? "replace_deny" : "grant";
+      return { ...item, status, selected: item.tier === "required" || selected.has(item.code) };
+    });
+  const blocked = !user?.active
+    ? { reason: "inactive", message: presetBlockedMessages.inactive }
+    : !user?.department_id
+      ? { reason: "no_department", message: presetBlockedMessages.no_department }
+      : null;
+  return { blocked, items, codesToApply: blocked ? [] : items.filter((item) => item.selected && item.status !== "already").map((item) => item.code) };
+}

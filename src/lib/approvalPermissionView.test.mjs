@@ -11,7 +11,10 @@ import {
   previewSentence,
   historyLine,
   requiresTypedConfirmation,
+  PERMISSION_PRESETS,
+  planPresetApplication,
 } from "./approvalPermissionView.mjs";
+import { supportedScopesForPermission } from "./rbac/permissionScopes.mjs";
 
 test("approval catalog exposes the three codes and Vietnamese copy", () => {
   assert.deepEqual(APPROVAL_PERMISSION_CODES, ["leave.approve", "schedule.business.approve", "schedule.event.approve"]);
@@ -50,4 +53,64 @@ test("typed confirmation is required only for all-scope allows", () => {
   assert.equal(requiresTypedConfirmation("allow", "all"), true);
   assert.equal(requiresTypedConfirmation("allow", "department"), false);
   assert.equal(requiresTypedConfirmation("deny", "all"), false);
+});
+
+test("permission preset is scoped, complete, and excludes approval-sensitive codes", () => {
+  const preset = PERMISSION_PRESETS.find((item) => item.key === "record_department_editor");
+  assert.ok(preset);
+  assert.equal(preset.label, "Người nhập CSDL của phòng");
+  assert.deepEqual(preset.items.map((item) => item.code), [
+    "record.discover", "record.create", "record.edit", "record.metadata.view",
+    "record.preview", "record.download", "record.delete", "record.restore", "record.export",
+  ]);
+  for (const item of preset.items) {
+    assert.ok(supportedScopesForPermission(item.code).includes(item.scope));
+  }
+  for (const code of ["record.approve", "record.self_approve", "record.acl.manage", "record.sensitive.access"]) {
+    assert.equal(preset.items.some((item) => item.code === code), false);
+  }
+});
+
+test("planPresetApplication classifies existing, denied, and new grants", () => {
+  const preset = PERMISSION_PRESETS[0];
+  const result = planPresetApplication(preset, {
+    active: true,
+    department_id: "dept-1",
+    overrides: { "record.create": { effect: "deny", scope: "all" } },
+    effective: {
+      "record.discover": { scopes: ["all"], source: "role", roleScopes: ["all"] },
+    },
+  }, ["record.metadata.view"]);
+  assert.equal(result.blocked, null);
+  assert.equal(result.items.find((item) => item.code === "record.discover").status, "already");
+  assert.equal(result.items.find((item) => item.code === "record.discover").selected, true);
+  assert.equal(result.items.find((item) => item.code === "record.create").status, "replace_deny");
+  assert.equal(result.items.find((item) => item.code === "record.metadata.view").status, "grant");
+  assert.equal(result.items.find((item) => item.code === "record.metadata.view").selected, true);
+  assert.equal(result.items.find((item) => item.code === "record.preview").selected, false);
+  assert.equal(result.items.find((item) => item.code === "record.preview").status, "grant");
+  assert.equal(result.items.length, preset.items.length);
+  assert.deepEqual(result.codesToApply, ["record.create", "record.edit", "record.metadata.view"]);
+});
+
+test("planPresetApplication blocks inactive or unassigned users", () => {
+  const preset = PERMISSION_PRESETS[0];
+  const noDepartment = planPresetApplication(preset, { active: true, department_id: null }, []);
+  assert.equal(noDepartment.blocked.reason, "no_department");
+  assert.equal(noDepartment.items.length, preset.items.length);
+  assert.deepEqual(noDepartment.items.filter((item) => item.tier === "required").map((item) => item.selected), [true, true, true]);
+  assert.equal(noDepartment.items.find((item) => item.code === "record.delete").selected, false);
+  assert.deepEqual(noDepartment.codesToApply, []);
+  const inactive = planPresetApplication(preset, { active: false, department_id: "dept-1" }, []);
+  assert.equal(inactive.blocked.reason, "inactive");
+  assert.equal(inactive.items.length, preset.items.length);
+  assert.deepEqual(inactive.codesToApply, []);
+});
+
+test("planPresetApplication adds a checked optional item in preset order", () => {
+  const preset = PERMISSION_PRESETS[0];
+  const result = planPresetApplication(preset, { active: true, department_id: "dept-1" }, ["record.restore"]);
+  assert.equal(result.items.find((item) => item.code === "record.delete").selected, false);
+  assert.equal(result.items.find((item) => item.code === "record.restore").selected, true);
+  assert.deepEqual(result.codesToApply, ["record.discover", "record.create", "record.edit", "record.restore"]);
 });
