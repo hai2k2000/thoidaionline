@@ -18,9 +18,11 @@ test("export keeps the 22 weekdays of October 2026", () => {
 });
 
 test("cells follow the grid status codes", () => {
-  assert.equal(exportCellValue({ code: "present", workday: 1 }), 1);
-  assert.equal(exportCellValue({ code: "incomplete", workday: 0 }), 0);
-  assert.equal(exportCellValue({ code: "absent", workday: 0 }), 0);
+  assert.equal(exportCellValue({ code: "present", workday: 1 }), "v");
+  assert.equal(exportCellValue({ code: "incomplete", workday: 1 }), "v");
+  assert.equal(exportCellValue({ code: "incomplete", workday: 0.5 }), 0.5);
+  assert.equal(exportCellValue({ code: "incomplete", workday: 0 }), "x");
+  assert.equal(exportCellValue({ code: "absent", workday: 0 }), "x");
   assert.equal(exportCellValue({ code: "leave_full", workday: 1 }), "P");
   assert.equal(exportCellValue({ code: "leave_half", workday: 0.5 }), "½P");
   assert.equal(exportCellValue({ code: "business", workday: 1 }), "CT");
@@ -39,7 +41,8 @@ test("CSV uses the department name, not its id, and fills past absences", () => 
   assert.ok(header.startsWith("STT,Họ tên,Phòng,01,02,05,06"));
   const fields = row.split(",");
   assert.equal(fields[2], "Phòng Tổng hợp");
-  assert.equal(fields[4], "0");
+  assert.equal(fields[3], "v");
+  assert.equal(fields[4], "x");
   assert.equal(fields[5], "CT");
   assert.doesNotMatch(row, /[0-9a-f]{8}-[0-9a-f]{4}-/);
   const tail = fields.slice(-7);

@@ -31,8 +31,9 @@ export function exportCellValue(cell) {
     case "leave_half": return "½P";
     case "business": return "CT";
     case "online": return "O";
-    case "absent": return 0;
-    default: return cell.workday;
+    case "absent": return "x";
+    // Owner wants v/x marks instead of 1/0; a half day keeps its 0.5 value.
+    default: return cell.workday >= 1 ? "v" : cell.workday > 0 ? cell.workday : "x";
   }
 }
 
