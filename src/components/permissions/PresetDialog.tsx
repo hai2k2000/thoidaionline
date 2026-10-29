@@ -35,21 +35,29 @@ export default function PresetDialog({ preset, user, labels, saving, onClose, on
         <span className="min-w-0 flex-1"><span className="block font-semibold">{labels[item.code] ?? item.name}</span><code className="block text-xs text-slate-500">{item.code}</code></span>
         <span className="text-right text-xs text-slate-600">
           <span className="block">{scopeLabels[item.scope as Scope]}</span>
-          <span className={`mt-1 inline-block rounded-full px-2 py-1 ${item.status === "replace_deny" ? "bg-amber-100 text-amber-900" : "bg-slate-100"}`}>
-            {statusLabels[item.status as keyof typeof statusLabels]}
+          <span className={`mt-1 inline-block rounded-full px-2 py-1 ${item.selected && item.status === "replace_deny"
+            ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-600"}`}>
+            {!item.selected && item.status !== "already" ? "Không cấp" : statusLabels[item.status as keyof typeof statusLabels]}
           </span>
         </span>
       </label>)}</div>
     </section>)}</div>
     <p className="mt-4 text-xs text-slate-600">Gói không cấp quyền duyệt, tự phê duyệt, quản lý quyền hồ sơ hay hồ sơ nhạy cảm.</p>
-    {plan.blocked ? <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{plan.blocked.message}</p> : null}
-    {failure ? <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">
-      Đã áp dụng: {failure.succeeded.map(permissionName).join(", ") || "không có"}.
-      Chưa áp dụng: {failure.failed.map(permissionName).join(", ")}.
-    </p> : null}
-    <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-lg border px-3 py-2 text-sm font-semibold">Hủy</button>
-      <button type="button" disabled={Boolean(plan.blocked) || !plan.codesToApply.length || saving} onClick={() => void onApply(plan.codesToApply).then((result) => {
-        if (result.failed.length) setFailure(result); else onClose();
-      })} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Đang áp dụng…" : "Áp dụng gói"}</button></div>
+    <div className="sticky bottom-0 bg-white pt-1">
+      {plan.blocked ? <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{plan.blocked.message}</p> : null}
+      {failure ? <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">
+        Đã áp dụng: {failure.succeeded.map(permissionName).join(", ") || "không có"}.
+        Chưa áp dụng: {failure.failed.map(permissionName).join(", ")}.
+      </p> : null}
+      <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={onClose}
+        className="rounded-lg border px-3 py-2 text-sm font-semibold">Hủy</button>
+        <button type="button" disabled={Boolean(plan.blocked) || !plan.codesToApply.length || saving}
+          onClick={() => void onApply(plan.codesToApply).then((result) => {
+            if (result.failed.length) setFailure(result); else onClose();
+          })} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          {saving ? "Đang áp dụng…" : "Áp dụng gói"}
+        </button>
+      </div>
+    </div>
   </Dialog>;
 }
