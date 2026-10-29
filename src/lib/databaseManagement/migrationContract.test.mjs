@@ -12,6 +12,18 @@ const listFilters = readFileSync(fileURLToPath(new URL("../../../supabase/migrat
 const dropSourcePerson = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql", import.meta.url)), "utf8");
 const doanThe = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261028090000_database_management_v1_doan_the_types.sql", import.meta.url)), "utf8");
 const recordTypeSort = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261028120000_database_management_v1_record_type_sort_order.sql", import.meta.url)), "utf8");
+const departmentVisibility = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261029120000_database_management_v1_department_visibility.sql", import.meta.url)), "utf8");
+
+test("department visibility migration is server-only and replaces both RPCs explicitly", () => {
+  assert.match(departmentVisibility, /add column if not exists visibility text not null default 'department'/i);
+  assert.match(departmentVisibility, /create table if not exists public\.db_department_view_grants/);
+  assert.match(departmentVisibility, /enable row level security/);
+  assert.match(departmentVisibility, /p_visibility text default null/);
+  assert.match(departmentVisibility, /db_department_view_grants/);
+  assert.match(departmentVisibility, /manager_id/);
+  assert.match(departmentVisibility, /doan_the_quan_ly/);
+  assert.doesNotMatch(departmentVisibility, /regexp_replace|execute\s+format/i);
+});
 
 test("record type sort migration adds the nullable column and approved doan the order", () => {
   assert.match(recordTypeSort, /alter table public\.db_record_types add column if not exists sort_order integer/i);

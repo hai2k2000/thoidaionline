@@ -64,13 +64,14 @@ export function validateDatabaseRecordInput(input: unknown): { ok: true; value: 
   if (value.ownerId !== undefined && value.ownerId !== null && (typeof value.ownerId !== "string" || !UUID.test(value.ownerId))) errors.push({ field: "ownerId", code: "uuid_required" });
   if (!value.metadata || typeof value.metadata !== "object" || Array.isArray(value.metadata)) errors.push({ field: "metadata", code: "object_required" });
   if (value.languageCode !== undefined && value.languageCode !== null && !["vi", "en", "zh", "lo", "km"].includes(value.languageCode)) errors.push({ field: "languageCode", code: "invalid_option" });
+  if (value.visibility !== undefined && value.visibility !== "department" && value.visibility !== "public") errors.push({ field: "visibility", code: "invalid_option" });
   if (value.keywords !== undefined && (!Array.isArray(value.keywords) || value.keywords.some((keyword) => typeof keyword !== "string" || keyword.trim().length === 0 || keyword.length > 120))) errors.push({ field: "keywords", code: "invalid_keywords" });
   if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.some((link) => !link || link.provider !== "google_drive" || typeof link.url !== "string" || !URL.test(link.url)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: {
     categoryId: value.categoryId!, recordTypeId: value.recordTypeId!, title: value.title!.trim(),
     summary: value.summary ?? null, departmentId: value.departmentId ?? null, ownerId: value.ownerId ?? null,
-    status: value.status ?? "draft", metadata: value.metadata as Record<string, unknown>, languageCode: value.languageCode ?? null, keywords: value.keywords ?? [], externalLinks: value.externalLinks ?? [],
+    status: value.status ?? "draft", metadata: value.metadata as Record<string, unknown>, languageCode: value.languageCode ?? null, keywords: value.keywords ?? [], externalLinks: value.externalLinks ?? [], visibility: value.visibility ?? "department",
   } };
 }
 
@@ -87,6 +88,10 @@ export function validateDatabaseRecordUpdateInput(input: unknown): { ok: true; v
   }
   if (value.metadata !== undefined && (typeof value.metadata !== "object" || value.metadata === null || Array.isArray(value.metadata))) errors.push({ field: "metadata", code: "object_required" });
   else if (value.metadata !== undefined) result.metadata = value.metadata as Record<string, unknown>;
+  if (value.visibility !== undefined) {
+    if (value.visibility !== "department" && value.visibility !== "public") errors.push({ field: "visibility", code: "invalid_option" });
+    else result.visibility = value.visibility;
+  }
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: result };
 }

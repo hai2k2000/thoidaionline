@@ -17,7 +17,7 @@ type Props = {
     onBack: () => void;
 };
 export default function UserPermissionDetail({ user, currentUserId, onChanged, onToast, genericModules = [], scopeOptions = {}, onBack }: Props) {
-    const { items, loading, error, setError, load } = usePermissionUserDetail(user.id);
+    const { items, departments, departmentViewGrants, setDepartmentViewGrants, loading, error, setError, load } = usePermissionUserDetail(user.id);
     const [pending, setPending] = useState<string[]>([]);
     const [history, setHistory] = useState(false);
     const [grantItem, setGrantItem] = useState<PermissionItem | null>(null);
@@ -34,6 +34,7 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
         onToast("Đã cập nhật quyền.");
         setPending((current) => current.filter((item) => item !== code));
     };
+    const saveDepartmentGrants = async () => { try { await write({ action: "replace_department_view_grants", userId: user.id, departmentIds: departmentViewGrants }); onToast("Đã lưu phạm vi xem theo phòng."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Không thể lưu phạm vi phòng."); } };
     const setOther = (permissionCode: string, value: string, scope?: Scope) => {
         const body = value === "inherit"
             ? { action: "clear_user_override", userId: user.id, permissionCode }
@@ -81,6 +82,7 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
       {loading ? <p>Đang tải quyền…</p> : <>
         <ApprovalPermissionsCard items={items} active={user.active} self={self} userName={user.full_name} pending={pending} onSet={onApprovalSet} onGrant={setGrantItem} onRevoke={setRevokeItem}/>
         <OtherPermissionsSection user={user} modules={genericModules} active={user.active} self={self} scopeOptions={scopeOptions} pending={pending} onSet={setOther}/>
+        <section className="mt-5 rounded-xl border border-slate-200 p-4"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Xem tài liệu của phòng</h3><p className="text-xs text-slate-500">Chỉ áp dụng cho hồ sơ đã duyệt hoặc lưu trữ.</p></div><button type="button" onClick={() => void saveDepartmentGrants()} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Lưu</button></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{departments.map((department) => <label key={department.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={departmentViewGrants.includes(department.id)} onChange={() => setDepartmentViewGrants((current) => current.includes(department.id) ? current.filter((id) => id !== department.id) : [...current, department.id])} />{department.name}</label>)}</div></section>
       </>}
       {error ? <p role="alert">{error}</p> : null}
       {history ? <PermissionHistoryDrawer userId={user.id} onClose={() => setHistory(false)}/> : null}

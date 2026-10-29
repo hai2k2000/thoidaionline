@@ -220,7 +220,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     canManageJournalismStructures: hasPermission("journalism.structure.manage"),
     canViewAssets: hasPermission("asset.view"),
     canManageAssets: hasPermission("asset.manage"),
-    canViewDatabase: hasPermission("record.discover"),
+    canViewDatabase: true,
     rbacPermissionScopes: user?.rbacPermissionScopes,
   });
 
