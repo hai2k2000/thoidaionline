@@ -9,6 +9,7 @@ import { type Asset, type AssetAssignment, type AssetConditionStatus } from "@/l
 import { errorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import AssetServiceHistory from "@/components/AssetServiceHistory";
+import { planManagingRoomChange } from "@/lib/assetManagingRoom.mjs";
 
 const conditionLabel: Record<AssetConditionStatus, string> = { normal: "Bình thường", needs_maintenance: "Cần bảo trì", under_service: "Đang sửa chữa", broken: "Hỏng" };
 const trackingModeLabel: Record<string, string> = { individual: "Cá thể", lot: "Theo lô" };
@@ -44,6 +45,7 @@ export default function AssetDetailPage() {
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [departmentId, setDepartmentId] = useState("");
+  const [managingRoomId, setManagingRoomId] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -56,8 +58,32 @@ export default function AssetDetailPage() {
     if (!response.ok) return setMessage(`❌ ${payload?.error || "Không thể tải tài sản."}`);
     setAsset(payload?.asset ?? null);
     setDepartmentId(payload?.asset?.currentAssignment?.department_id ?? "");
+    setManagingRoomId(payload?.asset?.currentAssignment?.department_id ?? "");
     setAssigneeId(payload?.asset?.currentAssignment?.assignee_id ?? "");
     setMessage("✅ Đã tải chi tiết tài sản.");
+  };
+
+  const changeManagingRoom = async () => {
+    if (!asset?.id || lifecycleBusy || !canManage) return;
+    const plan = planManagingRoomChange({ currentAssignment, status: asset.status, selectedDepartmentId: managingRoomId });
+    if (!plan.action) return;
+    const warning = currentAssignment?.assignee_id
+      ? "Người đang sử dụng sẽ bị gỡ khỏi tài sản và tài sản sẽ trở thành tài sản dùng chung của phòng mới. Bạn có muốn tiếp tục?"
+      : "Tài sản sẽ trở thành tài sản dùng chung của phòng mới. Bạn có muốn tiếp tục?";
+    if (!window.confirm(warning)) return;
+    setLifecycleBusy(true);
+    try {
+      const response = await fetch("/api/assets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: plan.action, asset_id: asset.id, department_id: managingRoomId, assignee_id: null }) });
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error || "Không thể đổi phòng quản lý.");
+      await load(asset.id);
+      notify("success", "Đã đổi phòng quản lý.");
+      setMessage("✅ Đã đổi phòng quản lý.");
+    } catch (error) {
+      const text = errorMessage(error, "Không thể đổi phòng quản lý.");
+      notify("error", text);
+      setMessage(`❌ ${text}`);
+    } finally { setLifecycleBusy(false); }
   };
 
   const saveAsset = async () => {
@@ -126,7 +152,7 @@ export default function AssetDetailPage() {
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Vị trí tài sản<select aria-label="Vị trí tài sản" disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.location_id ?? ""} onChange={(event) => setAssetField({ location_id: event.target.value || null })}><option value="">Chưa xác định</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Trạng thái sử dụng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{currentAssignment ? "Đang sử dụng" : "Chưa phân công"}</p></div>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Tình trạng tài sản<select disabled={!canManage} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal disabled:bg-slate-50" value={asset?.condition_status ?? "normal"} onChange={(event) => setAssetField({ condition_status: event.target.value as AssetConditionStatus })}>{Object.entries(conditionLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Phòng đang quản lý<input readOnly className="min-h-11 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-normal" value={currentDepartment} /></label>
+            {canManage && asset?.status !== "liquidated" ? <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><label>Phòng đang quản lý<select aria-label="Phòng đang quản lý" className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal" value={managingRoomId} onChange={(event) => setManagingRoomId(event.target.value)}><option value="">Chọn phòng ban</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label><button type="button" onClick={() => void changeManagingRoom()} disabled={lifecycleBusy || !planManagingRoomChange({ currentAssignment, status: asset?.status, selectedDepartmentId: managingRoomId }).action} className="min-h-10 justify-self-start rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50">Đổi phòng quản lý</button></div> : <label className="grid gap-1.5 text-sm font-semibold text-slate-700">Phòng đang quản lý<input readOnly className="min-h-11 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-normal" value={currentDepartment} /></label>}
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Người đang sử dụng</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{currentPerson}</p></div>
             <div className="grid gap-1.5 text-sm font-semibold text-slate-700"><span>Ngày cấp phát</span><p className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-normal">{formatDateTime(currentAssignment?.assigned_at)}</p></div>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700 md:col-span-2">Ghi chú<textarea readOnly={!canManage} className="min-h-28 rounded-lg border border-slate-300 px-3 py-2 font-normal read-only:bg-slate-50" value={asset?.note ?? ""} onChange={(event) => setAssetField({ note: event.target.value || null })} /></label>
