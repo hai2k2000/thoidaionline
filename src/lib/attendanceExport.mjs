@@ -1,5 +1,3 @@
-const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-
 /** @param {unknown} value */
 export function csvCell(value) {
   let text = value == null ? "" : String(value);
@@ -12,11 +10,15 @@ export function exportWorkdays(month, gridDays) {
   return gridDays.filter((day) => day.startsWith(month) && ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()));
 }
 
-// "T4 01/10" stays text in Excel; a bare "01/10" is auto-converted to a date.
+// Day-of-month only ("01"); "01/10" would be auto-converted to a date by Excel.
 /** @param {string} workDate YYYY-MM-DD */
 export function exportDayHeader(workDate) {
-  const date = new Date(`${workDate}T12:00:00Z`);
-  return `${WEEKDAY_LABELS[date.getUTCDay()]} ${workDate.slice(8, 10)}/${workDate.slice(5, 7)}`;
+  return workDate.slice(8, 10);
+}
+
+/** @param {string} month YYYY-MM */
+export function exportTitle(month) {
+  return `BẢNG CHẤM CÔNG THÁNG ${month.slice(5, 7)}/${month.slice(0, 4)}`;
 }
 
 /** @param {{ code: string, workday: number } | undefined} cell */
@@ -47,7 +49,7 @@ export function buildAttendanceExportCsv(month, grid, monthlyRows) {
     notesByStaff.set(row.user_id, [...(notesByStaff.get(row.user_id) ?? []), row.note ?? ""]);
   }
   const headers = ["STT", "Họ tên", "Phòng", ...days.map(exportDayHeader), "Tổng công", "Nghỉ có phép", "Nghỉ không phép", "Công tác", "Đi muộn", "Về sớm", "Thiếu giờ ra"];
-  const lines = [headers.map(csvCell).join(",")];
+  const lines = [csvCell(exportTitle(month)), "", headers.map(csvCell).join(",")];
   grid.rows.forEach((person, index) => {
     const cellsByDate = new Map(person.cells.map((cell) => [cell.date, cell]));
     const monthCells = days.map((day) => cellsByDate.get(day));
