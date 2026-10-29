@@ -12,7 +12,7 @@ const sourceText = sources.map(([, source]) => source).join("\n");
 
 test("role tab renders every catalog permission, including approval codes", () => {
   assert.doesNotMatch(page, /APPROVAL_PERMISSION_CODES/);
-  assert.match(page, /module\.permissions\.map/);
+  assert.match(page, /group\.permissions\.map|module\.permissions\.map|group\.permissions\.filter/);
   assert.match(page, /scopeOptions\?\.\[permission\.code\]/);
 });
 
@@ -21,6 +21,21 @@ test("other user permissions excludes exactly the approval codes", () => {
   assert.match(sourceText, /OtherPermissionsSection/);
   assert.match(sourceText, /effective/);
   assert.match(sourceText, /overrides/);
+});
+
+test("saves refresh silently and expose per-row pending state", () => {
+  assert.doesNotMatch(sourceText, /await onChanged\(\)/);
+  assert.doesNotMatch(sourceText, /await load\(\)/);
+  assert.match(sourceText, /pending/);
+  assert.match(sourceText, /Đang lưu|Dang luu/);
+});
+
+test("permission groups are collapsed, accessible, and searchable", () => {
+  assert.match(sourceText, /groupPermissions/);
+  assert.match(sourceText, /aria-expanded/);
+  assert.match(sourceText, /aria-controls/);
+  assert.match(sourceText, /Tìm quyền|Tim quyen/);
+  assert.match(page, /groupPermissions/);
 });
 
 test("restore-all confirm dialog exists and calls restore_user_inheritance", () => {

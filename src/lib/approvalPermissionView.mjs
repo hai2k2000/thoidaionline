@@ -2,6 +2,32 @@
 /** @typedef {'self'|'assigned'|'department'|'all'} Scope */
 
 export const APPROVAL_PERMISSION_CODES = ["leave.approve", "schedule.business.approve", "schedule.event.approve"];
+export const PERMISSION_GROUP_DEFINITIONS = [
+  { key: "task", label: "Giao việc", matches: (code) => code.startsWith("task.") },
+  { key: "record", label: "Dữ liệu (CSDL)", matches: (code) => code.startsWith("record.") },
+  { key: "asset", label: "Tài sản", matches: (code) => code.startsWith("asset.") },
+  { key: "attendance", label: "Chấm công & nghỉ phép", matches: (code) => code.startsWith("attendance.") || code === "leave.view_self" },
+  { key: "schedule", label: "Lịch & kế hoạch", matches: (code) => code === "schedule.view_self" },
+  { key: "journalism", label: "Báo chí", matches: (code) => code.startsWith("journalism.") },
+  { key: "staff", label: "Nhân sự & quản trị", matches: (code) => code.startsWith("staff.") || code === "permission.manage" || code.startsWith("evaluation.") },
+  { key: "approval", label: "Phê duyệt đơn và kế hoạch", matches: (code) => APPROVAL_PERMISSION_CODES.includes(code) },
+  { key: "other", label: "Khác", matches: () => true },
+];
+
+/**
+ * @template {{code:string,name?:string,description?:string|null}} Permission
+ * @param {Permission[]} permissions
+ * @returns {{key:string,label:string,permissions:Permission[]}[]}
+ */
+export function groupPermissions(permissions = []) {
+  /** @type {{key:string,label:string,permissions:Permission[]}[]} */
+  const groups = PERMISSION_GROUP_DEFINITIONS.map(({ key, label }) => ({ key, label, permissions: [] }));
+  for (const permission of permissions) {
+    const index = PERMISSION_GROUP_DEFINITIONS.findIndex(({ matches }) => matches(permission.code));
+    groups[index < 0 ? groups.length - 1 : index].permissions.push(permission);
+  }
+  return groups.filter((group) => group.permissions.length > 0);
+}
 export const APPROVAL_PERMISSION_LABELS = {
   "leave.approve": "Duyệt đơn xin nghỉ",
   "schedule.business.approve": "Duyệt kế hoạch công tác cá nhân",

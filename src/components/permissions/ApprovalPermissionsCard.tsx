@@ -5,8 +5,8 @@ const dateText = (value?: string | null) => value ? new Intl.DateTimeFormat("vi-
   timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
 }).format(new Date(value)) : "—";
 const scopeText = (scope: string, item: PermissionItem) => scope === "department" ? `Phòng ${item.effectiveDepartment?.name ?? "ban"}` : scope === "all" ? "Toàn cơ quan" : scope;
-export default function ApprovalPermissionsCard({ items, active, self, onGrant, onRevoke, userName }: {
-  items: PermissionItem[]; active: boolean; self: boolean; onSet: (item: PermissionItem, value: string) => void;
+export default function ApprovalPermissionsCard({ items, active, self, onGrant, onRevoke, userName, pending = [] }: {
+  items: PermissionItem[]; active: boolean; self: boolean; pending?: string[]; onSet: (item: PermissionItem, value: string) => void;
   onGrant: (item: PermissionItem) => void; onRevoke: (item: PermissionItem) => void; userName: string;
 }) {
   const approvalItems = APPROVAL_PERMISSION_CODES.map((code) => items.find((item) => item.permissionCode === code) ?? ({
@@ -16,10 +16,10 @@ export default function ApprovalPermissionsCard({ items, active, self, onGrant, 
   return <section><h3 className="mb-3 text-sm font-extrabold uppercase tracking-wide">PHÊ DUYỆT ĐƠN VÀ KẾ HOẠCH</h3>
     {approvalItems.map((item) => <div key={item.permissionCode} className="border-t py-4">
     <b>{item.label ?? item.permissionCode}</b>
-    <select aria-label={`Thiết lập: ${item.label ?? item.permissionCode}`} disabled={self || !active}
+    <select aria-label={`Thiết lập: ${item.label ?? item.permissionCode}`} disabled={self || !active || pending.includes(item.permissionCode)}
       value={item.userEffect ?? "inherit"}
       onChange={(event) => event.target.value === "allow" ? onGrant(item) : onRevoke(item)}
-      className="ml-3 rounded-lg border px-2 py-2">
+      className="ml-3 rounded-lg border px-2 py-2">{pending.includes(item.permissionCode) ? <option>Đang lưu…</option> : null}
       <option value="inherit">Kế thừa</option><option value="allow">Cấp riêng</option><option value="deny">Chặn riêng</option>
     </select>
     <div className="mt-2 space-y-1 text-sm text-slate-600">

@@ -5,6 +5,7 @@ import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import UserPermissionPanel from "@/components/permissions/UserPermissionPanel";
 import type { PermissionManagementPayload, PermissionMatrixGrantRow, PermissionMatrixRole, } from "@/lib/permissionMatrix";
+import { groupPermissions } from "@/lib/approvalPermissionView.mjs";
 type Scope = PermissionMatrixGrantRow["scope"];
 type Payload = Partial<PermissionManagementPayload> & {
     roleCatalog?: PermissionMatrixRole[];
@@ -25,8 +26,9 @@ export default function PermissionsPage() {
     const [selectedUserId, setSelectedUserId] = useState("");
     const [roleDraft, setRoleDraft] = useState<Record<string, Scope[]>>({});
     const [pending, setPending] = useState(false);
+    const [permissionSearch, setPermissionSearch] = useState("");
     const [message, setMessage] = useState("Đang tải ma trận phân quyền...");
-    const load = useCallback(async () => {
+    const load = useCallback(async (silent = false) => {
         const response = await fetch("/api/permissions", { cache: "no-store", credentials: "same-origin" });
         const next = await response.json().catch(() => ({})) as Payload;
         if (!response.ok) {
@@ -41,7 +43,7 @@ export default function PermissionsPage() {
         const nextRoles = next.roles ?? next.roleCatalog ?? [];
         if (!selectedRoleId && nextRoles[0])
             setSelectedRoleId(nextRoles[0].id);
-        setMessage("Quyền hiệu lực được tính theo deny > allow > role grant.");
+        if (!silent) setMessage("Quyền hiệu lực được tính theo deny > allow > role grant.");
     }, [router, selectedRoleId]);
     useEffect(() => {
         if (loading)
@@ -54,6 +56,12 @@ export default function PermissionsPage() {
     const roles = payload.roles ?? payload.roleCatalog ?? [];
     const users = useMemo(() => payload.users ?? [], [payload.users]);
     const selectedRole = roles.find((entry) => entry.id === selectedRoleId) ?? roles[0];
+    const rolePermissions = (payload.modules ?? []).flatMap((module) => module.permissions);
+    const roleGroups = groupPermissions(rolePermissions as never) as Array<{
+        key: string;
+        label: string;
+        permissions: Array<{ code: string; name?: string; description?: string | null }>;
+    }>;
     const affectedCount = users.filter((entry) => entry.active && entry.role_id === selectedRole?.id).length;
     useEffect(() => {
         if (!selectedRole)
@@ -75,7 +83,7 @@ export default function PermissionsPage() {
                 body: JSON.stringify(body),
             });
             if (response.ok)
-                await load();
+                await load(true);
             return response.ok;
         }
         finally {
@@ -141,9 +149,19 @@ export default function PermissionsPage() {
                     Lưu thay đổi
                   </button>
                 </div>
-                {(payload.modules ?? []).map((module) => (<div key={module.key} className="mb-5 overflow-hidden rounded-xl border border-slate-200">
-                    <div className="bg-slate-50 px-4 py-3 text-sm font-bold uppercase">{module.key}</div>
-                    {module.permissions.map((permission) => (<div key={permission.code} className="grid gap-3 border-t border-slate-100 px-4 py-3 md:grid-cols-[1fr_auto]">
+                <input aria-label="Tìm quyền" placeholder="Tìm quyền" value={permissionSearch}
+                  onChange={(event) => setPermissionSearch(event.target.value)} className="mb-4 w-full rounded-lg border px-3 py-2" />
+                {roleGroups.map((group) => (<details key={group.key} open={Boolean(permissionSearch)}
+                  className="mb-3 overflow-hidden rounded-xl border border-slate-200">
+                    <summary className="cursor-pointer px-4 py-3 text-sm font-bold">{group.label}
+                      <span className="font-normal text-slate-500"> ({group.permissions.length}) · {group.permissions.filter((permission: { code: string }) =>
+                        (roleDraft[permission.code] ?? []).length > 0).length}/{group.permissions.length} quyền</span>
+                    </summary>
+                    {group.permissions.filter((permission: { code: string; name?: string }) =>
+                      `${permission.name} ${permission.code}`.toLowerCase().includes(permissionSearch.toLowerCase())).map((permission: {
+                        code: string; name?: string; description?: string | null;
+                    }) => (
+                      <div key={permission.code} className="grid gap-3 border-t border-slate-100 px-4 py-3 md:grid-cols-[1fr_auto]">
                         <div>
                           <b>{permission.name}</b>
                           <p className="font-mono text-xs text-slate-500">{permission.code}</p>
@@ -163,14 +181,14 @@ export default function PermissionsPage() {
                               {scopeLabels[scope]}
                             </label>))}
                         </div>
-                      </div>))}
                   </div>))}
+                  </details>))}
               </div>
             </section>) : <UserPermissionPanel users={users.map((entry) => ({
                 ...entry,
                 role_name: Array.isArray(entry.roles) ? entry.roles[0]?.name : entry.roles?.name,
                 role_code: Array.isArray(entry.roles) ? entry.roles[0]?.code : entry.roles?.code,
-            }))} selectedUserId={selectedUserId} onSelect={setSelectedUserId} currentUserId={user?.id} onChanged={load} onToast={setMessage} genericModules={payload.modules}
+            }))} selectedUserId={selectedUserId} onSelect={setSelectedUserId} currentUserId={user?.id} onChanged={() => void load(true)} onToast={setMessage} genericModules={payload.modules}
   scopeOptions={payload.scopeOptions}/>}
         </div>
       </div>

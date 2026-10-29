@@ -52,7 +52,7 @@ export type UserPermissionPanelProps = {
     selectedUserId: string;
     onSelect: (id: string) => void;
     currentUserId?: string;
-    onChanged: () => Promise<void>;
+    onChanged?: (userId: string) => void;
     onToast: (message: string) => void;
     genericModules?: PermissionModule[];
     scopeOptions?: Record<string, Scope[]>;
