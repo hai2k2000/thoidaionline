@@ -18,6 +18,7 @@ export type DatabaseRecordInput = {
   languageCode?: "vi" | "en" | "zh" | "lo" | "km" | null;
   keywords?: string[];
   externalLinks?: Array<{ provider: "google_drive"; url: string; label?: string | null; mediaKind?: "image" | "audio" | "video" | null }>;
+  visibility?: "department" | "public";
 };
 
 export type DatabaseRecordAclInput = {
@@ -29,5 +30,5 @@ export type DatabaseRecordAclInput = {
 };
 
 export type DatabaseRecordUpdateInput = Partial<Pick<DatabaseRecordInput,
-  "title" | "summary" | "metadata" | "keywords" | "externalLinks"
+  "title" | "summary" | "metadata" | "keywords" | "externalLinks" | "visibility"
 >>;

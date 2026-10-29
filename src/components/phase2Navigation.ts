@@ -67,7 +67,7 @@ export function getPhase2Navigation(
       { id: "my-assets", href: "/my-assets" },
       ...((access.canViewAssets || access.canManageAssets) ? [{ id: "assets", href: "/assets" } as const] : []),
       ...(access.canManageAssets ? [{ id: "asset-status-requests", href: "/assets/status-requests" } as const] : []),
-      ...(access.canViewDatabase ? [{ id: "database", href: "/database/records" } as const] : []),
+      { id: "database", href: "/database/records" } as const,
     ],
     journalism: canAccessJournalism ? [
       { id: "journalism-tasks", href: "/journalism/tasks" },

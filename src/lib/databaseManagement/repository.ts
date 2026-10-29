@@ -12,6 +12,7 @@ type RecordRow = {
   id: string; category_id: string; record_type_id: string; record_code: string; title: string;
   summary: string | null; status: string; department_id: string | null; owner_id: string | null;
   created_by: string; metadata: Record<string, unknown>; language_code?: string | null; form_definition_id?: string | null; deleted_at?: string | null; created_at: string; updated_at: string;
+  visibility?: "department" | "public";
   record_type_code?: string | null;
   record_type_name?: string | null;
   category_code?: string | null;
@@ -40,6 +41,23 @@ async function aclForRecord(recordId: string) {
   return (data ?? []).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>;
 }
 
+async function visibilityAllowed(actor: DatabaseRecordActor, record: Pick<RecordRow, "department_id" | "status" | "visibility" | "record_type_code" | "category_code">, recordId: string) {
+  if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return false;
+  const context = await actorContext(actor);
+  const rows = await aclForRecord(recordId);
+  if (rows.some((row) => row.capability === "discover" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return false;
+  if (rows.some((row) => row.capability === "discover" && row.effect === "allow" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return true;
+  if (actor.rbacPermissionScopes?.["record.discover"]?.includes("all")) return true;
+  if (record.department_id && record.department_id === actor.department_id) return true;
+  if (record.status === "approved" || record.status === "archived") {
+    if (record.visibility === "public") return true;
+    const { data, error } = await serverSupabase.from("db_department_view_grants").select("user_id").eq("user_id", actor.id).eq("department_id", record.department_id).maybeSingle();
+    if (error) throw error;
+    return Boolean(data);
+  }
+  return false;
+}
+
 async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code" | "category_code">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
   if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return false;
   if (!actor.rbacPermissions.includes(`record.${capability}`)) return false;
@@ -63,7 +81,12 @@ function hasPermissionScope(actor: DatabaseRecordActor, permission: string, scop
 }
 
 async function canApproveRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code" | "created_by">, recordId: string) {
-  if (!(await canRecord(actor, record, recordId, "approve"))) return false;
+  const context = await actorContext(actor);
+  const rows = await aclForRecord(recordId);
+  if (rows.some((row) => row.capability === "approve" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return false;
+  const manager = record.department_id ? Boolean((await serverSupabase.from("departments").select("manager_id").eq("id", record.department_id).maybeSingle()).data?.manager_id === actor.id) : false;
+  const approver = manager || actor.rbacPermissionScopes?.["record.approve"]?.includes("all");
+  if (!approver) return false;
   if (record.created_by !== actor.id) return true;
   return hasPermissionScope(actor, "record.self_approve", ["self", "all"]);
 }
@@ -79,16 +102,12 @@ export type DatabaseRecordApprovalBlockReason =
 async function approvalBlockReason(actor: DatabaseRecordActor, record: RecordRow, recordId: string): Promise<DatabaseRecordApprovalBlockReason | null> {
   if (record.status !== "pending_review") return "record_not_pending";
   if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return "record_type_restricted";
-  if (!actor.rbacPermissions.includes("record.approve")) return "missing_record_approve_permission";
   const context = await actorContext(actor);
   const rows = await aclForRecord(recordId);
-  const applicable = rows.filter((row) => row.capability === "approve" && (
-    row.principal_type === "user" && row.principal_id === actor.id
-    || row.principal_type === "role" && row.principal_id === context.roleId
-    || row.principal_type === "department" && row.principal_id === context.departmentId
-  ));
+  const applicable = rows.filter((row) => row.capability === "approve" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)));
   if (applicable.some((row) => row.effect === "deny")) return "approval_acl_denied";
-  if (!applicable.some((row) => row.effect === "allow")) return "missing_approval_acl_allow";
+  const manager = record.department_id ? Boolean((await serverSupabase.from("departments").select("manager_id").eq("id", record.department_id).maybeSingle()).data?.manager_id === actor.id) : false;
+  if (!manager && !actor.rbacPermissionScopes?.["record.approve"]?.includes("all")) return "missing_record_approve_permission";
   if (record.created_by === actor.id && !hasPermissionScope(actor, "record.self_approve", ["self", "all"])) return "missing_self_approve_permission";
   return null;
 }
@@ -99,7 +118,7 @@ export async function canAccessDatabaseRecordForActor(actor: DatabaseRecordActor
 }
 
 async function getRecord(recordId: string) {
-  const { data, error } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,form_definition_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,language_code,created_at,updated_at,deleted_at").eq("id", recordId).maybeSingle();
+  const { data, error } = await serverSupabase.from("db_records").select("id,category_id,record_type_id,form_definition_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,language_code,visibility,created_at,updated_at,deleted_at").eq("id", recordId).maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const [{ data: type, error: typeError }, { data: category, error: categoryError }] = await Promise.all([
@@ -124,9 +143,9 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return null;
   const canRestore = record.status === "deleted" && await canRecord(actor, record, recordId, "restore");
   if (record.status === "deleted" && !canRestore) return null;
-  const metadataAllowed = await canRecord(actor, record, recordId, "metadata.view");
-  const discoverAllowed = await canRecord(actor, record, recordId, "discover");
-  if (!metadataAllowed && !discoverAllowed && !canRestore) return null;
+  const visible = await visibilityAllowed(actor, record, recordId);
+  if (!visible && !canRestore) return null;
+  const metadataAllowed = visible;
   const [acl, files, links, keywords, history] = await Promise.all([
     aclForRecord(recordId),
     serverSupabase.from("db_record_files").select("id,storage_backend,original_name,mime_type,size_bytes,sha256,created_by,created_at").eq("record_id", recordId).order("created_at", { ascending: false }),
@@ -176,7 +195,7 @@ export async function getDatabaseRecordAclManagement(actor: DatabaseRecordActor,
   return { acl: acl.data ?? [], users: users.data ?? [], roles: roles.data ?? [] };
 }
 
-export type DatabaseRecordListQuery = { q?: string; status?: string; recordTypeId?: string; categoryId?: string; languageCode?: string; limit?: number; offset?: number; createdFrom?: string; createdTo?: string; updatedFrom?: string; updatedTo?: string; departmentId?: string; ownerId?: string; createdBy?: string; hasFiles?: boolean; keyword?: string; sort?: string; sortDir?: string };
+export type DatabaseRecordListQuery = { q?: string; status?: string; visibility?: "department" | "public"; recordTypeId?: string; categoryId?: string; languageCode?: string; limit?: number; offset?: number; createdFrom?: string; createdTo?: string; updatedFrom?: string; updatedTo?: string; departmentId?: string; ownerId?: string; createdBy?: string; hasFiles?: boolean; keyword?: string; sort?: string; sortDir?: string };
 
 export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, filters: DatabaseRecordListQuery = {}) {
   let categoryId = filters.categoryId ?? null;
@@ -212,6 +231,7 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, fil
     p_keyword: filters.keyword?.trim() || null,
     p_sort: filters.sort ?? "updated_at",
     p_sort_dir: filters.sortDir ?? "desc",
+    p_visibility: filters.visibility ?? null,
   });
   if (error) throw error;
   const rows = (data ?? []) as RecordRow[];
@@ -319,6 +339,7 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
     metadata: input.metadata,
     language_code: languageCodeForCategory(category.code) ?? languageCode,
     form_definition_id: form?.id ?? null,
+    visibility: input.visibility ?? "department",
     ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
   }).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,language_code,created_at,updated_at").single();
   if (error) {
@@ -358,10 +379,11 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
     await validateFormMetadata(current.form_definition_id, { ...input.metadata, record_code: current.record_code, title: input.title ?? current.title, summary: input.summary ?? current.summary ?? "", status: current.status });
     patch.metadata = input.metadata;
   }
-  const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,created_at,updated_at").single();
+  if (input.visibility !== undefined) patch.visibility = input.visibility;
+  const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,visibility,created_at,updated_at").single();
   if (error) throw error;
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "update", old_data: current, new_data: data });
-  if (historyError) { await serverSupabase.from("db_records").update({ record_code: current.record_code, title: current.title, summary: current.summary, metadata: current.metadata }).eq("id", recordId); throw historyError; }
+  if (historyError) { await serverSupabase.from("db_records").update({ record_code: current.record_code, title: current.title, summary: current.summary, metadata: current.metadata, visibility: current.visibility }).eq("id", recordId); throw historyError; }
   return data as RecordRow;
 }
 
@@ -400,7 +422,7 @@ export async function upsertDatabaseRecordAcl(actor: DatabaseRecordActor, record
 export async function getDatabaseRecordFile(actor: DatabaseRecordActor, recordId: string, fileId: string) {
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
-  if (!(await canRecord(actor, current, recordId, "download"))) throw new Error("permission_denied");
+  if (!(await visibilityAllowed(actor, current, recordId))) throw new Error("permission_denied");
   const { data, error } = await serverSupabase.from("db_record_files").select("id,record_id,storage_key,original_name,mime_type,size_bytes,sha256").eq("id", fileId).eq("record_id", recordId).maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("file_not_found");

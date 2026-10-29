@@ -21,6 +21,8 @@ export function parseRecordListParams(params) {
   if (hasFiles !== undefined && !["0", "1", "true", "false"].includes(hasFiles)) throw new Error("invalid_filter");
   const sort = get("sort") ?? "updated_at";
   const sortDir = get("sortDir") ?? "desc";
+  const visibility = get("visibility");
+  if (visibility !== undefined && !["department", "public"].includes(visibility)) throw new Error("invalid_filter");
   if (!SORTS.has(sort) || !["asc", "desc"].includes(sortDir)) throw new Error("invalid_filter");
   const pageSize = Number(params.get("pageSize") ?? params.get("limit") ?? 20);
   const rawOffset = params.get("offset");
@@ -28,12 +30,12 @@ export function parseRecordListParams(params) {
   if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || !PAGE_SIZES.has(pageSize)) throw new Error("invalid_filter");
   const offset = rawOffset === null ? (page - 1) * pageSize : Number(rawOffset);
   if (!Number.isInteger(offset) || offset < 0) throw new Error("invalid_filter");
-  return { q: params.get("q") ?? "", status: get("status"), recordTypeId: get("recordTypeId"), categoryId: get("categoryId"), languageCode: get("languageCode"), createdFrom: get("createdFrom"), createdTo: get("createdTo"), updatedFrom: get("updatedFrom"), updatedTo: get("updatedTo"), departmentId: get("departmentId"), ownerId: get("ownerId"), createdBy: get("createdBy"), hasFiles: hasFiles === undefined ? undefined : ["1", "true"].includes(hasFiles), keyword: get("keyword"), sort, sortDir, limit: pageSize, offset, page, pageSize };
+  return { q: params.get("q") ?? "", status: get("status"), visibility, recordTypeId: get("recordTypeId"), categoryId: get("categoryId"), languageCode: get("languageCode"), createdFrom: get("createdFrom"), createdTo: get("createdTo"), updatedFrom: get("updatedFrom"), updatedTo: get("updatedTo"), departmentId: get("departmentId"), ownerId: get("ownerId"), createdBy: get("createdBy"), hasFiles: hasFiles === undefined ? undefined : ["1", "true"].includes(hasFiles), keyword: get("keyword"), sort, sortDir, limit: pageSize, offset, page, pageSize };
 }
 
 export function serializeRecordListState(state) {
   const params = new URLSearchParams();
-  const keys = ["q", "categoryId", "recordTypeId", "languageCode", "status", "createdFrom", "createdTo", "updatedFrom", "updatedTo", "departmentId", "ownerId", "createdBy", "keyword", "sort", "sortDir"];
+  const keys = ["q", "categoryId", "recordTypeId", "languageCode", "status", "visibility", "createdFrom", "createdTo", "updatedFrom", "updatedTo", "departmentId", "ownerId", "createdBy", "keyword", "sort", "sortDir"];
   for (const key of keys) if (state[key]) params.set(key, String(state[key]));
   if (state.hasFiles !== undefined) params.set("hasFiles", state.hasFiles ? "1" : "0");
   if (state.page && state.page !== 1) params.set("page", String(state.page));
@@ -43,7 +45,7 @@ export function serializeRecordListState(state) {
 
 export function parseRecordListState(params) {
   const parsed = parseRecordListParams(params);
-  return { q: parsed.q, categoryId: parsed.categoryId ?? "", recordTypeId: parsed.recordTypeId ?? "", languageCode: parsed.languageCode ?? "", status: parsed.status ?? "", page: parsed.page, pageSize: parsed.pageSize, sort: parsed.sort, sortDir: parsed.sortDir, createdFrom: parsed.createdFrom ?? "", createdTo: parsed.createdTo ?? "", updatedFrom: parsed.updatedFrom ?? "", updatedTo: parsed.updatedTo ?? "", departmentId: parsed.departmentId ?? "", ownerId: parsed.ownerId ?? "", createdBy: parsed.createdBy ?? "", hasFiles: parsed.hasFiles, keyword: parsed.keyword ?? "" };
+  return { q: parsed.q, categoryId: parsed.categoryId ?? "", recordTypeId: parsed.recordTypeId ?? "", languageCode: parsed.languageCode ?? "", status: parsed.status ?? "", ...(parsed.visibility ? { visibility: parsed.visibility } : {}), page: parsed.page, pageSize: parsed.pageSize, sort: parsed.sort, sortDir: parsed.sortDir, createdFrom: parsed.createdFrom ?? "", createdTo: parsed.createdTo ?? "", updatedFrom: parsed.updatedFrom ?? "", updatedTo: parsed.updatedTo ?? "", departmentId: parsed.departmentId ?? "", ownerId: parsed.ownerId ?? "", createdBy: parsed.createdBy ?? "", hasFiles: parsed.hasFiles, keyword: parsed.keyword ?? "" };
 }
 
 export const recordListSorts = ["updated_at", "created_at", "record_code", "title", "status"];

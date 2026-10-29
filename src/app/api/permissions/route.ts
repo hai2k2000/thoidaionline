@@ -111,6 +111,17 @@ export async function POST(request: Request) {
       if (!userId || !permissionCode || !isCatalogPermission(permissionCode)) return apiError("invalid_request", 400);
       return apiJson({ result: await clearUserPermissionOverride(actor, userId, permissionCode) });
     }
+    if (body?.action === "replace_department_view_grants") {
+      if (!userId || !Array.isArray(body.departmentIds) || body.departmentIds.some((id: unknown) => !asUuid(id))) return apiError("invalid_request", 400);
+      const ids = [...new Set(body.departmentIds as string[])];
+      const { error: deleteError } = await serverSupabase.from("db_department_view_grants").delete().eq("user_id", userId);
+      if (deleteError) return rpcFailure(deleteError);
+      if (ids.length) {
+        const { error: insertError } = await serverSupabase.from("db_department_view_grants").insert(ids.map((departmentId) => ({ user_id: userId, department_id: departmentId, granted_by: guard.actor.id })));
+        if (insertError) return rpcFailure(insertError);
+      }
+      return apiJson({ result: { userId, departmentIds: ids } });
+    }
     if ((!roleId && !userId) || (roleId && userId) || (action !== "grant" && action !== "revoke") || (permissionCode !== "task.quick_report.create" && permissionCode !== "asset.manage")) return apiError("invalid_request", 400);
     if (userId) {
       const data = permissionCode === "asset.manage"

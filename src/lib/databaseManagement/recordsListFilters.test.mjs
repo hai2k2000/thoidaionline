@@ -21,3 +21,9 @@ test("valid API params normalize pagination and booleans", () => {
   assert.equal(result.hasFiles, true);
   assert.equal(result.sort, "title");
 });
+
+test("visibility filter accepts only department or public and serializes", () => {
+  const state = { visibility: "public", page: 1, pageSize: 20, sort: "updated_at", sortDir: "desc" };
+  assert.equal(parseRecordListState(new URLSearchParams(serializeRecordListState(state))).visibility, "public");
+  assert.throws(() => parseRecordListParams(new URLSearchParams("visibility=private")), /invalid_filter/);
+});
