@@ -44,6 +44,28 @@ test("restore-all confirm dialog exists and calls restore_user_inheritance", () 
   assert.match(sourceText, /restore_user_inheritance/);
 });
 
+test("permission presets expose the approved button and dialog copy", () => {
+  assert.match(sourceText, /Gói quyền mẫu/);
+  assert.match(sourceText, /Người nhập CSDL của phòng/);
+  assert.match(sourceText, /Áp dụng gói:/);
+  assert.match(sourceText, /Bắt buộc/);
+  assert.match(sourceText, /Nên có/);
+  assert.match(sourceText, /Tùy chọn/);
+  assert.match(sourceText, /Đã có/);
+  assert.match(sourceText, /Đang chặn riêng → sẽ cấp riêng/);
+  assert.match(sourceText, /Sẽ cấp riêng/);
+  assert.match(sourceText, /Không cấp/);
+  assert.match(sourceText, /Gói không cấp quyền duyệt, tự phê duyệt, quản lý quyền hồ sơ hay hồ sơ nhạy cảm\./);
+  assert.match(sourceText, /Đang áp dụng…/);
+  assert.match(sourceText, /Áp dụng gói/);
+});
+
+test("permission dialogs bound and scroll long content", () => {
+  const dialog = readFileSync(new URL("../components/permissions/Dialog.tsx", import.meta.url), "utf8");
+  assert.match(dialog, /overflow-y-auto/);
+  assert.match(dialog, /max-h-\[calc\(100dvh-2rem\)\]|max-h-\[100dvh\]/);
+});
+
 test("mobile user list and detail are separate screens and history is full-screen", () => {
   assert.match(sourceText, /← Danh sách/);
   assert.match(sourceText, /md:hidden/);

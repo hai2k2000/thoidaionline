@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
-import { APPROVAL_PERMISSION_CODES, groupPermissions } from "@/lib/approvalPermissionView.mjs";
+import { APPROVAL_PERMISSION_CODES, groupPermissions, PERMISSION_PRESETS } from "@/lib/approvalPermissionView.mjs";
 import type { PermissionModule, Scope, UserRow } from "./types";
+import PresetDialog from "./PresetDialog";
 const labels: Record<Scope, string> = { self: "Cá nhân", assigned: "Được giao", department: "Phòng ban", all: "Toàn cơ quan" };
 type ViewPermission = { code: string; name?: string };
 type Group = { key: string; label: string; permissions: ViewPermission[] };
@@ -13,14 +14,29 @@ type Props = {
   scopeOptions?: Record<string, Scope[]>;
   pending?: string[];
   onSet: (code: string, value: string, scope?: Scope) => void;
+  onApplyPreset: (preset: typeof PERMISSION_PRESETS[number], codes: string[]) => Promise<{ succeeded: string[]; failed: string[] }>;
+  presetSaving?: boolean;
 };
-export default function OtherPermissionsSection({ user, modules, active, self, scopeOptions, pending = [], onSet }: Props) {
+export default function OtherPermissionsSection({ user, modules, active, self, scopeOptions, pending = [], onSet, onApplyPreset, presetSaving = false }: Props) {
   const [query, setQuery] = useState(""); const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [preset, setPreset] = useState<typeof PERMISSION_PRESETS[number] | null>(null);
   const permissions = useMemo(() => modules.flatMap((module) => module.permissions).filter((permission) => !APPROVAL_PERMISSION_CODES.includes(permission.code)), [modules]);
   const groups = groupPermissions(permissions as never) as Group[];
   return <section className="mt-5 rounded-xl border border-slate-200">
     <div className="border-b px-4 py-3 text-sm font-extrabold uppercase tracking-wide">Các quyền khác</div>
     <div className="space-y-2 p-4">
+      {/* Người nhập CSDL của phòng */}
+      <div className="rounded-lg border border-orange-100 bg-orange-50 p-3">
+        <h3 className="text-sm font-bold">Gói quyền mẫu</h3>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {PERMISSION_PRESETS.map((item) => <button key={item.key} type="button"
+            disabled={self || !active} onClick={() => setPreset(item)}
+            className="rounded-lg border border-orange-200 bg-white px-3 py-2 text-left text-sm font-semibold disabled:opacity-50">
+            <span className="block">{item.label}</span>
+            <span className="text-xs font-normal text-slate-600">{item.description}</span>
+          </button>)}
+        </div>
+      </div>
       <label className="block text-sm font-semibold">Tìm quyền
         <input value={query} onChange={(event) => setQuery(event.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
       </label>
@@ -49,7 +65,10 @@ export default function OtherPermissionsSection({ user, modules, active, self, s
             scopeOptions={scopeOptions} busy={pending.includes(permission.code)} onSet={onSet} />)}</div> : null}
         </section>;
       })}
-    </div>
+    </div>{preset ? <PresetDialog preset={preset} user={user}
+      labels={Object.fromEntries(permissions.map((item) => [item.code, item.name]))}
+      saving={presetSaving} onClose={() => setPreset(null)}
+      onApply={(codes) => onApplyPreset(preset, codes)} /> : null}
   </section>;
 }
 type RowProps = { permission: ViewPermission; user: UserRow; active: boolean; self: boolean;

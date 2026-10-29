@@ -7,6 +7,7 @@ import GrantDialog from "./GrantDialog";
 import RevokeDialog from "./RevokeDialog";
 import usePermissionUserDetail from "./usePermissionUserDetail";
 import type { PermissionItem, PermissionModule, Scope, UserRow } from "./types";
+import { PERMISSION_PRESETS } from "@/lib/approvalPermissionView.mjs";
 type Props = {
     user: UserRow;
     currentUserId?: string;
@@ -22,6 +23,7 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
     const [history, setHistory] = useState(false);
     const [grantItem, setGrantItem] = useState<PermissionItem | null>(null);
     const [revokeItem, setRevokeItem] = useState<PermissionItem | null>(null);
+    const [presetSaving, setPresetSaving] = useState(false);
     const self = currentUserId === user.id;
     const write = async (body: Record<string, unknown>) => {
         const code = String(body.permissionCode ?? "restore");
@@ -34,12 +36,47 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
         onToast("Đã cập nhật quyền.");
         setPending((current) => current.filter((item) => item !== code));
     };
-    const saveDepartmentGrants = async () => { try { await write({ action: "replace_department_view_grants", userId: user.id, departmentIds: departmentViewGrants }); onToast("Đã lưu phạm vi xem theo phòng."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Không thể lưu phạm vi phòng."); } };
+    const saveDepartmentGrants = async () => {
+        try {
+            await write({ action: "replace_department_view_grants", userId: user.id, departmentIds: departmentViewGrants });
+            onToast("Đã lưu phạm vi xem theo phòng.");
+        } catch (reason) {
+            setError(reason instanceof Error ? reason.message : "Không thể lưu phạm vi phòng.");
+        }
+    };
     const setOther = (permissionCode: string, value: string, scope?: Scope) => {
         const body = value === "inherit"
             ? { action: "clear_user_override", userId: user.id, permissionCode }
             : { action: "set_user_override", userId: user.id, permissionCode, effect: value, scope: scope ?? scopeOptions[permissionCode]?.[0] ?? "all" };
         void write(body).catch((reason) => { setPending((current) => current.filter((item) => item !== permissionCode)); setError(reason.message); });
+    };
+    const applyPreset = async (preset: typeof PERMISSION_PRESETS[number], codes: string[]) => {
+        setPresetSaving(true);
+        const succeeded: string[] = [];
+        let failed: string[] = [];
+        try {
+            for (const permissionCode of codes) {
+                const item = preset.items.find((entry) => entry.code === permissionCode);
+                if (!item) continue;
+                setPending((current) => [...current, permissionCode]);
+                const response = await fetch("/api/permissions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+                    action: "set_user_override", userId: user.id, permissionCode, effect: "allow", scope: item.scope,
+                }) });
+                setPending((current) => current.filter((code) => code !== permissionCode));
+                if (!response.ok) throw new Error("Không thể cập nhật quyền.");
+                succeeded.push(permissionCode);
+            }
+            onToast(`Đã áp dụng gói “${preset.label}”: ${succeeded.length} quyền`);
+        } catch (reason) {
+            void reason;
+            failed = codes.filter((code) => !succeeded.includes(code));
+        } finally {
+            setPending((current) => current.filter((code) => !codes.includes(code)));
+            setPresetSaving(false);
+            await load(true);
+            onChanged?.(user.id);
+        }
+        return { succeeded, failed };
     };
     const onApprovalSet = (item: PermissionItem, value: string) => value === "allow" ? setGrantItem(item) : setRevokeItem(item);
     const submitGrant = async (scope: Scope) => {
@@ -81,8 +118,19 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
       </header>
       {loading ? <p>Đang tải quyền…</p> : <>
         <ApprovalPermissionsCard items={items} active={user.active} self={self} userName={user.full_name} pending={pending} onSet={onApprovalSet} onGrant={setGrantItem} onRevoke={setRevokeItem}/>
-        <OtherPermissionsSection user={user} modules={genericModules} active={user.active} self={self} scopeOptions={scopeOptions} pending={pending} onSet={setOther}/>
-        <section className="mt-5 rounded-xl border border-slate-200 p-4"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Xem tài liệu của phòng</h3><p className="text-xs text-slate-500">Chỉ áp dụng cho hồ sơ đã duyệt hoặc lưu trữ.</p></div><button type="button" onClick={() => void saveDepartmentGrants()} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Lưu</button></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{departments.map((department) => <label key={department.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={departmentViewGrants.includes(department.id)} onChange={() => setDepartmentViewGrants((current) => current.includes(department.id) ? current.filter((id) => id !== department.id) : [...current, department.id])} />{department.name}</label>)}</div></section>
+        <OtherPermissionsSection user={user} modules={genericModules} active={user.active} self={self}
+          scopeOptions={scopeOptions} pending={pending} onSet={setOther}
+          onApplyPreset={applyPreset} presetSaving={presetSaving}/>
+        <section className="mt-5 rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Xem tài liệu của phòng</h3>
+            <p className="text-xs text-slate-500">Chỉ áp dụng cho hồ sơ đã duyệt hoặc lưu trữ.</p></div>
+            <button type="button" onClick={() => void saveDepartmentGrants()}
+              className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Lưu</button></div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">{departments.map((department) => <label key={department.id}
+            className="flex items-center gap-2 text-sm"><input type="checkbox" checked={departmentViewGrants.includes(department.id)}
+              onChange={() => setDepartmentViewGrants((current) => current.includes(department.id)
+                ? current.filter((id) => id !== department.id) : [...current, department.id])} />{department.name}</label>)}</div>
+        </section>
       </>}
       {error ? <p role="alert">{error}</p> : null}
       {history ? <PermissionHistoryDrawer userId={user.id} onClose={() => setHistory(false)}/> : null}
