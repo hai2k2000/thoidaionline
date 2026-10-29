@@ -601,7 +601,7 @@ function AttendancePageContent() {
               >
                 {syncBusy ? "Đang gửi..." : syncRequests[0]?.status === "completing" ? "Đang chốt dữ liệu..." : syncRequests[0]?.status === "running" ? "Đang đồng bộ..." : "Đồng bộ ngay"}
               </button>
-              {isOrganizationView && period === "month" ? <a href={`/api/attendance/export?month=${selectedDate.slice(0, 7)}`} className="min-h-11 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800">Xuất Excel (CSV)</a> : null}
+              {isOrganizationView && period === "month" ? <a href={`/api/attendance/export?${new URLSearchParams({ month: selectedDate.slice(0, 7), ...(departmentFilter ? { departmentId: departmentFilter } : {}), ...(staffFilter ? { staffId: staffFilter } : {}), ...(statusFilter ? { status: statusFilter } : {}) }).toString()}`} className="min-h-11 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800">Xuất Excel (CSV)</a> : null}
             </div>
           ) : null}
           <div className="grid gap-2 md:grid-cols-4">
