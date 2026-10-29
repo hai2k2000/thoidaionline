@@ -10,7 +10,7 @@ import type { PermissionItem, PermissionModule, Scope, UserRow } from "./types";
 type Props = {
     user: UserRow;
     currentUserId?: string;
-    onChanged: () => Promise<void>;
+    onChanged?: (userId: string) => void;
     onToast: (message: string) => void;
     genericModules?: PermissionModule[];
     scopeOptions?: Record<string, Scope[]>;
@@ -18,23 +18,27 @@ type Props = {
 };
 export default function UserPermissionDetail({ user, currentUserId, onChanged, onToast, genericModules = [], scopeOptions = {}, onBack }: Props) {
     const { items, loading, error, setError, load } = usePermissionUserDetail(user.id);
+    const [pending, setPending] = useState<string[]>([]);
     const [history, setHistory] = useState(false);
     const [grantItem, setGrantItem] = useState<PermissionItem | null>(null);
     const [revokeItem, setRevokeItem] = useState<PermissionItem | null>(null);
     const self = currentUserId === user.id;
     const write = async (body: Record<string, unknown>) => {
+        const code = String(body.permissionCode ?? "restore");
+        setPending((current) => [...current, code]);
         const response = await fetch("/api/permissions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
         if (!response.ok)
             throw new Error("Không thể cập nhật quyền.");
-        await load();
-        await onChanged();
+        await load(true);
+        onChanged?.(user.id);
         onToast("Đã cập nhật quyền.");
+        setPending((current) => current.filter((item) => item !== code));
     };
     const setOther = (permissionCode: string, value: string, scope?: Scope) => {
         const body = value === "inherit"
             ? { action: "clear_user_override", userId: user.id, permissionCode }
             : { action: "set_user_override", userId: user.id, permissionCode, effect: value, scope: scope ?? scopeOptions[permissionCode]?.[0] ?? "all" };
-        void write(body).catch((reason) => setError(reason.message));
+        void write(body).catch((reason) => { setPending((current) => current.filter((item) => item !== permissionCode)); setError(reason.message); });
     };
     const onApprovalSet = (item: PermissionItem, value: string) => value === "allow" ? setGrantItem(item) : setRevokeItem(item);
     const submitGrant = async (scope: Scope) => {
@@ -75,8 +79,8 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
         </div>
       </header>
       {loading ? <p>Đang tải quyền…</p> : <>
-        <ApprovalPermissionsCard items={items} active={user.active} self={self} userName={user.full_name} onSet={onApprovalSet} onGrant={setGrantItem} onRevoke={setRevokeItem}/>
-        <OtherPermissionsSection user={user} modules={genericModules} active={user.active} self={self} scopeOptions={scopeOptions} onSet={setOther}/>
+        <ApprovalPermissionsCard items={items} active={user.active} self={self} userName={user.full_name} pending={pending} onSet={onApprovalSet} onGrant={setGrantItem} onRevoke={setRevokeItem}/>
+        <OtherPermissionsSection user={user} modules={genericModules} active={user.active} self={self} scopeOptions={scopeOptions} pending={pending} onSet={setOther}/>
       </>}
       {error ? <p role="alert">{error}</p> : null}
       {history ? <PermissionHistoryDrawer userId={user.id} onClose={() => setHistory(false)}/> : null}
