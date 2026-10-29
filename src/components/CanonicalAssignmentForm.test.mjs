@@ -31,7 +31,7 @@ test("canonical form owns recipient scope, defaults, fields, validation, and pay
     "validateTaskCards",
     "buildBatchPayload",
     "Tìm hoặc chọn nhân viên",
-    "Phạm vi:",
+    "Phòng ban:",
     "Đổi người",
     "role=\"combobox\"",
     "Escape",
@@ -56,6 +56,32 @@ test("auto-focuses the first card only when the active recipient is ready", asyn
   assert.match(form, /if \(formActivated && recipientReady\)\s*window\.requestAnimationFrame\(\(\) => cardTitleRefs\.current\[firstCardIdRef\.current \?\? ""\]\?\.focus\(\)\)/);
   assert.match(form, /\}, \[formActivated, recipientReady\]\);/);
   assert.doesNotMatch(form, /\}, \[[^\]]*taskCards[^\]]*\]\);/);
+});
+
+test("recipient controls render in mode, department, recipient order before task cards", async () => {
+  const form = await read("CanonicalAssignmentForm.tsx");
+  const modeIndex = form.indexOf("Cách giao");
+  const departmentIndex = form.indexOf("Phòng ban");
+  const recipientIndex = form.indexOf("Người nhận việc");
+  const taskCardIndex = form.indexOf("aria-label=\"Danh sách công việc\"");
+  assert.ok(modeIndex >= 0 && departmentIndex > modeIndex && recipientIndex > departmentIndex);
+  assert.ok(taskCardIndex > recipientIndex);
+  assert.match(form, /type="radio"/);
+  assert.match(form, /department_group/);
+  assert.match(form, /disabled=\{mode === "department_group" && taskCards\.length > 1\}/);
+});
+
+test("department changes clear the selected recipient and activation while mode switches reset exclusions", async () => {
+  const form = await read("CanonicalAssignmentForm.tsx");
+  assert.match(form, /const handleDepartmentChange[\s\S]*setDepartmentId\(nextDepartmentId\)[\s\S]*setAssigneeId\(""\)[\s\S]*setExcludedMemberIds\(\[\]\)[\s\S]*setFormActivated\(false\)/);
+  assert.match(form, /setAssignmentMode\(nextMode\);[\s\S]{0,120}setExcludedMemberIds\(\[\]\)/);
+  assert.match(form, /assignmentMode === "department_group" \? `Nhóm phòng ban — chính: \$\{selectedAssignee\.fullName\}`/);
+  assert.doesNotMatch(form, /<Field label="Cách chọn người">/);
+});
+
+test("department group summary keeps the editable member checklist visible", async () => {
+  const form = await read("CanonicalAssignmentForm.tsx");
+  assert.match(form, /formActivated && selectedAssignee && selectedDepartment[\s\S]*assignmentMode === "department_group" && formActivated[\s\S]*groupMemberChecklist/);
 });
 
 test("shell keeps API, attachment, notification, and redirect lifecycle outside the reusable form", async () => {
