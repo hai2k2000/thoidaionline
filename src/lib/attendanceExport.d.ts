@@ -1,6 +1,7 @@
 export function csvCell(value: unknown): string;
 export function exportWorkdays(month: string, gridDays: string[]): string[];
 export function exportDayHeader(workDate: string): string;
+export function exportTitle(month: string): string;
 export function exportCellValue(cell: { code: string; workday: number } | undefined): string | number;
 export function buildAttendanceExportCsv(
   month: string,
