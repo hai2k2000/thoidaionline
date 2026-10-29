@@ -6,6 +6,7 @@ import { isAttendanceListedStaff, roleCodeFromRelation } from "@/lib/attendanceV
 import { attendanceScheduleNoteEntriesFor } from "@/lib/attendanceScheduleNotes.mjs";
 import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
 import { classifyAttendanceDay } from "@/lib/attendanceDayStatus.mjs";
+import { attendanceGridDays } from "@/lib/attendanceGridRange.mjs";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -175,6 +176,8 @@ export async function GET(request: Request) {
     const end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0, 12));
     rangeEnd = end.toISOString().slice(0, 10);
   }
+  const gridRangeStart = rangeStart;
+  const gridRangeEnd = rangeEnd;
   rangeEnd = clampAttendanceEndDate(rangeEnd, today);
   if (rangeStart > rangeEnd) rangeStart = rangeEnd;
   const summaryRangeStart = rangeStart;
@@ -529,8 +532,8 @@ export async function GET(request: Request) {
   const rows = contextRows((dayResult.data ?? []) as unknown as AttendanceRow[], rangeStart, rangeEnd, dayAdminNotes, dayAdjustments);
   const monthlyRows = contextRows((monthResult.data ?? []) as unknown as AttendanceRow[], period === "day" ? monthStart : summaryRangeStart, period === "day" ? anchorDate : summaryRangeEnd, monthAdminNotes, monthAdjustments);
   // Compatibility marker: monthlyRows: contextRows(...)
-  const gridDays = period === "month" && organizationScope ? Array.from({ length: new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0)).getUTCDate() }, (_, index) => `${anchorDate.slice(0, 7)}-${String(index + 1).padStart(2, "0")}`) : [];
-  const grid = period === "month" && organizationScope ? { days: gridDays, rows: visibleStaff.map((staff) => { const cells = gridDays.map((workDate) => { const row = monthlyRows.find((item) => item.user_id === staff.id && item.work_date === workDate); const cell = row?.day_status ?? classifyAttendanceDay({ workDate, today, isBusinessDate: isAttendanceBusinessDate(workDate) }); return { date: workDate, ...cell }; }); return { staffId: staff.id, name: staff.full_name, departmentName: departmentFor(staff)?.name ?? "", cells, totalWorkday: cells.reduce((sum, cell) => sum + cell.workday, 0) }; }) } : undefined;
+  const gridDays = organizationScope ? attendanceGridDays(gridRangeStart, gridRangeEnd) : [];
+  const grid = organizationScope ? { days: gridDays, rows: visibleStaff.map((staff) => { const cells = gridDays.map((workDate) => { const row = [...rows, ...monthlyRows].find((item) => item.user_id === staff.id && item.work_date === workDate); const cell = row?.day_status ?? classifyAttendanceDay({ workDate, today, isBusinessDate: isAttendanceBusinessDate(workDate) }); return { date: workDate, ...cell }; }); return { staffId: staff.id, name: staff.full_name, departmentName: departmentFor(staff)?.name ?? "", cells, totalWorkday: cells.reduce((sum, cell) => sum + cell.workday, 0) }; }) } : undefined;
   return apiJson({
     scope: organizationScope ? "organization" : "personal",
     orgScope: access.orgScope,
