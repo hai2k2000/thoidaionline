@@ -8,6 +8,7 @@ import { vietnamTime, vietnamWorkDate } from "./attendanceReconciliation.ts";
 const calculate = (checkIn, checkOut, options = {}) => calculateAttendance({ checkIn, checkOut, ...options });
 const attendanceRoute = readFileSync(new URL("../app/api/attendance/route.ts", import.meta.url), "utf8");
 const exportRoute = readFileSync(new URL("../app/api/attendance/export/route.ts", import.meta.url), "utf8");
+const exportLib = readFileSync(new URL("./attendanceExport.mjs", import.meta.url), "utf8");
 const adjustmentRoute = readFileSync(new URL("../app/api/attendance/workday-adjustment/route.ts", import.meta.url), "utf8");
 const adjustmentMigration = readFileSync(new URL("../../supabase/migrations/20261028170000_attendance_workday_adjustments.sql", import.meta.url), "utf8");
 
@@ -169,15 +170,16 @@ test("October 2026 export has one column per weekday", () => {
     if (weekday !== 0 && weekday !== 6) weekdays.push(day);
   }
   assert.equal(weekdays.length, 22);
-  assert.match(exportRoute, /if \(!\[0, 6\]\.includes\(cursor\.getUTCDay\(\)\)\) days\.push/);
+  assert.match(exportLib, /!\[0, 6\]\.includes\(new Date\(`\$\{day\}T12:00:00Z`\)\.getUTCDay\(\)\)/);
 });
 
 test("CSV export emits UTF-8 BOM, escapes values, and protects formulas", () => {
-  assert.ok(exportRoute.includes("new Response(`\\uFEFF${lines.join(\"\\n\")}\\n`"));
-  assert.ok(exportRoute.includes('text.replace(/"/g, \'\"\"\')'));
-  assert.ok(exportRoute.includes('/[",\\n]/.test(text)'));
-  assert.ok(exportRoute.includes('/^[=+\\-@]/.test(text)'));
-  assert.ok(exportRoute.includes("text = `'${text}`"));
+  assert.match(exportLib, /return `.\$\{lines\.join\("\\n"\)\}\\n`;/);
+  assert.ok(exportRoute.includes("buildAttendanceExportCsv("));
+  assert.ok(exportLib.includes('text.replace(/"/g, \'\"\"\')'));
+  assert.ok(exportLib.includes('/[",\\n]/.test(text)'));
+  assert.ok(exportLib.includes('/^[=+\\-@]/.test(text)'));
+  assert.ok(exportLib.includes("text = `'${text}`"));
 });
 
 test("attendance routes use resolved access and actor-scoped adjustment RPCs", () => {
