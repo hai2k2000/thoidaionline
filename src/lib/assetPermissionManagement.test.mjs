@@ -54,8 +54,8 @@ test("asset.manage role and user RPCs are idempotent, auditable, and service-rol
 
 test("asset list UI keeps the requested polished table and mobile contracts", () => {
   const assets = readFileSync(new URL("../app/assets/page.tsx", import.meta.url), "utf8");
-  assert.match(assets, /min-w-\[900px\]/);
-  assert.match(assets, /whitespace-nowrap[^\n]*Ghi chú|Ghi chú[^\n]*whitespace-nowrap/);
+  assert.match(assets, /min-w-\[1080px\]/);
+  assert.match(assets, /<th scope="col"[^>]*>Ghi chú<\/th>/);
   assert.match(assets, /aria-label=\{`Mở chi tiết tài sản/);
   assert.match(assets, /Tài sản dùng chung của phòng/);
   assert.match(assets, /role="combobox"/);
