@@ -645,20 +645,19 @@ function AttendancePageContent() {
             <label className="text-sm font-semibold">Trạng thái<select value={statusFilter} onChange={(event) => { const nextStatus = event.target.value; setStatusFilter(nextStatus); updateQuery({ status: nextStatus }); refreshAfterFilterChange({ statusFilter: nextStatus }); }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả trạng thái</option><option value="present">Đi làm</option><option value="incomplete">Đi làm (thiếu giờ/đi muộn/về sớm)</option><option value="absent">Nghỉ không phép</option><option value="leave">Nghỉ phép</option><option value="online">Làm việc online</option><option value="business">{"Công tác/Sự kiện"}</option></select></label>
             <button type="button" className="self-end min-h-10 rounded border bg-white px-3 py-2 text-sm font-semibold" onClick={() => { setStaffFilter(""); setStaffQuery(""); setDepartmentFilter(""); setStatusFilter(""); updateQuery({ staffId: "", departmentId: "", status: "" }); refreshAfterFilterChange({ staffFilter: "", departmentFilter: "", statusFilter: "" }); }}>Xóa lọc</button>
           </div> : null}
-          {isOrganizationView && period === "month" ? <div className="mt-3 flex gap-2"><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("list"); updateQuery({ view: "" }); }}>Danh sách</button><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "grid" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("grid"); updateQuery({ view: "grid" }); }}>Lưới</button></div> : null}
+          {isOrganizationView ? <div className="mt-3 flex gap-2"><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("list"); updateQuery({ view: "" }); }}>Danh sách</button><button type="button" className={`rounded border px-3 py-2 text-sm font-semibold ${view === "grid" ? "bg-slate-900 text-white" : "bg-white"}`} onClick={() => { setView("grid"); updateQuery({ view: "grid" }); }}>Lưới</button></div> : null}
         </section>
 
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Bảng chấm công theo {period === "day" ? "ngày" : period === "week" ? "tuần" : "tháng"}</h2>
-          {isOrganizationView && period === "month" && view === "grid" && grid ? <AttendanceMonthGrid days={grid.days} rows={grid.rows} /> : <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll min-w-0 max-w-full rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
+          {isOrganizationView && view === "grid" && grid ? <AttendanceMonthGrid days={grid.days} rows={grid.rows} onCellClick={(staffId, workDate) => { const gridStaff = grid.rows.find((item) => item.staffId === staffId); const row = rows.find((item) => item.user_id === staffId && item.work_date === workDate) ?? { id: `grid-${staffId}-${workDate}`, user_id: staffId, work_date: workDate, check_in: null, check_out: null, note: null, status: "absent", staff_users: { full_name: gridStaff?.name ?? "" }, workday: 0 }; setSelectedAttendanceRow(row); setAdminNoteText(row.admin_note ?? ""); setAdminNoteError(""); }} /> : <div className={`${isOrganizationView ? "max-h-[65vh] overflow-y-auto" : ""} table-scroll min-w-0 max-w-full rounded-lg border border-slate-200`} tabIndex={0} aria-label={isOrganizationView ? "Danh sách chấm công toàn cơ quan, cuộn dọc và ngang để xem thêm" : "Bảng chấm công theo ngày, cuộn ngang để xem thêm"}>
           <table className={`data-table attendance-day-table ${isOrganizationView ? "attendance-organization-table" : "attendance-personal-table"} table-fixed text-left text-sm`}>
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Nhân sự</th>
-                {period !== "day" ? <th scope="col" className="px-3 py-2">Ngày</th> : null}
+                <th scope="col" className="px-3 py-2">Ngày</th>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Giờ vào</th>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Giờ ra</th>
-                <th scope="col" className="whitespace-nowrap px-3 py-2 text-right">Ngày công</th>
                 <th scope="col" className="whitespace-nowrap px-3 py-2">Trạng thái</th>
                 <th scope="col" className="px-3 py-2">Ghi chú</th>
               </tr>
@@ -667,16 +666,15 @@ function AttendancePageContent() {
               {visibleAttendanceRows.map((r) => (
                 <tr key={r.id} className="cursor-pointer border-t hover:bg-orange-50 focus:bg-orange-50" tabIndex={0} role="button" aria-label={`Xem chi tiết ${r.staff_users?.full_name ?? "nhân sự"} ngày ${formatAttendanceDate(r.work_date)}`} onClick={() => { setSelectedAttendanceRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedAttendanceRow(r); setAdminNoteText(r.admin_note ?? ""); setAdminNoteError(""); } }}>
                   <td className="px-3 py-2 font-semibold">{r.staff_users?.full_name ?? "-"}</td>
-                  {period !== "day" ? <td className="px-3 py-2">{formatAttendanceDate(r.work_date)}</td> : null}
+                  <td className="px-3 py-2">{formatAttendanceDate(r.work_date)}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_in ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{r.workday ?? 0}</td>
                   <td className="attendance-status-cell px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception_status === "approved" ? "Đi muộn do việc phát sinh" : r.late_exception_status === "pending" ? "Đi muộn (chờ duyệt lý do phát sinh)" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
                   <td className="attendance-note-cell px-3 py-2"><div className="line-clamp-2 whitespace-pre-wrap break-words">{r.note ?? ""}</div></td>
                 </tr>
               ))}
               {visibleAttendanceRows.length === 0 ? (
-                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={period === "day" ? 6 : 7}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
+                <tr><td className="px-2 py-6 text-center text-slate-500" colSpan={6}>Chưa có dữ liệu chấm công trong khoảng đã chọn.</td></tr>
               ) : null}
             </tbody>
           </table>
