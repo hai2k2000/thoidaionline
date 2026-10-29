@@ -23,14 +23,14 @@ test("general assignment starts with a compact interaction-only recipient picker
 test("recipient selection collapses, focuses Việc 1, and change preserves mounted task content", () => {
   assert.match(assignment, /Đang giao việc cho:/);
   assert.match(assignment, /Đổi người/);
-  assert.match(assignment, /cardTitleRefs\.current\[taskCards\[0\]\?\.cardId\]/);
+  assert.match(assignment, /cardTitleRefs\.current\[firstCardIdRef\.current \?\? ""\]/);
   assert.match(assignment, /setAssigneeId\(""\)/);
   assert.match(assignment, /setFormActivated\(false\)/);
   assert.doesNotMatch(assignment, /reset\(\)|event\.currentTarget\.reset/);
 });
 
 test("manager scope stays inline while TBT and PTBT can explicitly switch departments", () => {
-  assert.match(assignment, /Phạm vi:/);
+  assert.match(assignment, /Phòng ban:/);
   assert.match(assignment, /Tìm người trong Ban Biên tập/);
   assert.match(assignment, /Chọn phòng ban khác/);
   assert.match(assignment, /Quay về Ban Biên tập/);
