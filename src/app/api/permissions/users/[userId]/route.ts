@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     if (user.error) return rpcFailure(user.error);
     if (!user.data) return apiError("not_found", 404);
     if (overrides.error) return rpcFailure(overrides.error);
-    if (departments.error || grants.error) return rpcFailure(departments.error ?? grants.error);
+    if (departments.error || grants.error) return rpcFailure((departments.error ?? grants.error)!);
     return apiJson({ user: { ...user.data, override_count: overrides.count ?? 0 }, items: permissions.data ?? [], departments: departments.data ?? [], departmentViewGrants: (grants.data ?? []).map((row) => row.department_id) });
   } catch (error) { return rpcFailure(error as { code?: string | null }); }
 }
