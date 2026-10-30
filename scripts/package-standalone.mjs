@@ -162,6 +162,7 @@ const migrationReference = [
   "supabase/migrations/20261028170000_attendance_workday_adjustments.sql",
   "supabase/migrations/20261028180000_attendance_logs_drop_reviewer_fk.sql",
   "supabase/migrations/20261029120000_database_management_v1_department_visibility.sql",
+  "supabase/migrations/20261030100000_record_approve_department_scope.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");

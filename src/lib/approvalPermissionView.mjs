@@ -61,7 +61,7 @@ export const RESTRICTION_LABELS = {
 };
 
 /** @param {ApprovalPermissionCode|string} code */
-export function defaultGrantScope(code) { return APPROVAL_PERMISSION_CODES.includes(code) ? "department" : null; }
+export function defaultGrantScope(code) { return APPROVAL_PERMISSION_CODES.includes(code) || code === "record.approve" ? "department" : null; }
 
 /** @param {Scope[]} roleScopes @param {Scope[]} structuralScopes @param {Scope} chosenScope */
 export function isNarrowingAllow(roleScopes = [], structuralScopes = [], chosenScope) {
