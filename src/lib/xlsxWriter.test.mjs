@@ -58,3 +58,26 @@ test("xlsx contains required OOXML parts, styles, escaping and frozen panes", ()
   const styles = files.get("xl/styles.xml");
   for (const color of ["FF16A34A", "FFDC2626", "FFB45309", "FFF1F5F9"]) assert.match(styles, new RegExp(color));
 });
+
+// Excel refused the first production export ("We found a problem with some content"):
+// element order, missing apply* flags and empty-string cells must stay fixed.
+test("worksheet and styles follow the order and flags Excel requires", () => {
+  const files = unzipLocalEntries(writeXlsx({
+    name: "10",
+    columns: [{ width: 5 }, { width: 5 }],
+    rows: [{ cells: [{ value: 1, style: "boxed" }, { value: "", style: "boxed" }] }, { cells: [{ value: "", style: "boxed", formula: "B1-A1" }, { value: "x", style: "boxed" }] }],
+    styles: { boxed: { font: { name: "Times New Roman", size: 12, bold: true, color: "FF16A34A" }, border: true } },
+    freeze: { rows: 1, columns: 1 },
+    pageSetup: { paperSize: 9, orientation: "landscape", fitToWidth: 1, fitToHeight: 0 },
+  }));
+  const sheet = files.get("xl/worksheets/sheet1.xml");
+  const styles = files.get("xl/styles.xml");
+  const order = ["<sheetPr", "<sheetViews", "<sheetFormatPr", "<cols", "<sheetData", "<pageMargins", "<pageSetup"].map((tag) => sheet.indexOf(tag));
+  assert.ok(order.every((position) => position >= 0), String(order));
+  assert.deepEqual([...order].sort((a, b) => a - b), order);
+  assert.match(sheet, /<sheetPr><pageSetUpPr fitToPage="1"\/><\/sheetPr>/);
+  assert.match(sheet, /<c r="B1" s="\d+"\/>/);
+  assert.doesNotMatch(sheet, /<t><\/t>/);
+  assert.match(styles, /<font><b\/><sz val="12"\/><color rgb="FF16A34A"\/><name val="Times New Roman"\/><\/font>/);
+  assert.match(styles, /borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/);
+});
