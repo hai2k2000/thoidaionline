@@ -17,7 +17,7 @@ test("footer follows the template: legend in four pairs per row, signatures on o
   const values = sheet.rows.map((row) => row.cells.map((cell) => cell.value));
   const signatureIndex = values.findIndex((row) => row.includes("NGƯỜI LẬP BẢNG"));
   const signatureRow = values[signatureIndex];
-  for (const title of ["PHỤ TRÁCH PHÒNG TỔNG HỢP", "KẾ TOÁN TRƯỞNG", "TỔNG BIÊN TẬP"]) assert.ok(signatureRow.includes(title));
+  for (const title of ["TRƯỞNG PHÒNG TỔNG HỢP", "KẾ TOÁN TRƯỞNG", "TỔNG BIÊN TẬP"]) assert.ok(signatureRow.includes(title));
   assert.ok(sheet.merges.includes(`A${signatureIndex + 1}:B${signatureIndex + 1}`));
   assert.ok(sheet.merges.includes(`AD${signatureIndex + 1}:AL${signatureIndex + 1}`));
   const firstLegend = values.find((row) => row.includes("Nghỉ phép:"));
@@ -50,4 +50,22 @@ test("signature block shows the exporter and the template's default signers", ()
   const names = values[titleIndex + 6];
   assert.deepEqual([names[0], names[3], names[16], names[29]], ["Người Xuất", "Nguyễn Duy Đông", "Lê Thị Bích Thuận", "Lê Quang Thiện"]);
   assert.ok(sheet.merges.includes(`D${titleIndex + 7}:O${titleIndex + 7}`));
+});
+
+test("unfiltered export appends the three default staff exactly like the template", () => {
+  const sept = Array.from({ length: 30 }, (_, i) => `2026-09-${String(i + 1).padStart(2, "0")}`);
+  const listed = [{ staffId: "u1", name: "Người A", departmentName: "Phòng Nội dung", jobTitleName: "Phóng viên", cells: [] }];
+  const sheet = buildAttendanceExportSheet("2026-09", { days: sept, rows: listed }, [], { includeDefaultStaff: true, today: "2026-10-30" });
+  const values = sheet.rows.map((row) => row.cells.map((cell) => cell.value));
+  const linh = values.find((row) => row[1] === "Nguyễn Văn Linh");
+  const khanh = values.find((row) => row[1] === "Nguyễn Hồng Khánh");
+  const minh = values.find((row) => row[1] === "Đặng Quang Minh");
+  assert.deepEqual([linh[0], khanh[0], minh[0]], [2, 3, 4]);
+  assert.equal(linh[3], 1); assert.equal(linh[3 + 5], ""); // 01/09 Tue worked, 06/09 Sunday blank
+  assert.equal(khanh[3 + 5], 1);
+  assert.equal(minh[3], "Ro"); assert.equal(minh[3 + 5], "");
+  assert.equal(linh[3 + 30], 22); assert.equal(khanh[3 + 30], 30); assert.equal(minh[3 + 30], 0);
+  assert.deepEqual([minh[3 + 32], minh[3 + 33]], [0, 0]);
+  const filtered = buildAttendanceExportSheet("2026-09", { days: sept, rows: listed }, [], { includeDefaultStaff: false });
+  assert.ok(!filtered.rows.some((row) => row.cells.some((cell) => cell.value === "Nguyễn Văn Linh")));
 });
