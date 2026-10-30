@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assetUsageState, closeEmployeeFilterState, filterAssetList, isAssetUnassigned, presentAssetCustody, resetEmployeeFilterState, summarizeAssetList } from "./assetListPresentation.ts";
+import { assetUsageState, closeEmployeeFilterState, filterAssetList, isAssetInWarehouse, isAssetUnassigned, presentAssetCustody, resetEmployeeFilterState, summarizeAssetList } from "./assetListPresentation.ts";
 
 const rows = Array.from({ length: 97 }, (_, index) => ({
   asset_name: index === 0 ? "Bộ bàn ghế sồi Nga dùng tại phòng họp tầng hai" : `Tài sản ${index + 1}`,
@@ -73,4 +73,22 @@ test("custody presentation keeps view-only labels and shared/unassigned semantic
     assigned_department_name: "Phòng Nội dung",
   }), { department: "Phòng Nội dung", person: "Tài sản dùng chung", unassigned: false });
   assert.deepEqual(presentAssetCustody({ status: "available", currentAssignment: null }), { department: "Chưa xác định phòng", person: "Cần bổ sung sau", unassigned: true });
+});
+
+test("warehouse assets are hidden by default but shown for a warehouse location", () => {
+  const warehouse = { status: "available", location_id: "loc-kho", currentAssignment: null };
+  const other = { status: "available", location_id: "loc-office", currentAssignment: null };
+  assert.equal(isAssetInWarehouse(warehouse, ["loc-kho"]), true);
+  assert.deepEqual(filterAssetList([warehouse, other], { name: "", category: "", quick: "all", warehouseLocationIds: ["loc-kho"] }), [other]);
+  assert.deepEqual(filterAssetList([warehouse, other], { name: "", category: "", quick: "all", warehouseLocationIds: ["loc-kho"], locationId: "loc-kho" }), [warehouse]);
+});
+
+test("assigned assets at warehouse stay visible and liquidated assets are unaffected", () => {
+  const assigned = { status: "in_use", location_id: "loc-kho", currentAssignment: { department_id: "dept", assignee_id: "user" } };
+  const liquidated = { status: "liquidated", location_id: "loc-kho", currentAssignment: null };
+  const waiting = { status: "available", location_id: "loc-waiting", currentAssignment: null };
+  assert.equal(isAssetInWarehouse(assigned, ["loc-kho", "loc-waiting"]), false);
+  assert.equal(isAssetInWarehouse(liquidated, ["loc-kho", "loc-waiting"]), false);
+  assert.equal(isAssetInWarehouse(waiting, ["loc-kho", "loc-waiting"]), true);
+  assert.deepEqual(filterAssetList([assigned, liquidated, waiting], { name: "", category: "", quick: "all", warehouseLocationIds: ["loc-kho", "loc-waiting"] }), [assigned, liquidated]);
 });
