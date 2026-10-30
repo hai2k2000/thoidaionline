@@ -1,50 +1,42 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildAttendanceExportCsv, exportCellValue, exportDayHeader, exportTitle, exportWorkdays } from "./attendanceExport.mjs";
+import { buildAttendanceExportSheet, buildAttendanceExportXlsx, exportDayHeader, exportTitle } from "./attendanceExport.mjs";
 
 const october = Array.from({ length: 31 }, (_, i) => `2026-10-${String(i + 1).padStart(2, "0")}`);
+const cells = october.map((date) => ({
+  date,
+  code: date === "2026-10-03" ? "weekend" : date === "2026-10-05" ? "absent" : date === "2026-10-06" ? "forgot_card" : "present",
+  symbol: date === "2026-10-03" ? "·" : date === "2026-10-05" ? "✗" : date === "2026-10-06" ? "QT" : "✓",
+  workday: date === "2026-10-03" || date === "2026-10-05" ? 0 : 1,
+}));
+const grid = { days: october, rows: [{ staffId: "u1", name: "Nguyễn Văn A", departmentName: "Phòng Tổng hợp & Tin", cells, totalWorkday: 29 }] };
+const monthlyRows = [
+  { user_id: "u1", work_date: "2026-10-01", note: "Đi muộn" },
+  { user_id: "u1", work_date: "2026-10-02", note: "Về sớm; Thiếu giờ ra" },
+];
 
-test("day headers show only the day of month", () => {
+test("day headers and title identify October 2026", () => {
   assert.equal(exportDayHeader("2026-10-01"), "01");
-  assert.equal(exportDayHeader("2026-10-05"), "05");
-});
-
-test("title names the month", () => {
   assert.equal(exportTitle("2026-10"), "BẢNG CHẤM CÔNG THÁNG 10/2026");
 });
 
-test("export keeps the 22 weekdays of October 2026", () => {
-  assert.equal(exportWorkdays("2026-10", october).length, 22);
+test("export sheet mirrors all calendar days and grid symbols", () => {
+  const sheet = buildAttendanceExportSheet("2026-10", grid, monthlyRows);
+  assert.equal(sheet.columns.length, 42);
+  assert.deepEqual(sheet.rows[2].cells.slice(3, 34).map((cell) => cell.value), october.map(exportDayHeader));
+  assert.deepEqual(sheet.rows[3].cells.slice(3, 10).map((cell) => cell.value), ["T5", "T6", "T7", "CN", "T2", "T3", "T4"]);
+  const data = sheet.rows[4].cells;
+  assert.equal(data[1].value, "Nguyễn Văn A");
+  assert.equal(data[2].value, "Phòng Tổng hợp & Tin");
+  assert.equal(data[5].value, "·");
+  assert.equal(data[7].value, "✗");
+  assert.equal(data[8].value, "QT");
+  assert.equal(typeof data[34].value, "number");
+  assert.doesNotMatch(JSON.stringify(data), /[0-9a-f]{8}-[0-9a-f]{4}-/);
 });
 
-test("cells follow the grid status codes", () => {
-  assert.equal(exportCellValue({ code: "present", workday: 1 }), "v");
-  assert.equal(exportCellValue({ code: "incomplete", workday: 1 }), "v");
-  assert.equal(exportCellValue({ code: "incomplete", workday: 0.5 }), 0.5);
-  assert.equal(exportCellValue({ code: "incomplete", workday: 0 }), "x");
-  assert.equal(exportCellValue({ code: "absent", workday: 0 }), "x");
-  assert.equal(exportCellValue({ code: "leave_full", workday: 1 }), "P");
-  assert.equal(exportCellValue({ code: "leave_half", workday: 0.5 }), "½P");
-  assert.equal(exportCellValue({ code: "business", workday: 1 }), "CT");
-  assert.equal(exportCellValue({ code: "online", workday: 1 }), "O");
-  assert.equal(exportCellValue({ code: "future", workday: 0 }), "");
-  assert.equal(exportCellValue(undefined), "");
-});
-
-test("CSV uses the department name, not its id, and fills past absences", () => {
-  const cells = october.map((date) => ({ date, code: date === "2026-10-02" ? "absent" : date === "2026-10-05" ? "business" : "present", workday: date === "2026-10-02" ? 0 : 1 }));
-  const csv = buildAttendanceExportCsv("2026-10", { days: october, rows: [{ staffId: "u1", name: "Nguyễn Văn A", departmentName: "Phòng Tổng hợp", cells }] }, [{ user_id: "u1", work_date: "2026-10-01", note: "Đi muộn" }]);
-  assert.ok(csv.startsWith("﻿"));
-  const [title, blank, header, row] = csv.slice(1).trim().split("\n");
-  assert.equal(title, "BẢNG CHẤM CÔNG THÁNG 10/2026");
-  assert.equal(blank, "");
-  assert.ok(header.startsWith("STT,Họ tên,Phòng,01,02,05,06"));
-  const fields = row.split(",");
-  assert.equal(fields[2], "Phòng Tổng hợp");
-  assert.equal(fields[3], "v");
-  assert.equal(fields[4], "x");
-  assert.equal(fields[5], "CT");
-  assert.doesNotMatch(row, /[0-9a-f]{8}-[0-9a-f]{4}-/);
-  const tail = fields.slice(-7);
-  assert.deepEqual(tail, ["21", "0", "1", "1", "1", "0", "0"]);
+test("attendance export builds a real xlsx buffer", () => {
+  const output = buildAttendanceExportXlsx("2026-10", grid, monthlyRows);
+  assert.ok(Buffer.isBuffer(output));
+  assert.equal(output.subarray(0, 2).toString(), "PK");
 });

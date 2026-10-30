@@ -23,3 +23,23 @@ test("uses Vietnam today boundary and adjustment workday", () => {
   assert.match(result.label, /điều chỉnh/);
   assert.equal(classifyAttendanceDay({ ...base, workDate: "2026-10-28", today: "2026-10-28" }).code, "absent");
 });
+
+test("detects forgot-card notes with QQ taking precedence over QT", () => {
+  const forgotSwipe = classifyAttendanceDay({ ...base, adminNote: "Đã xác nhận: QUÊN QUẸT THẺ" });
+  assert.deepEqual({ code: forgotSwipe.code, symbol: forgotSwipe.symbol, label: forgotSwipe.label, workday: forgotSwipe.workday }, {
+    code: "forgot_swipe", symbol: "QQ", label: "Quên quẹt thẻ", workday: 1,
+  });
+  assert.equal(classifyAttendanceDay({ ...base, note: "Nhân sự quên thẻ" }).code, "forgot_card");
+});
+
+test("leave beats forgot marks while forgot marks beat presence and absence", () => {
+  assert.equal(classifyAttendanceDay({ ...base, leave: { full: true }, adminNote: "Quên thẻ" }).code, "leave_full");
+  assert.equal(classifyAttendanceDay({ ...base, adminNote: "Quên thẻ", log: { check_in: "08:00", check_out: "17:00" } }).code, "forgot_card");
+  assert.equal(classifyAttendanceDay({ ...base, adminNote: "Quên quẹt thẻ" }).code, "forgot_swipe");
+});
+
+test("forgot marks count one workday unless an adjustment overrides them", () => {
+  assert.equal(classifyAttendanceDay({ ...base, note: "Quên thẻ" }).workday, 1);
+  assert.equal(classifyAttendanceDay({ ...base, note: "Quên thẻ", calculation: { workday: 0 } }).workday, 1);
+  assert.equal(classifyAttendanceDay({ ...base, note: "Quên thẻ", adjustment: { workday: 0.5 } }).workday, 0.5);
+});

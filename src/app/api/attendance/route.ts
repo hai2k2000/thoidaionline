@@ -139,7 +139,7 @@ export async function GET(request: Request) {
   const limit = Math.min(31, Math.max(1, Number.parseInt(params.get("limit") ?? "10", 10) || 10));
   if (!isValidDate(date) || !["personal", "organization"].includes(scope) || !["day", "week", "month"].includes(period)
     || (staffId && !asUuid(staffId)) || (departmentId && !asUuid(departmentId))
-    || (statusFilter && !["present", "incomplete", "absent", "leave", "online", "business"].includes(statusFilter))) {
+    || (statusFilter && !["present", "incomplete", "absent", "leave", "online", "business", "forgot"].includes(statusFilter))) {
     return apiError("invalid_request", 400);
   }
   const access = await resolveAttendanceAccess(guard.actor);
@@ -483,20 +483,23 @@ export async function GET(request: Request) {
     for (const row of result) {
       const leave = leaves.find((item) => item.requester?.id === row.user_id && item.start_date <= row.work_date && item.end_date >= row.work_date);
       const periods = leave ? leavePeriodsForDate(leave, row.work_date) : [];
-      row.day_status = classifyAttendanceDay({
+      const dayStatus = classifyAttendanceDay({
         workDate: row.work_date, today, isBusinessDate: isAttendanceBusinessDate(row.work_date),
         log: row, leave: leave && leave.leave_type !== "business" ? { full: periods.every((period) => period === "full") } : null,
         online: !!row.attendance_sources?.online, business: !!row.attendance_sources?.business || !!row.attendance_sources?.event,
-        adjustment: row.workday_adjustment, calculation: noteFor(row),
+        adjustment: row.workday_adjustment, calculation: noteFor(row), note: row.note, adminNote: row.admin_note,
       } as unknown as Parameters<typeof classifyAttendanceDay>[0]);
-      row.status = row.day_status.code === "leave_full" || row.day_status.code === "leave_half" ? "leave" : row.day_status.code;
+      row.day_status = dayStatus;
+      row.status = dayStatus.code === "leave_full" || dayStatus.code === "leave_half" ? "leave" : dayStatus.code;
     }
     const filtered = result.filter((row) => {
       if (staffId && row.user_id !== staffId) return false;
       if (departmentId && row.staff_users?.department_id !== departmentId) return false;
       if (!statusFilter) return true;
       const code = row.day_status?.code;
-      return statusFilter === "leave" ? code === "leave_full" || code === "leave_half" : code === statusFilter;
+      if (statusFilter === "leave") return code === "leave_full" || code === "leave_half";
+      if (statusFilter === "forgot") return code === "forgot_card" || code === "forgot_swipe";
+      return code === statusFilter;
     });
     return filtered.sort((a, b) => {
       const byDate = b.work_date.localeCompare(a.work_date);
