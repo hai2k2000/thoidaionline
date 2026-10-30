@@ -85,7 +85,11 @@ async function canApproveRecord(actor: DatabaseRecordActor, record: Pick<RecordR
   const rows = await aclForRecord(recordId);
   if (rows.some((row) => row.capability === "approve" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return false;
   const manager = record.department_id ? Boolean((await serverSupabase.from("departments").select("manager_id").eq("id", record.department_id).maybeSingle()).data?.manager_id === actor.id) : false;
-  const approver = manager || actor.rbacPermissionScopes?.["record.approve"]?.includes("all");
+  const approver = manager || actor.rbacPermissionScopes?.["record.approve"]?.includes("all") || (
+    actor.rbacPermissionScopes?.["record.approve"]?.includes("department")
+    && Boolean(record.department_id)
+    && record.department_id === actor.department_id
+  );
   if (!approver) return false;
   if (record.created_by !== actor.id) return true;
   return hasPermissionScope(actor, "record.self_approve", ["self", "all"]);
@@ -107,7 +111,10 @@ async function approvalBlockReason(actor: DatabaseRecordActor, record: RecordRow
   const applicable = rows.filter((row) => row.capability === "approve" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)));
   if (applicable.some((row) => row.effect === "deny")) return "approval_acl_denied";
   const manager = record.department_id ? Boolean((await serverSupabase.from("departments").select("manager_id").eq("id", record.department_id).maybeSingle()).data?.manager_id === actor.id) : false;
-  if (!manager && !actor.rbacPermissionScopes?.["record.approve"]?.includes("all")) return "missing_record_approve_permission";
+  const departmentApprover = actor.rbacPermissionScopes?.["record.approve"]?.includes("department")
+    && Boolean(record.department_id)
+    && record.department_id === actor.department_id;
+  if (!manager && !actor.rbacPermissionScopes?.["record.approve"]?.includes("all") && !departmentApprover) return "missing_record_approve_permission";
   if (record.created_by === actor.id && !hasPermissionScope(actor, "record.self_approve", ["self", "all"])) return "missing_self_approve_permission";
   return null;
 }

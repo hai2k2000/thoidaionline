@@ -4,9 +4,10 @@ import { resolveEffectivePermission } from "./authorization.ts";
 import { supportedScopesForPermission } from "./permissionScopes.mjs";
 
 test("approval permissions only support department and all scopes", () => {
-  for (const code of ["leave.approve", "schedule.business.approve", "schedule.event.approve"]) {
+  for (const code of ["leave.approve", "schedule.business.approve", "schedule.event.approve", "record.approve"]) {
     assert.deepEqual(supportedScopesForPermission(code), ["department", "all"]);
   }
+  assert.equal(supportedScopesForPermission("record.approve").includes("self"), false);
 });
 
 test("active user inherits active role scopes", () => {

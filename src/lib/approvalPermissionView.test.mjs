@@ -24,6 +24,7 @@ test("approval catalog exposes the three codes and Vietnamese copy", () => {
     assert.equal(defaultGrantScope(code), "department");
   }
   assert.deepEqual(SOURCE_LABELS, { role: "Vai trò", structural: "Chức vụ Trưởng phòng", user_allow: "Cấp riêng", user_deny: "Chặn riêng", none: "Không có" });
+  assert.equal(defaultGrantScope("record.approve"), "department");
 });
 
 test("narrowing allow compares inherited union", () => {

@@ -8,6 +8,12 @@ function hasPermission(actor, permission, scopes = null) {
   return Array.isArray(effectiveScopes) && effectiveScopes.some((scope) => scopes.includes(scope));
 }
 
+function canApproveScope(actor, record) {
+  if (record.department_manager_id === actor.id) return true;
+  const scopes = actor.permissionScopes?.[APPROVER_PERMISSION] ?? [];
+  return scopes.includes("all") || (scopes.includes("department") && Boolean(record.department_id) && record.department_id === actor.department_id);
+}
+
 export function canTransitionRecord(actor, record, action, reason = "") {
   if (action === "submit") {
     if (record.status !== "draft") return { ok: false, reason: "invalid_transition" };
@@ -16,7 +22,8 @@ export function canTransitionRecord(actor, record, action, reason = "") {
   }
   if (action === "approve" || action === "return") {
     if (record.status !== "pending_review") return { ok: false, reason: "invalid_transition" };
-    if (!hasPermission(actor, APPROVER_PERMISSION) || record.aclApprove !== true) return { ok: false, reason: "permission_denied" };
+    if (!hasPermission(actor, APPROVER_PERMISSION) && record.department_manager_id !== actor.id) return { ok: false, reason: "permission_denied" };
+    if (!canApproveScope(actor, record) || record.aclApprove !== true) return { ok: false, reason: "permission_denied" };
     if (actor.id === record.created_by && (action !== "approve" || !hasPermission(actor, SELF_APPROVER_PERMISSION, ["self", "all"]))) return { ok: false, reason: "self_approval_forbidden" };
     if (action === "return" && !String(reason).trim()) return { ok: false, reason: "return_reason_required" };
     return { ok: true };
