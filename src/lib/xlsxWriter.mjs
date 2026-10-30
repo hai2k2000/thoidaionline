@@ -53,7 +53,7 @@ function buildStyles(customStyles = {}) {
   const styleIndexes = new Map();
   const xfs = [];
   for (const [name, style] of Object.entries(definitions)) {
-    const font = { name: "Calibri", size: style.font?.size ?? 11, bold: !!style.font?.bold, color: style.font?.color ?? null };
+    const font = { name: style.font?.name ?? "Calibri", size: style.font?.size ?? 11, bold: !!style.font?.bold, italic: !!style.font?.italic, color: style.font?.color ?? null };
     const fontJson = JSON.stringify(font);
     if (!fontKey.has(fontJson)) { fontKey.set(fontJson, fonts.length); fonts.push(font); }
     const fill = style.fill ?? "";
@@ -63,10 +63,10 @@ function buildStyles(customStyles = {}) {
     styleIndexes.set(name, xfs.length);
     xfs.push({ fontId: fontKey.get(fontJson), fillId: fillKey.get(fill), borderId, alignment: style.alignment ?? null });
   }
-  const fontsXml = fonts.map((font) => `<font>${font.bold ? "<b/>" : ""}<sz val="${font.size}"/><name val="${escapeXml(font.name)}"/>${font.color ? `<color rgb="${font.color}"/>` : ""}</font>`).join("");
+  const fontsXml = fonts.map((font) => `<font>${font.bold ? "<b/>" : ""}${font.italic ? "<i/>" : ""}<sz val="${font.size}"/><name val="${escapeXml(font.name)}"/>${font.color ? `<color rgb="${font.color}"/>` : ""}</font>`).join("");
   const fillsXml = fills.map((fill) => fill === null ? '<fill><patternFill patternType="none"/></fill>' : fill === "gray125" ? '<fill><patternFill patternType="gray125"/></fill>' : `<fill><patternFill patternType="solid"><fgColor rgb="${fill}"/><bgColor indexed="64"/></patternFill></fill>`).join("");
   const bordersXml = borders.map((border) => border ? '<border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border>' : '<border><left/><right/><top/><bottom/><diagonal/></border>').join("");
-  const xfsXml = xfs.map((xf) => `<xf numFmtId="0" fontId="${xf.fontId}" fillId="${xf.fillId}" borderId="${xf.borderId}" xfId="0"${xf.alignment ? ' applyAlignment="1"' : ""}>${xf.alignment ? `<alignment horizontal="${xf.alignment.horizontal ?? "general"}" vertical="${xf.alignment.vertical ?? "bottom"}"/>` : ""}</xf>`).join("");
+  const xfsXml = xfs.map((xf) => `<xf numFmtId="0" fontId="${xf.fontId}" fillId="${xf.fillId}" borderId="${xf.borderId}" xfId="0"${xf.alignment ? ' applyAlignment="1"' : ""}>${xf.alignment ? `<alignment horizontal="${xf.alignment.horizontal ?? "general"}" vertical="${xf.alignment.vertical ?? "bottom"}"${xf.alignment.wrapText ? ' wrapText="1"' : ""}/>` : ""}</xf>`).join("");
   return {
     indexes: styleIndexes,
     xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="${fonts.length}">${fontsXml}</fonts><fills count="${fills.length}">${fillsXml}</fills><borders count="${borders.length}">${bordersXml}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfsXml}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
@@ -78,6 +78,7 @@ function worksheetXml(sheet, styleIndexes) {
     const cells = row.cells.map((cell, columnIndex) => {
       const reference = `${columnName(columnIndex)}${rowIndex + 1}`;
       const style = styleIndexes.get(cell.style ?? "default") ?? 0;
+      if (cell.formula) return `<c r="${reference}" s="${style}"><f>${escapeXml(cell.formula)}</f></c>`;
       if (typeof cell.value === "number" && Number.isFinite(cell.value)) return `<c r="${reference}" s="${style}"><v>${cell.value}</v></c>`;
       const text = cleanXml(cell.value);
       const preserve = /^\s|\s$|\n/.test(text) ? ' xml:space="preserve"' : "";
@@ -88,7 +89,8 @@ function worksheetXml(sheet, styleIndexes) {
   const columns = sheet.columns.map((column, index) => `<col min="${index + 1}" max="${index + 1}" width="${column.width}" customWidth="1"/>`).join("");
   const freeze = sheet.freeze ? `<sheetViews><sheetView workbookViewId="0"><pane xSplit="${sheet.freeze.columns}" ySplit="${sheet.freeze.rows}" topLeftCell="${columnName(sheet.freeze.columns)}${sheet.freeze.rows + 1}" activePane="bottomRight" state="frozen"/><selection pane="bottomRight"/></sheetView></sheetViews>` : '<sheetViews><sheetView workbookViewId="0"/></sheetViews>';
   const merges = sheet.merges?.length ? `<mergeCells count="${sheet.merges.length}">${sheet.merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells>` : "";
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${freeze}<sheetFormatPr defaultRowHeight="15"/><cols>${columns}</cols><sheetData>${rows}</sheetData>${merges}</worksheet>`;
+  const pageSetup = sheet.pageSetup ? `<pageSetup paperSize="${sheet.pageSetup.paperSize}" orientation="${sheet.pageSetup.orientation}" fitToWidth="${sheet.pageSetup.fitToWidth}" fitToHeight="${sheet.pageSetup.fitToHeight}"/>` : "";
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${freeze}<sheetPr/><sheetFormatPr defaultRowHeight="15"/><cols>${columns}</cols><sheetData>${rows}</sheetData>${merges}${pageSetup}</worksheet>`;
 }
 
 function zip(files) {

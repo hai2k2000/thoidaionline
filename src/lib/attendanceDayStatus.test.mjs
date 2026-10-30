@@ -10,6 +10,8 @@ test("classifies every attendance day status with precedence", () => {
   assert.equal(classifyAttendanceDay({ ...base, leave: { full: true }, log: { check_in: "08:00", check_out: "17:00" } }).code, "leave_full");
   assert.equal(classifyAttendanceDay({ ...base, leave: { full: false } }).code, "leave_half");
   assert.equal(classifyAttendanceDay({ ...base, business: true }).code, "business");
+  assert.deepEqual(classifyAttendanceDay({ ...base, event: true }), { code: "event", symbol: "SK", label: "Đi sự kiện", workday: 1 });
+  assert.equal(classifyAttendanceDay({ ...base, business: true, event: true }).code, "business");
   assert.equal(classifyAttendanceDay({ ...base, online: true }).code, "online");
   assert.equal(classifyAttendanceDay({ ...base, log: { check_in: "08:00", check_out: "17:00" } }).code, "present");
   assert.equal(classifyAttendanceDay({ ...base, log: { check_in: "08:20", check_out: null }, calculation: { workday: 0 } }).code, "incomplete");

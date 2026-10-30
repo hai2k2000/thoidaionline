@@ -25,6 +25,15 @@ test("crc32 matches the standard check value", () => {
   assert.equal(crc32(Buffer.from("123456789")), 0xcbf43926);
 });
 
+test("xlsx writes formulas and print page setup", () => {
+  const output = writeXlsx({ name: "10", columns: [{ width: 10 }], rows: [{ cells: [{ value: "", formula: "1+1", style: "formula" }] }], styles: { formula: { font: { name: "Times New Roman", size: 11, italic: true }, alignment: { horizontal: "center", wrapText: true }, border: true } }, pageSetup: { paperSize: 9, orientation: "landscape", fitToWidth: 1, fitToHeight: 0 } });
+  const files = unzipLocalEntries(output);
+  assert.match(files.get("xl/worksheets/sheet1.xml"), /<f>1\+1<\/f>/);
+  assert.match(files.get("xl/worksheets/sheet1.xml"), /pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/);
+  assert.match(files.get("xl/styles.xml"), /<i\/>/);
+  assert.match(files.get("xl/styles.xml"), /wrapText="1"/);
+});
+
 test("xlsx contains required OOXML parts, styles, escaping and frozen panes", () => {
   const output = writeXlsx({
     name: "Chấm công",

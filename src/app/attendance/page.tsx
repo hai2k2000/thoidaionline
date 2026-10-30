@@ -69,7 +69,7 @@ const leaveTypeLabel: Record<string, string> = {
   sick: "Nghỉ ốm",
   unpaid: "Nghỉ không lương",
   personal: "Nghỉ việc riêng",
-  business: "Công tác",
+  business: "Công tác/Sự kiện",
 };
 
 const toDateInput = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
