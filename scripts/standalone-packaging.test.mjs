@@ -96,6 +96,7 @@ test("release metadata uses the complete ordered migration reference", () => {
     assert.ok(migrations.includes("supabase/migrations/20261028170000_attendance_workday_adjustments.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261028180000_attendance_logs_drop_reviewer_fk.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261029120000_database_management_v1_department_visibility.sql"));
+    assert.ok(migrations.includes("supabase/migrations/20261030100000_record_approve_department_scope.sql"));
   assert.match(packager, /"migration_reference=" \+ migrationReference\.join\(\",\"\)/);
   assert.doesNotMatch(packager, /20261016110000_asset_locations_expansion\.sql",\s*\n\s*"migration_reference=/);
 });
