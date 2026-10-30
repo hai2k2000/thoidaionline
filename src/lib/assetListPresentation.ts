@@ -4,6 +4,7 @@ export type AssetUsageState = "assigned" | "unassigned" | "liquidated";
 export type EmployeeFilterState = { assigneeId: string; search: string; activeIndex: number; open: boolean };
 
 export type AssetListPresentationRow = {
+  location_id?: string | null;
   asset_name?: string | null;
   category?: string | null;
   status?: string | null;
@@ -13,6 +14,11 @@ export type AssetListPresentationRow = {
   assigned_department_name?: string | null;
   assignee_name?: string | null;
 };
+
+export function isAssetInWarehouse(row: AssetListPresentationRow, warehouseLocationIds: ReadonlySet<string> | readonly string[]) {
+  const locations = warehouseLocationIds instanceof Set ? warehouseLocationIds : new Set(warehouseLocationIds);
+  return !row.currentAssignment && row.status !== "liquidated" && Boolean(row.location_id && locations.has(row.location_id));
+}
 
 export function assetUsageState(row: AssetListPresentationRow): AssetUsageState {
   if (row.status === "liquidated") return "liquidated";
@@ -47,12 +53,14 @@ export function presentAssetCustody(row: AssetListPresentationRow) {
 
 export function filterAssetList<T extends AssetListPresentationRow>(
   rows: T[],
-  filters: { name: string; category: string; status?: string; usageState?: AssetUsageState | ""; conditionStatus?: string; quick: AssetQuickFilter; departmentId?: string; assigneeId?: string },
+  filters: { name: string; category: string; status?: string; usageState?: AssetUsageState | ""; conditionStatus?: string; quick: AssetQuickFilter; departmentId?: string; assigneeId?: string; locationId?: string; warehouseLocationIds?: ReadonlySet<string> | readonly string[] },
 ) {
   const name = normalizeVietnamese(filters.name);
   const category = normalizeVietnamese(filters.category);
 
   return rows.filter((row) => {
+    if (!filters.locationId && filters.warehouseLocationIds && isAssetInWarehouse(row, filters.warehouseLocationIds)) return false;
+    if (filters.locationId && row.location_id !== filters.locationId) return false;
     if (name && !normalizeVietnamese(row.asset_name ?? "").includes(name)) return false;
     if (category && !normalizeVietnamese(row.category ?? "").includes(category)) return false;
     if (filters.usageState && assetUsageState(row) !== filters.usageState) return false;

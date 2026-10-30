@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
-import { filterAssetList, isAssetUnassigned, presentAssetCustody, summarizeAssetList, normalizeVietnamese, type AssetQuickFilter } from "@/lib/assetListPresentation";
+import { filterAssetList, isAssetInWarehouse, isAssetUnassigned, presentAssetCustody, summarizeAssetList, normalizeVietnamese, type AssetQuickFilter } from "@/lib/assetListPresentation";
 import { presentAssetCondition } from "@/lib/assetStatusPresentation";
 import { listAssets, type Asset } from "@/lib/services";
+import { ASSET_LIST_VIEW_STORAGE_KEY, defaultAssetListViewState, parseAssetListViewState, serializeAssetListViewState } from "@/lib/assetListViewState.mjs";
 
 type AssetRow = Asset & {
   assigned_department_name?: string | null;
@@ -61,6 +62,15 @@ export default function AssetsPage() {
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const initialViewState = useRef<ReturnType<typeof defaultAssetListViewState> | null>(null);
+  const scrollRestored = useRef(false);
+  const suppressFilterSave = useRef(false);
+  const readViewState = () => {
+    if (initialViewState.current) return initialViewState.current;
+    if (typeof window === "undefined") return defaultAssetListViewState();
+    try { initialViewState.current = parseAssetListViewState(window.sessionStorage.getItem(ASSET_LIST_VIEW_STORAGE_KEY)); } catch { initialViewState.current = defaultAssetListViewState(); }
+    return initialViewState.current;
+  };
   const [qName, setQName] = useState("");
   const [qDepartment, setQDepartment] = useState("");
   const [qLocation, setQLocation] = useState("");
@@ -72,6 +82,28 @@ export default function AssetsPage() {
   const [employeeActiveIndex, setEmployeeActiveIndex] = useState(0);
   const [employeeOpen, setEmployeeOpen] = useState(false);
   const employeeFilterRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Restore saved filters after mount so server and first client render match.
+    const timer = setTimeout(() => {
+      const state = readViewState();
+      setQName(state.qName); setQDepartment(state.qDepartment); setQLocation(state.qLocation); setQCondition(state.qCondition); setQUsage(state.qUsage); setQuickFilter(state.quickFilter as AssetQuickFilter); setQAssignee(state.qAssignee);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const saveViewState = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const state = { qName, qDepartment, qLocation, qCondition, qUsage, quickFilter, qAssignee, windowScrollY: window.scrollY, tableScrollTop: tableScrollRef.current?.scrollTop ?? 0, tableScrollLeft: tableScrollRef.current?.scrollLeft ?? 0 };
+    try { window.sessionStorage.setItem(ASSET_LIST_VIEW_STORAGE_KEY, serializeAssetListViewState(state)); } catch { /* storage is optional */ }
+  }, [qName, qDepartment, qLocation, qCondition, qUsage, quickFilter, qAssignee]);
+
+  useEffect(() => {
+    if (!loaded || !scrollRestored.current) return;
+    if (suppressFilterSave.current) { suppressFilterSave.current = false; return; }
+    saveViewState();
+  }, [loaded, saveViewState]);
 
   const loadData = useCallback(async () => {
     const assetsRes = await listAssets();
@@ -112,11 +144,24 @@ export default function AssetsPage() {
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
 
+  useEffect(() => {
+    if (!loaded || scrollRestored.current) return;
+    const state = readViewState();
+    requestAnimationFrame(() => {
+      try {
+        window.scrollTo(0, state.windowScrollY);
+        if (tableScrollRef.current) { tableScrollRef.current.scrollTop = state.tableScrollTop; tableScrollRef.current.scrollLeft = state.tableScrollLeft; }
+      } catch { /* scroll restoration is best effort */ }
+      scrollRestored.current = true;
+    });
+  }, [loaded]);
+
+  const warehouseLocationIds = useMemo(() => new Set(locations.filter((location) => location.code === "kho" || location.code === "kho_cho_xu_ly").map((location) => location.id)), [locations]);
   const filteredRows = useMemo(
-    () => filterAssetList(rows, { name: qName, category: "", conditionStatus: qCondition, usageState: qUsage as "assigned" | "unassigned" | "liquidated" | "", quick: quickFilter, departmentId: qDepartment, assigneeId: qAssignee }).filter((row) => !qLocation || row.location_id === qLocation),
-    [rows, qName, qCondition, qUsage, quickFilter, qAssignee, qDepartment, qLocation],
+    () => filterAssetList(rows, { name: qName, category: "", conditionStatus: qCondition, usageState: qUsage as "assigned" | "unassigned" | "liquidated" | "", quick: quickFilter, departmentId: qDepartment, assigneeId: qAssignee, locationId: qLocation, warehouseLocationIds }),
+    [rows, qName, qCondition, qUsage, quickFilter, qAssignee, qDepartment, qLocation, warehouseLocationIds],
   );
-  const summary = useMemo(() => summarizeAssetList(rows), [rows]);
+  const summary = useMemo(() => summarizeAssetList(rows.filter((row) => !isAssetInWarehouse(row, warehouseLocationIds) || warehouseLocationIds.has(qLocation))), [rows, qLocation, warehouseLocationIds]);
   const departmentById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments]);
   const userById = useMemo(() => new Map(users.map((person) => [person.id, person.full_name])), [users]);
   const locationById = useMemo(() => new Map(locations.map((location) => [location.id, location.name])), [locations]);
@@ -133,6 +178,7 @@ export default function AssetsPage() {
   };
 
   const clearFilters = () => {
+    suppressFilterSave.current = true;
     setQName("");
     setQDepartment("");
     setQLocation("");
@@ -143,7 +189,10 @@ export default function AssetsPage() {
     setQEmployeeSearch("");
     setEmployeeOpen(false);
     setEmployeeActiveIndex(0);
+    try { window.sessionStorage.removeItem(ASSET_LIST_VIEW_STORAGE_KEY); } catch { /* storage is optional */ }
   };
+
+  const openAsset = (id?: string) => { saveViewState(); if (id) router.push(`/assets/${id}`); };
 
   const hasActiveFilters = Boolean(qName || qDepartment || qLocation || qCondition || qUsage || qAssignee || quickFilter !== "all");
 
@@ -188,7 +237,7 @@ export default function AssetsPage() {
             </div>
 
             <div className="hidden md:block">
-              <div className="table-scroll max-h-[72vh] rounded-xl border border-slate-200" tabIndex={0} aria-label="Danh sách tài sản; có thể cuộn ngang trên màn hình hẹp">
+              <div ref={tableScrollRef} className="table-scroll max-h-[72vh] rounded-xl border border-slate-200" tabIndex={0} aria-label="Danh sách tài sản; có thể cuộn ngang trên màn hình hẹp">
                 <table className="data-table table-fixed min-w-[1080px] text-left text-sm">
                   <colgroup>
                     <col className="w-[25%]" />
@@ -213,8 +262,8 @@ export default function AssetsPage() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredRows.map((row) => {
                       const owner = custody(row);
-                      return <tr key={row.id ?? row.asset_code} className="group cursor-pointer transition-colors hover:bg-orange-50/45" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) return; router.push(`/assets/${row.id}`); }}>
-                        <td className="px-4 py-4 align-top"><Link href={`/assets/${row.id}`} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"><p className="line-clamp-2 break-words font-bold leading-5 text-slate-950 group-hover:text-orange-800" title={row.asset_name}>{row.asset_name}</p>{row.asset_code ? <p className="mt-1 text-xs font-medium tracking-wide text-slate-500">{row.asset_code}</p> : null}</Link></td>
+                      return <tr key={row.id ?? row.asset_code} className="group cursor-pointer transition-colors hover:bg-orange-50/45" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) return; openAsset(row.id); }}>
+                        <td className="px-4 py-4 align-top"><Link href={`/assets/${row.id}`} onClick={saveViewState} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"><p className="line-clamp-2 break-words font-bold leading-5 text-slate-950 group-hover:text-orange-800" title={row.asset_name}>{row.asset_name}</p>{row.asset_code ? <p className="mt-1 text-xs font-medium tracking-wide text-slate-500">{row.asset_code}</p> : null}</Link></td>
                         <td className="px-2 py-4 text-center align-top text-base font-bold tabular-nums text-slate-900">{row.quantity ?? 1}</td>
                         <td className="px-3 py-4 align-top"><StatusBadge row={row} /></td>
                         <td className="px-3 py-4 align-top"><ConditionBadge row={row} /></td>
@@ -232,7 +281,7 @@ export default function AssetsPage() {
             <div className="grid gap-3 md:hidden">
               {filteredRows.map((row) => {
                 const owner = custody(row);
-                return <Link key={row.id ?? row.asset_code} href={`/assets/${row.id}`} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-orange-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-300">
+                return <Link key={row.id ?? row.asset_code} href={`/assets/${row.id}`} onClick={saveViewState} aria-label={`Mở chi tiết tài sản ${row.asset_name}`} className="block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-orange-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-300">
                   <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-semibold leading-5 text-slate-950">{row.asset_name}</h2>{row.asset_code ? <p className="mt-1 text-xs font-medium text-slate-500">{row.asset_code}</p> : null}</div><div className="flex flex-wrap justify-end gap-1"><StatusBadge row={row} /><ConditionBadge row={row} /></div></div>
                   <div className="mt-3 flex flex-wrap gap-2"><MetadataBadge>{row.category || "Chưa rõ"}</MetadataBadge><MetadataBadge tone={row.tracking_mode === "lot" ? "sky" : "slate"}>{row.tracking_mode === "lot" ? "Theo lô" : "Cá thể"}</MetadataBadge><MetadataBadge>SL: {row.quantity ?? 1}</MetadataBadge></div>
                   <dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vị trí</dt><dd className={`mt-1 font-medium ${row.location_id ? "text-slate-800" : "text-slate-500"}`}>{locationLabel(row)}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người sử dụng</dt><dd className={`mt-1 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-600"}`}>{owner.person}</dd></div>{row.note ? <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú</dt><dd className="mt-1 line-clamp-2 leading-5 text-slate-600" title={row.note}>{row.note}</dd></div> : null}</dl>
