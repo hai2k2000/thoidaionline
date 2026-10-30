@@ -10,10 +10,14 @@ const repository = readFileSync(new URL("./rbac/repository.ts", import.meta.url)
 
 test("catalog codes are authoritative and expose shared scope metadata", () => {
   assert.equal(isCatalogPermission("asset.manage"), true);
+  assert.equal(isCatalogPermission("journalism.structure.manage"), true);
+  assert.equal(isCatalogPermission("journalism.structure.assign"), true);
+  assert.equal(isCatalogPermission("record.sensitive.access"), true);
   assert.equal(isCatalogPermission("can_manage_permissions"), false);
   assert.deepEqual(supportedScopesForPermission("task.view"), ["self", "assigned", "department", "all"]);
   assert.deepEqual(supportedScopesForPermission("task.quick_report.create"), ["self", "all"]);
   assert.deepEqual(supportedScopesForPermission("record.self_approve"), ["self", "all"]);
+  assert.deepEqual(supportedScopesForPermission("record.sensitive.access"), ["self", "assigned", "department", "all"]);
   assert.deepEqual(supportedScopesForPermission("task.create"), ["all"]);
 });
 
