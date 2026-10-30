@@ -12,17 +12,28 @@ insert into zz_record_approve_departments
 select case when code = 'zz_record_approve_a' then 'a' else 'b' end, id
 from public.departments where code in ('zz_record_approve_a', 'zz_record_approve_b');
 
-insert into public.staff_users(full_name, username, email, password, role_id, department_id, job_title_id, active)
-select 'zz_record_approve_' || x.key, 'zz_record_approve_' || x.key, x.key || '@zz-record-approve.invalid', 'zz_record_approve',
-  (select id from public.roles where code = 'nhan_vien' limit 1),
-  case when x.department_key is null then null else (select id from zz_record_approve_departments where key = x.department_key) end,
-  (select id from public.job_titles where code = 'nhan_vien' limit 1), true
-from (values ('admin', null), ('approver_a', 'a'), ('approver_all', 'a'), ('owner_a', 'a'), ('owner_b', 'b'), ('manager_a', 'a'), ('no_department', null)) x(key, department_key);
+insert into public.staff_users(
+  full_name, username, email, password_hash, role_id, department_id, job_title_id, active
+)
+select 'zz_record_approve_' || x.key,
+  'zz_record_approve_' || x.key,
+  x.key || '@zz-record-approve.invalid',
+  extensions.crypt('x', extensions.gen_salt('bf', 4)),
+  (select id from public.roles where code = case when x.key = 'admin' then 'admin' else 'nhan_vien' end limit 1),
+  (select id from zz_record_approve_departments where key = x.department_key),
+  (select id from public.job_titles where code = case when x.key = 'manager_a' then 'truong_phong' else 'nhan_vien' end limit 1),
+  true
+from (values
+  ('admin', 'a'), ('approver_a', 'a'), ('approver_all', 'a'),
+  ('owner_a', 'a'), ('owner_b', 'b'), ('manager_a', 'a')
+) x(key, department_key);
 insert into zz_record_approve_users
-select substring(full_name from 21), id from public.staff_users where full_name like 'zz_record_approve_%';
+select substring(full_name from 19), id from public.staff_users where full_name like 'zz_record_approve_%';
 
 update public.departments set manager_id = (select id from zz_record_approve_users where key = 'manager_a')
 where id = (select id from zz_record_approve_departments where key = 'a');
+update public.departments set manager_id = null
+where id = (select id from zz_record_approve_departments where key = 'b');
 
 insert into public.user_permission_grants(user_id, permission_id, scope, effect, created_by)
 select u.id, p.id, x.scope, 'allow', (select id from zz_record_approve_users where key = 'admin')
@@ -44,7 +55,7 @@ from (values ('a','a','owner_a'), ('b','b','owner_b'), ('self','a','approver_a')
 cross join public.db_categories c cross join public.db_record_types t
 where c.code = 'zz_record_approve_category' and t.code = 'zz_record_approve_type';
 insert into zz_record_approve_records
-select substring(record_code from 21), id from public.db_records where record_code like 'zz_record_approve_%';
+select substring(record_code from 19), id from public.db_records where record_code like 'zz_record_approve_%';
 
 do $$ declare v uuid; begin
   v := (select id from zz_record_approve_users where key = 'approver_a');
@@ -52,33 +63,43 @@ do $$ declare v uuid; begin
   raise notice 'PASS 1 department approver approves own department';
 end $$;
 do $$ begin
-  begin perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'approver_a'), (select id from zz_record_approve_records where key = 'b'), 'approve'); raise exception 'FAIL 2 cross-department approve'; exception when sqlstate = '42501' then raise notice 'PASS 2 cross-department approve rejected'; end;
+  begin perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'approver_a'), (select id from zz_record_approve_records where key = 'b'), 'approve'); raise exception 'FAIL 2 cross-department approve'; exception when sqlstate '42501' then raise notice 'PASS 2 cross-department approve rejected'; end;
 end $$;
 do $$ begin
-  begin perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'approver_a'), (select id from zz_record_approve_records where key = 'b'), 'return', 'Sửa hồ sơ'); raise exception 'FAIL 3 cross-department return'; exception when sqlstate = '42501' then raise notice 'PASS 3 cross-department return rejected'; end;
+  begin perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'approver_a'), (select id from zz_record_approve_records where key = 'b'), 'return', 'Sửa hồ sơ'); raise exception 'FAIL 3 cross-department return'; exception when sqlstate '42501' then raise notice 'PASS 3 cross-department return rejected'; end;
 end $$;
 do $$ begin
   perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'approver_all'), (select id from zz_record_approve_records where key = 'b'), 'approve');
   raise notice 'PASS 4 all-scoped approver approves B';
 end $$;
 do $$ begin
-  begin perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'approver_a'), (select id from zz_record_approve_records where key = 'self'), 'approve'); raise exception 'FAIL 5 self approval'; exception when sqlstate = '42501' then raise notice 'PASS 5 self approval rejected'; end;
+  begin perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'approver_a'), (select id from zz_record_approve_records where key = 'self'), 'approve'); raise exception 'FAIL 5 self approval'; exception when sqlstate '42501' then raise notice 'PASS 5 self approval rejected'; end;
 end $$;
 do $$ begin
   perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'manager_a'), (select id from zz_record_approve_records where key = 'manager'), 'approve');
   raise notice 'PASS 6 department manager approves without record.approve';
 end $$;
 do $$ begin
-  begin perform public.api_transition_database_record((select id from zz_record_approve_users where key = 'no_department'), (select id from zz_record_approve_records where key = 'a'), 'approve'); raise exception 'FAIL 7 no-department approver'; exception when sqlstate = '42501' then raise notice 'PASS 7 no-department approver rejected'; end;
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'staff_users'
+      and column_name = 'department_id'
+      and is_nullable = 'NO'
+  ) then
+    raise exception 'FAIL 7 staff_users.department_id is nullable';
+  end if;
+  raise notice 'PASS 7 staff_users.department_id is NOT NULL';
 end $$;
 do $$ begin
   if not public.rbac_v2_scope_supported('record.approve','department') or public.rbac_v2_scope_supported('record.approve','self') or not public.rbac_v2_scope_supported('leave.approve','department') then raise exception 'FAIL 8 scope support'; end if;
   raise notice 'PASS 8 scope support';
 end $$;
 do $$ begin
-  perform public.api_set_user_permission_override((select id from zz_record_approve_users where key = 'admin'), (select id from zz_record_approve_users where key = 'no_department'), 'record.approve', 'allow', 'department');
+  perform public.api_set_user_permission_override((select id from zz_record_approve_users where key = 'admin'), (select id from zz_record_approve_users where key = 'owner_b'), 'record.approve', 'allow', 'department');
   raise notice 'PASS 9 department override accepted';
 end $$;
 
-raise notice 'ALL_PASS';
+do $$ begin raise notice 'ALL_PASS'; end $$;
 rollback;
