@@ -1,6 +1,6 @@
 import { requireReadActor } from "@/lib/serverApi";
 import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
-import { buildAttendanceExportCsv } from "@/lib/attendanceExport.mjs";
+import { buildAttendanceExportXlsx } from "@/lib/attendanceExport.mjs";
 import { GET as attendanceGet } from "../route";
 
 const FORWARDED_FILTERS = ["departmentId", "staffId", "status"];
@@ -18,6 +18,6 @@ export async function GET(request: Request) {
   const result = await attendanceGet(new Request(url, { headers: request.headers }));
   if (!result.ok) return result;
   const payload = await result.json() as { monthlyRows?: Array<{ user_id: string; work_date: string; note?: string | null }>; grid?: { days: string[]; rows: Array<{ staffId: string; name: string; departmentName: string; cells: Array<{ date: string; code: string; workday: number }> }> } };
-  const csv = buildAttendanceExportCsv(month, payload.grid ?? { days: [], rows: [] }, payload.monthlyRows ?? []);
-  return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename=cham-cong-${month}.csv` } });
+  const xlsx = buildAttendanceExportXlsx(month, payload.grid ?? { days: [], rows: [] }, payload.monthlyRows ?? []);
+  return new Response(xlsx, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename=cham-cong-${month}.xlsx` } });
 }

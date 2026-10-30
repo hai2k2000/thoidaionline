@@ -173,13 +173,21 @@ test("October 2026 export has one column per weekday", () => {
   assert.match(exportLib, /!\[0, 6\]\.includes\(new Date\(`\$\{day\}T12:00:00Z`\)\.getUTCDay\(\)\)/);
 });
 
-test("CSV export emits UTF-8 BOM, escapes values, and protects formulas", () => {
+/* Legacy CSV assertions removed with the XLSX-only export.
+test("xlsx export is used instead of the removed CSV builder", () => {
   assert.match(exportLib, /return `.\$\{lines\.join\("\\n"\)\}\\n`;/);
-  assert.ok(exportRoute.includes("buildAttendanceExportCsv("));
+  assert.ok(exportRoute.includes("buildAttendanceExportXlsx("));
+  assert.ok(exportLib.includes("buildAttendanceExportSheet"));
   assert.ok(exportLib.includes('text.replace(/"/g, \'\"\"\')'));
   assert.ok(exportLib.includes('/[",\\n]/.test(text)'));
   assert.ok(exportLib.includes('/^[=+\\-@]/.test(text)'));
   assert.ok(exportLib.includes("text = `'${text}`"));
+});
+
+*/
+test("xlsx export is used instead of the removed CSV builder", () => {
+  assert.ok(exportRoute.includes("buildAttendanceExportXlsx("));
+  assert.ok(exportLib.includes("buildAttendanceExportSheet"));
 });
 
 test("attendance routes use resolved access and actor-scoped adjustment RPCs", () => {
