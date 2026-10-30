@@ -41,3 +41,13 @@ test("export rows follow the owner's order: TBT, Phó TBT, trưởng phòng, the
   ];
   assert.deepEqual(sortAttendanceExportRows(rows).map((row) => row.name), ["TBT", "PTBT", "TP-ND", "TP-TH", "ND1", "ND2", "TT1", "TH1", "X"]);
 });
+
+test("signature block shows the exporter and the template's default signers", () => {
+  const october = Array.from({ length: 31 }, (_, i) => `2026-10-${String(i + 1).padStart(2, "0")}`);
+  const sheet = buildAttendanceExportSheet("2026-10", { days: october, rows: [] }, [], { preparedBy: "Người Xuất" });
+  const values = sheet.rows.map((row) => row.cells.map((cell) => cell.value));
+  const titleIndex = values.findIndex((row) => row.includes("NGƯỜI LẬP BẢNG"));
+  const names = values[titleIndex + 6];
+  assert.deepEqual([names[0], names[3], names[16], names[29]], ["Người Xuất", "Nguyễn Duy Đông", "Lê Thị Bích Thuận", "Lê Quang Thiện"]);
+  assert.ok(sheet.merges.includes(`D${titleIndex + 7}:O${titleIndex + 7}`));
+});

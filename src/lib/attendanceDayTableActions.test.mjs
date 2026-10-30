@@ -12,3 +12,8 @@ test("day table has no workday-adjustment button and a pen-icon note button", ()
   assert.doesNotMatch(page, /M12 5v14M5 12h14/);
   assert.doesNotMatch(page, /attendance-note-action/);
 });
+
+// Owner report 2026-10-30: admin notes vanished from the list after the popup refactor.
+test("list note cell shows the admin note under the system note", () => {
+  assert.match(page, /attendance-note-cell[\s\S]{0,300}\{r\.admin_note \? <div className="attendance-admin-note[^"]*"><strong>Ghi chú Admin:<\/strong> \{r\.admin_note\}<\/div> : null\}/);
+});

@@ -18,6 +18,6 @@ export async function GET(request: Request) {
   const result = await attendanceGet(new Request(url, { headers: request.headers }));
   if (!result.ok) return result;
   const payload = await result.json() as { monthlyRows?: Array<{ user_id: string; work_date: string; note?: string | null }>; grid?: { days: string[]; rows: Array<{ staffId: string; name: string; departmentName: string; cells: Array<{ date: string; code: string; workday: number }> }> } };
-  const xlsx = buildAttendanceExportXlsx(month, payload.grid ?? { days: [], rows: [] }, payload.monthlyRows ?? []);
+  const xlsx = buildAttendanceExportXlsx(month, payload.grid ?? { days: [], rows: [] }, payload.monthlyRows ?? [], { preparedBy: guard.actor.full_name });
   return new Response(xlsx, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename=cham-cong-${month}.xlsx` } });
 }

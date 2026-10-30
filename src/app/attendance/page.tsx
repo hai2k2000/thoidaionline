@@ -678,7 +678,7 @@ function AttendancePageContent() {
                   <td className="whitespace-nowrap px-3 py-2">{r.check_in ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2">{r.check_out ?? "-"}</td>
                   <td className="attendance-status-cell px-3 py-2"><span className={`table-status ${r.status === "present" ? "table-status-success" : r.status === "late" || r.status === "leave" ? "table-status-warning" : r.status === "absent" ? "table-status-danger" : "table-status-neutral"}`}>{r.has_attendance_log === false ? "Không có dữ liệu chấm công" : r.late_exception_status === "approved" ? "Đi muộn do việc phát sinh" : r.late_exception_status === "pending" ? "Đi muộn (chờ duyệt lý do phát sinh)" : attendanceStatusLabel[(r.status ?? "").toLowerCase()] ?? r.status ?? "-"}</span></td>
-                  <td className="attendance-note-cell px-3 py-2"><div className="line-clamp-2 whitespace-pre-wrap break-words">{r.note ?? ""}</div></td>
+                  <td className="attendance-note-cell px-3 py-2"><div className="line-clamp-2 whitespace-pre-wrap break-words">{r.note ?? ""}</div>{r.admin_note ? <div className="attendance-admin-note mt-1 line-clamp-2 rounded bg-orange-50 px-2 py-1 text-xs text-orange-900"><strong>Ghi chú Admin:</strong> {r.admin_note}</div> : null}</td>
                 </tr>
               ))}
               {visibleAttendanceRows.length === 0 ? (
