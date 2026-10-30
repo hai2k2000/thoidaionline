@@ -10,6 +10,16 @@ const symbolForCell = (cell) => ({ present: 1, incomplete: Number(cell?.workday)
 export function exportCellValue(cell) { return symbolForCell(cell); }
 const styleForCode = () => "day";
 
+// Owner order: Tổng biên tập, Phó TBT, trưởng phòng, then Phòng Nội dung, Truyền thông, Tổng hợp.
+const LEADER_RANK = { tong_bien_tap: 0, pho_tong_bien_tap: 1, truong_phong: 2 };
+const LEADER_NAME_RANK = [[/^tổng biên tập$/i, 0], [/^phó tổng biên tập$/i, 1], [/^trưởng phòng$/i, 2]];
+const DEPARTMENT_ORDER = ["phòng nội dung", "phòng truyền thông", "phòng tổng hợp"];
+const leaderRank = (row) => LEADER_RANK[row.jobTitleCode ?? ""] ?? LEADER_NAME_RANK.find(([pattern]) => pattern.test((row.jobTitleName ?? "").trim()))?.[1] ?? 3;
+const departmentRank = (row) => { const rank = DEPARTMENT_ORDER.indexOf((row.departmentName ?? "").trim().toLowerCase()); return rank === -1 ? DEPARTMENT_ORDER.length : rank; };
+/** Stable sort: leaders first, then department order; ties keep the grid's existing order. */
+export function sortAttendanceExportRows(rows) {
+  return rows.map((row, position) => ({ row, position })).sort((a, b) => leaderRank(a.row) - leaderRank(b.row) || departmentRank(a.row) - departmentRank(b.row) || a.position - b.position).map(({ row }) => row);
+}
 export function buildAttendanceExportSheet(month, grid, monthlyRows = []) {
   void monthlyRows;
   const days = daysInMonth(month); const width = 3 + days.length + 4; const lastColumn = columnNameFor(width); const businessDays = countBusinessDays(month); const rows = [];
@@ -23,7 +33,7 @@ export function buildAttendanceExportSheet(month, grid, monthlyRows = []) {
   rows.push({ height: 18.75, cells: [blank(`Tháng ${Number(month.slice(5, 7))}/${month.slice(0, 4)}`, "subtitle"), ...Array.from({ length: width - 1 }, () => blank())] });
   rows.push({ height: 18.75, cells: empty() });
   rows.push({ height: 18.75, cells: ["TT", "HỌ & TÊN", "CHỨC VỤ", ...days.map(exportDayHeader), "TỔNG", "P", "N", "CL"].map((value) => blank(value, "header")) });
-  for (const [index, person] of (grid.rows ?? []).entries()) {
+  for (const [index, person] of sortAttendanceExportRows(grid.rows ?? []).entries()) {
     const byDate = new Map((person.cells ?? []).map((cell) => [cell.date, cell])); const monthCells = days.map((date) => byDate.get(date) ?? { date, code: "future", workday: 0 }); const total = monthCells.reduce((sum, cell) => sum + Number(cell.workday ?? 0), 0); const rowNumber = index + 10; const totalColumn = 3 + days.length + 1; const totalRef = `${columnNameFor(totalColumn)}${rowNumber}`; const pRef = `${columnNameFor(totalColumn + 1)}${rowNumber}`; const nRef = `${columnNameFor(totalColumn + 2)}${rowNumber}`;
     const values = [index + 1, person.name, person.jobTitleName ?? person.departmentName ?? "", ...monthCells.map(symbolForCell), total, "", "", ""];
     rows.push({ height: 20.1, cells: values.map((value, cellIndex) => ({ value, style: cellIndex >= 3 && cellIndex < 3 + days.length ? styleForCode() : cellIndex === 0 || cellIndex >= 3 + days.length ? "center" : "body", ...(cellIndex === totalColumn + 1 ? { formula: `${businessDays}-${totalRef}` } : {}), ...(cellIndex === totalColumn + 2 ? { formula: `${pRef}-${nRef}` } : {}) })) });

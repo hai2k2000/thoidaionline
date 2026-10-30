@@ -25,3 +25,19 @@ test("footer follows the template: legend in four pairs per row, signatures on o
   assert.ok(values.some((row) => row.includes("Quên quẹt thẻ:") && row.includes("QQ")));
   assert.equal(sheet.rows[2].cells[0].style, "plain");
 });
+
+test("export rows follow the owner's order: TBT, Phó TBT, trưởng phòng, then Nội dung, Truyền thông, Tổng hợp", async () => {
+  const { sortAttendanceExportRows } = await import("./attendanceExport.mjs");
+  const rows = [
+    { name: "TH1", departmentName: "Phòng Tổng hợp", jobTitleCode: "nhan_vien" },
+    { name: "TP-TH", departmentName: "Phòng Tổng hợp", jobTitleCode: "truong_phong" },
+    { name: "TT1", departmentName: "Phòng Truyền thông", jobTitleCode: "nhan_vien" },
+    { name: "PTBT", departmentName: "Ban Biên tập", jobTitleCode: "pho_tong_bien_tap" },
+    { name: "ND1", departmentName: "Phòng Nội dung", jobTitleCode: "phong_vien" },
+    { name: "TP-ND", departmentName: "Phòng Nội dung", jobTitleCode: "truong_phong" },
+    { name: "TBT", departmentName: "Ban Biên tập", jobTitleName: "Tổng biên tập" },
+    { name: "ND2", departmentName: "Phòng Nội dung", jobTitleCode: "phong_vien" },
+    { name: "X", departmentName: "Phòng khác", jobTitleCode: "nhan_vien" },
+  ];
+  assert.deepEqual(sortAttendanceExportRows(rows).map((row) => row.name), ["TBT", "PTBT", "TP-ND", "TP-TH", "ND1", "ND2", "TT1", "TH1", "X"]);
+});
