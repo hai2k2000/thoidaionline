@@ -9,6 +9,7 @@ import { attendanceDetailsForEmployee } from "@/lib/attendanceSummaryDetails.mjs
 import { isAttendanceListedStaff } from "@/lib/attendanceVisibility.mjs";
 import { canEditCreatorMutation, leaveLifecycleState } from "@/lib/creatorMutationPolicy.mjs";
 import AttendanceMonthGrid from "@/components/attendance/AttendanceMonthGrid";
+import AttendanceAnomalyReview from "@/components/attendance/AttendanceAnomalyReview";
 
 type AttendanceRow = {
   id: string;
@@ -100,6 +101,7 @@ const selectedRange = (date: string, period: "day" | "week" | "month") => {
   end.setUTCDate(end.getUTCDate() + 6);
   return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 };
+const monthEnd = (date: string) => new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)), 0, 12)).toISOString().slice(0, 10);
 
 const formatAttendanceDate = (value?: string | null) => {
   if (!value) return "-";
@@ -161,6 +163,7 @@ function AttendancePageContent() {
   const [leaveStatus, setLeaveStatus] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled">(initialLeaveFilters.status as "all" | "pending" | "approved" | "rejected" | "cancelled");
   const [selectedSummaryEmployee, setSelectedSummaryEmployee] = useState<{ userId: string; name: string } | null>(null);
   const [selectedAttendanceRow, setSelectedAttendanceRow] = useState<AttendanceRow | null>(null);
+  const [anomalyReviewOpen, setAnomalyReviewOpen] = useState(false);
   const appendAdminNoteQuickText = (value: string) => setAdminNoteText((current) => current.trim() ? `${current.trim()}; ${value}` : value);
   const [attendanceAccess, setAttendanceAccess] = useState<{ orgScope: "all" | "department" | null; canManage: boolean }>({ orgScope: null, canManage: false });
   const attendanceRequestSequence = useRef<number>(0);
@@ -559,6 +562,7 @@ function AttendancePageContent() {
               <form onSubmit={(event) => { setAdminNoteRow(selectedAttendanceRow); void submitAdminNote(event); }} className="mt-4"><label className="block text-sm font-semibold">Ghi chú Admin<textarea readOnly={!effectiveCanManage} required={effectiveCanManage} minLength={3} maxLength={2000} value={adminNoteText} onChange={(event) => setAdminNoteText(event.target.value)} className="mt-1 min-h-24 w-full rounded border px-3 py-2 font-normal" /></label>{effectiveCanManage ? <div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => appendAdminNoteQuickText("Quên thẻ")} className="rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-700">Quên thẻ (QT)</button><button type="button" onClick={() => appendAdminNoteQuickText("Quên quẹt thẻ")} className="rounded border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-700">Quên quẹt thẻ (QQ)</button></div> : null}{adminNoteError ? <p className="mt-2 text-sm text-red-700" role="alert">{adminNoteError}</p> : null}{effectiveCanManage ? <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setAdminNoteText(selectedAttendanceRow.admin_note ?? "")} className="rounded border px-3 py-2 text-sm font-semibold">Hủy</button><button disabled={adminNoteBusy} className="rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white">{adminNoteBusy ? "Đang lưu..." : "Lưu ghi chú"}</button></div> : null}</form>
             </div>
           </div> : null}
+          {anomalyReviewOpen ? <AttendanceAnomalyReview initialFrom={`${selectedDate.slice(0, 7)}-01`} initialTo={selectedDate.slice(0, 7) < today.slice(0, 7) ? monthEnd(selectedDate) : today} onClose={() => setAnomalyReviewOpen(false)} onSelect={(staffId, date) => { const target = monthlyRows.find((row) => row.user_id === staffId && row.work_date === date) ?? rows.find((row) => row.user_id === staffId && row.work_date === date) ?? null; setAnomalyReviewOpen(false); setSelectedDate(date); setPeriod("day"); setStaffFilter(staffId); setSelectedAttendanceRow(target); }} /> : null}
           {adjustmentRow ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="adjustment-title"><form onSubmit={submitAdjustment} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl"><h2 id="adjustment-title" className="text-lg font-semibold">Điều chỉnh công</h2><p className="mt-1 text-sm text-slate-600">{adjustmentRow.staff_users?.full_name ?? "Nhân sự"} · {formatAttendanceDate(adjustmentRow.work_date)}</p><label className="mt-4 block text-sm font-semibold">Ngày công<select value={adjustmentWorkday} onChange={(event) => setAdjustmentWorkday(event.target.value)} className="mt-1 w-full rounded border px-3 py-2 font-normal"><option value="1">1</option><option value="0.5">0.5</option><option value="0">0</option></select></label><label className="mt-3 block text-sm font-semibold">Lý do<textarea required minLength={3} maxLength={2000} value={adjustmentReason} onChange={(event) => setAdjustmentReason(event.target.value)} className="mt-1 min-h-24 w-full rounded border px-3 py-2 font-normal" /></label>{adjustmentError ? <p className="mt-2 text-sm text-red-700" role="alert">{adjustmentError}</p> : null}<div className="mt-4 flex justify-between gap-2"><button type="button" onClick={deleteAdjustment} disabled={adjustmentBusy || !adjustmentRow.workday_adjustment} className="rounded border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Xóa điều chỉnh</button><div className="flex gap-2"><button type="button" onClick={() => setAdjustmentRow(null)} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={adjustmentBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">Lưu điều chỉnh</button></div></div></form></div> : null}
           {leaveModalOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="leave-dialog-title">
             <form onSubmit={submitLeave} className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
@@ -605,6 +609,7 @@ function AttendancePageContent() {
                 {syncBusy ? "Đang gửi..." : syncRequests[0]?.status === "completing" ? "Đang chốt dữ liệu..." : syncRequests[0]?.status === "running" ? "Đang đồng bộ..." : "Đồng bộ ngay"}
               </button>
               {isOrganizationView && period === "month" ? <a href={`/api/attendance/export?${new URLSearchParams({ month: selectedDate.slice(0, 7), ...(departmentFilter ? { departmentId: departmentFilter } : {}), ...(staffFilter ? { staffId: staffFilter } : {}), ...(statusFilter ? { status: statusFilter } : {}) }).toString()}`} className="min-h-11 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800">Xuất Excel</a> : null}
+              {isOrganizationView && effectiveCanManage ? <button type="button" onClick={() => setAnomalyReviewOpen(true)} className="min-h-11 rounded-lg border border-orange-300 bg-white px-4 py-2 text-sm font-bold text-orange-800">Rà soát bất thường</button> : null}
             </div>
           ) : null}
           <div className="grid gap-2 md:grid-cols-4">
