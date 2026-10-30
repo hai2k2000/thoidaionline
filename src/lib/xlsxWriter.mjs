@@ -63,10 +63,10 @@ function buildStyles(customStyles = {}) {
     styleIndexes.set(name, xfs.length);
     xfs.push({ fontId: fontKey.get(fontJson), fillId: fillKey.get(fill), borderId, alignment: style.alignment ?? null });
   }
-  const fontsXml = fonts.map((font) => `<font>${font.bold ? "<b/>" : ""}${font.italic ? "<i/>" : ""}<sz val="${font.size}"/><name val="${escapeXml(font.name)}"/>${font.color ? `<color rgb="${font.color}"/>` : ""}</font>`).join("");
+  const fontsXml = fonts.map((font) => `<font>${font.bold ? "<b/>" : ""}${font.italic ? "<i/>" : ""}<sz val="${font.size}"/>${font.color ? `<color rgb="${font.color}"/>` : ""}<name val="${escapeXml(font.name)}"/></font>`).join("");
   const fillsXml = fills.map((fill) => fill === null ? '<fill><patternFill patternType="none"/></fill>' : fill === "gray125" ? '<fill><patternFill patternType="gray125"/></fill>' : `<fill><patternFill patternType="solid"><fgColor rgb="${fill}"/><bgColor indexed="64"/></patternFill></fill>`).join("");
   const bordersXml = borders.map((border) => border ? '<border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border>' : '<border><left/><right/><top/><bottom/><diagonal/></border>').join("");
-  const xfsXml = xfs.map((xf) => `<xf numFmtId="0" fontId="${xf.fontId}" fillId="${xf.fillId}" borderId="${xf.borderId}" xfId="0"${xf.alignment ? ' applyAlignment="1"' : ""}>${xf.alignment ? `<alignment horizontal="${xf.alignment.horizontal ?? "general"}" vertical="${xf.alignment.vertical ?? "bottom"}"${xf.alignment.wrapText ? ' wrapText="1"' : ""}/>` : ""}</xf>`).join("");
+  const xfsXml = xfs.map((xf) => `<xf numFmtId="0" fontId="${xf.fontId}" fillId="${xf.fillId}" borderId="${xf.borderId}" xfId="0" applyFont="1" applyFill="1" applyBorder="1"${xf.alignment ? ' applyAlignment="1"' : ""}>${xf.alignment ? `<alignment horizontal="${xf.alignment.horizontal ?? "general"}" vertical="${xf.alignment.vertical ?? "bottom"}"${xf.alignment.wrapText ? ' wrapText="1"' : ""}/>` : ""}</xf>`).join("");
   return {
     indexes: styleIndexes,
     xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="${fonts.length}">${fontsXml}</fonts><fills count="${fills.length}">${fillsXml}</fills><borders count="${borders.length}">${bordersXml}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfsXml}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
@@ -81,6 +81,8 @@ function worksheetXml(sheet, styleIndexes) {
       if (cell.formula) return `<c r="${reference}" s="${style}"><f>${escapeXml(cell.formula)}</f></c>`;
       if (typeof cell.value === "number" && Number.isFinite(cell.value)) return `<c r="${reference}" s="${style}"><v>${cell.value}</v></c>`;
       const text = cleanXml(cell.value);
+      // A truly empty cell keeps only its style; an empty string would break formulas like =P-N.
+      if (text === "") return `<c r="${reference}" s="${style}"/>`;
       const preserve = /^\s|\s$|\n/.test(text) ? ' xml:space="preserve"' : "";
       return `<c r="${reference}" s="${style}" t="inlineStr"><is><t${preserve}>${escapeXml(text)}</t></is></c>`;
     }).join("");
@@ -89,8 +91,10 @@ function worksheetXml(sheet, styleIndexes) {
   const columns = sheet.columns.map((column, index) => `<col min="${index + 1}" max="${index + 1}" width="${column.width}" customWidth="1"/>`).join("");
   const freeze = sheet.freeze ? `<sheetViews><sheetView workbookViewId="0"><pane xSplit="${sheet.freeze.columns}" ySplit="${sheet.freeze.rows}" topLeftCell="${columnName(sheet.freeze.columns)}${sheet.freeze.rows + 1}" activePane="bottomRight" state="frozen"/><selection pane="bottomRight"/></sheetView></sheetViews>` : '<sheetViews><sheetView workbookViewId="0"/></sheetViews>';
   const merges = sheet.merges?.length ? `<mergeCells count="${sheet.merges.length}">${sheet.merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells>` : "";
+  // OOXML requires sheetPr before sheetViews; fit-to-page needs pageSetUpPr.
+  const sheetPr = sheet.pageSetup?.fitToWidth ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : "<sheetPr/>";
   const pageSetup = sheet.pageSetup ? `<pageSetup paperSize="${sheet.pageSetup.paperSize}" orientation="${sheet.pageSetup.orientation}" fitToWidth="${sheet.pageSetup.fitToWidth}" fitToHeight="${sheet.pageSetup.fitToHeight}"/>` : "";
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${freeze}<sheetPr/><sheetFormatPr defaultRowHeight="15"/><cols>${columns}</cols><sheetData>${rows}</sheetData>${merges}${pageSetup}</worksheet>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${sheetPr}${freeze}<sheetFormatPr defaultRowHeight="15"/><cols>${columns}</cols><sheetData>${rows}</sheetData>${merges}${sheet.pageSetup ? '<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>' : ""}${pageSetup}</worksheet>`;
 }
 
 function zip(files) {
