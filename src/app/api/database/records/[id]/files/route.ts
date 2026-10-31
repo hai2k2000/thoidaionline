@@ -4,6 +4,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { canAccessDatabaseRecordForActor, prepareDatabaseRecordFileUpload } from "@/lib/databaseManagement/repository";
 import { removeDatabaseRecordFile, writeDatabaseRecordFile } from "@/lib/databaseManagement/storage";
 import { logServerAudit } from "@/lib/serverAudit";
+import { databaseRecordFileType, hasDatabaseRecordFileMagic } from "@/lib/databaseManagement/fileType.mjs";
 
 const MAX_MULTIPART_BYTES = 51 * 1024 * 1024;
 const IDEMPOTENCY_KEY = /^[a-zA-Z0-9_-]{8,200}$/;
@@ -61,13 +62,17 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "file_required" }, { status: 400 });
   if (file.size > 50 * 1024 * 1024) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
+  const mimeType = databaseRecordFileType(file.name);
+  if (!mimeType) return NextResponse.json({ error: "unsupported_file_type" }, { status: 415 });
+  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  if (!hasDatabaseRecordFileMagic(file.name, fileBytes)) return NextResponse.json({ error: "unsupported_file_type" }, { status: 415 });
   let storageKey: string | null = null;
   let retainStorageForReconciliation = false;
   try {
     await prepareDatabaseRecordFileUpload(actor, recordId);
     const stored = await writeDatabaseRecordFile(recordId, file, uploadRequestId || undefined);
     storageKey = stored.storageKey;
-    const { data, error } = await serverSupabase.from("db_record_files").insert({ record_id: recordId, upload_request_id: uploadRequestId || null, storage_backend: "vps_private", storage_key: stored.storageKey, original_name: file.name, mime_type: file.type, size_bytes: stored.sizeBytes, sha256: stored.sha256, created_by: actor.id }).select("id,original_name,mime_type,size_bytes,sha256,created_at").single();
+    const { data, error } = await serverSupabase.from("db_record_files").insert({ record_id: recordId, upload_request_id: uploadRequestId || null, storage_backend: "vps_private", storage_key: stored.storageKey, original_name: file.name, mime_type: mimeType, size_bytes: stored.sizeBytes, sha256: stored.sha256, created_by: actor.id }).select("id,original_name,mime_type,size_bytes,sha256,created_at").single();
     if (error) {
       if (uploadRequestId && error.code === "23505") {
         const { data: existing, error: retryError } = await serverSupabase.from("db_record_files").select("id,original_name,mime_type,size_bytes,sha256,created_at").eq("record_id", recordId).eq("upload_request_id", uploadRequestId).maybeSingle();

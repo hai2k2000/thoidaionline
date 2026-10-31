@@ -47,6 +47,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     return json({ record: result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "record_delete_failed";
-    return json({ error: message === "permission_denied" ? "forbidden" : message === "record_not_found" ? "not_found" : "record_delete_failed" }, errorStatus(message));
+    return json({ error: ["record_not_deleted", "record_already_deleted", "record_locked"].includes(message) ? message : message === "permission_denied" ? "forbidden" : message === "record_not_found" ? "not_found" : "record_delete_failed" }, errorStatus(message));
   }
 }

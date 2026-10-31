@@ -16,6 +16,11 @@ export type AuditOutboxInput = {
 };
 
 const SENSITIVE_KEY = /(password|token|secret|cookie|authorization|private[_-]?key|content|bytes)/i;
+let lastRetryAt = 0;
+
+export function shouldRunAuditRetry(now: number, previousRetryAt: number, intervalMs: number) { return now - previousRetryAt >= intervalMs; }
+
+function triggerPendingAuditRetry() { const now = Date.now(); if (!shouldRunAuditRetry(now, lastRetryAt, 60_000)) return; lastRetryAt = now; void retryPendingAudits(10).catch(() => undefined); }
 
 function sanitize(value: unknown, depth = 0): unknown {
   if (depth > 4) return "[truncated]";
@@ -51,15 +56,15 @@ export async function enqueueAndDeliverAudit(input: AuditOutboxInput) {
       outboxId = retry.data.id;
     } else outboxId = data.id;
   }
-  if (existing?.status === "delivered") return { status: "delivered" as const, outboxId };
+  if (existing?.status === "delivered") { triggerPendingAuditRetry(); return { status: "delivered" as const, outboxId }; }
   const { error: auditError } = await serverSupabase.from("audit_logs").insert({ idempotency_key: idempotencyKey, actor_id: input.actorId, module: input.module, entity_type: input.entityType, entity_id: input.entityId ?? null, action: input.action, old_data: payload.old_data, new_data: payload.new_data });
   if (auditError?.code === "23505") {
     await serverSupabase.from("database_audit_outbox").update({ status: "delivered", delivered_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", outboxId);
-    return { status: "delivered" as const, outboxId };
+    triggerPendingAuditRetry(); return { status: "delivered" as const, outboxId };
   }
   if (!auditError) {
     await serverSupabase.from("database_audit_outbox").update({ status: "delivered", delivered_at: new Date().toISOString(), updated_at: new Date().toISOString(), attempt_count: 1 }).eq("id", outboxId);
-    return { status: "delivered" as const, outboxId };
+    triggerPendingAuditRetry(); return { status: "delivered" as const, outboxId };
   }
   await serverSupabase.from("database_audit_outbox").update({ status: "pending", last_error: "audit_delivery_failed", next_attempt_at: new Date(Date.now() + 30_000).toISOString(), attempt_count: 1, updated_at: new Date().toISOString() }).eq("id", outboxId);
   return { status: "pending" as const, outboxId };
