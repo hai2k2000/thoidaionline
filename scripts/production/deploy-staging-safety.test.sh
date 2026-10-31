@@ -12,7 +12,8 @@ release_root="$root/releases"
 shared="$root/shared"
 bin="$root/bin"
 mkdir -p "$release_root" "$shared" "$bin" "$root/staging-outside" \
-  "$release_root/staging-inside" "$root/artifact/.next/server" "$root/artifact/node_modules/next"
+  "$release_root/staging-inside" "$root/artifact/.next/server" "$root/artifact/node_modules/next" "$root/artifact/deploy"
+cp deploy/disk-guard.conf "$root/artifact/deploy/disk-guard.conf"
 chmod 755 "$root" "$release_root" "$shared" "$root/staging-outside" "$release_root/staging-inside" "$root/artifact"
 touch "$shared/.env.local" "$shared/.env.production" "$root/artifact/server.js" \
   "$root/artifact/.next/BUILD_ID" "$root/artifact/node_modules/next/package.json"
@@ -88,19 +89,32 @@ ln -s "$release_root/current-release" "$root/active-link"
 if verify_only "$root/active-link" "$expected_commit" >"$root/active.out" 2>&1; then exit 1; fi
 grep -q 'regular directory' "$root/active.out"
 
-# A successful activation cleans only invocation-owned staging outside releases.
+# A successful activation uses canonical commit naming and cleans owned staging.
 rm -rf "$root/staging-outside"
 mkdir "$root/staging-outside"
 cp -a "$root/artifact/." "$root/staging-outside/"
 PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_SHARED_ROOT="$shared" \
-  THOIDAI_EXTERNAL_DEPLOY_APPROVED=1 \
-  THOIDAI_DEPLOY_LOCK="$root/deploy.lock" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" \
-  THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" \
-  THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" THOIDAI_INSTALL_BIN="$bin/install" THOIDAI_NEW_RELEASE_PATH="$release_root/new-release" \
+  THOIDAI_EXTERNAL_DEPLOY_APPROVED=1 THOIDAI_DEPLOY_LOCK="$root/deploy.lock" \
+  THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" \
+  THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" THOIDAI_INSTALL_BIN="$bin/install" \
   bash scripts/production/deploy-external-artifact.sh "$root/staging-outside" "$expected_commit" --activate >/dev/null
+standard_release="$release_root/thoidai-standalone-$expected_commit"
 [[ ! -e "$root/staging-outside" ]]
-[[ -d "$release_root/new-release" ]]
-[[ "$(readlink -f "$release_root/current")" == "$(readlink -f "$release_root/new-release")" ]]
-[[ -e "$release_root/new-release/server.js" ]]
+[[ -d "$standard_release" ]]
+[[ "$(readlink -f "$release_root/current")" == "$(readlink -f "$standard_release")" ]]
 
-echo "deploy-staging-safety: PASS (outside/inside/root/symlink/protected staging, owned cleanup and release preservation)"
+# A repeated commit receives -r2.
+mkdir "$root/staging-r2"; cp -a "$root/artifact/." "$root/staging-r2/"
+PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_SHARED_ROOT="$shared" \
+  THOIDAI_EXTERNAL_DEPLOY_APPROVED=1 THOIDAI_DEPLOY_LOCK="$root/deploy-r2.lock" \
+  THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" \
+  THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" THOIDAI_INSTALL_BIN="$bin/install" \
+  bash scripts/production/deploy-external-artifact.sh "$root/staging-r2" "$expected_commit" --activate >/dev/null
+[[ -d "${standard_release}-r2" ]]
+
+# Invalid commit metadata aborts before release creation.
+mkdir "$root/staging-invalid"; cp -a "$root/artifact/." "$root/staging-invalid/"
+sed -i "s/commit=$expected_commit/commit=bad/" "$root/staging-invalid/.release-meta"
+if PATH="$bin:$PATH" THOIDAI_RELEASE_ROOT="$release_root" THOIDAI_SHARED_ROOT="$shared" THOIDAI_DEPLOY_LOCK="$root/deploy-invalid.lock" THOIDAI_NODE_BIN="$bin/node" THOIDAI_SYSTEMCTL_BIN="$bin/systemctl" THOIDAI_CURL_BIN="$bin/curl" THOIDAI_NGINX_GUARD_SCRIPT="$bin/nginx-guard" THOIDAI_RBAC_ROLLBACK_GATE="$bin/rbac-gate" THOIDAI_INSTALL_BIN="$bin/install" bash scripts/production/deploy-gate.sh "$root/staging-invalid" >"$root/invalid.out" 2>&1; then exit 1; fi
+grep -q 'artifact commit is invalid' "$root/invalid.out"
+echo "deploy-staging-safety: PASS (staging safety, canonical naming, collision suffix and invalid commit)"
