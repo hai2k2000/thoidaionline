@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { canAccessDatabaseRecordForActor } from "@/lib/databaseManagement/repository";
+import { canAccessDatabaseRecordForActor, prepareDatabaseRecordFileUpload } from "@/lib/databaseManagement/repository";
 import { removeDatabaseRecordFile, writeDatabaseRecordFile } from "@/lib/databaseManagement/storage";
 import { logServerAudit } from "@/lib/serverAudit";
 
@@ -64,6 +64,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   let storageKey: string | null = null;
   let retainStorageForReconciliation = false;
   try {
+    await prepareDatabaseRecordFileUpload(actor, recordId);
     const stored = await writeDatabaseRecordFile(recordId, file, uploadRequestId || undefined);
     storageKey = stored.storageKey;
     const { data, error } = await serverSupabase.from("db_record_files").insert({ record_id: recordId, upload_request_id: uploadRequestId || null, storage_backend: "vps_private", storage_key: stored.storageKey, original_name: file.name, mime_type: file.type, size_bytes: stored.sizeBytes, sha256: stored.sha256, created_by: actor.id }).select("id,original_name,mime_type,size_bytes,sha256,created_at").single();
@@ -90,6 +91,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (storageKey && !retainStorageForReconciliation) await removeDatabaseRecordFile(storageKey).catch(() => undefined);
     const message = error instanceof Error ? error.message : "file_upload_failed";
     if (message === "file_upload_reconciliation_required" || message === "audit_reconciliation_required") return NextResponse.json({ error: message }, { status: 500 });
+    if (message === "record_locked") return NextResponse.json({ error: "record_locked" }, { status: 409 });
+    if (message === "permission_denied" || message === "record_not_found") return NextResponse.json({ error: "forbidden" }, { status: 403 });
     return NextResponse.json({ error: message === "invalid_file" ? "invalid_file" : "file_upload_failed" }, { status: 400 });
   }
 }

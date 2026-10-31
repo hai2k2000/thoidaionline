@@ -1,0 +1,16 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import ts from "typescript";
+import fs from "node:fs";
+const source = fs.readFileSync("src/lib/databaseManagement/acl.ts", "utf8");
+const transpiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+const compiledModule = { exports: {} };
+new Function("exports", "module", transpiled)(compiledModule.exports, compiledModule);
+const { decideDatabaseRecordDownload } = compiledModule.exports;
+const actor = (overrides = {}) => ({ id: "u1", roleId: "r1", departmentId: "d1", permissionCodes: ["record.download"], permissionScopes: {}, ...overrides });
+const record = (overrides = {}) => ({ status: "draft", owner_id: "u2", department_id: "d1", ...overrides });
+const row = (capability, effect = "allow", principal_id = "u1", principal_type = "user") => ({ capability, effect, principal_id, principal_type });
+test("download requires RBAC permission", () => assert.equal(decideDatabaseRecordDownload(actor({ permissionCodes: [] }), [], record()), false));
+test("download denies explicit download and metadata denies", () => { assert.equal(decideDatabaseRecordDownload(actor(), [row("download", "deny")], record()), false); assert.equal(decideDatabaseRecordDownload(actor(), [row("metadata.view", "deny")], record()), false); });
+test("download permits owner, all scope, department scope, approved, and ACL allow", () => { assert.equal(decideDatabaseRecordDownload(actor({ id: "u2" }), [], record()), true); assert.equal(decideDatabaseRecordDownload(actor({ permissionScopes: { "record.download": ["all"] } }), [], record()), true); assert.equal(decideDatabaseRecordDownload(actor({ permissionScopes: { "record.download": ["department"] } }), [], record()), true); assert.equal(decideDatabaseRecordDownload(actor(), [], record({ status: "approved" })), true); assert.equal(decideDatabaseRecordDownload(actor(), [row("download")], record()), true); });
+test("department scope does not cross departments", () => assert.equal(decideDatabaseRecordDownload(actor({ permissionScopes: { "record.download": ["department"] } }), [], record({ department_id: "d2" })), false));

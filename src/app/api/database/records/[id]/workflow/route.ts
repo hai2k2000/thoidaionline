@@ -18,7 +18,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const result = await transitionDatabaseRecord(actor, id, action as DatabaseRecordWorkflowAction, typeof body?.reason === "string" ? body.reason : undefined);
     const auditStatus = result.replayed
       ? "replayed"
-      : await logServerAudit({ actorId: actor.id, module: "database", entityType: "db_records", entityId: id, action: result.action, idempotencyKey: `record-workflow:${id}:${result.action}:${result.status}`, newData: { status: result.status, reason: result.reason } });
+      : await logServerAudit({ actorId: actor.id, module: "database", entityType: "db_records", entityId: id, action: result.action, newData: { status: result.status, reason: result.reason } });
     return json({ result, audit_status: auditStatus });
   } catch (error) {
     const message = error instanceof Error ? error.message : "workflow_failed";

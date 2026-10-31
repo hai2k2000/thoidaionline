@@ -105,7 +105,7 @@ export default function DatabaseRecordForm({ mode, catalog, initial }: Props) {
     } catch {
       setBusy(false); setMessage("Không thể kết nối máy chủ. Vui lòng thử lại."); return;
     }
-    if (!response.ok || !payload?.record) { const nextErrors = payload?.fields ?? []; setErrors(nextErrors); setMessage(payload?.error === "forbidden" ? "Bạn không có quyền thực hiện thao tác này." : nextErrors.length ? "Vui lòng kiểm tra các trường được đánh dấu." : "Không thể lưu hồ sơ. Vui lòng thử lại."); setBusy(false); focusField(nextErrors[0]?.field); return; }
+    if (!response.ok || !payload?.record) { const nextErrors = payload?.fields ?? []; setErrors(nextErrors); setMessage(payload?.error === "record_locked" ? "Hồ sơ đang chờ duyệt, không thể sửa." : payload?.error === "forbidden" ? "Bạn không có quyền thực hiện thao tác này." : nextErrors.length ? "Vui lòng kiểm tra các trường được đánh dấu." : "Không thể lưu hồ sơ. Vui lòng thử lại."); setBusy(false); focusField(nextErrors[0]?.field); return; }
     if (mode === "edit") { setBusy(false); router.push(`/database/records/${initial?.id}`); return; }
     const recordId = payload.record.id;
     setCreatedRecordId(recordId);

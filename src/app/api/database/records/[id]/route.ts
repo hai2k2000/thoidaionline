@@ -6,7 +6,7 @@ import { validateDatabaseRecordUpdateInput } from "@/lib/databaseManagement/vali
 
 const NO_STORE = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: NO_STORE });
-const errorStatus = (message: string) => message === "permission_denied" ? 403 : message === "record_not_found" ? 404 : 400;
+const errorStatus = (message: string) => message === "permission_denied" ? 403 : message === "record_not_found" ? 404 : message === "record_locked" ? 409 : 400;
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const actor = await getSessionUser();
@@ -33,7 +33,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (message.startsWith("invalid_metadata:")) {
       try { return json({ error: "invalid_request", fields: JSON.parse(message.slice("invalid_metadata:".length)) }, 400); } catch { return json({ error: "invalid_request" }, 400); }
     }
-    return json({ error: message === "permission_denied" ? "forbidden" : message === "record_not_found" ? "not_found" : "record_update_failed" }, errorStatus(message));
+    return json({ error: message === "permission_denied" ? "forbidden" : message === "record_not_found" ? "not_found" : message === "record_locked" ? "record_locked" : "record_update_failed" }, errorStatus(message));
   }
 }
 
