@@ -51,6 +51,8 @@ risk_test_evidence=$(awk -F= '$1=="risk_test_evidence" {print $2; exit}' "$artif
 [[ "$env_model" == runtime-injected ]] || { echo "external artifact must use env_model=runtime-injected" >&2; exit 1; }
 [[ "$risk_class" == low || "$risk_class" == high ]] || { echo "artifact risk classification is missing or invalid" >&2; exit 1; }
 [[ "$risk_test_evidence" == automated-tests-pass ]] || { echo "${risk_class}-risk artifact lacks required automated test evidence (expected risk_test_evidence=automated-tests-pass)" >&2; exit 1; }
+disk_guard_config=${THOIDAI_DISK_GUARD_CONFIG:-$artifact/deploy/disk-guard.conf}
+[[ -r "$disk_guard_config" ]] || { echo "artifact disk guard config missing: $disk_guard_config" >&2; exit 1; }
 
 if [[ "$mode" == --verify-only ]]; then
   echo "external-artifact: PASS (verify-only, production unchanged)"

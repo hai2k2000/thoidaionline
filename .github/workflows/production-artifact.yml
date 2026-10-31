@@ -137,9 +137,10 @@ jobs:
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/thoidai-roundtrip"
-          for path in .release-meta .artifact-manifest.json .artifact-manifest.sha256 .next/BUILD_ID .next/static server.js required-route-manifest.json; do
+          for path in .release-meta .artifact-manifest.json .artifact-manifest.sha256 .next/BUILD_ID .next/static server.js required-route-manifest.json deploy/disk-guard.conf; do
             test -e "$root/$path" || { echo "round-trip artifact missing: $path" >&2; exit 1; }
           done
+          cmp "$root/deploy/disk-guard.conf" deploy/disk-guard.conf
           test ! -e "$root/.env"
           test ! -e "$root/.env.local"
           test ! -e "$root/.env.production"

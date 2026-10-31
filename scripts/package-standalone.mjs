@@ -106,6 +106,8 @@ await mkdir(join(output, "scripts", "production"), { recursive: true });
 for (const name of ["build-standalone-release.sh", "mark-release-success.sh", "release-retention.sh", "controlled-deploy-exception.mjs", "produce-rbac-readiness.mjs", "verify-rbac-disposable-restore.sh"]) {
   await cp(join(root, "scripts", "production", name), join(output, "scripts", "production", name));
 }
+await mkdir(join(output, "deploy"), { recursive: true });
+await cp(join(root, "deploy", "disk-guard.conf"), join(output, "deploy", "disk-guard.conf"));
 await rm(join(output, "scripts", "check-required-routes.mjs"), { force: true });
 await cp(join(root, "scripts", "check-release-baseline.mjs"), join(output, "scripts", "check-release-baseline.mjs"));
 await writeFile(join(output, "RELEASE_BASELINE_COMMIT"), `${canonicalBaseline}\n`);
