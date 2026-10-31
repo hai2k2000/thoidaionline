@@ -11,6 +11,7 @@ const uploadRoute = read("../../app/api/database/records/[id]/files/route.ts");
 const fileRoute = read("../../app/api/database/records/[id]/files/[fileId]/route.ts");
 const page = read("../../app/database/records/[id]/page.tsx");
 const migration = read("../../../supabase/migrations/20261031100000_database_management_v1_p2_search_hardening.sql");
+const revert = read("../../../scripts/production/database-management-p2-search-hardening-revert.sql");
 
 test("P2 status and visibility guards are enforced", () => {
   assert.match(repository, /current\.status !== "deleted"[\s\S]*record_not_deleted/);
@@ -50,4 +51,12 @@ test("P2 search and approval queue contracts are hardened", () => {
   assert.equal((migration.match(/\bcommit;/g) ?? []).length, 1);
   assert.match(migration, /do \$assert\$[\s\S]*begin/);
   assert.match(repository, /\.in\("record_id", ids\)/);
+});
+
+test("P2 search hardening revert restores only the search function and ledger state", () => {
+  assert.match(revert, /api_search_database_records/);
+  assert.doesNotMatch(revert, /api_transition_database_record/);
+  assert.match(revert, /regexp_count\(trim\(coalesce\(p_q, ''\)\), '\\\\S\+'\)/);
+  assert.match(revert, /delete from supabase_migrations\.schema_migrations where version = '20261031100000';/);
+  assert.equal((revert.match(/\bcommit;/g) ?? []).length, 1);
 });
