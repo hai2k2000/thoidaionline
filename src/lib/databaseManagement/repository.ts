@@ -1,7 +1,7 @@
 import "server-only";
 
 import { serverSupabase } from "@/lib/serverSupabase";
-import { canAccessDatabaseRecord, defaultDatabaseRecordAccess, type DatabaseAclActor, type DatabaseAclRow } from "./acl";
+import { canAccessDatabaseRecord, databaseRecordMetadataDenied, decideDatabaseRecordDownload, defaultDatabaseRecordAccess, type DatabaseAclActor, type DatabaseAclRow } from "./acl";
 import { validateDatabaseMetadata } from "./validation";
 import { canAccessRecordType } from "./policy";
 import type { DatabaseRecordAclInput, DatabaseRecordInput, DatabaseRecordUpdateInput } from "./types";
@@ -152,7 +152,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   if (record.status === "deleted" && !canRestore) return null;
   const visible = await visibilityAllowed(actor, record, recordId);
   if (!visible && !canRestore) return null;
-  const metadataAllowed = visible;
+  const context = await actorContext(actor);
   const [acl, files, links, keywords, history] = await Promise.all([
     aclForRecord(recordId),
     serverSupabase.from("db_record_files").select("id,storage_backend,original_name,mime_type,size_bytes,sha256,created_by,created_at").eq("record_id", recordId).order("created_at", { ascending: false }),
@@ -161,6 +161,8 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     serverSupabase.from("db_record_history").select("id,actor_id,action,old_data,new_data,created_at").eq("record_id", recordId).order("created_at", { ascending: false }).limit(100),
   ]);
   if (files.error || links.error || keywords.error || history.error) throw files.error ?? links.error ?? keywords.error ?? history.error;
+  const metadataDenied = databaseRecordMetadataDenied(context, acl);
+  const metadataAllowed = visible && !metadataDenied;
   const historyRows = history.data ?? [];
   const actorIds = [...new Set(historyRows.map((item) => item.actor_id).filter(Boolean))];
   const actors = actorIds.length ? await serverSupabase.from("staff_users").select("id,full_name").in("id", actorIds) : { data: [], error: null };
@@ -170,6 +172,8 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   const canApprove = record.status === "pending_review" && await canApproveRecord(actor, record, recordId);
   const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
   const canDelete = record.status !== "deleted" && await canRecord(actor, record, recordId, "delete");
+  const canEdit = ["draft", "approved", "archived"].includes(record.status) && await canRecord(actor, record, recordId, "edit");
+  const canDownload = metadataAllowed && decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, record);
   const canManageAcl = await canRecord(actor, record, recordId, "acl.manage");
   const blockReason = canManageAcl ? await approvalBlockReason(actor, record, recordId) : null;
   return {
@@ -177,6 +181,8 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     canApprove,
     canSubmit,
     canDelete,
+    canEdit,
+    canDownload,
     canRestore,
     canManageAcl,
     approvalBlockReason: blockReason,
@@ -184,7 +190,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     files: metadataAllowed ? files.data ?? [] : [],
     externalLinks: metadataAllowed ? links.data ?? [] : [],
     keywords: metadataAllowed ? (keywords.data ?? []).map((row) => row.keyword) : [],
-    history: metadataAllowed ? historyRows.map((item) => ({ ...item, actor_name: actorNames.get(item.actor_id) ?? null })) : [],
+    history: historyRows.map((item) => ({ ...item, old_data: metadataAllowed ? item.old_data : null, new_data: metadataAllowed ? item.new_data : null, actor_name: actorNames.get(item.actor_id) ?? null })),
     approvedBy: latestApproval ? { name: actorNames.get(latestApproval.actor_id) ?? null, at: latestApproval.created_at } : null,
   };
 }
@@ -379,6 +385,7 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
+  if (current.status === "pending_review") throw new Error("record_locked");
   const patch: Record<string, unknown> = {};
   if (input.title !== undefined) patch.title = input.title;
   if (input.summary !== undefined) patch.summary = input.summary;
@@ -387,10 +394,14 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
     patch.metadata = input.metadata;
   }
   if (input.visibility !== undefined) patch.visibility = input.visibility;
-  const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,visibility,created_at,updated_at").single();
+  const reopened = current.status === "approved" || current.status === "archived";
+  if (reopened) patch.status = "draft";
+  const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).eq("status", current.status).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,visibility,created_at,updated_at").maybeSingle();
+  if (!data && !error) throw new Error("record_locked");
   if (error) throw error;
+  if (reopened) { const { error: reopenError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "reopen_for_edit", old_data: current, new_data: { from_status: current.status, to_status: "draft" } }); if (reopenError) { await serverSupabase.from("db_records").update({ title: current.title, summary: current.summary, metadata: current.metadata, visibility: current.visibility, status: current.status }).eq("id", recordId); throw reopenError; } }
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "update", old_data: current, new_data: data });
-  if (historyError) { await serverSupabase.from("db_records").update({ record_code: current.record_code, title: current.title, summary: current.summary, metadata: current.metadata, visibility: current.visibility }).eq("id", recordId); throw historyError; }
+  if (historyError) { await serverSupabase.from("db_records").update({ title: current.title, summary: current.summary, metadata: current.metadata, visibility: current.visibility, status: current.status }).eq("id", recordId); throw historyError; }
   return data as RecordRow;
 }
 
@@ -430,8 +441,25 @@ export async function getDatabaseRecordFile(actor: DatabaseRecordActor, recordId
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (!(await visibilityAllowed(actor, current, recordId))) throw new Error("permission_denied");
+  const context = await actorContext(actor);
+  const acl = await aclForRecord(recordId);
+  if (!decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, current)) throw new Error("permission_denied");
   const { data, error } = await serverSupabase.from("db_record_files").select("id,record_id,storage_key,original_name,mime_type,size_bytes,sha256").eq("id", fileId).eq("record_id", recordId).maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("file_not_found");
   return data as { id: string; record_id: string; storage_key: string; original_name: string; mime_type: string; size_bytes: number; sha256: string };
+}
+
+export async function prepareDatabaseRecordFileUpload(actor: DatabaseRecordActor, recordId: string) {
+  const current = await getRecord(recordId);
+  if (!current || current.status === "deleted") throw new Error("record_not_found");
+  if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
+  if (current.status === "pending_review") throw new Error("record_locked");
+  if (current.status !== "approved" && current.status !== "archived") return current;
+  const { data, error } = await serverSupabase.from("db_records").update({ status: "draft" }).eq("id", recordId).eq("status", current.status).select("*").maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("record_locked");
+  const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "reopen_for_edit", old_data: current, new_data: { from_status: current.status, to_status: "draft" } });
+  if (historyError) { await serverSupabase.from("db_records").update({ status: current.status }).eq("id", recordId); throw historyError; }
+  return data as RecordRow;
 }
