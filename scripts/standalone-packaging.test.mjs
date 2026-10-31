@@ -20,6 +20,15 @@ test("packaging keeps guards and env symlinks", () => {
   assert.match(packager, /removePackagedEnvironmentFiles\(output\)/);
   assert.match(verifier, /app-paths-manifest\.json/);
 });
+test("disk guard config is packaged for artifact-local deploy gate", () => {
+  const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+  const workflow = readFileSync(".github/workflows/production-artifact.yml", "utf8");
+  const deploy = readFileSync("scripts/production/deploy-external-artifact.sh", "utf8");
+  assert.match(packager, /disk-guard\.conf/);
+  assert.match(workflow, /deploy\/disk-guard\.conf/);
+  assert.match(deploy, /disk-guard\.conf/);
+  assert.match(deploy, /artifact disk guard config missing/);
+});
 test("artifact migration reference includes RBAC V2 dependency", () => {
   const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
   const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");

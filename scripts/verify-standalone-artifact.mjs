@@ -9,7 +9,7 @@ const root = resolve(process.argv[2] || process.cwd());
 for (const path of [
   "server.js", ".next/BUILD_ID", ".next/server/app-paths-manifest.json", ".next/static", "public", "start-standalone.mjs", "scripts/production/controlled-deploy-exception.mjs", "scripts/production/produce-rbac-readiness.mjs", "scripts/production/verify-rbac-disposable-restore.sh",
   "scripts/contract-smoke.mjs", "scripts/required-api-contracts.mjs", "scripts/production/browser-path-smoke.mjs", "src/lib/journalismScope.mjs",
-  "required-route-manifest.json", "RELEASE_BASELINE_COMMIT", "MIGRATION_REFERENCE", ".release-meta", ".artifact-manifest.json", ".artifact-manifest.sha256",
+  "required-route-manifest.json", "deploy/disk-guard.conf", "RELEASE_BASELINE_COMMIT", "MIGRATION_REFERENCE", ".release-meta", ".artifact-manifest.json", ".artifact-manifest.sha256",
 ]) assert.ok(existsSync(join(root, path)), `missing artifact path: ${path}`);
 const smokeContracts = await import(pathToFileURL(join(root, "scripts", "required-api-contracts.mjs")));
 assert.equal(smokeContracts.canUseJournalismForSmoke({ role_code: "admin", department_code: null, rbacPermissions: ["journalism.metadata.update"] }), true, "artifact Journalism allow policy mismatch");
