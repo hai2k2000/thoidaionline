@@ -41,12 +41,14 @@ async function aclForRecord(recordId: string) {
   return (data ?? []).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>;
 }
 
-async function visibilityAllowed(actor: DatabaseRecordActor, record: Pick<RecordRow, "department_id" | "status" | "visibility" | "record_type_code" | "category_code">, recordId: string) {
+async function visibilityAllowed(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "status" | "visibility" | "record_type_code" | "category_code">, recordId: string) {
+  if (!actor.rbacPermissions.includes("record.discover")) return false;
   if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return false;
   const context = await actorContext(actor);
   const rows = await aclForRecord(recordId);
   if (rows.some((row) => row.capability === "discover" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return false;
   if (rows.some((row) => row.capability === "discover" && row.effect === "allow" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return true;
+  if (record.owner_id && record.owner_id === actor.id) return true;
   if (actor.rbacPermissionScopes?.["record.discover"]?.includes("all")) return true;
   if (record.department_id && record.department_id === actor.department_id) return true;
   if (record.status === "approved" || record.status === "archived") {
@@ -58,7 +60,7 @@ async function visibilityAllowed(actor: DatabaseRecordActor, record: Pick<Record
   return false;
 }
 
-async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code" | "category_code">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
+async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "status" | "visibility" | "record_type_code" | "category_code">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
   if (!canAccessRecordType(actor, record.record_type_code, record.category_code)) return false;
   if (!actor.rbacPermissions.includes(`record.${capability}`)) return false;
   const context = await actorContext(actor);
@@ -69,8 +71,8 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ow
     || row.principal_type === "department" && row.principal_id === context.departmentId
   ));
   if (explicitDeny) return false;
-  // ACL managers are granted record-wide management by RBAC; an explicit deny still wins.
-  if (capability === "acl.manage") return true;
+  // ACL management is limited to records visible to the actor.
+  if (capability === "acl.manage") return visibilityAllowed(actor, record, recordId);
   return canAccessDatabaseRecord(context, rows, capability) || defaultDatabaseRecordAccess(context, capability, record.owner_id, record.department_id);
 }
 
@@ -80,19 +82,18 @@ function hasPermissionScope(actor: DatabaseRecordActor, permission: string, scop
   return Array.isArray(effectiveScopes) && effectiveScopes.some((scope) => scopes.includes(scope));
 }
 
+function canApproveRecordWithContext(actor: DatabaseRecordActor, context: DatabaseAclActor, record: Pick<RecordRow, "department_id" | "created_by">, rows: readonly DatabaseAclRow[], managerId?: string | null) {
+  if (rows.some((row) => row.capability === "approve" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return false;
+  const approver = managerId === actor.id || actor.rbacPermissionScopes?.["record.approve"]?.includes("all") || actor.rbacPermissionScopes?.["record.approve"]?.includes("department") && Boolean(record.department_id) && record.department_id === actor.department_id;
+  if (!approver) return false;
+  return record.created_by !== actor.id || hasPermissionScope(actor, "record.self_approve", ["self", "all"]);
+}
+
 async function canApproveRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id" | "record_type_code" | "created_by">, recordId: string) {
   const context = await actorContext(actor);
   const rows = await aclForRecord(recordId);
-  if (rows.some((row) => row.capability === "approve" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return false;
-  const manager = record.department_id ? Boolean((await serverSupabase.from("departments").select("manager_id").eq("id", record.department_id).maybeSingle()).data?.manager_id === actor.id) : false;
-  const approver = manager || actor.rbacPermissionScopes?.["record.approve"]?.includes("all") || (
-    actor.rbacPermissionScopes?.["record.approve"]?.includes("department")
-    && Boolean(record.department_id)
-    && record.department_id === actor.department_id
-  );
-  if (!approver) return false;
-  if (record.created_by !== actor.id) return true;
-  return hasPermissionScope(actor, "record.self_approve", ["self", "all"]);
+  const managerId = record.department_id ? (await serverSupabase.from("departments").select("manager_id").eq("id", record.department_id).maybeSingle()).data?.manager_id : null;
+  return canApproveRecordWithContext(actor, context, record, rows, managerId);
 }
 
 export type DatabaseRecordApprovalBlockReason =
@@ -281,10 +282,20 @@ export async function listVisibleApprovalQueue(actor: DatabaseRecordActor, filte
   do {
     const page = await listVisibleDatabaseRecords(actor, { ...filters, status: "pending_review", limit: 100, offset });
     total = Number(page[0]?.total_count ?? offset + page.length);
+    const context = await actorContext(actor);
+    const ids = page.map((row) => row.id);
+    const departmentIds = [...new Set(page.map((row) => row.department_id).filter((id): id is string => Boolean(id)))];
+    const [{ data: aclRows, error: aclError }, { data: departments, error: departmentError }] = await Promise.all([
+      ids.length ? serverSupabase.from("db_record_acl").select("record_id,principal_type,principal_id,capability,effect,expires_at").in("record_id", ids).eq("capability", "approve") : Promise.resolve({ data: [], error: null }),
+      departmentIds.length ? serverSupabase.from("departments").select("id,manager_id").in("id", departmentIds) : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (aclError) throw aclError;
+    if (departmentError) throw departmentError;
+    const now = Date.now();
+    const activeAcl = (aclRows ?? []).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now) as Array<DatabaseAclRow & { record_id: string }>;
+    const managerByDepartment = new Map((departments ?? []).map((department) => [department.id, department.manager_id]));
     for (const row of page) {
-      if (canAccessRecordType(actor, row.record_type_code, row.category_code) && await canApproveRecord(actor, row, row.id)) {
-        approved.push(row);
-      }
+      if (canAccessRecordType(actor, row.record_type_code, row.category_code) && canApproveRecordWithContext(actor, context, row, activeAcl.filter((acl) => acl.record_id === row.id), row.department_id ? managerByDepartment.get(row.department_id) : null)) approved.push(row);
     }
     offset += page.length;
     if (page.length === 0 || page.length < 100) break;
@@ -409,9 +420,12 @@ export async function setDatabaseRecordStatus(actor: DatabaseRecordActor, record
   const current = await getRecord(recordId);
   if (!current) throw new Error("record_not_found");
   const capability = status === "deleted" ? "delete" : "restore";
+  if (status === "draft" && current.status !== "deleted") throw new Error("record_not_deleted");
+  if (status === "deleted" && current.status === "deleted") throw new Error("record_already_deleted");
   if (!(await canRecord(actor, current, recordId, capability))) throw new Error("permission_denied");
-  const { data, error } = await serverSupabase.from("db_records").update({ status, deleted_at: status === "deleted" ? new Date().toISOString() : null }).eq("id", recordId).select("id,status,deleted_at,updated_at").single();
+  const { data, error } = await serverSupabase.from("db_records").update({ status, deleted_at: status === "deleted" ? new Date().toISOString() : null }).eq("id", recordId).eq("status", current.status).select("id,status,deleted_at,updated_at").maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("record_locked");
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: status === "deleted" ? "soft_delete" : "restore", old_data: current, new_data: data });
   if (historyError) {
     await serverSupabase.from("db_records").update({ status: current.status, deleted_at: current.deleted_at ?? null }).eq("id", recordId);
@@ -462,4 +476,19 @@ export async function prepareDatabaseRecordFileUpload(actor: DatabaseRecordActor
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "reopen_for_edit", old_data: current, new_data: { from_status: current.status, to_status: "draft" } });
   if (historyError) { await serverSupabase.from("db_records").update({ status: current.status }).eq("id", recordId); throw historyError; }
   return data as RecordRow;
+}
+
+export async function deleteDatabaseRecordFile(actor: DatabaseRecordActor, recordId: string, fileId: string) {
+  const current = await getRecord(recordId);
+  if (!current || current.status === "deleted") throw new Error("record_not_found");
+  if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
+  const { data: file, error: fileError } = await serverSupabase.from("db_record_files").select("id,record_id,storage_key,original_name,mime_type,size_bytes,sha256,created_by,created_at,upload_request_id,storage_backend").eq("id", fileId).eq("record_id", recordId).maybeSingle();
+  if (fileError) throw fileError;
+  if (!file) throw new Error("file_not_found");
+  await prepareDatabaseRecordFileUpload(actor, recordId);
+  const { error: deleteError } = await serverSupabase.from("db_record_files").delete().eq("id", fileId).eq("record_id", recordId);
+  if (deleteError) throw deleteError;
+  const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "file_delete", new_data: { file_id: file.id, original_name: file.original_name, size_bytes: file.size_bytes, sha256: file.sha256 } });
+  if (historyError) { await serverSupabase.from("db_record_files").insert(file); throw historyError; }
+  return file as { id: string; record_id: string; storage_key: string; original_name: string; size_bytes: number; sha256: string };
 }
