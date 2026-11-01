@@ -22,6 +22,7 @@ import {
 } from "@/lib/permissionMatrix";
 import { isCatalogPermission, supportedScopesForPermission } from "@/lib/rbac/permissionCatalog";
 import { apiError, apiJson, asUuid, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
+import { logServerAudit } from "@/lib/serverAudit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -113,14 +114,31 @@ export async function POST(request: Request) {
     }
     if (body?.action === "replace_department_view_grants") {
       if (!userId || !Array.isArray(body.departmentIds) || body.departmentIds.some((id: unknown) => !asUuid(id))) return apiError("invalid_request", 400);
+      if (userId.toLowerCase() === guard.actor.id.toLowerCase()) return apiError("forbidden", 403);
       const ids = [...new Set(body.departmentIds as string[])];
-      const { error: deleteError } = await serverSupabase.from("db_department_view_grants").delete().eq("user_id", userId);
-      if (deleteError) return rpcFailure(deleteError);
+      const sortedIds = [...ids].sort();
+      const { data: oldRows, error: selectError } = await serverSupabase.from("db_department_view_grants").select("department_id").eq("user_id", userId);
+      if (selectError) return rpcFailure(selectError);
+      const oldIds = (oldRows ?? []).map((row) => row.department_id).sort();
       if (ids.length) {
-        const { error: insertError } = await serverSupabase.from("db_department_view_grants").insert(ids.map((departmentId) => ({ user_id: userId, department_id: departmentId, granted_by: guard.actor.id })));
-        if (insertError) return rpcFailure(insertError);
+        const rows = ids.map((departmentId) => ({ user_id: userId, department_id: departmentId, granted_by: guard.actor.id }));
+        const { error: upsertError } = await serverSupabase.from("db_department_view_grants").upsert(rows, { onConflict: "user_id,department_id", ignoreDuplicates: true });
+        if (upsertError) return rpcFailure(upsertError);
       }
-      return apiJson({ result: { userId, departmentIds: ids } });
+      const deleteQuery = serverSupabase.from("db_department_view_grants").delete().eq("user_id", userId);
+      const { error: deleteError } = ids.length ? await deleteQuery.not("department_id", "in", `(${ids.join(",")})`) : await deleteQuery;
+      if (deleteError) return rpcFailure(deleteError);
+      let auditStatus: "delivered" | "pending" | "unavailable" = "delivered";
+      if (oldIds.join(",") !== sortedIds.join(",")) {
+        try {
+          auditStatus = await logServerAudit({ actorId: guard.actor.id, module: "admin", entityType: "db_department_view_grants", entityId: userId, action: "replace_department_view_grants", newData: { old: oldIds, new: sortedIds } });
+        } catch {
+          auditStatus = "unavailable";
+        }
+      }
+      const response = apiJson({ result: { userId, departmentIds: ids } });
+      response.headers.set("X-Audit-Status", auditStatus);
+      return response;
     }
     if ((!roleId && !userId) || (roleId && userId) || (action !== "grant" && action !== "revoke") || (permissionCode !== "task.quick_report.create" && permissionCode !== "asset.manage")) return apiError("invalid_request", 400);
     if (userId) {

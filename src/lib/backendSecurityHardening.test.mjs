@@ -31,6 +31,29 @@ test("reports and notification jobs query with the server Supabase client", () =
   }
 });
 
+test("security hardening covers department grants, due-soon bounds, and Next headers", () => {
+  const permissions = read("../app/api/permissions/route.ts");
+  const branchStart = permissions.indexOf('if (body?.action === "replace_department_view_grants")');
+  const branchEnd = permissions.indexOf("    if ((!roleId && !userId)", branchStart);
+  const departmentBranch = permissions.slice(branchStart, branchEnd);
+  assert.match(permissions, /import \{ logServerAudit \} from "@\/lib\/serverAudit"/);
+  assert.match(departmentBranch, /userId\.toLowerCase\(\) === guard\.actor\.id\.toLowerCase\(\)[\s\S]*apiError\("forbidden", 403\)/);
+  assert.match(departmentBranch, /userId\.toLowerCase\(\)/);
+  assert.match(departmentBranch, /select\("department_id"\)\.eq\("user_id", userId\)/);
+  assert.match(departmentBranch, /\.upsert\([\s\S]*onConflict: "user_id,department_id"[\s\S]*ignoreDuplicates: true/);
+  assert.ok(departmentBranch.indexOf(".upsert(") < departmentBranch.indexOf(".delete()"));
+  assert.match(departmentBranch, /\.not\("department_id", "in", `\(\$\{ids\.join\(","\)\}\)`\)/);
+  assert.match(departmentBranch, /logServerAudit\(\{[\s\S]*module: "admin"[\s\S]*entityType: "db_department_view_grants"[\s\S]*action: "replace_department_view_grants"/);
+  assert.match(departmentBranch, /newData: \{ old: oldIds, new: sortedIds \}/);
+  assert.match(departmentBranch, /auditStatus/);
+
+  const dueSoon = read("../app/api/notify/due-soon/route.ts");
+  assert.match(dueSoon, /const requested = Number\(url\.searchParams\.get\("days"\) \|\| 3\)/);
+  assert.match(dueSoon, /Number\.isFinite\(requested\) \? Math\.max\(1, Math\.min\(14, Math\.trunc\(requested\)\)\) : 3/);
+
+  assert.match(read("../../next.config.ts"), /poweredByHeader: false/);
+});
+
 test("HR uploads require app auth and use private runtime storage", () => {
   const route = read("../app/api/hr/upload/route.ts");
   assert.match(route, /isSameOriginRequest/);
