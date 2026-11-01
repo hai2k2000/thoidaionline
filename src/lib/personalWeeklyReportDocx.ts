@@ -1,6 +1,6 @@
 import { AlignmentType, BorderStyle, Document, Footer, Packer, Paragraph, SimpleField, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
-import type { PersonalWeeklyReportLoad } from "@/lib/personalWeeklyReportRepository";
-import { formatDateOnlyVN } from "@/lib/businessDate.mjs";
+import type { PersonalWeeklyReportLoad } from "./personalWeeklyReportRepository.ts";
+import { formatDateOnlyVN } from "./businessDate.mjs";
 
 const FONT = "Times New Roman";
 const SIZE = 22;

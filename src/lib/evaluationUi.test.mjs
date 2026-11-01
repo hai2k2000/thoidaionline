@@ -8,17 +8,17 @@ test("evaluation UI uses Vietnamese qualitative and deadline wording", () => {
   const helperSource = readFileSync(new URL("./taskEvaluation.ts", import.meta.url), "utf8");
   const userFacingSource = [taskSource, performanceSource, helperSource].join("\n");
 
-  assert.match(taskSource, /Mức độ khó/u);
-  assert.match(taskSource, /Thời hạn đánh giá/u);
-  assert.match(taskSource, /Đánh giá công việc/u);
-  assert.match(taskSource, /Dán đánh giá từ ChatGPT/u);
+  assert.match(taskSource, /Mức độ đáp ứng yêu cầu/u);
+  assert.match(taskSource, /Hạn:/u);
+  assert.match(taskSource, /Chấm điểm hoàn thành/u);
+  assert.match(taskSource, /Nhận xét/u);
   assert.doesNotMatch(userFacingSource, /Trọng số|trọng số|>[^<{]*checkpoint[^<{]*</iu);
 });
 
 test("legacy scores are hidden while qualitative evaluation is capability-gated", () => {
   const source = readFileSync(new URL("../components/TaskDetailShell.tsx", import.meta.url), "utf8");
-  assert.match(source, /capabilities\.evaluate/);
-  assert.match(source, /Dữ liệu lịch sử được giữ nguyên/);
-  assert.match(source, /Lưu đánh giá/);
-  assert.doesNotMatch(source, /rating\}\/10|Điểm[^\n]*1[^\n]*10/);
+  assert.match(source, /capabilities\.review/);
+  assert.match(source, /task\.completion_score/);
+  assert.match(source, /Lưu điểm và duyệt hoàn thành/);
+  assert.doesNotMatch(source, /rating\}\/10|type="number"[^\n]*max=\{?10\}?/);
 });

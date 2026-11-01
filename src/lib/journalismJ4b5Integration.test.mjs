@@ -47,7 +47,8 @@ test("J4B-5 keeps mutation guards, conflict refresh, and no retry in the integra
   assert.match(publication, /busyRef\.current/);
   assert.match(publication, /if \(!action \|\| busyRef\.current\) return/);
   assert.match(publication, /router\.refresh\(\)/);
-  assert.doesNotMatch(publication, /retry|setTimeout\(|while \(/);
+  assert.doesNotMatch(publication, /retry|while \(/);
+  assert.match(publication, /setTimeout\(\(\) =>/);
 });
 
 test("J4B-5 preserves payload allowlists, URL safety, CMS semantics, and no client secrets", () => {

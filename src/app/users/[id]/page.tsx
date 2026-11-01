@@ -67,6 +67,7 @@ export default function UserDetailPage() {
     if (authLoading) return;
     if (!authUser) return void router.push("/login");
     if (!hasPermission("can_manage_users")) return void router.push("/");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This effect owns the selected user fetch lifecycle.
     void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, authLoading, authUser, router, hasPermission]);

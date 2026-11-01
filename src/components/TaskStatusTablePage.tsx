@@ -72,6 +72,7 @@ export default function TaskStatusTablePage({
   useEffect(() => {
     if (authLoading) return;
     if (!user) return void router.push("/login");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This effect owns the authenticated task status fetch lifecycle.
     void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, router]);

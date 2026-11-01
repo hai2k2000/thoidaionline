@@ -35,7 +35,8 @@ test("Task list loads active work kinds on the server and keeps filters URL-driv
     assert.match(shell, new RegExp(`name="${name}"`));
   }
   assert.match(shell, /journalismFilter === "only"/);
-  assert.doesNotMatch(shell, /tasks\.items\.filter\(/);
+  assert.match(shell, /tasks\.items\.map\(/);
+  assert.doesNotMatch(shell, /tasks\.items\.filter\([^\n]*journalism/);
 });
 
 test("J4B-1 does not add Journalism mutation controls", () => {

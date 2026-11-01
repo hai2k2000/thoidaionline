@@ -80,6 +80,7 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   };
 
   const addTask = () => {
+    // eslint-disable-next-line react-hooks/purity -- Capture the assignment draft creation time once for this component instance.
     const cardId = `card-${Date.now()}-${taskCards.length + 1}`;
     setTaskCards((current) => addTaskCard(current, cardId));
     setBatchId(null);

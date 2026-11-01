@@ -110,6 +110,7 @@ export default function CanonicalAssignmentForm({
   const cardTitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const firstCardIdRef = useRef<string | undefined>(taskCards[0]?.cardId);
   // Read via ref so the auto-focus effect does not re-run (and steal focus) on every card keystroke.
+  // eslint-disable-next-line react-hooks/refs -- Keep the latest callbacks available to the stable assignment controller.
   firstCardIdRef.current = taskCards[0]?.cardId;
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);

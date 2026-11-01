@@ -159,6 +159,7 @@ export default function WorkSchedulePageShell({
 
   useEffect(() => {
     const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This effect owns the work schedule fetch lifecycle.
     setLoading(true);
     setLoadError(false);
     const endpoint = viewAll ? "/api/work-schedule" : "/api/work-schedule/personal";
@@ -180,6 +181,7 @@ export default function WorkSchedulePageShell({
   }, [retryToken, canReviewPersonalPlans]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize local scope controls with the server-provided scope.
     setViewAll(scheduleScope === "all");
   }, [scheduleScope]);
 

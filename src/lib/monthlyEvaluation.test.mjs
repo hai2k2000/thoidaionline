@@ -35,11 +35,11 @@ test("admin cycle history exposes aggregate review counts without N+1", () => {
   assert.match(cycleHistoryMigration, /api_list_performance_cycle_history/);
   assert.match(cycleHistoryMigration, /count\(pr\.id\) filter\(where pr\.status='awaiting_manager'\)/);
   assert.match(cycleHistoryMigration, /public\.phase7_is_admin\(p_actor\)/);
-  assert.match(rubricShell, /Lịch sử kỳ đánh giá/);
-  assert.match(rubricShell, /cycle\.rubric_versions/);
-  assert.match(rubricShell, /cycle\.total_reviews/);
-  assert.match(rubricShell, /type="month"/);
-  assert.match(rubricShell, /cycleStatus/);
+  assert.match(rubricShell, /Bộ tiêu chí đánh giá chung/);
+  assert.match(rubricShell, /rubrics\.map/);
+  assert.match(rubricShell, /rubric\.version_no/);
+  assert.match(rubricShell, /effective_from/);
+  assert.match(rubricShell, /rubricStatusLabel/);
 });
 
 test("manual overlap is rejected and monthly ensure reuses a date-matching cycle", () => {
@@ -56,7 +56,7 @@ test("employee list loads another page when its own scroll reaches the bottom", 
 });
 
 test("personnel toolbar is compact on desktop and starts with five subjects", () => {
-  assert.match(personnelShell, /useState\(5\)/);
+  assert.match(personnelShell, /useState\(isLeader \? 4 : 5\)/);
   assert.match(personnelShell, /sm:flex-nowrap/);
   assert.match(personnelShell, /ĐÁNH GIÁ NHÂN SỰ/i);
   assert.match(personnelShell, /Nhân viên trực thuộc/);
@@ -64,7 +64,7 @@ test("personnel toolbar is compact on desktop and starts with five subjects", ()
 
 test("personnel list explains non-overflow state and focuses after TBT expansion", () => {
   assert.match(personnelShell, /Đang hiển thị \$\{scopedSubjects\.length\} Trưởng phòng và Phó Tổng biên tập/);
-  assert.match(personnelShell, /Đánh giá thêm nhân viên \(\$\{data\.subjects\.length\}\)/);
+  assert.match(personnelShell, /Bấm “Đánh giá thêm nhân viên” để xem \$\{data\.subjects\.length\} nhân viên/);
   assert.match(personnelShell, /scrollRef\.current\?\.focus\(\)/);
   assert.match(personnelShell, /sticky bottom-0/);
   assert.match(personnelShell, /Xem thêm 5 nhân viên/);

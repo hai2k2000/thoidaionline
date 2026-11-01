@@ -43,6 +43,7 @@ export default function JournalismPublicationControls({ journalism, taskId }: { 
   const actions = publicationActions(journalism.publication_status) as Action[];
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset publication controls when the task snapshot changes.
     setDate(planned.date);
     setTime(planned.time);
   }, [planned.date, planned.time]);

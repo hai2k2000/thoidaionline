@@ -1,4 +1,4 @@
-import readXlsxFile from "read-excel-file/node";
+import { readSheet } from "read-excel-file/node";
 
 export const DUTY_IMPORT_POSITIONS = ["Xuất bản", "Biên tập", "Phóng viên"];
 
@@ -86,6 +86,6 @@ export function parseDutyRosterWorkbook(workbook) {
 }
 
 export async function readDutyRosterWorkbook(buffer) {
-  const rows = await readXlsxFile(buffer);
+  const rows = await readSheet(buffer);
   return parseDutyRosterWorkbook({ sheets: [{ name: "Sheet1", rows }] });
 }

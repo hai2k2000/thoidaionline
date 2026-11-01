@@ -48,6 +48,7 @@ export default function DutyScheduleViewer({
   const scope = initialScope;
   const range = useMemo(() => scheduleRange(view, anchor), [view, anchor]);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This effect owns the duty schedule fetch lifecycle.
     setLoading(true);
     setLoadError(false);
     fetch(`/api/duty-schedule?from=${range.from}&to=${range.to}${scope === "personal" ? "&mine=1" : ""}`)

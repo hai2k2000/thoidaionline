@@ -19,13 +19,13 @@ test("shared shells preserve a bounded responsive layout", async () => {
 
 test("task center avoids the cramped tablet table and filter grid", async () => {
   const center = await source("TaskCenterShell.tsx");
-  assert.match(center, /lg:grid-cols-3 xl:grid-cols-4/);
   assert.match(center, /min-w-\[1120px\]/);
+  assert.match(center, /hidden overflow-x-auto lg:block/);
   assert.match(center, /space-y-3 lg:hidden/);
 });
 
 test("detail localizes every active workflow status", async () => {
   const detail = await source("TaskDetailShell.tsx");
   assert.match(detail, /blocked: "Có vướng mắc"/);
-  assert.match(detail, /waiting: "Chờ phối hợp"/);
+  assert.match(detail, /waiting: approvalRequired \? "Chờ duyệt giao việc" : "Chờ duyệt nhận việc"/);
 });

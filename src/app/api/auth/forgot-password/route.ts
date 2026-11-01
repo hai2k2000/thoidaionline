@@ -2,8 +2,15 @@ import { NextResponse } from "next/server";
 import { isSameOriginRequest } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { createResetRecord, createResetToken, GENERIC_RESET_MESSAGE, hashResetFingerprint, sendResetEmail } from "@/lib/passwordReset";
+import { findStaffByIdentifier } from "@/lib/staffIdentifierLookup";
 
 const WINDOW_MS = 15 * 60 * 1000;
+
+type ResetAccountRow = {
+  id: string;
+  email: string | null;
+  active: boolean;
+};
 
 export async function POST(request: Request) {
   if (!(await isSameOriginRequest())) return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 403 });
@@ -16,10 +23,12 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as { identifier?: string } | null;
   const identifier = body?.identifier?.trim().toLowerCase();
   if (!identifier) return NextResponse.json({ message: GENERIC_RESET_MESSAGE });
-  const { data } = await serverSupabase.from("staff_users").select("id,email,active").or(`username.eq.${identifier},email.ilike.${identifier},phone.eq.${identifier}`).eq("active", true).limit(1).maybeSingle();
-  if (data?.id && data.email) {
+  const { data, error } = await findStaffByIdentifier(identifier, "id,email,active", { activeOnly: true });
+  if (error) return NextResponse.json({ message: GENERIC_RESET_MESSAGE });
+  const account = data as ResetAccountRow | null;
+  if (account?.id && account.email) {
     const { token, hash } = createResetToken();
-    if (await createResetRecord(data.id, hash)) await sendResetEmail(data.email, token, request);
+    if (await createResetRecord(account.id, hash)) await sendResetEmail(account.email, token, request);
   }
   return NextResponse.json({ message: GENERIC_RESET_MESSAGE });
 }

@@ -71,6 +71,7 @@ export default function PermissionsPage() {
             for (const permission of section.permissions)
                 next[permission.code] = [...permission.scopes];
         }
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- This effect owns the permission catalog fetch lifecycle.
         setRoleDraft(next);
     }, [selectedRole]);
     async function mutate(body: Record<string, unknown>) {

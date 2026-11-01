@@ -51,7 +51,7 @@ test("personnel evaluation UI lists employees and drills into period tasks and r
     "Ngày kết thúc",
     "STT",
     "Tên công việc",
-    "Độ khó",
+    "Người phụ trách",
     "Trạng thái hoàn thành",
     "Thời hạn",
     "Bảng chấm điểm cá nhân",

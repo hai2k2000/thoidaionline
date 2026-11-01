@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const root = new URL("../", import.meta.url).pathname.replace(/%20/g, " ");
+const root = fileURLToPath(new URL("../", import.meta.url));
 const route = (name) => `${root}app/api/journalism/calendar/${name}`;
 
 test("J7 calendar GET route is present and guarded", () => {

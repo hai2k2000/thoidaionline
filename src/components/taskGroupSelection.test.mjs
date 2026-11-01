@@ -9,7 +9,7 @@ const handlers = readFileSync(new URL("../lib/taskHandlers.ts", import.meta.url)
 test("assignment UI restores department group preview and per-member include/exclude", () => {
   assert.match(shell, /Cá nhân/);
   assert.match(shell, /Nhóm phòng ban/);
-  assert.match(shell, /Danh sách thành viên active/);
+  assert.match(shell, /Danh sách thành viên đang hoạt động/);
   assert.match(shell, /excludedMemberIds/);
   assert.match(shell, /groupDepartmentId/);
   assert.match(shell, /type="checkbox"/);

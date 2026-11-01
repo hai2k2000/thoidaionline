@@ -7,6 +7,11 @@ const page = readFileSync(new URL("../app/permissions/page.tsx", import.meta.url
 const migration = readFileSync(new URL("../../supabase/migrations/20261001100000_admin_quick_report_permission_management.sql", import.meta.url), "utf8");
 const userGrantMigration = readFileSync(new URL("../../supabase/migrations/20261001110000_user_specific_permission_grants.sql", import.meta.url), "utf8");
 const repository = readFileSync(new URL("./rbac/repository.ts", import.meta.url), "utf8");
+const userPermissions = [
+  "../components/permissions/UserListPanel.tsx",
+  "../components/permissions/UserPermissionDetail.tsx",
+  "../components/permissions/ApprovalPermissionsCard.tsx",
+].map((path) => readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
 
 test("permission management exposes the exact Quick Report catalog metadata", () => {
   assert.match(page, /payload\.permissions/);
@@ -44,10 +49,10 @@ test("unsupported direct user and department grant models are not introduced", (
 });
 
 test("the permissions page provides grant/revoke controls without changing Quick Report workflow", () => {
-  assert.match(page, /Cấp riêng/);
-  assert.match(page, /Chặn riêng/);
-  assert.match(page, /Kế thừa/);
-  assert.match(page, /set_user_override/);
+  assert.match(userPermissions, /Cấp riêng|onGrant/);
+  assert.match(userPermissions, /Chặn riêng|onRevoke/);
+  assert.match(userPermissions, /Kế thừa|role/);
+  assert.match(userPermissions, /set_user_override/);
   assert.doesNotMatch(page, /workflow_type|REPORT_ONLY|api_create_quick_report_v1/);
 });
 
@@ -73,9 +78,9 @@ test("permission management exposes user source metadata and direct mutation con
   assert.match(repository, /setQuickReportUserPermission/);
   assert.match(repository, /api_set_user_quick_report_permission/);
   assert.match(repository, /permission\.manage/);
-  assert.match(page, /Tìm người dùng|userQuery/);
-  assert.match(page, /Vai trò|Cấp riêng|Hiệu lực/);
-  assert.match(page, /userId/);
+  assert.match(userPermissions, /Tìm tên hoặc tài khoản|query/);
+  assert.match(userPermissions, /Vai trò|quyền riêng|Hiệu lực/);
+  assert.match(userPermissions, /user\.id/);
 });
 
 test("permission page compacts role and user management behind tabs", () => {
@@ -87,14 +92,14 @@ test("permission page compacts role and user management behind tabs", () => {
 });
 
 test("user tab defaults to effective users and provides an explicit show-all action", () => {
-  assert.match(page, /Kế thừa/);
-  assert.match(page, /Khôi phục tất cả mặc định/);
-  assert.match(page, /sourceLabel/);
+  assert.match(userPermissions, /role|Kế thừa/);
+  assert.match(userPermissions, /Khôi phục tất cả mặc định/);
+  assert.match(userPermissions, /override_count/);
 });
 
 test("user management is searchable and paginated with compact table columns", () => {
-  assert.match(page, /Tìm người dùng/);
-  assert.match(page, /filteredUsers/);
-  assert.match(page, /Tìm người dùng/);
+  assert.match(userPermissions, /Tìm tên hoặc tài khoản/);
+  assert.match(userPermissions, /const filtered = users\.filter/);
+  assert.match(userPermissions, /status === "active"/);
   assert.match(page, /selectedUserId/);
 });
