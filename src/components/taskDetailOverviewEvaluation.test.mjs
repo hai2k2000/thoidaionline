@@ -4,42 +4,26 @@ import test from "node:test";
 
 const source = readFileSync(new URL("./TaskDetailShell.tsx", import.meta.url), "utf8");
 
-test("evaluation is part of overview instead of a separate tab", () => {
+test("evaluation results remain in overview instead of a separate tab", () => {
   assert.doesNotMatch(source, /id:\s*["']evaluation["']\s*,\s*label:/);
   assert.doesNotMatch(source, /task-panel-evaluation/);
-  assert.match(source, /sm:grid-cols-4/);
-
-  const readingWorkspace = source.indexOf('id="task-overview-content"');
-  const evaluationWorkspace = source.indexOf('id="task-evaluation-workspace"');
-  assert.ok(readingWorkspace >= 0, "overview reading workspace must exist");
-  assert.ok(evaluationWorkspace > readingWorkspace, "evaluation must follow task content in overview");
+  assert.match(source, /<section aria-label="Tổng quan"/);
+  assert.match(source, /Kết quả chấm điểm/);
 });
 
-test("overview reading area is bounded and can be expanded without a nested scroll trap", () => {
-  assert.match(source, /contentExpanded/);
-  assert.match(source, /max-h-\[42vh\]/);
-  assert.match(source, /overflow-y-auto/);
-  assert.match(source, /overscroll-contain/);
-  assert.match(source, /aria-expanded=\{contentExpanded\}/);
-  assert.match(source, /aria-controls="task-overview-content"/);
-  assert.match(source, /Xem toàn bộ nội dung/);
-  assert.match(source, /Thu gọn nội dung/);
+test("overview reading area stays in the main column without a nested scroll trap", () => {
+  assert.match(source, /<section aria-label="Tổng quan" className="space-y-2\.5">/);
+  assert.match(source, /whitespace-pre-wrap break-words/);
+  assert.doesNotMatch(source, /task-overview-content[^\n]*overflow-y-auto/);
 });
 
-test("legacy evaluation hash opens overview and focuses the merged workspace", () => {
-  assert.match(source, /hash\s*===\s*["']evaluation["']/);
-  assert.match(source, /setActiveTab\(["']overview["']\)/);
-  assert.match(source, /getElementById\(["']task-evaluation-workspace["']\)/);
-  assert.match(source, /scrollIntoView/);
-  assert.match(source, /\.focus\(/);
-  assert.match(source, /id="task-evaluation-workspace"[^>]*tabIndex=\{-1\}/);
+test("legacy evaluation tab state is removed from the single-page detail", () => {
+  assert.doesNotMatch(source, /hash\s*===\s*["']evaluation["']|setActiveTab|getElementById\(["']task-evaluation-workspace/);
 });
 
-test("merged evaluation keeps permissions, manual ChatGPT input, API and history", () => {
-  assert.match(source, /capabilities\.evaluate/);
-  assert.match(source, /\/evaluations/);
-  assert.match(source, /Dán đánh giá từ ChatGPT/);
-  assert.doesNotMatch(source, /Chưa cấu hình AI/);
-  assert.match(source, /qualitative_evaluations/);
-  assert.match(source, /legacy_evaluations/);
+test("merged evaluation keeps review permission, scoring API and history", () => {
+  assert.match(source, /capabilities\.review/);
+  assert.match(source, /\/review-completion/);
+  assert.match(source, /task\.completion_score/);
+  assert.match(source, /task\.completion_score/);
 });

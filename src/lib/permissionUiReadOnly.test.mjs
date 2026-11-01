@@ -62,7 +62,7 @@ test("permissions route requires server permission.manage and protects mutations
 });
 
 test("permissions page presents the catalog-driven role and user override controls", () => {
-  const page = readFileSync("src/app/permissions/page.tsx", "utf8");
+  const page = [readFileSync("src/app/permissions/page.tsx", "utf8"), readFileSync("src/components/permissions/UserPermissionDetail.tsx", "utf8"), readFileSync("src/components/permissions/ApprovalPermissionsCard.tsx", "utf8")].join("\n");
   assert.match(page, /ROLE|Vai trò/);
   assert.match(page, /MODULE|Mô-đun|module/i);
   assert.match(page, /PERMISSION|Quyền|permission/i);

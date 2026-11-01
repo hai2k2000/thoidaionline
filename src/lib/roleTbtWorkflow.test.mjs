@@ -23,6 +23,6 @@ test("role lifecycle is atomic and protects admin", () => {
   assert.match(migration, /admin role cannot be locked/);
   assert.match(permissions, /requireMutationActor/);
   assert.match(permissions, /api_set_quick_report_permission/);
-  assert.match(session, /ROLE_LIFECYCLE_ENABLED/);
-  assert.match(session, /roleLifecycleEnabled[\s\S]*active/);
+  assert.match(session, /roles\(code,name,level,active,/);
+  assert.match(session, /row\.roles\.active \? row\.roles\.role_permissions : null/);
 });

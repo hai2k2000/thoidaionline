@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
+import { connection } from "next/server";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ActionFeedbackProvider from "@/components/ActionFeedbackProvider";
@@ -25,11 +26,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await connection();
+
   return (
     <html lang="vi">
       <body

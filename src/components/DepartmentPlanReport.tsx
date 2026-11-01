@@ -125,6 +125,7 @@ export default function DepartmentPlanReport({ userLabel, departmentName, depart
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This effect owns the report fetch lifecycle.
     const controller = new AbortController(); setLoading(true);
     fetch(`/api/planning/department/reports?${queryFor().toString()}`, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => { if (!response.ok) throw new Error("Không thể tải tổng kết kỳ."); return response.json() as Promise<ReportData>; })

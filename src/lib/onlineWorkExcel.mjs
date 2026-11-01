@@ -1,4 +1,4 @@
-import readXlsxFile from "read-excel-file/node";
+import { readSheet } from "read-excel-file/node";
 import { reporterLanguageLabel } from "./onlineWorkLanguage.mjs";
 
 const GROUPS = new Set(["Anh", "Trung", "Lào", "Khmer", "Nga", "Các tổ làm online"]);
@@ -39,7 +39,7 @@ export function parseOnlineWorkWorkbook(workbook) {
 }
 
 export async function readOnlineWorkWorkbook(buffer) {
-  return parseOnlineWorkWorkbook({ sheets: [{ rows: await readXlsxFile(buffer) }] });
+  return parseOnlineWorkWorkbook({ sheets: [{ rows: await readSheet(buffer) }] });
 }
 
 export function resolveOnlineWorkImport(parsed, people) {

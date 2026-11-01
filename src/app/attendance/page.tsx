@@ -181,6 +181,7 @@ function AttendancePageContent() {
   useEffect(() => {
     if (!staffFilter || !filterOptions.staff.length) return;
     const selected = filterOptions.staff.find((item) => item.id === staffFilter);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize the visible staff label with the URL-selected staff record.
     if (selected) setStaffQuery(selected.full_name);
   }, [filterOptions.staff, staffFilter]);
 
@@ -450,6 +451,7 @@ function AttendancePageContent() {
     if (!user) return void router.push("/login");
     if (pathname === "/attendance" && !effectiveOrgScope) return void router.push("/my-attendance");
     if (!canAccessModule("hr")) return void router.push("/");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This effect owns the authenticated attendance data fetch lifecycle.
     void loadLeaveRequests();
     if (skipNextAttendanceEffect.current) {
       skipNextAttendanceEffect.current = false;
@@ -463,6 +465,7 @@ function AttendancePageContent() {
 
   useEffect(() => {
     if (!user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This effect owns the authenticated attendance data fetch lifecycle.
     if (isOrganizationView) void loadSyncStatus();
     const interval = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
@@ -473,6 +476,7 @@ function AttendancePageContent() {
   }, [user, isOrganizationView, loadAttendance, loadSyncStatus]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset pagination when the server-backed filter range changes.
     setRecentOffset(0);
     setRecentRows([]);
   }, [selectedDate, period, isOrganizationView]);

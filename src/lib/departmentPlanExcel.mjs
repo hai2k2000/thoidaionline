@@ -1,4 +1,4 @@
-import readXlsxFile, { readSheetNames } from "read-excel-file/node";
+import readXlsxFile from "read-excel-file/node";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -154,8 +154,8 @@ export const deduplicateDepartmentPlanExcelRows = (rows) => {
 export async function readDepartmentPlanExcel(file, context = {}) {
   if (!(file instanceof File)) throw new Error("File Excel không hợp lệ.");
   if (!file.name.toLowerCase().endsWith(".xlsx") || file.size < 1 || file.size > MAX_FILE_BYTES) throw new Error("File Excel không hợp lệ: chỉ hỗ trợ .xlsx tối đa 10 MB.");
-  const buffer = Buffer.from(await file.arrayBuffer()); const names = await readSheetNames(buffer); const candidates = [];
-  for (const name of names) { if (sheetIsInstructional(name)) continue; const rows = await readXlsxFile(buffer, { sheet: name, trim: false }); if (headerForRows(rows)) candidates.push({ name, rows }); }
+  const buffer = Buffer.from(await file.arrayBuffer()); const sheets = await readXlsxFile(buffer, { trim: false }); const candidates = [];
+  for (const { sheet: name, data: rows } of sheets) { if (sheetIsInstructional(name)) continue; if (headerForRows(rows)) candidates.push({ name, rows }); }
   const preferred = candidates.find((sheet) => ["kehoach", "kehoach import"].includes(normalizeExcelHeader(sheet.name)));
   if (!preferred && candidates.length !== 1) throw new Error("File Excel không hợp lệ: cần một sheet dữ liệu kế hoạch duy nhất.");
   return deduplicateDepartmentPlanExcelRows(parseDepartmentPlanExcelRows((preferred ?? candidates[0]).rows, context));

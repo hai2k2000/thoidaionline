@@ -3,6 +3,7 @@ import "server-only";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { hashPassword, isBcryptHash, verifyPassword } from "@/lib/password";
 import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/defaultPassword";
+import { findStaffByIdentifier } from "@/lib/staffIdentifierLookup";
 
 type CredentialRow = {
   id: string;
@@ -28,12 +29,10 @@ export async function authenticateCredentials(identifierInput: string, passwordI
   const password = passwordInput;
   if (!identifier || !password) return null;
   const roleLifecycleEnabled = process.env.ROLE_LIFECYCLE_ENABLED === "true";
-  const { data, error } = await serverSupabase
-    .from("staff_users")
-    .select(`id,username,password,password_hash,active,session_version,must_change_password${roleLifecycleEnabled ? ",roles!inner(active)" : ""}`)
-    .or(`username.eq.${identifier},email.ilike.${identifier},phone.eq.${identifier}`)
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await findStaffByIdentifier(
+    identifier,
+    `id,username,password,password_hash,active,session_version,must_change_password${roleLifecycleEnabled ? ",roles!inner(active)" : ""}`,
+  );
   const row = data as CredentialRow | null;
   if (error) throw new AuthenticationUnavailableError("credential_lookup_failed");
   if (!row) return null;

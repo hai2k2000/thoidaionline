@@ -30,7 +30,7 @@ test("credential verification preserves exact password material", () => {
 });
 
 test("web client sends the password without normalization", () => {
-  assert.match(authClient, /\n\s*password,\n/);
+  assert.match(authClient, /\r?\n\s*password,\r?\n/);
   assert.doesNotMatch(authClient, /password: password\.trim\(\)/);
 });
 

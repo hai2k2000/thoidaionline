@@ -178,6 +178,7 @@ export default function TaskCenterShell(props: Props) {
   // Reset selection only when filter values actually change; object identity can
   // change during unrelated renders and would otherwise drop multi-select state.
   const querySelectionKey = JSON.stringify(query);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize the local filter state with URL search parameters.
   useEffect(() => { setSelectedTaskIds([]); }, [querySelectionKey]);
   const adminBulk = currentUserRole === "admin" && !taskMode && !query.approvalQueue;
   const bulkPrintEnabled = !taskMode && !query.approvalQueue;

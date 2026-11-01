@@ -21,6 +21,7 @@ export default function JournalismMetadataEditor({ journalism, taskId, workKinds
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset draft fields when the edited task changes.
   useEffect(() => setForm(initial), [initial]);
   const lockedPlanned = journalism.publication_status === "published" || journalism.publication_status === "withdrawn";
   const activeKinds = workKinds.filter((kind) => kind.is_active);

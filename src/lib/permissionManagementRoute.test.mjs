@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const route = readFileSync(new URL("../app/api/permissions/route.ts", import.meta.url), "utf8");
+const route = readFileSync(new URL("../app/api/permissions/route.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
 
 test("permission management route authenticates reads and writes server-side", () => {
   assert.match(route, /requireReadActor/);
@@ -28,6 +28,6 @@ test("legacy permission mutation remains a narrow compatibility path", () => {
 });
 
 test("permission catalog uses the unambiguous staff department relationship", () => {
-  assert.match(route, /departments!staff_users_department_id_fkey\(name\)/);
+  assert.match(route, /departments!staff_users_department_id_fkey\([^)]*name[^)]*\)/);
   assert.doesNotMatch(route, /select\([^\n]*departments\(name\)/);
 });
