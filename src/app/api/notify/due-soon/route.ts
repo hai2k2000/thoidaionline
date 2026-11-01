@@ -17,7 +17,8 @@ export async function POST(req: Request) {
     if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (actor.role_code !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const url = new URL(req.url);
-    const days = Math.max(1, Math.min(14, Number(url.searchParams.get("days") || 3)));
+    const requested = Number(url.searchParams.get("days") || 3);
+    const days = Number.isFinite(requested) ? Math.max(1, Math.min(14, Math.trunc(requested))) : 3;
 
     const today = new Date();
     const from = today.toISOString().slice(0, 10);
