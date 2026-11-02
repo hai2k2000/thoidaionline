@@ -515,7 +515,7 @@ begin
     v_self_approval := p_action = 'approve' and r.created_by = p_actor_id;
     if p_action = 'return' and r.created_by = p_actor_id then raise exception 'Self approval is not allowed.' using errcode = '42501'; end if;
     v_allowed := (case when v_restricted then v_is_admin or v_category_grant = 'approve' else exists (select 1 from public.staff_users u join public.departments d on d.id = r.department_id where u.id = p_actor_id and d.manager_id = p_actor_id)
-      or exists (select 1 from public.api_list_effective_permissions(p_actor_id) p where p.permission_code = 'record.approve' and ('all' = any(p.effective_scopes) or ('department' = any(p.effective_scopes) and r.department_id is not null and r.department_id = (select u.department_id from public.staff_users u where u.id = p_actor_id)))) )
+      or exists (select 1 from public.api_list_effective_permissions(p_actor_id) p where p.permission_code = 'record.approve' and ('all' = any(p.effective_scopes) or ('department' = any(p.effective_scopes) and r.department_id is not null and r.department_id = (select u.department_id from public.staff_users u where u.id = p_actor_id))))
       end)
       and not exists (select 1 from public.db_record_acl a join public.staff_users u on u.id = p_actor_id where a.record_id = r.id and a.capability = 'approve' and a.effect = 'deny' and (a.expires_at is null or a.expires_at > now()) and ((a.principal_type='user' and a.principal_id=u.id) or (a.principal_type='role' and a.principal_id=u.role_id) or (a.principal_type='department' and a.principal_id=u.department_id)));
     if v_self_approval then
