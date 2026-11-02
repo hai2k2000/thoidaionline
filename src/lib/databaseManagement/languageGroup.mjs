@@ -75,3 +75,9 @@ export function filterLanguageRecordTypes(recordTypes, categories, selectedCateg
   const typeCategory = categories.find((category) => category.code === option.typeCategoryCode);
   return typeCategory ? sortRecordTypes(recordTypes.filter((type) => type.category_id === typeCategory.id)) : [];
 }
+
+export function orderCategoriesForFilter(categories) {
+  const visible = selectableCategories(categories);
+  const roots = visible.filter((category) => !category.parent_id).sort((left, right) => (left.sort_order ?? Number.POSITIVE_INFINITY) - (right.sort_order ?? Number.POSITIVE_INFINITY) || left.name.localeCompare(right.name));
+  return roots.flatMap((root) => [root, ...childCategories(visible, root.id)]);
+}
