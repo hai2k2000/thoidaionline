@@ -76,6 +76,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261102190000_database_management_v1_gopy_dot1_forms.sql",
   "supabase/migrations/20261103100000_database_management_v1_p3_tong_hop_subgroups.sql",
   "supabase/migrations/20261103120000_database_management_v1_doan_the_parent.sql",
+  "supabase/migrations/20261103140000_database_management_v1_keywords_fix_remaining.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ], "artifact migration mismatch");
@@ -97,6 +98,7 @@ assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261102170000_database_
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261102190000_database_management_v1_gopy_dot1_forms\.sql(?:,|$)/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261103100000_database_management_v1_p3_tong_hop_subgroups\.sql(?:,|$)/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261103120000_database_management_v1_doan_the_parent\.sql(?:,|$)/m);
+assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261103140000_database_management_v1_keywords_fix_remaining\.sql(?:,|$)/m);
 for (const field of ["build_id=", "commit=", "branch=", "created_at=", "source_worktree=", "local_head=", "remote_head=", "artifact_source_commit=", "metadata_commit=", "current_production_parent=", "integration_branch=", "integration_baseline=", "contract_suite=", "risk_class=", "risk_test_evidence=", "risk_reason="]) assert.match(releaseMeta, new RegExp(`^${field}[^\\n]+`, "m"));
 const routes = JSON.parse(readFileSync(join(root, "required-route-manifest.json"), "utf8"));
 const appPaths = JSON.parse(readFileSync(join(root, ".next/server/app-paths-manifest.json"), "utf8"));

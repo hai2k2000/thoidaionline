@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { categoryCodeForLanguage, childCategories, filterLanguageRecordTypes, getLanguageOption, hasSubcategories, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories, sortRecordTypes } from "./languageGroup.mjs";
+import { categoryCodeForLanguage, childCategories, orderCategoriesForFilter, filterLanguageRecordTypes, getLanguageOption, hasSubcategories, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories, sortRecordTypes } from "./languageGroup.mjs";
 
 const categories = [
   { id: "root", code: "phong_noi_dung", parent_id: null, name: "Phòng Nội dung" },
@@ -93,4 +93,30 @@ test("parent category requires a child before exposing child record types", () =
   assert.equal(hasSubcategories(nested, parent), true);
   assert.deepEqual(filterLanguageRecordTypes(types, nested, "parent", null, null), []);
   assert.deepEqual(filterLanguageRecordTypes(types, nested, "parent", null, "restricted-child"), [types[1]]);
+});
+
+test("orders filter categories by root then children without mutating the catalog", () => {
+  const input = [
+    { id: "root2", code: "root2", name: "Root 2", parent_id: null, sort_order: 20 },
+    { id: "child3", code: "child3", name: "Child 3", parent_id: "root1", sort_order: 30 },
+    { id: "root1", code: "root1", name: "Root 1", parent_id: null, sort_order: 10 },
+    { id: "child1", code: "child1", name: "Child 1", parent_id: "root1", sort_order: 10 },
+    { id: "child2", code: "child2", name: "Child 2", parent_id: "root1", sort_order: 20 },
+  ];
+  const original = structuredClone(input);
+  assert.deepEqual(orderCategoriesForFilter(input).map((item) => item.id), ["root1", "child1", "child2", "child3", "root2"]);
+  assert.deepEqual(input, original);
+});
+
+test("filter ordering breaks root and child ties by name and retains categories without a visible parent", () => {
+  const input = [
+    { id: "root-b", code: "root-b", name: "B", sort_order: 10 },
+    { id: "child-b", code: "child-b", name: "B", parent_id: "root-a", sort_order: 10 },
+    { id: "root-a", code: "root-a", name: "A", sort_order: 10 },
+    { id: "child-a", code: "child-a", name: "A", parent_id: "root-a", sort_order: 10 },
+    { id: "orphan", code: "orphan", name: "Orphan", parent_id: "missing", sort_order: 30 },
+    { id: "legacy", code: "ngoai_ngu", name: "Legacy", sort_order: 0 },
+  ];
+  assert.deepEqual(orderCategoriesForFilter(input).map((item) => item.id), ["root-a", "child-a", "child-b", "root-b"]);
+  assert.deepEqual(orderCategoriesForFilter([]), []);
 });

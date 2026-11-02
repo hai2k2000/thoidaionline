@@ -173,6 +173,7 @@ const migrationReference = [
   "supabase/migrations/20261102190000_database_management_v1_gopy_dot1_forms.sql",
   "supabase/migrations/20261103100000_database_management_v1_p3_tong_hop_subgroups.sql",
   "supabase/migrations/20261103120000_database_management_v1_doan_the_parent.sql",
+  "supabase/migrations/20261103140000_database_management_v1_keywords_fix_remaining.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];
