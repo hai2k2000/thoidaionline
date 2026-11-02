@@ -1,5 +1,7 @@
 # CSDL giai đoạn 2: tách nhóm đoàn thể và phân quyền theo nhóm hồ sơ (bản nháp)
 
+Trạng thái: đã triển khai production 2026-11-02 (PR #108, #109)
+
 Trạng thái: **owner đã chốt 2026-11-02**. Nguồn: góp ý của Phòng Tổng hợp (người lập: Hoàng Quỳnh Trang).
 
 ## 1. Mục tiêu
