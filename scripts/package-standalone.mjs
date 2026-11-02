@@ -170,6 +170,7 @@ const migrationReference = [
   "supabase/migrations/20261102160000_database_management_v1_p2_form_fields_fix.sql",
   "supabase/migrations/20261102100000_database_management_v1_noidung_forms.sql",
   "supabase/migrations/20261102170000_database_management_v1_to_tieng_viet_forms.sql",
+  "supabase/migrations/20261102190000_database_management_v1_gopy_dot1_forms.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];
