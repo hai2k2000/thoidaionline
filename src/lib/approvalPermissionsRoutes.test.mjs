@@ -14,6 +14,11 @@ for (const path of ["../app/api/permissions/users/[userId]/route.ts", "../app/ap
   });
 }
 
+test("approval user route preserves the category separator", () => {
+  const source = readFileSync(new URL("../app/api/permissions/users/[userId]/route.ts", import.meta.url), "utf8");
+  assert.match(source, /\u203A/);
+});
+
 test("approval routes call the exact RPCs", () => {
   assert.match(readFileSync(new URL("../app/api/permissions/users/[userId]/route.ts", import.meta.url), "utf8"), /api_list_user_approval_permissions/);
   assert.match(readFileSync(new URL("../app/api/permissions/users/[userId]/history/route.ts", import.meta.url), "utf8"), /api_list_user_permission_history/);

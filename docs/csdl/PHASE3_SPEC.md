@@ -1,6 +1,6 @@
 # CSDL giai đoạn 3: nhóm con Phòng Tổng hợp (bản nháp)
 
-Trạng thái: **nháp**. Làm sau giai đoạn 2, vì nhóm Tổ chức – Cán bộ dùng cơ chế nhóm hạn chế của giai đoạn 2.
+Trạng thái: phần nhóm con Phòng Tổng hợp, Văn thư – Lưu trữ, Tổ chức – Cán bộ làm trong migration `20261103100000`. Hợp đồng lao động không lưu mức lương thành trường riêng (owner quyết định 02/11/2026). Kế toán, Quản trị, Công nghệ, Pháp chế, Đối ngoại: để sau.
 
 ## 1. Vấn đề
 Phòng Tổng hợp có nhiều mảng việc, nên ô chọn loại hồ sơ của phòng quá dài. Phòng đề nghị chia nhóm con: Kế toán, Văn thư – Lưu trữ, Tổ chức – Cán bộ, Quản trị – Lễ tân, Công nghệ, Pháp chế, Đối ngoại, An sinh/xã hội…
@@ -32,7 +32,7 @@ Phòng Tổng hợp có nhiều mảng việc, nên ô chọn loại hồ sơ c�
 
 4 loại:
 1. **Tài liệu hồ sơ nhân sự:** Nhân sự (person); Loại tài liệu [Sơ yếu lý lịch / Bằng cấp / Quyết định / Khác]; Ngày tài liệu; Người quản lý.
-2. **Hợp đồng lao động và phụ lục:** Nhân sự; Số hợp đồng/phụ lục; Loại hợp đồng; Ngày ký; Ngày hiệu lực; Thời hạn; Ngày hết hạn; Vị trí việc làm; Tình trạng ký. Không lưu mức lương dạng trường; mức lương nằm trong file. [HỎI OWNER]
+2. **Hợp đồng lao động và phụ lục:** Nhân sự; Số hợp đồng/phụ lục; Loại hợp đồng; Ngày ký; Ngày hiệu lực; Thời hạn; Ngày hết hạn; Vị trí việc làm; Tình trạng ký. Không lưu mức lương dạng trường; mức lương nằm trong file.
 3. **Bổ nhiệm, điều động, biến động nhân sự:** Nhân sự; Hình thức biến động; Vị trí trước; Vị trí sau; Số quyết định; Ngày ký; Ngày hiệu lực; Cấp quyết định; Tình trạng.
 4. **Đánh giá, thi đua – khen thưởng, kỷ luật:** Cá nhân/tập thể; Kỳ/năm; Kết quả xếp loại; Hình thức khen thưởng/kỷ luật; Số, ngày văn bản; Cấp quyết định; Người tổng hợp.
 

@@ -384,6 +384,11 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
   const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("id,category_id,active,code").eq("id", input.recordTypeId).eq("active", true).maybeSingle();
   if (typeError) throw typeError;
   if (!category || !type || (category.department_id && category.department_id !== actor.department_id)) throw new Error("record_scope_forbidden");
+  if (category.code !== "phong_noi_dung") {
+    const { count: childCount, error: childError } = await serverSupabase.from("db_categories").select("id", { count: "exact", head: true }).eq("parent_id", category.id).eq("active", true);
+    if (childError) throw childError;
+    if ((childCount ?? 0) > 0) throw new Error("subcategory_required");
+  }
   if (isDepartmentOnlyRecordType(type.code) && input.visibility === "public") throw new Error("danh_ba_department_only");
   const languageCode = input.languageCode ?? null;
   const effectiveCategoryCode = category.code === "phong_noi_dung" ? categoryCodeForLanguage(languageCode) : category.code;
@@ -394,7 +399,7 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
   if (!effectiveCategory.data) throw new Error("language_required");
   const typeCategory = await serverSupabase.from("db_categories").select("code").eq("id", type.category_id).maybeSingle();
   if (typeCategory.error) throw typeCategory.error;
-  if (!effectiveCategoryCode || !isCompatibleLanguageSelection(effectiveCategoryCode, typeCategory.data?.code ?? "", languageCode)) throw new Error(category.code === "phong_noi_dung" || category.parent_id ? "language_required" : "record_scope_forbidden");
+  if (!effectiveCategoryCode || !isCompatibleLanguageSelection(effectiveCategoryCode, typeCategory.data?.code ?? "", languageCode)) throw new Error(category.code === "phong_noi_dung" ? "language_required" : "record_scope_forbidden");
   const grantContext = await loadCategoryGrantContext(actor, type.category_id);
   if (!canAccessRecordType(actor, type.code) || grantContext.restricted && !canContributeRestricted(actor, grantContext.grantLevel)) throw new Error("record_type_restricted");
   const { data: form, error: formError } = await serverSupabase.from("db_form_definitions").select("id").eq("record_type_id", input.recordTypeId).eq("status", "published").order("version", { ascending: false }).limit(1).maybeSingle();

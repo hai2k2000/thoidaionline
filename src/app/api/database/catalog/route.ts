@@ -47,7 +47,12 @@ export async function GET() {
   }));
   const categoryRows = categories.data ?? [];
   const visibleCategoryIds = new Set(visibleTypes.map((type) => type.category_id));
-  for (const category of categoryRows) if (visibleCategoryIds.has(category.id) && category.parent_id) visibleCategoryIds.add(category.parent_id);
-  for (const category of categoryRows) if (category.parent_id && visibleCategoryIds.has(category.parent_id)) visibleCategoryIds.add(category.id);
+  for (const category of categoryRows) {
+    if (visibleCategoryIds.has(category.id) && category.parent_id) visibleCategoryIds.add(category.parent_id);
+    if (category.parent_id && category.restricted && !visibleCategoryIds.has(category.id)) visibleCategoryIds.delete(category.id);
+  }
+  for (const category of categoryRows) {
+    if (category.parent_id && !category.restricted && visibleCategoryIds.has(category.parent_id)) visibleCategoryIds.add(category.id);
+  }
   return NextResponse.json({ categories: categoryRows.filter((category) => visibleCategoryIds.has(category.id)), recordTypes: visibleTypes, forms: formsWithSources }, { headers: { "Cache-Control": "private, no-store" } });
 }

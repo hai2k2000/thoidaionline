@@ -1,7 +1,8 @@
-export function validateRecordForm({ mode, categoryId, categoryCode, languageCode, recordTypeId, title, metadata, fields, visibility }) {
+export function validateRecordForm({ mode, categoryId, categoryCode, languageCode, requiresSubcategory = false, subcategoryId, recordTypeId, title, metadata, fields, visibility }) {
   const errors = [];
   if (mode === "create" && !categoryId) errors.push({ field: "categoryId", code: "required" });
   if (mode === "create" && categoryCode === "phong_noi_dung" && !languageCode) errors.push({ field: "languageCode", code: "required" });
+  if (mode === "create" && requiresSubcategory && !subcategoryId) errors.push({ field: "subcategoryId", code: "required" });
   if (mode === "create" && !recordTypeId) errors.push({ field: "recordTypeId", code: "required" });
   if (typeof title !== "string" || !title.trim()) errors.push({ field: "title", code: "invalid_title" });
   if (visibility !== undefined && !["department", "public"].includes(visibility)) errors.push({ field: "visibility", code: "invalid_option" });

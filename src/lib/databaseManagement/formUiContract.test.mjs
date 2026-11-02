@@ -65,3 +65,12 @@ test("record detail keeps hidden fields only when legacy metadata has a value", 
   assert.match(detail, /Object\.entries\(detail\.record\.metadata\)/);
   assert.match(detail, /value.*undefined|undefined.*value/);
 });
+
+test("record form only lists child categories that contain record types", () => {
+  assert.match(page, /recordTypes\.some\(\(type\) => type\.category_id === category\.id\)/);
+});
+
+test("record list shows non-language child categories beneath their parent", () => {
+  assert.match(listPage, /category.parent_id !== contentRoot\?.id/);
+  assert.ok(listPage.includes("\u2014 "));
+});

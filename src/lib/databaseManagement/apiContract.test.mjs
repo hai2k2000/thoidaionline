@@ -45,3 +45,12 @@ test("approval visibility exposes manager-only diagnostics and ACL management", 
   assert.match(repository, /recordId, "acl\.manage"/);
   assert.match(repository, /capability === "acl\.manage"/);
 });
+
+test("permission user route includes restricted child groups and category grants accept them", () => {
+  const userRoute = readFileSync(fileURLToPath(new URL("../../app/api/permissions/users/[userId]/route.ts", import.meta.url)), "utf8");
+  const grantRoute = readFileSync(fileURLToPath(new URL("../../app/api/permissions/users/[userId]/category-grants/route.ts", import.meta.url)), "utf8");
+  assert.doesNotMatch(userRoute, /\.is\("parent_id", null\)/);
+  assert.match(userRoute, /parentCategory/);
+  assert.match(userRoute, /parentSortOrder/);
+  assert.doesNotMatch(grantRoute, /!category \|\| category\.parent_id/);
+});
