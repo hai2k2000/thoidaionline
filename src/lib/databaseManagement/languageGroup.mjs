@@ -24,6 +24,7 @@ export const LANGUAGE_OPTIONS = Object.freeze([
   { value: "zh", label: "Tiếng Trung", categoryCode: "noi_dung_tieng_trung", typeCategoryCode: LEGACY_FOREIGN_CATEGORY_CODE },
   { value: "lo", label: "Tiếng Lào", categoryCode: "noi_dung_tieng_lao", typeCategoryCode: LEGACY_FOREIGN_CATEGORY_CODE },
   { value: "km", label: "Tiếng Campuchia (Khmer)", categoryCode: "noi_dung_tieng_khmer", typeCategoryCode: LEGACY_FOREIGN_CATEGORY_CODE },
+  { value: "ru", label: "Tiếng Nga", categoryCode: "noi_dung_tieng_nga", typeCategoryCode: LEGACY_FOREIGN_CATEGORY_CODE },
 ]);
 
 export function getLanguageOption(code) {

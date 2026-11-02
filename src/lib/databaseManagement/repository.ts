@@ -139,7 +139,7 @@ async function getRecord(recordId: string) {
 
 async function validateFormMetadata(formDefinitionId: string | null | undefined, metadata: Record<string, unknown>) {
   if (!formDefinitionId) return;
-  const { data, error } = await serverSupabase.from("db_form_fields").select("field_key,data_type,required,options,validation").eq("form_definition_id", formDefinitionId);
+  const { data, error } = await serverSupabase.from("db_form_fields").select("field_key,data_type,required,options,validation,hidden").eq("form_definition_id", formDefinitionId);
   if (error) throw error;
   const errors = validateDatabaseMetadata(metadata, data ?? []);
   if (errors.length) throw new Error(`invalid_metadata:${JSON.stringify(errors)}`);

@@ -19,6 +19,11 @@ test("catalog API preserves parent categories needed by the language group selec
   assert.match(route, /visibleCategoryIds\.add\(category\.parent_id\)/);
 });
 
+test("catalog API returns hidden and help metadata for form fields", () => {
+  assert.match(route, /field_key,label,data_type,required,searchable,options,validation,hidden,sort_order/);
+  assert.match(route, /help/);
+});
+
 test("record create route preserves dynamic metadata validation fields", () => {
   const createRoute = readFileSync(fileURLToPath(new URL("../../app/api/database/records/route.ts", import.meta.url)), "utf8");
   assert.match(createRoute, /invalid_metadata/);

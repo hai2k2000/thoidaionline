@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { filterLanguageRecordTypes, getLanguageOption, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories, sortRecordTypes } from "./languageGroup.mjs";
+import { categoryCodeForLanguage, filterLanguageRecordTypes, getLanguageOption, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories, sortRecordTypes } from "./languageGroup.mjs";
 
 const categories = [
   { id: "root", code: "phong_noi_dung", parent_id: null, name: "Phòng Nội dung" },
@@ -27,6 +27,12 @@ test("record types sort by explicit sort order before name and keep unsorted typ
 test("language options expose stable codes and Vietnamese labels", () => {
   assert.deepEqual(getLanguageOption("vi"), { value: "vi", label: "Tiếng Việt" });
   assert.deepEqual(getLanguageOption("km"), { value: "km", label: "Tiếng Campuchia (Khmer)" });
+  assert.deepEqual(getLanguageOption("ru"), { value: "ru", label: "Tiếng Nga" });
+});
+
+test("Russian uses the shared foreign-language record type family", () => {
+  assert.equal(categoryCodeForLanguage("ru"), "noi_dung_tieng_nga");
+  assert.equal(isCompatibleLanguageSelection("noi_dung_tieng_nga", "ngoai_ngu", "ru"), true);
 });
 
 test("language category resolution keeps non-content groups unchanged", () => {

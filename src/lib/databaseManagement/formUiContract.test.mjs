@@ -17,6 +17,12 @@ test("record form explains field validation failures returned by the API", () =>
   assert.match(page, /https:\/\//);
 });
 
+test("record form hides configured fields and renders field help text", () => {
+  assert.match(page, /field\.hidden/);
+  assert.match(page, /validation\?\.help|validation\.help/);
+  assert.match(page, /text-slate-500/);
+});
+
 test("create form supports drag and drop, removing selected files, and retry messaging", () => {
   assert.match(page, /onDragOver/);
   assert.match(page, /onDrop/);
@@ -51,4 +57,11 @@ test("record detail exposes delete and restore controls from API capabilities", 
   assert.match(detail, /Xóa hồ sơ/);
   assert.match(detail, /Khôi phục hồ sơ/);
   assert.match(detail, /window\.confirm/);
+});
+
+test("record detail keeps hidden fields only when legacy metadata has a value", () => {
+  const detail = readFileSync(new URL("../../app/database/records/[id]/page.tsx", import.meta.url), "utf8");
+  assert.match(detail, /hidden/);
+  assert.match(detail, /Object\.entries\(detail\.record\.metadata\)/);
+  assert.match(detail, /value.*undefined|undefined.*value/);
 });

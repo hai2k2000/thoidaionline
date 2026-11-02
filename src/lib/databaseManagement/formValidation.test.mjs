@@ -22,3 +22,23 @@ test("content group requires a language selection before submit", () => {
   const errors = validateRecordForm({ mode: "create", categoryId: "cat-1", categoryCode: "phong_noi_dung", languageCode: "", recordTypeId: "type-1", title: "Hồ sơ", metadata: {}, fields: [] });
   assert.deepEqual(errors, [{ field: "languageCode", code: "required" }]);
 });
+
+test("hidden fields are ignored even when they were previously required or contain legacy values", () => {
+  const errors = validateRecordForm({
+    mode: "edit",
+    title: "Hồ sơ",
+    metadata: { legacy_field: { preserved: true } },
+    fields: [{ field_key: "legacy_field", data_type: "text", required: true, hidden: true, label: "Trường cũ" }],
+  });
+  assert.deepEqual(errors, []);
+});
+
+test("field help text is presentation metadata and does not change validation", () => {
+  const errors = validateRecordForm({
+    mode: "edit",
+    title: "Hồ sơ",
+    metadata: {},
+    fields: [{ field_key: "notes", data_type: "text", required: false, hidden: false, validation: { help: "Hướng dẫn nhập" }, label: "Ghi chú" }],
+  });
+  assert.deepEqual(errors, []);
+});

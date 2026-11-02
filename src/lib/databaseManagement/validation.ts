@@ -9,6 +9,7 @@ export type DatabaseFormField = {
   field_key: string;
   data_type: string;
   required: boolean;
+  hidden?: boolean;
   options?: unknown;
   validation?: unknown;
 };
@@ -21,7 +22,7 @@ export function validateDatabaseMetadata(metadata: Record<string, unknown>, fiel
   }
   for (const field of fields) {
     const value = metadata[field.field_key];
-    if (field.required && (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0))) {
+    if (!field.hidden && field.required && (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0))) {
       errors.push({ field: `metadata.${field.field_key}`, code: "required" });
       continue;
     }
@@ -63,7 +64,7 @@ export function validateDatabaseRecordInput(input: unknown): { ok: true; value: 
   if (value.departmentId !== undefined && value.departmentId !== null && (typeof value.departmentId !== "string" || !UUID.test(value.departmentId))) errors.push({ field: "departmentId", code: "uuid_required" });
   if (value.ownerId !== undefined && value.ownerId !== null && (typeof value.ownerId !== "string" || !UUID.test(value.ownerId))) errors.push({ field: "ownerId", code: "uuid_required" });
   if (!value.metadata || typeof value.metadata !== "object" || Array.isArray(value.metadata)) errors.push({ field: "metadata", code: "object_required" });
-  if (value.languageCode !== undefined && value.languageCode !== null && !["vi", "en", "zh", "lo", "km"].includes(value.languageCode)) errors.push({ field: "languageCode", code: "invalid_option" });
+  if (value.languageCode !== undefined && value.languageCode !== null && !["vi", "en", "zh", "lo", "km", "ru"].includes(value.languageCode)) errors.push({ field: "languageCode", code: "invalid_option" });
   if (value.visibility !== undefined && value.visibility !== "department" && value.visibility !== "public") errors.push({ field: "visibility", code: "invalid_option" });
   if (value.keywords !== undefined && (!Array.isArray(value.keywords) || value.keywords.some((keyword) => typeof keyword !== "string" || keyword.trim().length === 0 || keyword.length > 120))) errors.push({ field: "keywords", code: "invalid_keywords" });
   if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.some((link) => !link || link.provider !== "google_drive" || typeof link.url !== "string" || !URL.test(link.url)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });

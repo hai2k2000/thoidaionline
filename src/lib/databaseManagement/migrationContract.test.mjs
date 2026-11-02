@@ -89,6 +89,12 @@ test("production artifact contracts include the self-approval migration", () => 
   for (const source of [packager, verifier]) assert.match(source, /20261024110000_database_management_v1_self_approval\.sql/);
 });
 
+test("production artifact contracts include the Phong Nội dung forms migration", () => {
+  const packager = readFileSync(fileURLToPath(new URL("../../../scripts/package-standalone.mjs", import.meta.url)), "utf8");
+  const verifier = readFileSync(fileURLToPath(new URL("../../../scripts/verify-standalone-artifact.mjs", import.meta.url)), "utf8");
+  for (const source of [packager, verifier]) assert.match(source, /20261102100000_database_management_v1_noidung_forms\.sql/);
+});
+
 test("CP2 specialized fields stay limited to source-backed record contracts", () => {
   for (const field of ["document_number", "sender_organization", "processing_deadline", "original_location"]) assert.match(catalog, new RegExp(`'${field}'`));
   for (const field of ["contract_number", "signed_date", "term_end_date", "execution_status"]) assert.match(catalog, new RegExp(`'${field}'`));
