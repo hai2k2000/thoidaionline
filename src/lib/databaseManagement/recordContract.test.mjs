@@ -67,12 +67,11 @@ test("dynamic metadata enforces required fields, options, limits and rejects unk
   assert.deepEqual(errors.map((error) => error.code).sort(), ["invalid_option", "max_items", "unknown_field"]);
 });
 
-test("server metadata validation preserves legacy values for hidden fields", () => {
-  const errors = validateDatabaseMetadata(
-    { legacy_field: { preserved: true } },
-    [{ field_key: "legacy_field", data_type: "text", required: true, hidden: true }],
-  );
-  assert.deepEqual(errors, []);
+test("server metadata validation skips required for hidden fields but still type-checks them", () => {
+  const fields = [{ field_key: "legacy_field", data_type: "text", required: true, hidden: true }];
+  assert.deepEqual(validateDatabaseMetadata({}, fields), []);
+  assert.deepEqual(validateDatabaseMetadata({ legacy_field: "kept" }, fields), []);
+  assert.notDeepEqual(validateDatabaseMetadata({ legacy_field: { preserved: true } }, fields), []);
 });
 
 test("ACL expiry is validated as a datetime", () => {
