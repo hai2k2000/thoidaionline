@@ -383,6 +383,7 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
   const { data: type, error: typeError } = await serverSupabase.from("db_record_types").select("id,category_id,active,code").eq("id", input.recordTypeId).eq("active", true).maybeSingle();
   if (typeError) throw typeError;
   if (!category || !type || (category.department_id && category.department_id !== actor.department_id)) throw new Error("record_scope_forbidden");
+  if (type.code === "danh_ba_nghiep_vu" && input.visibility === "public") throw new Error("danh_ba_department_only");
   const languageCode = input.languageCode ?? null;
   const effectiveCategoryCode = category.code === "phong_noi_dung" ? categoryCodeForLanguage(languageCode) : category.code;
   const effectiveCategory = effectiveCategoryCode && effectiveCategoryCode !== category.code
@@ -448,6 +449,7 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
   const grantContext = await loadCategoryGrantContext(actor, current.category_id);
   if (!(await canRecord(actor, current, recordId, "edit")) || grantContext.restricted && !canContributeRestricted(actor, grantContext.grantLevel)) throw new Error("permission_denied");
   if (current.status === "pending_review") throw new Error("record_locked");
+  if (current.record_type_code === "danh_ba_nghiep_vu" && input.visibility === "public") throw new Error("danh_ba_department_only");
   const patch: Record<string, unknown> = {};
   if (input.title !== undefined) patch.title = input.title;
   if (input.summary !== undefined) patch.summary = input.summary;
