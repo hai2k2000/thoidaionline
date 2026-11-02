@@ -21,9 +21,8 @@ export function validateDatabaseMetadata(metadata: Record<string, unknown>, fiel
     if (!knownFields.has(key)) errors.push({ field: `metadata.${key}`, code: "unknown_field" });
   }
   for (const field of fields) {
-    if (field.hidden) continue;
     const value = metadata[field.field_key];
-    if (field.required && (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0))) {
+    if (!field.hidden && field.required && (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0))) {
       errors.push({ field: `metadata.${field.field_key}`, code: "required" });
       continue;
     }
