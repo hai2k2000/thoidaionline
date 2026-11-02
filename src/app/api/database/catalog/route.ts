@@ -10,7 +10,7 @@ export async function GET() {
   const [categories, types, forms] = await Promise.all([
     serverSupabase.from("db_categories").select("id,parent_id,code,name,department_id,active,sort_order").eq("active", true).order("sort_order"),
     serverSupabase.from("db_record_types").select("id,category_id,code,name,description,active,sort_order").eq("active", true).order("sort_order", { ascending: true, nullsFirst: false }).order("name", { ascending: true }),
-    serverSupabase.from("db_form_definitions").select("id,record_type_id,version,status,search_config,display_config,db_form_fields(id,field_key,label,data_type,required,searchable,options,validation,sort_order)").eq("status", "published").eq("version", 1),
+    serverSupabase.from("db_form_definitions").select("id,record_type_id,version,status,search_config,display_config,db_form_fields(id,field_key,label,data_type,required,searchable,options,validation,hidden,sort_order)").eq("status", "published").eq("version", 1),
   ]);
   if (categories.error || types.error || forms.error) return NextResponse.json({ error: "catalog_read_failed" }, { status: 500 });
   const categoryCodes = new Map((categories.data ?? []).map((category) => [category.id, category.code]));
@@ -29,6 +29,7 @@ export async function GET() {
     ...form,
     db_form_fields: (form.db_form_fields ?? []).map((field) => ({
       ...field,
+      help: typeof field.validation?.help === "string" ? field.validation.help : null,
       options: field.data_type === "department" ? (departments ?? []).map((item) => ({ value: item.id, label: item.name }))
         : field.data_type === "person" || field.field_key === "participants" ? (people ?? []).map((item) => ({ value: item.id, label: item.full_name }))
         : field.data_type === "country" ? countryOptions : field.options,

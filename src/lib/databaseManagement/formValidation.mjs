@@ -6,6 +6,7 @@ export function validateRecordForm({ mode, categoryId, categoryCode, languageCod
   if (typeof title !== "string" || !title.trim()) errors.push({ field: "title", code: "invalid_title" });
   if (visibility !== undefined && !["department", "public"].includes(visibility)) errors.push({ field: "visibility", code: "invalid_option" });
   for (const field of fields ?? []) {
+    if (field.hidden) continue;
     if (["record_code", "title", "summary", "status"].includes(field.field_key)) continue;
     const value = metadata?.[field.field_key];
     const empty = value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);

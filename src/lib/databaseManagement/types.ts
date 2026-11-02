@@ -15,7 +15,7 @@ export type DatabaseRecordInput = {
   ownerId?: string | null;
   status?: DatabaseRecordStatus;
   metadata: Record<string, unknown>;
-  languageCode?: "vi" | "en" | "zh" | "lo" | "km" | null;
+  languageCode?: "vi" | "en" | "zh" | "lo" | "km" | "ru" | null;
   keywords?: string[];
   externalLinks?: Array<{ provider: "google_drive"; url: string; label?: string | null; mediaKind?: "image" | "audio" | "video" | null }>;
   visibility?: "department" | "public";

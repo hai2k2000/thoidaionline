@@ -12,6 +12,17 @@ test("record input requires controlled identifiers and metadata object", () => {
   assert.equal(result.ok && result.value.recordCode, undefined);
 });
 
+test("record input accepts the Russian language code", () => {
+  const result = validateDatabaseRecordInput({
+    categoryId: "11111111-1111-4111-8111-111111111111",
+    recordTypeId: "22222222-2222-4222-8222-222222222222",
+    title: "Hồ sơ tiếng Nga",
+    metadata: {},
+    languageCode: "ru",
+  });
+  assert.equal(result.ok, true);
+});
+
 test("record creation does not require a client-supplied code", () => {
   const result = validateDatabaseRecordInput({ ...ids, title: "Ho so tu cap ma", metadata: {} });
   assert.equal(result.ok, true);
@@ -54,6 +65,14 @@ test("dynamic metadata enforces required fields, options, limits and rejects unk
   ];
   const errors = validateDatabaseMetadata({ status: "approved", keywords: ["a", "b", "c"], extra: true }, fields);
   assert.deepEqual(errors.map((error) => error.code).sort(), ["invalid_option", "max_items", "unknown_field"]);
+});
+
+test("server metadata validation preserves legacy values for hidden fields", () => {
+  const errors = validateDatabaseMetadata(
+    { legacy_field: { preserved: true } },
+    [{ field_key: "legacy_field", data_type: "text", required: true, hidden: true }],
+  );
+  assert.deepEqual(errors, []);
 });
 
 test("ACL expiry is validated as a datetime", () => {
