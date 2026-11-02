@@ -78,3 +78,19 @@ test("groups without subcategories keep their existing record type behavior", ()
   const types = [{ id: "plain", category_id: "other", name: "Báo cáo" }];
   assert.deepEqual(filterLanguageRecordTypes(types, categories, "other", null, null), types);
 });
+
+test("parent category requires a child before exposing child record types", () => {
+  const nested = [
+    { id: "parent", code: "doan_the_quan_ly", name: "Parent organizations", parent_id: null, sort_order: 50, restricted: false },
+    { id: "public-child", code: "phap_ly_dieu_hanh", name: "Public child", parent_id: "parent", sort_order: 270, restricted: false },
+    { id: "restricted-child", code: "cong_tac_dang", name: "Restricted child", parent_id: "parent", sort_order: 210, restricted: true },
+  ];
+  const types = [
+    { id: "public-type", category_id: "public-child", name: "Regulation" },
+    { id: "restricted-type", category_id: "restricted-child", name: "Party records" },
+  ];
+  const parent = nested.find((category) => category.id === "parent");
+  assert.equal(hasSubcategories(nested, parent), true);
+  assert.deepEqual(filterLanguageRecordTypes(types, nested, "parent", null, null), []);
+  assert.deepEqual(filterLanguageRecordTypes(types, nested, "parent", null, "restricted-child"), [types[1]]);
+});

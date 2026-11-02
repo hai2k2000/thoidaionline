@@ -113,6 +113,9 @@ test("release metadata uses the complete ordered migration reference", () => {
     assert.ok(migrations.includes("supabase/migrations/20261102170000_database_management_v1_to_tieng_viet_forms.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261102190000_database_management_v1_gopy_dot1_forms.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261103100000_database_management_v1_p3_tong_hop_subgroups.sql"));
+    assert.ok(migrations.includes("supabase/migrations/20261103120000_database_management_v1_doan_the_parent.sql"));
+    assert.match(packager, /20261103120000_database_management_v1_doan_the_parent\.sql/);
+    assert.match(verifier, /20261103120000_database_management_v1_doan_the_parent\.sql/);
     assert.match(packager, /20261103100000_database_management_v1_p3_tong_hop_subgroups\.sql/);
   assert.match(verifier, /20261103100000_database_management_v1_p3_tong_hop_subgroups\.sql/);
     assert.ok(migrations.includes("supabase/migrations/20261031140000_duty_roster_status_fix.sql"));
