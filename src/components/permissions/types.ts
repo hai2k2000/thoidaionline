@@ -1,4 +1,13 @@
 export type Scope = "self" | "assigned" | "department" | "all";
+export type CategoryGrantLevel = "none" | "view" | "contribute" | "approve";
+export type CategoryGrant = {
+    category_id: string;
+    level: CategoryGrantLevel;
+    db_categories?: {
+        code: string;
+        name: string;
+    };
+};
 export type CatalogPermission = {
     code: string;
     name: string;

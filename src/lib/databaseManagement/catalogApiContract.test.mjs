@@ -14,7 +14,7 @@ test("catalog API is authenticated, permission checked and no-store", () => {
 });
 
 test("catalog API preserves parent categories needed by the language group selector", () => {
-  assert.match(route, /select\("id,parent_id,code,name,department_id,active,sort_order"\)/);
+  assert.match(route, /select\("id,parent_id,code,name,department_id,active,sort_order,restricted"\)/);
   assert.match(route, /category\.parent_id/);
   assert.match(route, /visibleCategoryIds\.add\(category\.parent_id\)/);
 });

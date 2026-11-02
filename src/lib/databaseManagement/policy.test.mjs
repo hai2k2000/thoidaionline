@@ -1,20 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canAccessRecordType, canAccessSensitiveRecordType, isSensitiveRecordType, isSensitiveRecordTypeCode, SENSITIVE_RECORD_PERMISSION } from "./policy.ts";
+import {
+  canAccessRecordType,
+  canApproveRestricted,
+  canContributeRestricted,
+  canSeeRestricted,
+  SENSITIVE_RECORD_PERMISSION,
+} from "./policy.ts";
 
-test("sensitive record types are denied by default, including technical admin", () => {
-  assert.equal(isSensitiveRecordTypeCode("ho_so_dang"), true);
-  assert.equal(canAccessRecordType({ rbacPermissions: ["record.discover"] }, "ho_so_dang"), false);
-  assert.equal(canAccessRecordType({ rbacPermissions: ["record.discover"] }, "van_ban_den"), true);
-});
+test("restricted category grant matrix", () => {
+  const admin = { rbacPermissions: ["record.create", SENSITIVE_RECORD_PERMISSION] };
+  const userA = { rbacPermissions: ["record.create"] };
+  const userB = { rbacPermissions: ["record.create"] };
+  const userC = { rbacPermissions: ["record.create"] };
 
-test("sensitive access requires an explicit owner-approved permission", () => {
-  assert.equal(canAccessSensitiveRecordType({ rbacPermissions: ["record.discover"] }), false);
-  assert.equal(canAccessSensitiveRecordType({ rbacPermissions: [SENSITIVE_RECORD_PERMISSION] }), true);
-});
-
-test("category-based sensitivity covers new types and stays fail-closed", () => {
-  assert.equal(isSensitiveRecordType("dang_dai_hoi", "doan_the_quan_ly"), true);
-  assert.equal(canAccessRecordType({ rbacPermissions: [] }, "dang_dai_hoi", "doan_the_quan_ly"), false);
-  assert.equal(canAccessRecordType({ rbacPermissions: [SENSITIVE_RECORD_PERMISSION] }, "dang_dai_hoi", "doan_the_quan_ly"), true);
+  assert.equal(canSeeRestricted(admin, null), true);
+  assert.equal(canContributeRestricted(admin, null), true);
+  assert.equal(canApproveRestricted(admin, null), true);
+  assert.equal(canSeeRestricted(userA, "view"), true);
+  assert.equal(canContributeRestricted(userA, "view"), false);
+  assert.equal(canApproveRestricted(userA, "view"), false);
+  assert.equal(canSeeRestricted(userB, "approve"), true);
+  assert.equal(canContributeRestricted(userB, "approve"), true);
+  assert.equal(canApproveRestricted(userB, "approve"), true);
+  assert.equal(canSeeRestricted(userB, null), false);
+  assert.equal(canSeeRestricted(userC, null), false);
+  assert.equal(canAccessRecordType(userC, "phap_ly_to_chuc_hoat_dong"), true);
 });

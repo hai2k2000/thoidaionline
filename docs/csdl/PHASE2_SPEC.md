@@ -1,6 +1,6 @@
 # CSDL giai đoạn 2: tách nhóm đoàn thể và phân quyền theo nhóm hồ sơ (bản nháp)
 
-Trạng thái: **nháp, chờ owner chốt các điểm [HỎI OWNER]**. Nguồn: góp ý của Phòng Tổng hợp (người lập: Hoàng Quỳnh Trang).
+Trạng thái: **owner đã chốt 2026-11-02**. Nguồn: góp ý của Phòng Tổng hợp (người lập: Hoàng Quỳnh Trang).
 
 ## 1. Mục tiêu
 1. Tách nhóm "Các tổ chức đoàn thể" (`doan_the_quan_ly`, 16 loại) thành các nhóm riêng, và thêm các nhóm còn thiếu.
@@ -15,8 +15,8 @@ Trạng thái: **nháp, chờ owner chốt các điểm [HỎI OWNER]**. Nguồn
 | `cong_doan` | Công đoàn | có | 5 loại mới, mục 4 |
 | `doan_thanh_nien` | Đoàn Thanh niên | có | `doan_tn_van_ban` hiện có |
 | `cuc_bao_chi` | Hồ sơ, văn bản Cục Báo chí | có | 4 loại `cuc_bc_*` hiện có |
-| `lien_hiep` | Hồ sơ, văn bản Liên hiệp | có [HỎI OWNER] | 6 loại mới: Quyết định; Nghị quyết; Chương trình hành động; Báo cáo định kỳ; Bản tin; Báo cáo theo yêu cầu |
-| `phap_ly_dieu_hanh` | Hồ sơ pháp lý, tổ chức và quản lý điều hành | không [HỎI OWNER] | 3 loại mới, mục 5 |
+| `lien_hiep` | Hồ sơ, văn bản Liên hiệp | có | 6 loại mới: Quyết định; Nghị quyết; Chương trình hành động; Báo cáo định kỳ; Bản tin; Báo cáo theo yêu cầu |
+| `phap_ly_dieu_hanh` | Hồ sơ pháp lý, tổ chức và quản lý điều hành | không | 3 loại mới, mục 5 |
 
 Cách chuyển:
 - Chuyển các loại hiện có sang nhóm mới bằng cách cập nhật `category_id`, đồng thời cập nhật `db_records.category_id` của các hồ sơ thuộc loại đó.
@@ -51,7 +51,7 @@ Quy ước chung:
 
 ## 5. Pháp lý, tổ chức và quản lý điều hành: 3 loại
 1. **Hồ sơ pháp lý và tổ chức hoạt động**: giấy phép hoạt động, quyết định thành lập, chức năng nhiệm vụ, cơ cấu tổ chức. Trường: Loại văn bản; Số, ký hiệu; Cơ quan ban hành; Ngày ban hành; Ngày hiệu lực; Tình trạng hiệu lực.
-2. **Nội quy, quy chế, quy định nội bộ**: nội quy, quy chế làm việc, chi tiêu nội bộ, trả lương, nhuận bút, đề án vị trí việc làm. Trường như mục 1, thêm "Văn bản thay thế/bị thay thế". [HỎI OWNER] Có chuyển loại `quy_che_quy_dinh_quy_trinh` của Tổng hợp sang đây không?
+2. **Nội quy, quy chế, quy định nội bộ**: nội quy, quy chế làm việc, chi tiêu nội bộ, trả lương, nhuận bút, đề án vị trí việc làm. Trường như mục 1, thêm "Văn bản thay thế/bị thay thế". Có chuyển loại `quy_che_quy_dinh_quy_trinh` của Tổng hợp sang đây không?
 3. **Văn bản quản lý, chỉ đạo và điều hành**: quyết định, kế hoạch, thông báo, hướng dẫn do Tạp chí ban hành. Trường: Loại; Số, ký hiệu; Người ký; Ngày ban hành; Đơn vị thực hiện; Thời hạn.
 
 ## 6. Phân quyền theo nhóm hồ sơ
@@ -67,7 +67,7 @@ Quy ước chung:
 
   Người có grant thấy mọi hồ sơ trong nhóm, không phụ thuộc phòng ban.
 - Tạo và sửa hồ sơ trong nhóm hạn chế cần `record.create` cộng grant level `contribute` hoặc `approve`.
-- Duyệt hồ sơ trong nhóm hạn chế cần grant `approve` hoặc Admin. Hồ sơ trong nhóm hạn chế **không** dùng quy tắc trưởng phòng duyệt. [HỎI OWNER]
+- Duyệt hồ sơ trong nhóm hạn chế cần grant `approve` hoặc Admin. Hồ sơ trong nhóm hạn chế **không** dùng quy tắc trưởng phòng duyệt.
 - Catalog: nhóm hạn chế chỉ hiện trong ô chọn khi người dùng có grant `contribute` hoặc `approve`, hoặc là Admin.
 - Giữ predicate 4 code cũ (`ho_so_dang` …) để an toàn.
 

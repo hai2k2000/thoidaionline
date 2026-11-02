@@ -44,7 +44,7 @@ from (values
   ('doan_thanh_nien', '60000000-0000-4000-8000-000000000008'::uuid, 'CP3-SENSITIVE-DOAN', 'restricted-doan-thanh-nien'),
   ('giay_phep_quan_ly_bao_chi', '60000000-0000-4000-8000-000000000009'::uuid, 'CP3-SENSITIVE-GIAY-PHEP', 'restricted-giay-phep-quan-ly-bao-chi')
 ) as v(type_code, id, record_code, title)
-join public.db_categories as c on c.code = 'doan_the_quan_ly'
+join public.db_categories as c on c.restricted = true
 join public.db_record_types as t on t.code = v.type_code and t.active = true
 join public.db_form_definitions as f on f.record_type_id = t.id and f.version = 1 and f.status = 'published'
 on conflict (id) do update set title = excluded.title, summary = excluded.summary, status = excluded.status;
