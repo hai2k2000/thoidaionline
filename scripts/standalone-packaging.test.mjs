@@ -86,6 +86,7 @@ test("controlled deployment exception validator is packaged for the activation g
 
 test("release metadata uses the complete ordered migration reference", () => {
   const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+  const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");
   const migrationBlock = packager.match(/const migrationReference = \[([\s\S]*?)\];/);
   assert.ok(migrationBlock, "migration reference list is defined");
   const migrations = [...migrationBlock[1].matchAll(/"(supabase\/migrations\/[^"\n]+\.sql)"/g)].map((match) => match[1]);
@@ -111,6 +112,9 @@ test("release metadata uses the complete ordered migration reference", () => {
     assert.ok(migrations.includes("supabase/migrations/20261102160000_database_management_v1_p2_form_fields_fix.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261102170000_database_management_v1_to_tieng_viet_forms.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261102190000_database_management_v1_gopy_dot1_forms.sql"));
+    assert.ok(migrations.includes("supabase/migrations/20261103100000_database_management_v1_p3_tong_hop_subgroups.sql"));
+    assert.match(packager, /20261103100000_database_management_v1_p3_tong_hop_subgroups\.sql/);
+  assert.match(verifier, /20261103100000_database_management_v1_p3_tong_hop_subgroups\.sql/);
     assert.ok(migrations.includes("supabase/migrations/20261031140000_duty_roster_status_fix.sql"));
   assert.match(packager, /"migration_reference=" \+ migrationReference\.join\(\",\"\)/);
   assert.doesNotMatch(packager, /20261016110000_asset_locations_expansion\.sql",\s*\n\s*"migration_reference=/);

@@ -42,3 +42,9 @@ test("field help text is presentation metadata and does not change validation", 
   });
   assert.deepEqual(errors, []);
 });
+
+
+test("form validation requires a subcategory when the selected group has children", () => {
+  const errors = validateRecordForm({ mode: "create", categoryId: "parent", requiresSubcategory: true, subcategoryId: "", recordTypeId: "type-1", title: "Hồ sơ", metadata: {}, fields: [] });
+  assert.deepEqual(errors, [{ field: "subcategoryId", code: "required" }]);
+});

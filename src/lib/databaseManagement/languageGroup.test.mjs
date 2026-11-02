@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { categoryCodeForLanguage, filterLanguageRecordTypes, getLanguageOption, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories, sortRecordTypes } from "./languageGroup.mjs";
+import { categoryCodeForLanguage, childCategories, filterLanguageRecordTypes, getLanguageOption, hasSubcategories, isCompatibleLanguageSelection, resolveLanguageCategory, selectableCategories, sortRecordTypes } from "./languageGroup.mjs";
 
 const categories = [
   { id: "root", code: "phong_noi_dung", parent_id: null, name: "Phòng Nội dung" },
@@ -59,4 +59,22 @@ test("backend compatibility accepts only the matching content type family", () =
   assert.equal(isCompatibleLanguageSelection("noi_dung_tieng_anh", "noi_dung_tieng_viet", "en"), false);
   assert.equal(isCompatibleLanguageSelection("tong_hop", "tong_hop", null), true);
   assert.equal(isCompatibleLanguageSelection("tong_hop", "tong_hop", "en"), false);
+});
+
+
+test("subcategories require an explicit child selection and filter record types", () => {
+  const nested = [...categories,
+    { id: "letters", code: "tong_hop_van_thu_luu_tru", parent_id: "other", name: "Văn thư – Lưu trữ", sort_order: 10 },
+    { id: "staff", code: "tong_hop_to_chuc_can_bo", parent_id: "other", name: "Tổ chức – Cán bộ", sort_order: 20 },
+  ];
+  const types = [{ id: "incoming", category_id: "letters", name: "Văn bản đến" }, { id: "contract", category_id: "staff", name: "Hợp đồng" }];
+  assert.deepEqual(childCategories(nested, "other").map((item) => item.id), ["letters", "staff"]);
+  assert.equal(hasSubcategories(nested, nested.find((item) => item.id === "other")), true);
+  assert.deepEqual(filterLanguageRecordTypes(types, nested, "other", null, null), []);
+  assert.deepEqual(filterLanguageRecordTypes(types, nested, "other", null, "letters"), [types[0]]);
+});
+
+test("groups without subcategories keep their existing record type behavior", () => {
+  const types = [{ id: "plain", category_id: "other", name: "Báo cáo" }];
+  assert.deepEqual(filterLanguageRecordTypes(types, categories, "other", null, null), types);
 });

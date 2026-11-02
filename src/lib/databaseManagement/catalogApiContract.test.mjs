@@ -30,3 +30,8 @@ test("record create route preserves dynamic metadata validation fields", () => {
   assert.match(createRoute, /JSON\.parse\(error\.message\.slice/);
   assert.match(createRoute, /fields,?\s*\}, 400/);
 });
+
+test("catalog API does not expose restricted child categories through a visible parent", () => {
+  assert.match(route, /!category\.restricted/);
+  assert.doesNotMatch(route, /category\.parent_id && visibleCategoryIds\.has\(category\.parent_id\)\) visibleCategoryIds\.add\(category\.id\)/);
+});

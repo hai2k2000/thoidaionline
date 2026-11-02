@@ -10,6 +10,14 @@ export function selectableCategories(categories) {
   return categories.filter((category) => category.code !== LEGACY_FOREIGN_CATEGORY_CODE);
 }
 
+export function childCategories(categories, parentId) {
+  return categories.filter((category) => category.parent_id === parentId).sort((left, right) => (left.sort_order ?? Number.POSITIVE_INFINITY) - (right.sort_order ?? Number.POSITIVE_INFINITY) || left.name.localeCompare(right.name));
+}
+
+export function hasSubcategories(categories, category) {
+  return Boolean(category && category.code !== CONTENT_ROOT_CODE && childCategories(categories, category.id).length);
+}
+
 export function sortRecordTypes(recordTypes) {
   return [...recordTypes].sort((left, right) => {
     const leftOrder = left.sort_order ?? Number.POSITIVE_INFINITY;
@@ -54,10 +62,14 @@ export function resolveLanguageCategory(categories, selectedCategoryId, language
   return option ? categories.find((category) => category.parent_id === selected.id && category.code === option.categoryCode) ?? null : null;
 }
 
-export function filterLanguageRecordTypes(recordTypes, categories, selectedCategoryId, languageCode) {
+export function filterLanguageRecordTypes(recordTypes, categories, selectedCategoryId, languageCode, subcategoryId) {
   const selected = categories.find((category) => category.id === selectedCategoryId);
   if (!selected) return [];
-  if (selected.code !== CONTENT_ROOT_CODE) return sortRecordTypes(recordTypes.filter((type) => type.category_id === selected.id));
+  if (selected.code !== CONTENT_ROOT_CODE) {
+    const children = childCategories(categories, selected.id);
+    if (children.length) return subcategoryId ? sortRecordTypes(recordTypes.filter((type) => type.category_id === subcategoryId)) : [];
+    return sortRecordTypes(recordTypes.filter((type) => type.category_id === selected.id));
+  }
   const option = LANGUAGE_OPTIONS.find((item) => item.value === languageCode);
   if (!option) return [];
   const typeCategory = categories.find((category) => category.code === option.typeCategoryCode);

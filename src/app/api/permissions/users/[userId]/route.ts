@@ -31,9 +31,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
       serverSupabase.from("db_department_view_grants").select("department_id").eq("user_id", userId),
       serverSupabase
         .from("db_categories")
-        .select("id,code,name,restricted,parent_id,db_category_access_grants!left(level)")
+        .select("id,code,name,restricted,parent_id,sort_order,db_category_access_grants!left(level)")
         .eq("restricted", true)
-        .is("parent_id", null)
         .eq("db_category_access_grants.user_id", userId)
         .order("sort_order"),
     ]);
@@ -42,17 +41,33 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     if (!user.data) return apiError("not_found", 404);
     if (overrides.error) return rpcFailure(overrides.error);
     if (departments.error || grants.error || categoryGrants.error) return rpcFailure((departments.error ?? grants.error ?? categoryGrants.error)!);
+    const parentIds = [...new Set((categoryGrants.data ?? []).map((category) => category.parent_id).filter(Boolean))] as string[];
+    const parentCategories = parentIds.length
+      ? await serverSupabase.from("db_categories").select("id,name,sort_order").in("id", parentIds)
+      : { data: [], error: null };
+    if (parentCategories.error) return rpcFailure(parentCategories.error);
+    const parentCategoryById = new Map((parentCategories.data ?? []).map((category) => [category.id, category]));
+    const categoryGrantItems = (categoryGrants.data ?? [])
+      .map((category) => {
+        const parentCategory = category.parent_id ? parentCategoryById.get(category.parent_id) : null;
+        return {
+          category,
+          parentCategory,
+          parentSortOrder: parentCategory?.sort_order ?? category.sort_order ?? 0,
+        };
+      })
+      .sort((left, right) => left.parentSortOrder - right.parentSortOrder || (left.parentCategory ? left.category.sort_order ?? 0 : -1) - (right.parentCategory ? right.category.sort_order ?? 0 : -1) || left.category.name.localeCompare(right.category.name));
     return apiJson({
       user: { ...(user.data as unknown as Record<string, unknown>), override_count: overrides.count ?? 0 },
       items: permissions.data ?? [],
       departments: departments.data ?? [],
       departmentViewGrants: (grants.data ?? []).map((row) => row.department_id),
-      categoryGrants: (categoryGrants.data ?? []).map((category) => ({
+      categoryGrants: categoryGrantItems.map(({ category, parentCategory }) => ({
         category_id: category.id,
         level: category.db_category_access_grants?.[0]?.level ?? "none",
         db_categories: {
           code: category.code,
-          name: category.name,
+          name: parentCategory ? `${parentCategory.name} › ${category.name}` : category.name,
           restricted: category.restricted,
         },
       })),

@@ -22,7 +22,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
       serverSupabase.from("db_category_access_grants").select("user_id,category_id,level,granted_by,created_at,updated_at").eq("user_id", userId).eq("category_id", categoryId).maybeSingle(),
     ]);
     if (categoryError || previousError) return rpcFailure((categoryError ?? previousError)!);
-    if (!category || category.parent_id) return apiError("invalid_request", 400);
+    if (!category) return apiError("invalid_request", 400);
     if (level === "none") {
       const result = await serverSupabase.from("db_category_access_grants").delete().eq("user_id", userId).eq("category_id", categoryId);
       if (result.error) return rpcFailure(result.error);
