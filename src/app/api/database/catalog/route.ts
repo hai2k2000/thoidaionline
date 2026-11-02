@@ -2,19 +2,29 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { canAccessRecordType } from "@/lib/databaseManagement/policy";
+import { canSeeRestricted } from "@/lib/databaseManagement/policy";
 
 export async function GET() {
   const actor = await getSessionUser();
   if (!actor) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   if (!actor.rbacPermissions.includes("record.discover")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  const [categories, types, forms] = await Promise.all([
-    serverSupabase.from("db_categories").select("id,parent_id,code,name,department_id,active,sort_order").eq("active", true).order("sort_order"),
+  const [categories, types, forms, categoryGrants] = await Promise.all([
+    serverSupabase.from("db_categories").select("id,parent_id,code,name,department_id,active,sort_order,restricted").eq("active", true).order("sort_order"),
     serverSupabase.from("db_record_types").select("id,category_id,code,name,description,active,sort_order").eq("active", true).order("sort_order", { ascending: true, nullsFirst: false }).order("name", { ascending: true }),
-    serverSupabase.from("db_form_definitions").select("id,record_type_id,version,status,search_config,display_config,db_form_fields(id,field_key,label,data_type,required,searchable,options,validation,hidden,sort_order)").eq("status", "published").eq("version", 1),
+    serverSupabase.from("db_form_definitions").select("id,record_type_id,version,status,search_config,display_config,db_form_fields(id,field_key,label,data_type,required,searchable,options,validation,hidden,sort_order)").eq("status", "published"),
+    serverSupabase.from("db_category_access_grants").select("category_id,level").eq("user_id", actor.id),
   ]);
-  if (categories.error || types.error || forms.error) return NextResponse.json({ error: "catalog_read_failed" }, { status: 500 });
-  const categoryCodes = new Map((categories.data ?? []).map((category) => [category.id, category.code]));
-  const visibleTypes = (types.data ?? []).filter((type) => canAccessRecordType(actor, type.code, categoryCodes.get(type.category_id)));
+  if (categories.error || types.error || forms.error || categoryGrants.error) return NextResponse.json({ error: "catalog_read_failed" }, { status: 500 });
+  const categoryById = new Map((categories.data ?? []).map((category) => [category.id, category]));
+  const grantsByCategory = new Map((categoryGrants.data ?? []).map((grant) => [grant.category_id, grant.level as "view" | "contribute" | "approve"]));
+  const admin = actor.rbacPermissions.includes("record.sensitive.access");
+  const visibleTypes = (types.data ?? []).filter((type) => {
+    const category = categoryById.get(type.category_id);
+    const parent = category?.parent_id ? categoryById.get(category.parent_id) : undefined;
+    const restrictedCategory = category?.restricted ? category : parent?.restricted ? parent : undefined;
+    const grantLevel = restrictedCategory ? grantsByCategory.get(restrictedCategory.id) ?? null : null;
+    return canAccessRecordType(actor, type.code) && (!restrictedCategory || canSeeRestricted(actor, grantLevel) && (admin || grantLevel === "contribute" || grantLevel === "approve"));
+  });
   const visibleTypeIds = new Set(visibleTypes.map((type) => type.id));
   const visibleForms = (forms.data ?? []).filter((form) => visibleTypeIds.has(form.record_type_id));
   const needsDepartments = visibleForms.some((form) => (form.db_form_fields ?? []).some((field) => field.data_type === "department"));

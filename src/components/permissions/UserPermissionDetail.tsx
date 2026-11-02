@@ -2,6 +2,7 @@
 import { useState } from "react";
 import ApprovalPermissionsCard from "./ApprovalPermissionsCard";
 import OtherPermissionsSection from "./OtherPermissionsSection";
+import CategoryGrantsSection from "./CategoryGrantsSection";
 import PermissionHistoryDrawer from "./PermissionHistoryDrawer";
 import GrantDialog from "./GrantDialog";
 import RevokeDialog from "./RevokeDialog";
@@ -18,7 +19,7 @@ type Props = {
     onBack: () => void;
 };
 export default function UserPermissionDetail({ user, currentUserId, onChanged, onToast, genericModules = [], scopeOptions = {}, onBack }: Props) {
-    const { items, departments, departmentViewGrants, setDepartmentViewGrants, loading, error, setError, load } = usePermissionUserDetail(user.id);
+    const { items, departments, departmentViewGrants, setDepartmentViewGrants, categoryGrants, setCategoryGrants, loading, error, setError, load } = usePermissionUserDetail(user.id);
     const [pending, setPending] = useState<string[]>([]);
     const [history, setHistory] = useState(false);
     const [grantItem, setGrantItem] = useState<PermissionItem | null>(null);
@@ -121,6 +122,16 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
         <OtherPermissionsSection user={user} modules={genericModules} active={user.active} self={self}
           scopeOptions={scopeOptions} pending={pending} onSet={setOther}
           onApplyPreset={applyPreset} presetSaving={presetSaving}/>
+        <CategoryGrantsSection
+          userId={user.id}
+          active={user.active}
+          self={self}
+          grants={categoryGrants}
+          setGrants={setCategoryGrants}
+          onChanged={onChanged}
+          onToast={onToast}
+          onError={setError}
+        />
         <section className="mt-5 rounded-xl border border-slate-200 p-4">
           <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Xem tài liệu của phòng</h3>
             <p className="text-xs text-slate-500">Chỉ áp dụng cho hồ sơ đã duyệt hoặc lưu trữ.</p></div>
@@ -139,4 +150,3 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
       {revokeItem ? <RevokeDialog item={revokeItem} onClose={() => setRevokeItem(null)} onSubmit={submitRevoke}/> : null}
     </div>);
 }
-
