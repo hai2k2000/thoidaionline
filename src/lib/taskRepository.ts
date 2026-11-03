@@ -38,6 +38,8 @@ import type {
 
 const TASK_BASE_FIELDS = [
   "id",
+  "project_id",
+  "project:projects!tasks_project_id_fkey(name)",
   "title",
   "priority",
   "created_at",
@@ -229,6 +231,8 @@ const enrichJournalismList = async (
 
 type TaskAccessRow = {
   id: string;
+  project_id: string | null;
+  projects: { project_members: { user_id: string; role: "lead" | "member"; staff_users: { active: boolean } }[] } | null;
   department_id: string | null;
   created_by: string | null;
   owner_id: string | null;
@@ -424,6 +428,10 @@ const mutation = async <T>(
 
 const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
   id: row.id,
+  projectId: row.project_id,
+  projectMembers: (row.projects?.project_members ?? [])
+    .filter((member) => member.staff_users?.active)
+    .map((member) => ({ userId: member.user_id, role: member.role })),
   departmentId: row.department_id,
   createdBy: row.created_by,
   ownerId: row.owner_id,
@@ -449,11 +457,16 @@ const toAccess = (row: TaskAccessRow): TaskAccessSnapshot => ({
 export const getTaskScopeTerms = async (
   actor: AuthorizationActor,
 ): Promise<RepositoryResult<string[]>> => {
+  const memberships = await serverSupabase.from("project_members")
+    .select("project_id,staff_users!project_members_user_id_fkey!inner(active)").eq("user_id", actor.id).eq("staff_users.active", true);
+  if (memberships.error) return fail(memberships.error);
+  const projectIds = (memberships.data ?? []).map((row) => row.project_id as string);
   if (isCollaboratorRole(actor.roleCode)) {
     const assignments = await serverSupabase.from("task_assignees").select("task_id").eq("user_id", actor.id);
     if (assignments.error) return fail(assignments.error);
     const ids = (assignments.data ?? []).map((row) => row.task_id as string);
-    return ok([`assignee_id.eq.${actor.id}`, `reviewer_id.eq.${actor.id}`, ...(ids.length ? [`id.in.(${ids.join(",")})`] : [])]);
+    const projectTerms = projectIds.length ? [`project_id.in.(${projectIds.join(",")})`] : [];
+    return ok([`assignee_id.eq.${actor.id}`, `reviewer_id.eq.${actor.id}`, ...projectTerms, ...(ids.length ? [`id.in.(${ids.join(",")})`] : [])]);
   }
   if (isTaskRbacV2Enabled()) {
     const rbacActor = await loadRbacActor({ id: actor.id, department_id: actor.departmentId });
@@ -465,6 +478,7 @@ export const getTaskScopeTerms = async (
     const scope = buildTaskListScope(
       rbacActor,
       (assignments.data ?? []).map((row) => row.task_id as string),
+      projectIds,
     );
     if (scope.all) return ok([]);
     if (scope.terms.length === 0) return ok(["id.eq.00000000-0000-0000-0000-000000000000"]);
@@ -485,6 +499,7 @@ export const getTaskScopeTerms = async (
     `assignee_id.eq.${actor.id}`,
     `reviewer_id.eq.${actor.id}`,
   ];
+  if (projectIds.length > 0) terms.push(`project_id.in.(${projectIds.join(",")})`);
   if (
     actor.permissions.can_view_department_tasks
     && actor.departmentId !== null
@@ -646,7 +661,7 @@ export const taskRepository: TaskRepository = {
     const { data, error } = await serverSupabase
       .from("tasks")
       .select(
-        "id,department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id)," +
+        "id,project_id,projects!tasks_project_id_fkey(project_members(user_id,role,staff_users!project_members_user_id_fkey(active))),department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id)," +
         "self_claimable,task_type,status,approval_required,task_status_events(from_status,to_status),task_assignees(user_id,assignment_role),department_plan_items!department_plan_items_linked_task_id_fkey(id,department_plan_id)",
       )
       .eq("id", taskId)

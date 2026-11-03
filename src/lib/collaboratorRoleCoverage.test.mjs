@@ -16,6 +16,19 @@ test("CTV navigation ignores elevated legacy flags", () => {
   const nav = getPhase2Navigation({ roleCode: "cong_tac_vien", canAssignTask: true, canManageUsers: true, canManagePermissions: true, canManageRubrics: true, canEvaluateStep1: true, canEvaluateStep2: true, isDepartmentManager: true });
   assert.deepEqual(nav, { primary: [{ id: "tasks", href: "/my-tasks" }], account: [{ id: "account", href: "/account" }], journalism: [], configuration: [], showEvaluationTab: false });
 });
+test("CTV project navigation requires membership even with a create grant", () => {
+  const access = { roleCode: "cong_tac_vien", canCreateProject: true };
+  assert.equal(getPhase2Navigation(access).primary.some((item) => item.id === "projects"), false);
+  assert.deepEqual(getPhase2Navigation({ ...access, hasProjectMembership: true }).primary, [{ id: "tasks", href: "/my-tasks" }, { id: "projects", href: "/projects" }]);
+});
+test("CTV project membership grants view and comment without management or task participation", () => {
+  const memberTask = { ...task, projectId: "project", projectMembers: [{ userId: id, role: "member" }] };
+  const trimmedActor = { ...actor, permissions: normalizePermissions({ can_comment: true }) };
+  for (const action of ["view", "comment"]) assert.equal(canTaskAction(trimmedActor, memberTask, action), true, action);
+  for (const action of ["assign", "update", "review", "evaluate", "claim", "report", "attachment", "complete_assigned"]) assert.equal(canTaskAction(trimmedActor, memberTask, action), false, action);
+  assert.equal(canTaskAction(trimmedActor, { ...memberTask, projectMembers: [] }, "view"), false);
+  assert.equal(canTaskAction(trimmedActor, { ...memberTask, assigneeId: id }, "report"), true);
+});
 test("creator, owner and department alone do not grant CTV task access", () => {
   assert.equal(canTaskAction(actor, task, "view"), false);
   for (const related of [{ assigneeId: id }, { reviewerId: id }, { participants: [{ userId: id, assignmentRole: "watcher" }] }, { participants: [{ userId: id, assignmentRole: "assignee" }] }]) {
@@ -32,7 +45,7 @@ test("CTV role is excluded from attendance regardless of title", () => {
   assert.equal(isAttendanceListedStaff({ roleCode: "nhan_vien" }), true);
 });
 
-const apiAllowlist = new Set(["auth/session", "auth/logout", "auth/mobile-logout", "account/profile", "account/password", "account/avatar", "tasks", "tasks/[id]", "tasks/[id]/comments", "tasks/[id]/attachments", "tasks/[id]/attachments/[attachmentId]", "tasks/[id]/progress-reports", "tasks/[id]/submit-completion"]);
+const apiAllowlist = new Set(["auth/session", "auth/logout", "auth/mobile-logout", "account/profile", "account/password", "account/avatar", "tasks", "tasks/[id]", "tasks/[id]/comments", "tasks/[id]/attachments", "tasks/[id]/attachments/[attachmentId]", "tasks/[id]/progress-reports", "tasks/[id]/submit-completion", "projects", "projects/[id]", "projects/[id]/members", "projects/[id]/tasks", "projects/access"]);
 test("every API route outside the explicit allowlist is covered by the central guard", () => {
   const proxy = read("src/proxy.ts");
   assert.match(proxy, /"\/api\/:path\*"/);
@@ -47,11 +60,11 @@ test("every API route outside the explicit allowlist is covered by the central g
     assert.equal(allowed, apiAllowlist.has(route), path);
   }
 });
-test("all pages outside task detail and account are denied", () => {
+test("all pages outside task, account and project member views are denied", () => {
   const pages = readdirSync("src/app", { recursive: true }).map(String).map((p) => p.replaceAll("\\", "/")).filter((p) => p.endsWith("page.tsx"));
   for (const page of pages) {
     const route = "/" + page.replace(/\/?page.tsx$/, "");
-    const allowed = ["/my-tasks", "/account", "/tasks/[id]"].includes(route);
+    const allowed = ["/my-tasks", "/account", "/tasks/[id]", "/projects", "/projects/[id]"].includes(route);
     assert.equal(isCollaboratorAllowedPath(route.replace(/\[[^\]]+\]/g, id)), allowed, route);
   }
   assert.match(read("src/app/my-tasks/page.tsx"), /TasksPage searchParams=.*basePath="\/my-tasks"/);

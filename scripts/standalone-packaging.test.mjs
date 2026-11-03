@@ -5,6 +5,17 @@ import test from "node:test";
 const config = readFileSync("next.config.ts", "utf8");
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
+test("CTV and Projects migrations are shipped once in version order in both reference lists", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const ctv = '"supabase/migrations/20261103150000_role_cong_tac_vien.sql"';
+    const projects = '"supabase/migrations/20261103160000_projects_v1.sql"';
+    assert.equal(source.split(ctv).length - 1, 1, file);
+    assert.equal(source.split(projects).length - 1, 1, file);
+    assert.ok(source.indexOf(ctv) < source.indexOf(projects), file);
+  }
+});
+
 test("Next standalone output is enabled", () => assert.match(config, /output:\s*["']standalone["']/));
 test("standalone tracing excludes development-only source payloads", () => assert.match(config, /outputFileTracingExcludes/));
 test("packaging commands exist", () => {
