@@ -72,6 +72,8 @@ function taskScopeMatches(actor: RbacActor, scope: RbacScope, task: Extract<Rbac
 }
 
 export function can(actor: RbacActor, permission: RbacPermissionCode | string, resource?: RbacResource): boolean {
+  if ((permission === "task.view" || permission === "task.comment")
+    && resource?.projectId && resource.projectMemberIds?.includes(actor.id)) return true;
   const scopes = scopesFor(actor, permission);
   if (scopes.length === 0) return false;
   if (!resource) return true;

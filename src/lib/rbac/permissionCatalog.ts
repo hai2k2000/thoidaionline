@@ -1,4 +1,5 @@
 export const RBAC_PERMISSION_CODES = [
+  "project.create",
   "task.view",
   "task.create",
   "task.quick_report.create",

@@ -20,6 +20,8 @@ export type TaskParticipant = {
 
 export type TaskAccessSnapshot = {
   id: string;
+  projectId?: string | null;
+  projectMembers?: { userId: string; role: "lead" | "member" }[];
   departmentId: string | null;
   createdBy: string | null;
   ownerId: string | null;
@@ -147,8 +149,12 @@ export function canTaskAction(
   task: TaskAccessSnapshot,
   action: TaskAction,
 ): boolean {
+  const projectMember = task.projectId
+    ? task.projectMembers?.find((member) => member.userId === actor.id)
+    : undefined;
   if (action === "view") {
     return hasOrganizationTaskView(actor)
+      || Boolean(projectMember)
       || isRelated(actor, task)
       || (
         actor.permissions.can_view_department_tasks
@@ -189,6 +195,7 @@ export function canTaskAction(
         && task.assigneeId === actor.id
         && !["new", "waiting", "pending_review", "done", "cancelled"].includes(task.status);
     case "review":
+      if (task.projectId) return projectMember?.role === "lead";
       return actor.roleCode === "admin"
         || (task.approvalRequired === true
           && ["tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode)
@@ -202,7 +209,7 @@ export function canTaskAction(
           )
         );
     case "comment":
-      return actor.permissions.can_comment
+      return Boolean(projectMember) || actor.permissions.can_comment
         && canTaskAction(actor, task, "view");
     case "attachment":
       return actor.roleCode === "admin"

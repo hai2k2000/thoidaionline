@@ -5,6 +5,13 @@ import test from "node:test";
 const config = readFileSync("next.config.ts", "utf8");
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
+test("Projects P1 migration is shipped in both migration reference lists", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    assert.ok(source.includes('"supabase/migrations/20261103160000_projects_v1.sql"'), file);
+  }
+});
+
 test("Next standalone output is enabled", () => assert.match(config, /output:\s*["']standalone["']/));
 test("standalone tracing excludes development-only source payloads", () => assert.match(config, /outputFileTracingExcludes/));
 test("packaging commands exist", () => {

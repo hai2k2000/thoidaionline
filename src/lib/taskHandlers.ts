@@ -51,6 +51,8 @@ const shadowTaskAction = async (
       rbac: can(rbacActor, permission, {
         kind: "task",
         id: task.id,
+        projectId: task.projectId,
+        projectMemberIds: task.projectMembers?.map((member) => member.userId),
         departmentId: task.departmentId,
         createdBy: task.createdBy,
         ownerId: task.ownerId,
@@ -82,6 +84,8 @@ export const taskHandlers = createTaskApplication({
     const resource = task ? {
       kind: "task" as const,
       id: task.id,
+      projectId: task.projectId,
+      projectMemberIds: task.projectMembers?.map((member) => member.userId),
       departmentId: task.departmentId,
       createdBy: task.createdBy,
       ownerId: task.ownerId,
