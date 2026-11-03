@@ -81,3 +81,29 @@ export function orderCategoriesForFilter(categories) {
   const roots = visible.filter((category) => !category.parent_id).sort((left, right) => (left.sort_order ?? Number.POSITIVE_INFINITY) - (right.sort_order ?? Number.POSITIVE_INFINITY) || left.name.localeCompare(right.name));
   return roots.flatMap((root) => [root, ...childCategories(visible, root.id)]);
 }
+
+export function resolveCategoryFilter(categories, categoryId, languageCode) {
+  const visible = selectableCategories(categories);
+  const selected = visible.find((category) => category.id === categoryId);
+  if (!selected) return { rootId: "", subId: "", mode: "none", subOptions: [] };
+  const root = selected.parent_id ? visible.find((category) => category.id === selected.parent_id) : selected;
+  if (!root) return { rootId: selected.id, subId: "", mode: "none", subOptions: [] };
+  if (root.code === CONTENT_ROOT_CODE) return { rootId: root.id, subId: selected.parent_id ? languageCodeForCategory(selected.code) ?? "" : languageCode ?? "", mode: "language", subOptions: LANGUAGE_OPTIONS.map((item) => ({ value: item.value, label: item.label })) };
+  const subOptions = childCategories(visible, root.id).map((category) => ({ value: category.id, label: category.name }));
+  return { rootId: root.id, subId: selected.parent_id ? selected.id : "", mode: subOptions.length ? "children" : "none", subOptions };
+}
+
+export function recordTypesForFilter(recordTypes, categories, categoryId, languageCode) {
+  const resolved = resolveCategoryFilter(categories, categoryId, languageCode);
+  if (!resolved.rootId) return sortRecordTypes(recordTypes);
+  if (resolved.mode === "language") {
+    if (resolved.subId) return filterLanguageRecordTypes(recordTypes, categories, resolved.rootId, resolved.subId);
+    const categoryIds = categories.filter((category) => LANGUAGE_OPTIONS.some((option) => option.typeCategoryCode === category.code)).map((category) => category.id);
+    return sortRecordTypes(recordTypes.filter((type) => categoryIds.includes(type.category_id)));
+  }
+  if (resolved.mode === "children") {
+    const ids = resolved.subId ? [resolved.subId] : resolved.subOptions.map((item) => item.value);
+    return sortRecordTypes(recordTypes.filter((type) => ids.includes(type.category_id)));
+  }
+  return sortRecordTypes(recordTypes.filter((type) => type.category_id === resolved.rootId));
+}

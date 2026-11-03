@@ -70,7 +70,10 @@ test("record form only lists child categories that contain record types", () => 
   assert.match(page, /recordTypes\.some\(\(type\) => type\.category_id === category\.id\)/);
 });
 
-test("record list shows non-language child categories beneath their parent", () => {
-  assert.match(listPage, /category.parent_id !== contentRoot\?.id/);
-  assert.ok(listPage.includes("\u2014 "));
+test("record list separates root categories from their child selector", () => {
+  assert.match(listPage, /selectableCategories\(categories\)\.filter\(\(category\) => !category\.parent_id\)/);
+  assert.match(listPage, /resolved\.mode === "children"/);
+  assert.match(listPage, /value=\{resolved\.rootId\}/);
+  assert.match(listPage, /value=\{resolved\.subId\}/);
+  assert.ok(!listPage.includes("— $" + "{"));
 });
