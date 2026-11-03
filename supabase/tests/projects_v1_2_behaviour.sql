@@ -83,31 +83,42 @@ begin
   perform pg_temp.expect_state(format('update public.tasks set reviewer_id=null where id=%L',t.id),'42501');
   perform pg_temp.expect_state(format('update public.tasks set project_id=null,reviewer_id=%L where id=%L',lead_id,t.id),'42501');
   perform pg_temp.expect_state(format('update public.tasks set self_claimable=true,assignment_mode=''multi_user'' where id=%L',t.id),'22023');
-  update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
+  update public.tasks set status='in_progress' where id=t.id;
+  t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
   perform pg_temp.expect_state(format('select public.api_review_task_completion(%L,%L,''reject'',''Revise'')',second_lead,t.id),'42501');
-  perform public.api_score_task_completion(lead_id,t.id,'[]'::jsonb,60,20,20);
+  perform public.api_review_assigned_task_completion(lead_id,t.id,'approve');
   if not exists(select 1 from public.tasks where id=t.id and status='done') then raise exception 'Cross-department lead scoring/review failed'; end if;
   -- Approval-required project rows must use the same project authorization.
   update public.tasks set approval_required=true,status='waiting' where id=t.id;
   perform pg_temp.expect_state(format('select public.api_approve_task_claim(%L,%L,''approve'')',second_lead,t.id),'42501');
   t:=public.api_approve_task_claim(lead_id,t.id,'approve');
   if t.status<>'in_progress' then raise exception 'Project assignment approval failed'; end if;
-  update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
+  update public.tasks set status='in_progress' where id=t.id;
+  t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
   perform pg_temp.expect_state(format('select public.api_review_assigned_task_completion(%L,%L,''approve'')',second_lead,t.id),'42501');
-  perform public.api_score_task_completion(lead_id,t.id,'[]'::jsonb,60,20,20);
+  perform public.api_review_assigned_task_completion(lead_id,t.id,'approve');
   if not exists(select 1 from public.tasks where id=t.id and status='done') then raise exception 'Project approval-required completion failed'; end if;
   t:=public.api_assign_project_task(creator,p.id,'Admin assigned','Requirements',ctv_id,creator,current_date,'17:00');
   if t.reviewer_id<>creator then raise exception 'Admin self reviewer rejected'; end if;
   perform public.api_assert_task_action(creator,t.id,'review');
-  update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
-  insert into public.task_completion_scores(task_id,reviewer_id,requirement_results,requirement_score,collaboration_score,initiative_score)
-  values(t.id,creator,'[]'::jsonb,0,20,20)
-  on conflict (task_id) do update set reviewer_id=excluded.reviewer_id,updated_at=now();
-  t:=public.api_review_task_completion(creator,t.id,'reject','Revise');
-  if t.status<>'rejected' then raise exception 'Admin review failed'; end if;
-  update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
+  update public.tasks set status='in_progress' where id=t.id;
+  t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
+  perform pg_temp.expect_state(format('select public.api_review_assigned_task_completion(%L,%L,''return'','' '')',lead_id,t.id),'22023');
+  t:=public.api_review_task_completion(lead_id,t.id,'reject','Revise project work');
+  if t.status<>'in_progress' then raise exception 'Lead rejection failed'; end if;
+  if not exists(select 1 from public.task_comments where task_id=t.id and content='Revise project work') then raise exception 'Rejection comment missing'; end if;
+  t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
+  if t.status<>'pending_review' then raise exception 'Resubmission failed'; end if;
+  perform pg_temp.expect_state(format('select public.api_score_task_completion(%L,%L,''[]''::jsonb,60,20,20)',creator,t.id),'22023');
+  t:=public.api_review_task_completion(creator,t.id,'approve');
+  if t.status<>'done' or t.progress_percent<>100 then raise exception 'Score-free admin approval failed'; end if;
+  if exists(select 1 from public.task_completion_scores s join public.tasks task on task.id=s.task_id where task.project_id=p.id) then raise exception 'Project score leaked'; end if;
+  -- The original non-project trigger still requires a fresh score.
+  update public.tasks set project_id=null,reviewer_id=null,approval_required=false,status='in_progress' where id=t.id;
+  t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
+  perform pg_temp.expect_state(format('select public.api_review_assigned_task_completion(%L,%L,''approve'')',creator,t.id),'22023');
   perform public.api_score_task_completion(creator,t.id,'[]'::jsonb,60,20,20);
-  if not exists(select 1 from public.tasks where id=t.id and status='done') then raise exception 'Admin scoring/review failed'; end if;
+  if not exists(select 1 from public.tasks where id=t.id and status='done') then raise exception 'Non-project score approval failed'; end if;
   perform public.api_assert_project_library(creator,p.id,true);
   f:=public.api_create_project_library_folder(creator,p.id,'Admin folder',null);
   item:=public.api_add_project_library_item(member_id,p.id,f.id,'link','Test',null,'https://example.com');

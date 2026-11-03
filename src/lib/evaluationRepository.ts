@@ -101,7 +101,7 @@ export const evaluationRepository = {
     });
     const items = await Promise.all(visible.map(async (row): Promise<EvaluationItem> => {
       const cycle = row.performance_cycles!;
-      const evidenceResult = await serverSupabase.from("task_assignees").select("tasks!inner(id,title,status,due_date,start_date)").eq("user_id", row.employee_id);
+      const evidenceResult = await serverSupabase.from("task_assignees").select("tasks!inner(id,title,status,due_date,start_date)").is("tasks.project_id", null).eq("user_id", row.employee_id);
       const evidence = ((evidenceResult.data ?? []) as unknown as { tasks: EvaluationEvidence & { start_date: string | null } }[])
         .map((entry) => entry.tasks).filter((task) => (!task.start_date || task.start_date <= cycle.end_date) && (!task.due_date || task.due_date >= cycle.start_date));
       const ownUnpublished = row.employee_id === actor.id && row.status !== "published";

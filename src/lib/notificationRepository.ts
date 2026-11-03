@@ -15,6 +15,7 @@ export type NotificationItem = {
 };
 
 type TaskRow = {
+  project_id: string | null;
   id: string;
   title: string;
   status: string;
@@ -50,7 +51,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short",
 }).format(new Date(`${value}T12:00:00+07:00`));
 
-const taskSelect = "id,title,status,due_date,created_at,updated_at,created_by,owner_id,assignee_id,reviewer_id";
+const taskSelect = "id,project_id,title,status,due_date,created_at,updated_at,created_by,owner_id,assignee_id,reviewer_id";
 const assignmentCutoff = () => new Date(Date.now() - 30 * 86400000).toISOString();
 const chunks = <T,>(items: T[], size = 40) => Array.from({ length: Math.ceil(items.length / size) }, (_, index) => items.slice(index * size, (index + 1) * size));
 
@@ -159,7 +160,7 @@ export const notificationRepository = {
         key: `status:${row.id}`,
         kind: "status",
         title: "Trạng thái công việc thay đổi",
-        message: `${taskTitle(row.task_id)} → ${statusLabels[row.to_status] ?? row.to_status}${row.reason ? ` · ${row.reason}` : ""}`,
+        message: `${taskTitle(row.task_id)} → ${taskMap.get(row.task_id)?.project_id && row.to_status === "pending_review" ? "Chờ duyệt" : statusLabels[row.to_status] ?? row.to_status}${row.reason ? ` · ${row.reason}` : ""}`,
         href: href(row.task_id), createdAt: row.created_at, unread: true, rank: 1,
       });
     }

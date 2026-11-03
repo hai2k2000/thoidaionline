@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (period === "year") { from = `${now.getFullYear()}-01-01`; to = `${now.getFullYear()}-12-31`; }
   const { data: cycles } = await serverSupabase.from("performance_cycles").select("id,name,start_date,end_date,status").order("start_date", { ascending: false });
   if (cycleId !== "all") { const cycle = (cycles as CycleRow[] | null ?? []).find((item) => item.id === cycleId); if (cycle) { from = cycle.start_date; to = cycle.end_date; } }
-  let taskQuery = serverSupabase.from("tasks").select("id,title,status,due_date,due_time,assignee_id,completion_score:task_completion_scores(total_score)").eq("task_category", "regular").neq("status", "cancelled");
+  let taskQuery = serverSupabase.from("tasks").select("id,title,status,due_date,due_time,assignee_id,completion_score:task_completion_scores(total_score)").is("project_id", null).eq("task_category", "regular").neq("status", "cancelled");
   if (from && to) taskQuery = taskQuery.gte("due_date", from).lte("due_date", to);
   let attendanceQuery = serverSupabase.from("attendance_logs").select("user_id,work_date,status");
   if (from && to) attendanceQuery = attendanceQuery.gte("work_date", from).lte("work_date", to);

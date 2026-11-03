@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 type TaskRow = {
+  project_id?: string | null;
   id: string;
   title: string;
   status: "new" | "in_progress" | "pending_review" | "done" | "rejected";
@@ -77,7 +78,7 @@ export default function ProfilePage() {
     const [taskRes, assetRes] = await Promise.all([
       supabase
         .from("tasks")
-        .select("id,title,status,progress_percent,due_date,owner_id,assignee_id,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),assignee:staff_users!tasks_assignee_id_fkey(full_name),task_assignees(user_id,assignment_role,staff_users(full_name))")
+        .select("id,project_id,title,status,progress_percent,due_date,owner_id,assignee_id,departments(name),owner:staff_users!tasks_owner_id_fkey(full_name),assignee:staff_users!tasks_assignee_id_fkey(full_name),task_assignees(user_id,assignment_role,staff_users(full_name))")
         .order("created_at", { ascending: false })
         .limit(500),
       fetch("/api/profile/assets", { cache: "no-store" }).then(async (response) => {
@@ -185,7 +186,7 @@ export default function ProfilePage() {
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{t.title}</span>
                   </td>
                   <td className="px-3 py-2">{t.departments?.name ?? "-"}</td>
-                  <td className="px-3 py-2"><span className={`table-status ${taskStatusTone(t.status)}`}>{statusLabel[t.status]}</span></td>
+                  <td className="px-3 py-2"><span className={`table-status ${taskStatusTone(t.status)}`}>{t.project_id && t.status === "pending_review" ? "Chờ duyệt" : statusLabel[t.status]}</span></td>
                   <td className="px-3 py-2 text-right font-semibold">{t.progress_percent}%</td>
                   <td className="whitespace-nowrap px-3 py-2">{t.due_date ?? "-"}</td>
                 </tr>
@@ -215,7 +216,7 @@ export default function ProfilePage() {
                     <span className="inline-flex items-center rounded border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 px-2 py-1 font-semibold text-orange-800">{t.title}</span>
                   </td>
                   <td className="px-3 py-2">{t.assignee?.full_name ?? "-"}</td>
-                  <td className="px-3 py-2"><span className={`table-status ${taskStatusTone(t.status)}`}>{statusLabel[t.status]}</span></td>
+                  <td className="px-3 py-2"><span className={`table-status ${taskStatusTone(t.status)}`}>{t.project_id && t.status === "pending_review" ? "Chờ duyệt" : statusLabel[t.status]}</span></td>
                   <td className="whitespace-nowrap px-3 py-2">{t.due_date ?? "-"}</td>
                 </tr>
               ))}

@@ -105,6 +105,8 @@ const makeHarness = ({
     claim: (...args) => { calls.push(["claim", ...args]); return result({}); },
     report: (...args) => { calls.push(["report", ...args]); return result({}); },
     review: (...args) => { calls.push(["review", ...args]); return result({}); },
+    reviewAssignedCompletion: (...args) => { calls.push(["reviewAssignedCompletion", ...args]); return result({}); },
+    scoreTaskCompletion: (...args) => { calls.push(["scoreTaskCompletion", ...args]); return result({}); },
     evaluate: (...args) => { calls.push(["evaluate", ...args]); return result({}); },
     submitQualitativeEvaluation: (...args) => { calls.push(["submitQualitativeEvaluation", ...args]); return result({}); },
     comment: (...args) => { calls.push(["comment", ...args]); return result({}); },
@@ -145,6 +147,30 @@ const makeHarness = ({
   });
   return { app, calls, shadowCalls, participantResolutionCalls };
 };
+
+test("project lead and admin review without score; rejection requires a comment", async () => {
+  for (const role of ["nhan_vien", "admin"]) {
+    const harness = makeHarness({
+      mutationActor: makeActor({ role_code: role }),
+      taskAccess: access({ projectId: "project", projectMembers: [{ userId: "actor", role: "lead" }], status: "pending_review" }),
+    });
+    const request = (body) => new Request("https://example.test/api/tasks/review-completion", { method: "POST", body: JSON.stringify(body) });
+    assert.equal((await harness.app.reviewAssignedCompletion(request({ decision: "return" }), taskId)).status, 400);
+    assert.equal((await harness.app.reviewAssignedCompletion(request({ decision: "return", reason: "Revise" }), taskId)).status, 200);
+    assert.equal((await harness.app.reviewAssignedCompletion(request({ decision: "approve" }), taskId)).status, 200);
+    assert.deepEqual(harness.calls, [
+      ["reviewAssignedCompletion", "actor", taskId, "return", "Revise"],
+      ["reviewAssignedCompletion", "actor", taskId, "approve", null],
+    ]);
+  }
+});
+
+test("project member cannot approve through the review API", async () => {
+  const harness = makeHarness({ taskAccess: access({ projectId: "project", projectMembers: [{ userId: "actor", role: "member" }] }) });
+  const response = await harness.app.reviewAssignedCompletion(new Request("https://example.test/api/tasks/review-completion", { method: "POST", body: JSON.stringify({ decision: "approve" }) }), taskId);
+  assert.equal(response.status, 403);
+  assert.deepEqual(harness.calls, []);
+});
 
 test("flag-on mutation denies when RBAC base access is denied even if legacy allows", async () => {
   const harness = makeHarness({

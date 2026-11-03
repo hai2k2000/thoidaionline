@@ -17,7 +17,7 @@ type UserDetail = {
   departments?: { name: string } | null;
 };
 
-type Task = { id: string; title: string; status: string; progress_percent: number; due_date: string | null };
+type Task = { project_id?: string | null; id: string; title: string; status: string; progress_percent: number; due_date: string | null };
 
 const taskStatusLabel: Record<string, string> = {
   new: "Mới",
@@ -48,7 +48,7 @@ export default function UserDetailPage() {
         .single(),
       supabase
         .from("tasks")
-        .select("id,title,status,progress_percent,due_date")
+        .select("id,project_id,title,status,progress_percent,due_date")
         .eq("assignee_id", userId)
         .order("updated_at", { ascending: false }),
     ]);
@@ -108,7 +108,7 @@ export default function UserDetailPage() {
                   {tasks.map((t) => (
                     <tr key={t.id}>
                       <td className="min-w-72 px-3 py-2">{t.title}</td>
-                      <td className="px-3 py-2"><span className={`table-status ${t.status === "done" ? "table-status-success" : t.status === "rejected" ? "table-status-danger" : t.status === "pending_review" ? "table-status-warning" : "table-status-neutral"}`}>{taskStatusLabel[t.status] ?? t.status}</span></td>
+                      <td className="px-3 py-2"><span className={`table-status ${t.status === "done" ? "table-status-success" : t.status === "rejected" ? "table-status-danger" : t.status === "pending_review" ? "table-status-warning" : "table-status-neutral"}`}>{t.project_id && t.status === "pending_review" ? "Chờ duyệt" : taskStatusLabel[t.status] ?? t.status}</span></td>
                       <td className="px-3 py-2 text-right font-semibold">{t.progress_percent}%</td>
                       <td className="whitespace-nowrap px-3 py-2">{t.due_date ?? "-"}</td>
                       <td className="whitespace-nowrap px-3 py-2"><Link href={`/tasks/${t.id}`} className="inline-flex items-center rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-100">Mở</Link></td>

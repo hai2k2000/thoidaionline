@@ -101,7 +101,7 @@ const NON_JOURNALISM_TASK_FIELDS = [
 ].join(",");
 
 const TASK_DETAIL_FIELDS = [
-  ...TASK_BASE_FIELDS,
+  ...TASK_BASE_FIELDS.filter((field) => !field.startsWith("completion_score:")),
   "description",
   "effort_weight",
   "evaluation_criteria",
@@ -703,23 +703,26 @@ export const taskRepository: TaskRepository = {
     const isJournalism = Boolean(journalismScopeResult?.data);
     if (journalismScopeResult?.error) return fail(journalismScopeResult.error);
     if (isJournalism) return ok(null);
-    const [taskResult, commentResult, legacyProgressResult, evaluationResult,
+    const taskResult = await serverSupabase.from("tasks").select(actor?.canAccessJournalism === false ? TASK_BASE_FIELDS.filter((field) => !field.startsWith("completion_score:")).concat(["effort_weight", "owner:staff_users!tasks_owner_id_fkey(full_name)", "reviewer:staff_users!tasks_reviewer_id_fkey(full_name)"]).join(",") : TASK_DETAIL_FIELDS).eq("id", taskId).maybeSingle();
+    if (taskResult.error) return fail(taskResult.error);
+    if (!taskResult.data) return ok(null);
+    const projectTask = (taskResult.data as unknown as TaskListItemDto).project_id != null;
+    const [commentResult, legacyProgressResult, evaluationResult,
       progressResult, qualitativeEvaluationResult, deadlineResult, statusResult,
       attachmentResult, completionScoreResult] = await Promise.all([
-      serverSupabase.from("tasks").select(actor?.canAccessJournalism === false ? TASK_BASE_FIELDS.concat(["effort_weight", "owner:staff_users!tasks_owner_id_fkey(full_name)", "reviewer:staff_users!tasks_reviewer_id_fkey(full_name)"]).join(",") : TASK_DETAIL_FIELDS).eq("id", taskId).maybeSingle(),
       serverSupabase.from("task_comments")
         .select("id,content,created_at,user_id,staff_users(full_name)")
         .eq("task_id", taskId).order("created_at", { ascending: false }),
       serverSupabase.from("task_progress_logs")
         .select("id,old_progress,new_progress,note,created_at,user_id,staff_users!task_progress_logs_user_id_fkey(full_name)")
         .eq("task_id", taskId).order("created_at", { ascending: false }),
-      serverSupabase.from("task_evaluation_checkpoints")
+      projectTask ? Promise.resolve({ data: [], error: null }) : serverSupabase.from("task_evaluation_checkpoints")
         .select("id,task_id,employee_id,reviewer_id,rating,effort_weight,total_score,completion,on_time,opinion,checkpoint_date,is_final,created_at")
         .eq("task_id", taskId).order("checkpoint_date", { ascending: false }).order("created_at", { ascending: false }),
       serverSupabase.from("task_progress_reports")
         .select("id,reported_by,reported_on,report_status,progress_text,blockers,created_at")
         .eq("task_id", taskId).order("reported_on", { ascending: false }).order("created_at", { ascending: false }),
-      serverSupabase.from("task_qualitative_evaluations")
+      projectTask ? Promise.resolve({ data: [], error: null }) : serverSupabase.from("task_qualitative_evaluations")
         .select("id,evaluation_text,evaluation_deadline,evaluation_source,created_at,evaluator:staff_users!task_qualitative_evaluations_evaluator_id_fkey(full_name)")
         .eq("task_id", taskId).order("created_at", { ascending: false }),
       serverSupabase.from("task_deadline_history")
@@ -731,7 +734,7 @@ export const taskRepository: TaskRepository = {
       serverSupabase.from("task_attachments")
         .select("id,file_name,mime_type,size_bytes,created_at,uploaded_by")
         .eq("task_id", taskId).order("created_at", { ascending: false }),
-      serverSupabase.from("task_completion_scores")
+      projectTask ? Promise.resolve({ data: null, error: null }) : serverSupabase.from("task_completion_scores")
         .select("id,requirement_results,requirement_score,collaboration_score,initiative_score,total_score,note,created_at,reviewer:staff_users!task_completion_scores_reviewer_id_fkey(full_name)")
         .eq("task_id", taskId).maybeSingle(),
     ]);
@@ -778,6 +781,7 @@ export const taskRepository: TaskRepository = {
       status_events: (statusResult.data ?? []) as unknown as TaskDetailDto["status_events"],
       attachments: (attachmentResult.data ?? []) as unknown as TaskDetailDto["attachments"],
       completion_score: completionScoreResult.data as unknown as TaskDetailDto["completion_score"],
+      effort_weight: projectTask ? null : (taskResult.data as unknown as TaskDetailDto).effort_weight,
       journalism: (() => {
         const journalism = journalismValue(
           (taskResult.data as unknown as { journalism?: JournalismTaskDetailDto | JournalismTaskDetailDto[] | null }).journalism,

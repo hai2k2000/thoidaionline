@@ -1,4 +1,74 @@
+# Project tasks without scoring - code extension
+
+This section supersedes earlier scoring behaviour notes below. Only migration 20261103200000 was extended. No migration was applied.
+
+## Behaviour and API
+
+Project tasks show approval wording, retain requirements/progress/comments/files/history, and hide scoring forms, scoring requirement controls, score summaries and scoring links. Lead/admin approve with Hoan thanh or reject with Tu choi and a required comment. Rejection returns to in_progress, clears the submission timestamp, records the comment/status event/audit, and permits resubmission. Non-project branches remain unchanged. The mixed task list retains scores only for non-project rows; a project-only list hides the score column entirely. ProjectDetailShell already uses Cho duyet and contains no scoring UI, so it required no edit.
+
+Task detail loads project identity before optional evaluation queries, skips completion/checkpoint/qualitative queries for project tasks, and returns null/empty compatibility fields. The existing review API already accepts decision/reason without scores; runtime handler tests prove that lead/admin can use it and ordinary members cannot.
+
+## SQL and evaluation protection
+
+Changed functions in this extension:
+- api_review_assigned_task_completion: project branch independent of approval_required; required rejection comment, no scoring writes.
+- require_task_score_before_done: bypass only when project_id is non-null; original non-project freshness requirement preserved.
+- api_score_task_completion: explicitly rejects project tasks before writing a score; non-project implementation preserved.
+- api_get_personnel_evaluation_detail: excludes project task evidence.
+- guard_project_task_score_row (new): denies direct INSERT/UPDATE into task_completion_scores for project tasks.
+- guard_project_task_evaluation_row (new): denies direct INSERT/UPDATE into task_evaluation_checkpoints and task_qualitative_evaluations for project tasks.
+
+api_review_task_completion -> review_task_completion already delegates project reviews into api_review_assigned_task_completion; those two definitions are unchanged. Existing task approval authorization remains lead/admin scoped. All new/replaced functions have explicit service-only execute ACLs. Revert restores previous definitions verbatim and drops only the added triggers/functions; source tests check exact restoration. Postcondition checks definitions, trigger presence and ACLs.
+
+No project review inserts performance_review_scores. That table remains employee/cycle-scoped, with no task-derived write chain. Project task evidence is excluded in evaluationRepository, the personnel-detail SQL function and public-evaluation-summary. Existing project score rows are not deleted; they cannot appear in those aggregates or project detail UI. No historical employee-level performance score is rewritten.
+
+## Validation
+
+- Related task/project/evaluation/notification Node suite: 384/384 PASS.
+- Exact Node command extracted from .github/workflows/production-artifact.yml: 72/72 PASS.
+- npx.cmd tsc --noEmit: PASS.
+- npx.cmd eslint touched TS/TSX/MJS files: 0 errors; 6 existing warnings.
+- Behaviour SQL now covers real submit, lead rejection with required comment, resubmit, admin/lead score-free approval, denied project scoring, and non-project score-required approval.
+- Live PostgreSQL behaviour/revert/reapply remains unexecuted because psql/Docker are unavailable offline. Node SQL checks are source contracts, not database execution.
+- No network, commit, push, deploy or production change. One accidental read-only git status command was disclosed.
+
+## Files in this extension
+
+- src/components/TaskDetailShell.tsx
+- src/components/TaskCenterShell.tsx
+- src/components/TaskStatusTablePage.tsx
+- src/components/AdminTaskEditForm.tsx
+- src/app/profile/page.tsx
+- src/app/users/[id]/page.tsx
+- src/lib/notificationRepository.ts
+- src/lib/taskRepository.ts
+- src/lib/evaluationRepository.ts
+- src/app/api/public-evaluation-summary/route.ts
+- supabase/migrations/20261103200000_projects_v1_2_permissions.sql
+- scripts/production/projects-v1-2-revert.sql
+- scripts/production/projects-v1-2/post/20261103200000_projects_v1_2_permissions.sql
+- supabase/tests/projects_v1_2_behaviour.sql
+- scripts/production/projects-v1-2-dryrun.test.mjs
+- src/lib/projectTaskNoScoring.test.mjs
+- src/lib/taskHandlers.test.mjs
+- src/lib/taskManagementUx.test.mjs (align existing CTV restriction assertion)
+- src/lib/taskAssignmentDisplay.test.mjs (dynamic column span assertion)
+- PROJECT_STATUS.md
+- docs/projects-v1-2-report.md
+
+---
+
 # Projects V1.2 permissions
+
+## Reviewer production-schema fix (2026-11-03)
+
+- V1.2 now replaces `validate_task_report_recipient`: project reviewers must be active project leads or admins; deputies are rejected. Non-project validation and the self-claimable assignment-mode check retain their previous behavior.
+- Also replaces `api_approve_task_claim` and `api_review_assigned_task_completion`: their `approval_required` branches use lead/admin authorization for project tasks and retain the previous department authorization for non-project tasks.
+- Inspected `api_review_task_completion`, `review_task_completion`, `api_assert_task_action`, `api_score_task_completion`, `require_task_score_before_done`, task/score constraints and `enforce_assignee_manager_watcher`. These already support the project path or enforce unrelated score/data integrity; no changes needed.
+- Revert restores all three previous function definitions exactly. Postcondition checks trigger binding, project authorization branches and explicit function ACLs. The recipient trigger retains SECURITY INVOKER.
+- SQL behaviour fixtures cover a plain cross-department employee lead scoring/approving, deputy denial, active admin scoring/review, invalid non-project reviewer rejection, inactive/null reviewer rejection, self-claimable validation and both approval-required gates.
+- Validation: `node --test scripts/production/projects-v1-2-dryrun.test.mjs scripts/standalone-packaging.test.mjs` passed 24/24. Live SQL behaviour and restore/apply/revert/reapply were not executed in this offline code-fix session; rerun the prod-schema restore dry-run with these updated artifacts.
+- No git, network or production operations performed.
 
 Implemented in the existing worktree without commit, push, network, SSH or Docker.
 

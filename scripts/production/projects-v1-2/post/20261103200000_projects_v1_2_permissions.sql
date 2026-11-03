@@ -10,6 +10,10 @@ select case when
  and pg_get_functiondef('public.validate_task_report_recipient()'::regprocedure) like '%api_project_is_lead(new.reviewer_id,new.project_id)%'
  and pg_get_functiondef('public.api_approve_task_claim(uuid,uuid,text,text)'::regprocedure) like '%api_project_is_lead(p_actor_id,v.project_id)%'
  and pg_get_functiondef('public.api_review_assigned_task_completion(uuid,uuid,text,text)'::regprocedure) like '%api_project_is_lead(p_actor_id,v_before.project_id)%'
+ and pg_get_functiondef('public.require_task_score_before_done()'::regprocedure) like '%new.project_id is null%'
+ and pg_get_functiondef('public.api_score_task_completion(uuid,uuid,jsonb,numeric,numeric,numeric,text)'::regprocedure) like '%Project tasks cannot be scored%'
+ and pg_get_functiondef('public.api_get_personnel_evaluation_detail(uuid,uuid,date,date)'::regprocedure) like '%task.project_id is null%'
+ and (select count(*) from pg_trigger where tgname in ('guard_project_task_score_row','guard_project_task_evaluation_row') and not tgisinternal and tgenabled='O')=3
  and to_regprocedure('public.api_project_can_assign(uuid,uuid)') is not null
  and to_regprocedure('public.api_list_project_library(uuid,uuid,uuid)') is not null
  and to_regprocedure('public.api_mutate_project_library_folder(uuid,uuid,uuid,text,text,uuid)') is not null
@@ -23,6 +27,11 @@ select case when
    ('public.api_transfer_project_lead(uuid,uuid,uuid,text)'),
    ('public.api_set_user_permission_override(uuid,uuid,text,text,text)'),
    ('public.api_list_user_approval_permissions(uuid,uuid)'),
+   ('public.require_task_score_before_done()'),
+   ('public.guard_project_task_score_row()'),
+   ('public.guard_project_task_evaluation_row()'),
+   ('public.api_score_task_completion(uuid,uuid,jsonb,numeric,numeric,numeric,text)'),
+   ('public.api_get_personnel_evaluation_detail(uuid,uuid,date,date)'),
    ('public.validate_task_report_recipient()'),
    ('public.api_approve_task_claim(uuid,uuid,text,text)'),
    ('public.api_review_assigned_task_completion(uuid,uuid,text,text)'),
