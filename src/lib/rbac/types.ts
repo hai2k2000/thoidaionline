@@ -21,6 +21,7 @@ export type EffectivePermission = {
 export type RbacActor = {
   id: string;
   departmentId: string | null;
+  roleCode?: string;
   grants: readonly RbacGrant[];
   permissions?: readonly EffectivePermission[];
 };

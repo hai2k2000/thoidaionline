@@ -36,7 +36,7 @@ test("eligible legacy plans expose only the existing server-authorized claim rou
   const actions = read("../components/PersonalTaskActions.tsx");
   const page = read("../app/tasks/page.tsx");
   assert.match(shell, /canClaimTasks\s*&&\s*task\.self_claimable/);
-  assert.match(page, /canClaimTasks=\{!\[['"]tong_bien_tap['"],\s*['"]tbt_read_only['"]\]\.includes\(user\.role_code\)\}/);
+  assert.match(page, /canClaimTasks=\{!collaborator && !\[['"]tong_bien_tap['"],\s*['"]tbt_read_only['"]\]\.includes\(user\.role_code\)\}/);
   assert.match(actions, /\/api\/tasks\/claim/);
   assert.match(actions, /Đăng ký nhận việc/);
   assert.match(actions, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);

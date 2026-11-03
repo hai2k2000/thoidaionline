@@ -55,7 +55,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
-      ...(access.hasProjectMembership || access.canCreateProject ? [{ id: "projects", href: "/projects" } as const] : []),
+      ...(access.roleCode === "admin" || access.hasProjectMembership || access.canCreateProject ? [{ id: "projects", href: "/projects" } as const] : []),
       ...(access.isDepartmentManager || ["admin", "tong_bien_tap", "tbt_read_only"].includes(access.roleCode) ? [{ id: "work-report", href: "/reports/work" } as const] : []),
       ...(canAccessDepartmentPlan ? [{ id: "department-plan", href: "/planning/department" } as const] : []),
       { id: "attendance", href: "/my-attendance" },

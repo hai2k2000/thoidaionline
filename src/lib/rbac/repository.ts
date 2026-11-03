@@ -20,7 +20,7 @@ type EffectivePermissionRow = {
 
 export type EffectivePermissionCatalogRow = EffectivePermissionRow;
 
-export async function loadRbacActor(actor: { id: string; department_id: string | null }): Promise<RbacActor> {
+export async function loadRbacActor(actor: { id: string; department_id: string | null; role_code?: string }): Promise<RbacActor> {
   // api_list_role_permission_grants remains a database compatibility wrapper;
   // all new server callers use the deny-aware effective resolver below.
   const { data, error } = await serverSupabase.rpc("api_list_effective_permissions", { p_actor_id: actor.id });
@@ -37,7 +37,7 @@ export async function loadRbacActor(actor: { id: string; department_id: string |
     permissionCode: permission.permissionCode,
     scope,
   })));
-  return { id: actor.id, departmentId: actor.department_id, grants, permissions };
+  return { id: actor.id, departmentId: actor.department_id, roleCode: actor.role_code, grants, permissions };
 }
 
 export async function loadEffectivePermissionCatalog(actor: { id: string }): Promise<EffectivePermissionCatalogRow[]> {

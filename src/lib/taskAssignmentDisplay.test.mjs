@@ -31,7 +31,7 @@ test("summary table hides assignment source and preserves person columns", () =>
   assert.equal((summary.match(/getAssignmentSourceDisplay\(task\)/g) ?? []).length, 1);
   assert.doesNotMatch(summary, /<th[^>]*>Hình thức<\/th>/);
   assert.doesNotMatch(summary, /<dt[^>]*>Hình thức<\/dt>/);
-  assert.match(summary, /colSpan=\{8\}/);
+  assert.match(summary, /colSpan=\{7 \+ Number\(showScoreColumn\) \+ Number\(bulkPrintEnabled\)\}/);
   assert.match(summary, /const semanticAssigner/);
   assert.match(summary, /const assigneeDisplay/);
 });

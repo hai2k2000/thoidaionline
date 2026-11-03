@@ -3,11 +3,12 @@ import type { ServerAuthUser } from "@/lib/serverSession";
 import { projectRepository } from "@/lib/projectRepository";
 import { apiError, rpcFailure } from "@/lib/serverApi";
 
-export const isProjectCreator = (user: Pick<ServerAuthUser, "rbacPermissionScopes">) =>
-  Boolean(user.rbacPermissionScopes["project.create"]?.length);
+export const isProjectCreator = (user: Pick<ServerAuthUser, "rbacPermissionScopes" | "role_code">) =>
+  user.role_code !== "cong_tac_vien" && Boolean(user.rbacPermissionScopes["project.create"]?.length);
 export const projectReader = (user: ServerAuthUser) => ({ id: user.id, roleCode: user.role_code });
 
 export async function requireProjectLead(user: ServerAuthUser, id: string): Promise<Response | null> {
+  if (user.role_code === "admin") return null;
   if (user.role_code === "cong_tac_vien") return apiError("forbidden", 403);
   const result = await projectRepository.listMembers(projectReader(user), id);
   if (!result.ok) return rpcFailure(result.error);
@@ -16,6 +17,7 @@ export async function requireProjectLead(user: ServerAuthUser, id: string): Prom
 }
 
 export async function requireProjectLeadOrDeputy(user: ServerAuthUser, id: string): Promise<Response | null> {
+  if (user.role_code === "admin") return null;
   if (user.role_code === "cong_tac_vien") return apiError("forbidden", 403);
   const result = await projectRepository.listMembers(projectReader(user), id);
   if (!result.ok) return rpcFailure(result.error);

@@ -72,6 +72,7 @@ function taskScopeMatches(actor: RbacActor, scope: RbacScope, task: Extract<Rbac
 }
 
 export function can(actor: RbacActor, permission: RbacPermissionCode | string, resource?: RbacResource): boolean {
+  if (actor.roleCode === "admin" && resource?.projectId && ["task.view", "task.comment", "task.assign", "task.review", "task.edit_all"].includes(permission)) return true;
   if ((permission === "task.view" || permission === "task.comment")
     && resource?.projectId && resource.projectMemberIds?.includes(actor.id)) return true;
   if (resource?.projectId && permission === "task.assign") return Boolean(resource.projectLeadIds?.includes(actor.id) || resource.projectDeputyIds?.includes(actor.id));

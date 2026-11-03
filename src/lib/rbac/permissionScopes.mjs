@@ -2,6 +2,7 @@ const allScopes = ["self", "assigned", "department", "all"];
 
 /** @param {string} code */
 export function supportedScopesForPermission(code) {
+  if (code === "project.create") return ["all"];
   if (["leave.approve", "schedule.business.approve", "schedule.event.approve"].includes(code)) return ["department", "all"];
   if (["task.quick_report.create", "attendance.view_self", "leave.view_self", "schedule.view_self", "record.self_approve"].includes(code)) return ["self", "all"];
   if (code === "attendance.view_all") return ["department", "all"];

@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 type Task = {
+  project_id?: string | null;
   id: string;
   title: string;
   assignee_id?: string | null;
@@ -51,7 +52,7 @@ export default function TaskStatusTablePage({
   const loadData = async () => {
     const { data, error } = await supabase
       .from("tasks")
-      .select("id,title,assignee_id,status,progress_percent,due_date,departments(name),task_assignees(user_id,staff_users(full_name))")
+      .select("id,project_id,title,assignee_id,status,progress_percent,due_date,departments(name),task_assignees(user_id,staff_users(full_name))")
       .order("created_at", { ascending: false })
       .limit(500);
 
@@ -133,7 +134,7 @@ export default function TaskStatusTablePage({
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-semibold ${statusTone[t.status]}`}>
-                          {statusLabel[t.status]}
+                          {t.project_id && t.status === "pending_review" ? "Chờ duyệt" : statusLabel[t.status]}
                         </span>
                       </td>
                     </tr>

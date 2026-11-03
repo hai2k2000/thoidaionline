@@ -19,6 +19,7 @@ export const PERMISSION_PRESETS = [{
   ],
 }];
 export const PERMISSION_GROUP_DEFINITIONS = [
+  { key: "project", label: "Dự án", matches: (code) => code === "project.create" },
   { key: "task", label: "Giao việc", matches: (code) => code.startsWith("task.") },
   { key: "record", label: "Dữ liệu (CSDL)", matches: (code) => code.startsWith("record.") },
   { key: "asset", label: "Tài sản", matches: (code) => code.startsWith("asset.") },
@@ -49,6 +50,12 @@ export const APPROVAL_PERMISSION_LABELS = {
   "schedule.business.approve": "Duyệt kế hoạch công tác cá nhân",
   "schedule.event.approve": "Duyệt kế hoạch tham gia sự kiện cá nhân",
 };
+export const PERMISSION_LABELS = {
+  "project.create": "Tạo dự án",
+};
+export const PERMISSION_DESCRIPTIONS = {
+  "project.create": "Tạo dự án mới và tự động trở thành Trưởng dự án.",
+};
 export const APPROVAL_PERMISSION_DESCRIPTIONS = {
   "leave.approve": "Duyệt đơn xin nghỉ dưới 3 ngày.",
   "schedule.business.approve": "Duyệt kế hoạch công tác cá nhân.",
@@ -61,7 +68,7 @@ export const RESTRICTION_LABELS = {
 };
 
 /** @param {ApprovalPermissionCode|string} code */
-export function defaultGrantScope(code) { return APPROVAL_PERMISSION_CODES.includes(code) || code === "record.approve" ? "department" : null; }
+export function defaultGrantScope(code) { return APPROVAL_PERMISSION_CODES.includes(code) || code === "record.approve" ? "department" : code === "project.create" ? "all" : null; }
 
 /** @param {Scope[]} roleScopes @param {Scope[]} structuralScopes @param {Scope} chosenScope */
 export function isNarrowingAllow(roleScopes = [], structuralScopes = [], chosenScope) {

@@ -11,9 +11,9 @@ export async function POST(request: Request) {
   const guard = await requireMutationActor(); if (!guard.ok) return guard.response;
   if (!isProjectCreator(guard.actor)) return apiError("forbidden",403);
   const body = await readJsonObject(request); const input = parseProject(body);
-  const leadIds = projectIds(body?.leadIds); const memberIds = projectIds(body?.memberIds ?? []); const deputyIds = projectIds(body?.deputyIds ?? []);
-  // P1 has separate create/member RPCs: the caller must be a lead to add initial members.
-  if (!input || !leadIds?.length || !memberIds || !deputyIds || ((memberIds.length || deputyIds.length) && !leadIds.includes(guard.actor.id))) return apiError("invalid_request",400);
+  const requestedLeads = projectIds(body?.leadIds ?? []); const memberIds = projectIds(body?.memberIds ?? []); const deputyIds = projectIds(body?.deputyIds ?? []);
+  if (!input || !requestedLeads || !memberIds || !deputyIds) return apiError("invalid_request",400);
+  const leadIds = [...new Set([guard.actor.id, ...requestedLeads])];
   const options = await projectRepository.options(); if (!options.ok) return rpcFailure(options.error);
   const active = new Set(options.data.people.map((person) => person.id));
   if ([...leadIds,...memberIds,...deputyIds].some((id) => !active.has(id))) return apiError("invalid_request",400);
