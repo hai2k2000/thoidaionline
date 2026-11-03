@@ -75,13 +75,22 @@ begin
   perform public.api_set_project_member(lead_id,p.id,second_lead,'lead');
   perform public.api_set_project_member(lead_id,p.id,tbt_id,'lead');
   update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
+  -- Scores are unique per task; refresh the row even if a prior score survives review.
   insert into public.task_completion_scores(task_id,reviewer_id,requirement_results,requirement_score,collaboration_score,initiative_score)
-  values(t.id,lead_id,'[]'::jsonb,0,20,20);
+  values(t.id,lead_id,'[]'::jsonb,0,20,20)
+  on conflict (task_id) do update set
+    reviewer_id=excluded.reviewer_id,requirement_results=excluded.requirement_results,
+    requirement_score=excluded.requirement_score,collaboration_score=excluded.collaboration_score,
+    initiative_score=excluded.initiative_score,updated_at=now();
   t := public.api_review_task_completion(second_lead,t.id,'reject','Please revise');
   if t.status<>'rejected' then raise exception 'Second lead could not reject'; end if;
   update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
   insert into public.task_completion_scores(task_id,reviewer_id,requirement_results,requirement_score,collaboration_score,initiative_score)
-  values(t.id,lead_id,'[]'::jsonb,0,20,20);
+  values(t.id,lead_id,'[]'::jsonb,0,20,20)
+  on conflict (task_id) do update set
+    reviewer_id=excluded.reviewer_id,requirement_results=excluded.requirement_results,
+    requirement_score=excluded.requirement_score,collaboration_score=excluded.collaboration_score,
+    initiative_score=excluded.initiative_score,updated_at=now();
   t := public.api_review_task_completion(tbt_id,t.id,'approve',null);
   if t.status<>'done' then raise exception 'TBT project lead could not approve'; end if;
   perform public.api_close_project(lead_id,p.id);
