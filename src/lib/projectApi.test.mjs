@@ -12,8 +12,8 @@ async function load(path, deps) {
 const apiError=(code,status)=>Response.json({error:{code}},{status});
 const rpcFailure=e=>apiError('forbidden',e.code==='42501'?403:500);
 const context={params:Promise.resolve({id:'00000000-0000-4000-8000-000000000001'})};
-test('lead guard denies nonmembers, ordinary members and global administrators without lead role',async()=>{
- for(const role of ['ctv','admin','tong_bien_tap']) {
+test('lead guard denies nonmembers, ordinary members and non-admin global roles without lead role',async()=>{
+ for(const role of ['ctv','tong_bien_tap']) {
   const guards=await load('src/lib/projectApiGuards.ts',{apiError,rpcFailure,projectRepository:{listMembers:async()=>({ok:true,data:[{user_id:'actor',role:'member',staff_users:{active:true}}]})}});
   assert.equal((await guards.requireProjectLead({...actor,role_code:role},'project')).status,403);
  }

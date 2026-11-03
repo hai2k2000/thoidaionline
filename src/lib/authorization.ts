@@ -162,6 +162,7 @@ export function canTaskAction(
     if (!["report", "complete_assigned", "comment", "attachment"].includes(action)) return false;
   }
   if (action === "view") {
+    if (actor.roleCode === "admin" && task.projectId) return true;
     return hasOrganizationTaskView(actor)
       || Boolean(projectMember)
       || isRelated(actor, task)
@@ -181,6 +182,7 @@ export function canTaskAction(
 
   switch (action) {
     case "assign":
+      if (actor.roleCode === "admin" && task.projectId) return true;
       if (task.projectId) return projectMember?.role === "lead" || projectMember?.role === "deputy";
       return canAssignToDepartment(actor, task.departmentId);
     case "update":
@@ -205,7 +207,7 @@ export function canTaskAction(
         && task.assigneeId === actor.id
         && !["new", "waiting", "pending_review", "done", "cancelled"].includes(task.status);
     case "review":
-      if (task.projectId) return projectMember?.role === "lead";
+      if (task.projectId) return actor.roleCode === "admin" || projectMember?.role === "lead";
       return actor.roleCode === "admin"
         || (task.approvalRequired === true
           && ["tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode)

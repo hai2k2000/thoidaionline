@@ -1,0 +1,95 @@
+-- Run with psql -X -v ON_ERROR_STOP=1 -f supabase/tests/projects_v1_2_behaviour.sql
+-- against a disposable database containing all migrations. All fixtures roll back.
+begin;
+create function pg_temp.expect_state(p_sql text,p_state text) returns void language plpgsql as $$
+begin
+  begin execute p_sql;
+  exception when others then
+    if sqlstate=p_state then return; end if;
+    raise;
+  end;
+  raise exception 'Expected SQLSTATE % for %',p_state,p_sql;
+end $$;
+
+do $$
+declare
+  host_id uuid; other_id uuid; creator uuid; lead_id uuid; member_id uuid;
+  second_lead uuid; tbt_id uuid; ctv_id uuid; outsider uuid; inactive_id uuid; p public.projects; t public.tasks;
+  employee_role uuid; lead_job uuid; ctv_job uuid; f public.project_library_folders; child public.project_library_folders; item public.project_library_items; auto_item public.project_library_items; attachment uuid;
+  fixture_suffix text := replace(gen_random_uuid()::text,'-','');
+begin
+  insert into public.departments(code,name) values('zz_projects_host_'||fixture_suffix,'Project host') returning id into host_id;
+  insert into public.departments(code,name) values('zz_projects_other_'||fixture_suffix,'Other department') returning id into other_id;
+  select id into employee_role from public.roles where code='nhan_vien';
+  if employee_role is null then raise exception 'Fixture needs nhan_vien role'; end if;
+  select id into lead_job from public.job_titles where code='truong_phong' and active;
+  if lead_job is null then raise exception 'Fixture needs truong_phong job title'; end if;
+  -- ctv is a fixture-only catalog value; production migrations do not seed it.
+  insert into public.job_titles(code,name,display_order,active)
+  values('ctv','Project CTV '||fixture_suffix,999,true)
+  on conflict do nothing;
+  select id into ctv_job from public.job_titles where code='ctv' and active;
+  if ctv_job is null then raise exception 'Fixture needs ctv job title'; end if;
+  insert into public.staff_users(full_name,username,password,role_id,department_id)
+  values('Project admin','zz_projects_admin_'||fixture_suffix,'test-only',(select id from public.roles where code='admin'),host_id) returning id into creator;
+  -- The legacy recipient trigger requires a host-department manager/title.
+  -- Staff insertion synchronizes manager_id from this title; do not set it manually.
+  insert into public.staff_users(full_name,username,password,role_id,department_id,job_title_id)
+  values('Project lead','zz_projects_lead_'||fixture_suffix,'test-only',employee_role,host_id,lead_job) returning id into lead_id;
+  insert into public.staff_users(full_name,username,password,role_id,department_id)
+  values('Project member','zz_projects_member_'||fixture_suffix,'test-only',employee_role,host_id) returning id into member_id;
+  insert into public.staff_users(full_name,username,password,role_id,department_id,job_title_id)
+  values('Project CTV','zz_projects_ctv_'||fixture_suffix,'test-only',employee_role,other_id,ctv_job) returning id into ctv_id;
+  insert into public.staff_users(full_name,username,password,role_id,department_id)
+  values('Project outsider','zz_projects_outsider_'||fixture_suffix,'test-only',employee_role,host_id) returning id into outsider;
+  insert into public.staff_users(full_name,username,password,role_id,department_id,active)
+  values('Inactive','zz_projects_inactive_'||fixture_suffix,'test-only',employee_role,other_id,false) returning id into inactive_id;
+
+  insert into public.staff_users(full_name,username,password,role_id,department_id)
+  values('Second lead','zz_projects_lead2_'||fixture_suffix,'test-only',employee_role,other_id) returning id into second_lead;
+  insert into public.staff_users(full_name,username,password,role_id,department_id)
+  values('TBT lead','zz_projects_tbt_'||fixture_suffix,'test-only',(select id from public.roles where code='tong_bien_tap'),other_id) returning id into tbt_id;
+  -- Role code, not job title, is the CTV authorization boundary.
+  update public.staff_users set role_id=(select id from public.roles where code='cong_tac_vien') where id=ctv_id;
+  perform pg_temp.expect_state(format('select public.api_create_project(%L,''ZZ-DENIED'',''Denied'',null,%L)',member_id,host_id),'42501');
+  perform public.api_set_user_permission_override(creator,member_id,'project.create','allow','all');
+  if not public.api_project_actor_can_create(member_id) then raise exception 'User grant missing'; end if;
+  p:=public.api_create_project(member_id,'ZZ-V12-'||fixture_suffix,'V1.2 test',null,host_id,'{}');
+  if not exists(select 1 from public.project_members where project_id=p.id and user_id=member_id and role='lead') then raise exception 'Creator must automatically lead'; end if;
+  if exists(select 1 from public.project_members where project_id=p.id and user_id=creator) then raise exception 'Admin must remain nonmember'; end if;
+  perform public.api_set_user_permission_override(creator,member_id,'project.create','deny','all');
+  if public.api_project_actor_can_create(member_id) then raise exception 'Deny override ignored'; end if;
+  perform public.api_clear_user_permission_override(creator,member_id,'project.create');
+  if public.api_project_actor_can_create(member_id) then raise exception 'Revocation ignored'; end if;
+  perform pg_temp.expect_state(format('select public.api_set_user_permission_override(%L,%L,''project.create'',''allow'',''all'')',creator,ctv_id),'42501');
+  if public.api_project_actor_can_create(ctv_id) then raise exception 'CTV create allowed'; end if;
+  if exists(select 1 from jsonb_array_elements(public.api_list_user_approval_permissions(creator,ctv_id)) x where x->>'permissionCode'='project.create') then raise exception 'CTV catalog exposed'; end if;
+  perform public.api_set_project_member(creator,p.id,lead_id,'member');
+  perform public.api_set_project_member(creator,p.id,ctv_id,'member');
+  perform pg_temp.expect_state(format('select public.api_transfer_project_lead(%L,%L,%L,''member'')',outsider,p.id,lead_id),'42501');
+  perform pg_temp.expect_state(format('select public.api_transfer_project_lead(%L,%L,%L,''member'')',member_id,p.id,ctv_id),'22023');
+  perform pg_temp.expect_state(format('select public.api_transfer_project_lead(%L,%L,%L,''member'')',member_id,p.id,inactive_id),'22023');
+  perform public.api_transfer_project_lead(member_id,p.id,lead_id,'deputy');
+  if not exists(select 1 from public.project_members where project_id=p.id and user_id=member_id and role='deputy') then raise exception 'Own role was not changed'; end if;
+  if not exists(select 1 from public.project_members where project_id=p.id and user_id=lead_id and role='lead') then raise exception 'New lead missing'; end if;
+  perform pg_temp.expect_state(format('select public.api_transfer_project_lead(%L,%L,%L,''member'')',member_id,p.id,lead_id),'42501');
+  perform public.api_transfer_project_lead(creator,p.id,member_id,'member');
+  if exists(select 1 from public.project_members where project_id=p.id and user_id=creator) then raise exception 'Admin gained membership'; end if;
+  if not exists(select 1 from public.audit_logs where entity_id=p.id and action='transfer_lead') then raise exception 'Transfer audit missing'; end if;
+  perform public.api_update_project(creator,p.id,p.code,'Admin changed name',null,host_id);
+  t:=public.api_assign_project_task(creator,p.id,'Admin assigned','Requirements',ctv_id,creator,current_date,'17:00');
+  if t.reviewer_id<>creator then raise exception 'Admin self reviewer rejected'; end if;
+  perform public.api_assert_task_action(creator,t.id,'review');
+  update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
+  insert into public.task_completion_scores(task_id,reviewer_id,requirement_results,requirement_score,collaboration_score,initiative_score)
+  values(t.id,creator,'[]'::jsonb,0,20,20)
+  on conflict (task_id) do update set reviewer_id=excluded.reviewer_id,updated_at=now();
+  t:=public.api_review_task_completion(creator,t.id,'reject','Revise');
+  if t.status<>'rejected' then raise exception 'Admin review failed'; end if;
+  perform public.api_assert_project_library(creator,p.id,true);
+  f:=public.api_create_project_library_folder(creator,p.id,'Admin folder',null);
+  item:=public.api_add_project_library_item(member_id,p.id,f.id,'link','Test',null,'https://example.com');
+  perform public.api_mutate_project_library_item(creator,p.id,item.id,'delete');
+  perform public.api_close_project(creator,p.id);
+end $$;
+rollback;

@@ -56,6 +56,7 @@ export function canTaskBase(
   permission: string,
   resource?: RbacTaskResource,
 ): boolean {
+  if (actor.roleCode === "admin" && resource?.projectId && ["task.view", "task.comment", "task.assign", "task.review", "task.edit_all"].includes(permission)) return true;
   if ((permission === "task.view" || permission === "task.comment")
     && resource?.projectId && resource.projectMemberIds?.includes(actor.id)) return true;
   const scopes = actor.grants
@@ -81,7 +82,7 @@ export function buildTaskListScope(
 ): { all: boolean; terms: string[] } {
   const grants = actor.grants.filter((grant) => grant.permissionCode === "task.view");
   if (grants.some((grant) => grant.scope === "all")) return { all: true, terms: [] };
-  const terms: string[] = [];
+  const terms: string[] = actor.roleCode === "admin" ? ["project_id.not.is.null"] : [];
   if (projectIds.length > 0) terms.push(`project_id.in.(${projectIds.join(",")})`);
   const scopes = new Set(grants.map((grant) => grant.scope));
   if (scopes.has("self") || scopes.has("assigned")) terms.push(`created_by.eq.${actor.id}`);

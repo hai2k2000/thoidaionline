@@ -1,10 +1,10 @@
 "use client";
 import { useMemo, useState } from "react";
-import { APPROVAL_PERMISSION_CODES, groupPermissions, PERMISSION_PRESETS } from "@/lib/approvalPermissionView.mjs";
+import { APPROVAL_PERMISSION_CODES, groupPermissions, PERMISSION_PRESETS, PERMISSION_LABELS, PERMISSION_DESCRIPTIONS } from "@/lib/approvalPermissionView.mjs";
 import type { PermissionModule, Scope, UserRow } from "./types";
 import PresetDialog from "./PresetDialog";
 const labels: Record<Scope, string> = { self: "Cá nhân", assigned: "Được giao", department: "Phòng ban", all: "Toàn cơ quan" };
-type ViewPermission = { code: string; name?: string };
+type ViewPermission = { code: string; name?: string; description?: string | null };
 type Group = { key: string; label: string; permissions: ViewPermission[] };
 type Props = {
   user: UserRow;
@@ -20,7 +20,14 @@ type Props = {
 export default function OtherPermissionsSection({ user, modules, active, self, scopeOptions, pending = [], onSet, onApplyPreset, presetSaving = false }: Props) {
   const [query, setQuery] = useState(""); const [open, setOpen] = useState<Record<string, boolean>>({});
   const [preset, setPreset] = useState<typeof PERMISSION_PRESETS[number] | null>(null);
-  const permissions = useMemo(() => modules.flatMap((module) => module.permissions).filter((permission) => !APPROVAL_PERMISSION_CODES.includes(permission.code)), [modules]);
+  const permissions = useMemo(() => modules.flatMap((module) => module.permissions)
+    .filter((permission) => !APPROVAL_PERMISSION_CODES.includes(permission.code)
+      && !(user.role_code === "cong_tac_vien" && permission.code === "project.create"))
+    .map(permission => ({
+      ...permission,
+      name: PERMISSION_LABELS[permission.code as keyof typeof PERMISSION_LABELS] ?? permission.name,
+      description: PERMISSION_DESCRIPTIONS[permission.code as keyof typeof PERMISSION_DESCRIPTIONS] ?? permission.description,
+    })), [modules, user.role_code]);
   const groups = groupPermissions(permissions as never) as Group[];
   return <section className="mt-5 rounded-xl border border-slate-200">
     <div className="border-b px-4 py-3 text-sm font-extrabold uppercase tracking-wide">Các quyền khác</div>
@@ -77,7 +84,7 @@ type RowProps = { permission: ViewPermission; user: UserRow; active: boolean; se
 function PermissionRow({ permission, user, active, self, scopeOptions, busy, onSet }: RowProps) {
   const override = user.overrides?.[permission.code]; const state = override?.effect ?? "inherit"; const options = scopeOptions?.[permission.code] ?? ["self", "assigned", "department", "all"];
   return <div className="grid gap-3 border-t py-3 md:grid-cols-[1fr_auto]"><div>
-    <b>{permission.name}</b><p className="font-mono text-xs text-slate-500">{permission.code}</p>
+    <b>{permission.name}</b><p className="text-xs text-slate-600">{permission.description}</p><p className="font-mono text-xs text-slate-500">{permission.code}</p>
   </div><div className="flex flex-wrap items-center gap-2"><select aria-label={`Thiết lập: ${permission.name}`}
     disabled={self || !active || busy} value={state}
     onChange={(event) => onSet(permission.code, event.target.value, override?.scope)}

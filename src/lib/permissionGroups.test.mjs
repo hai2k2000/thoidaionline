@@ -7,7 +7,7 @@ const permissions = RBAC_PERMISSION_CODES.map((code) => ({ code, name: code }));
 
 test("groups preserve the requested order and labels", () => {
   assert.deepEqual(groupPermissions(permissions).map((group) => group.label), [
-    "Giao việc", "Dữ liệu (CSDL)", "Tài sản", "Chấm công & nghỉ phép",
+    "Dự án", "Giao việc", "Dữ liệu (CSDL)", "Tài sản", "Chấm công & nghỉ phép",
     "Lịch & kế hoạch", "Báo chí", "Nhân sự & quản trị", "Phê duyệt đơn và kế hoạch",
   ]);
 });

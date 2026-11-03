@@ -22,7 +22,7 @@ export async function POST(request:Request,{params}:Context){
   // Check membership before storing bytes; the registration RPC rechecks it under lock.
   const members=await projectRepository.listMembers({id:guard.actor.id,roleCode:guard.actor.role_code},id);
   if(!members.ok)return rpcFailure(members.error);
-  if(!members.data.some(m=>m.user_id===guard.actor.id&&m.staff_users?.active))return apiError('forbidden',403);
+  if(guard.actor.role_code!=='admin'&&!members.data.some(m=>m.user_id===guard.actor.id&&m.staff_users?.active))return apiError('forbidden',403);
   const form=await request.formData().catch(()=>null);const file=form?.get('file');const folder=form?.get('folderId');
   if(!(file instanceof File)||invalidId(folder))return apiError('invalid_request',400);
   const metadata=taskAttachmentMetadata(file);if(!metadata)return apiError('invalid_request',400);

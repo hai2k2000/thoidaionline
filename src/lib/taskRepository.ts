@@ -469,7 +469,7 @@ export const getTaskScopeTerms = async (
     return ok([`assignee_id.eq.${actor.id}`, `reviewer_id.eq.${actor.id}`, ...projectTerms, ...(ids.length ? [`id.in.(${ids.join(",")})`] : [])]);
   }
   if (isTaskRbacV2Enabled()) {
-    const rbacActor = await loadRbacActor({ id: actor.id, department_id: actor.departmentId });
+    const rbacActor = await loadRbacActor({ id: actor.id, department_id: actor.departmentId, role_code: actor.roleCode });
     const assignments = await serverSupabase
       .from("task_assignees")
       .select("task_id")

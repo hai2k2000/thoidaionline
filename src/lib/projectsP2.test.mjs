@@ -17,6 +17,8 @@ test('project navigation depends on membership or create permission', async () =
  const {getPhase2Navigation} = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
  const shows = access => getPhase2Navigation({roleCode:'ctv', ...access}).primary.some(i => i.id === 'projects');
  assert.equal(shows({}), false); assert.equal(shows({hasProjectMembership:true}), true); assert.equal(shows({canCreateProject:true}), true);
+ assert.equal(shows({roleCode:'admin',canCreateProject:false,hasProjectMembership:false}), true);
+ assert.equal(shows({roleCode:'tong_bien_tap',canCreateProject:false,hasProjectMembership:false}), false);
 });
 test('project badge is linked and included on task detail and desktop/mobile lists', () => {
  const badge = read('src/components/ProjectBadge.tsx');

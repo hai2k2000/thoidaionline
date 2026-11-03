@@ -107,7 +107,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     ? await serverSupabase.storage.from("profile-avatars").createSignedUrl(row.avatar_path, 3600)
     : null;
 
-  const rbacActor = await loadRbacActor({ id: row.id, department_id: row.department_id });
+  const rbacActor = await loadRbacActor({ id: row.id, department_id: row.department_id, role_code: row.roles.code });
   return {
     id: row.id,
     full_name: row.full_name,

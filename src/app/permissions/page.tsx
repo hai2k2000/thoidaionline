@@ -56,7 +56,8 @@ export default function PermissionsPage() {
     const roles = payload.roles ?? payload.roleCatalog ?? [];
     const users = useMemo(() => payload.users ?? [], [payload.users]);
     const selectedRole = roles.find((entry) => entry.id === selectedRoleId) ?? roles[0];
-    const rolePermissions = (payload.modules ?? []).flatMap((module) => module.permissions);
+    const rolePermissions = (payload.modules ?? []).flatMap((module) => module.permissions)
+        .filter((permission) => selectedRole?.code !== "cong_tac_vien" || permission.code !== "project.create");
     const roleGroups = groupPermissions(rolePermissions as never) as Array<{
         key: string;
         label: string;
