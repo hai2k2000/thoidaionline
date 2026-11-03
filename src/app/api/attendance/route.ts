@@ -8,6 +8,8 @@ import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
 import { classifyAttendanceDay } from "@/lib/attendanceDayStatus.mjs";
 import { attendanceGridDays } from "@/lib/attendanceGridRange.mjs";
 
+type AttendanceStaff = { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown; job_titles?: { code?: string | null } | { code?: string | null }[] | null };
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 type AttendanceRow = {
@@ -27,7 +29,7 @@ type AttendanceRow = {
   workday?: number;
   attendance_sources?: { leave?: boolean; business?: boolean; event?: boolean; online?: boolean };
   day_status?: { code: string; symbol: string; label: string; workday: number };
-  staff_users?: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: { code?: string | null } | { code?: string | null }[] | null } | null;
+  staff_users?: AttendanceStaff | null;
 };
 type StaffRow = { id: string; full_name: string; username: string | null; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown; departments?: { id: string; name: string } | { id: string; name: string }[] | null; job_titles?: { code?: string | null; name: string } | null };
 
@@ -189,14 +191,14 @@ export async function GET(request: Request) {
   }
   let dayQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users!attendance_logs_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users!attendance_logs_user_id_fkey(full_name,attendance_exempt,department_id,roles(code),job_titles(code))")
     .gte("work_date", rangeStart)
     .lte("work_date", rangeEnd)
     .order("check_in", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   let monthQuery = serverSupabase
     .from("attendance_logs")
-    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users!attendance_logs_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))")
+    .select("id,user_id,work_date,check_in,check_out,note,status,late_exception,late_exception_status,staff_users!attendance_logs_user_id_fkey(full_name,attendance_exempt,department_id,roles(code),job_titles(code))")
     .gte("work_date", period === "day" ? monthStart : summaryRangeStart)
     .lte("work_date", period === "day" ? anchorDate : summaryRangeEnd)
     .order("work_date", { ascending: true })
@@ -218,10 +220,10 @@ export async function GET(request: Request) {
   if (dayResult.error || monthResult.error) return apiError("operation_failed", 500);
   const contextStart = period === "day" ? monthStart : summaryRangeStart;
   const contextEnd = period === "day" ? anchorDate : summaryRangeEnd;
-  const adminNoteFields = "id,user_id,work_date,note,created_at,updated_at,staff_users!attendance_admin_notes_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))";
+  const adminNoteFields = "id,user_id,work_date,note,created_at,updated_at,staff_users!attendance_admin_notes_user_id_fkey(full_name,attendance_exempt,department_id,roles(code),job_titles(code))";
   let dayAdminNotesQuery = serverSupabase.from("attendance_admin_notes").select(adminNoteFields).gte("work_date", rangeStart).lte("work_date", rangeEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
   let monthAdminNotesQuery = serverSupabase.from("attendance_admin_notes").select(adminNoteFields).gte("work_date", contextStart).lte("work_date", contextEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
-  const adjustmentFields = "id,user_id,work_date,workday,reason,created_at,updated_at,staff_users!attendance_workday_adjustments_user_id_fkey(full_name,attendance_exempt,department_id,roles(code))";
+  const adjustmentFields = "id,user_id,work_date,workday,reason,created_at,updated_at,staff_users!attendance_workday_adjustments_user_id_fkey(full_name,attendance_exempt,department_id,roles(code),job_titles(code))";
   let dayAdjustmentsQuery = serverSupabase.from("attendance_workday_adjustments").select(adjustmentFields).gte("work_date", rangeStart).lte("work_date", rangeEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
   let monthAdjustmentsQuery = serverSupabase.from("attendance_workday_adjustments").select(adjustmentFields).gte("work_date", contextStart).lte("work_date", contextEnd).order("work_date", { ascending: true }).order("id", { ascending: true });
   if (!organizationScope) {
@@ -233,8 +235,8 @@ export async function GET(request: Request) {
     dayAdjustmentsQuery = dayAdjustmentsQuery.eq("staff_users.department_id", guard.actor.department_id);
     monthAdjustmentsQuery = monthAdjustmentsQuery.eq("staff_users.department_id", guard.actor.department_id);
   }
-  const leaveFields = "id,requester_id,start_date,end_date,start_period,end_period,leave_type,status,requester:staff_users!leave_requests_requester_id_fkey(id,full_name,department_id)";
-  const onlineFields = "id,work_date,staff_id,staff:staff_users!online_work_schedules_staff_id_fkey(id,full_name,department_id)";
+  const leaveFields = "id,requester_id,start_date,end_date,start_period,end_period,leave_type,status,requester:staff_users!leave_requests_requester_id_fkey(id,full_name,department_id,attendance_exempt,roles(code),job_titles(code))";
+  const onlineFields = "id,work_date,staff_id,staff:staff_users!online_work_schedules_staff_id_fkey(id,full_name,department_id,attendance_exempt,roles(code),job_titles(code))";
   const scheduleFields = "id,work_date,end_date,plan_type,title,location,notes,schedule_scope,approval_status,event_assignment_kind,event_status,participant_ids,event_assignments:work_schedule_event_assignments!work_schedule_event_assignments_event_id_fkey(staff_id)";
   const readLeavePages = () => readPages((from, to) => {
     let query = serverSupabase.from("leave_requests").select(leaveFields)
@@ -270,12 +272,12 @@ export async function GET(request: Request) {
     readLeavePages(), readOnlinePages(), readSchedulePages(),
   ]);
   if (dayAdminNotesResult.error || monthAdminNotesResult.error || dayAdjustmentsResult.error || monthAdjustmentsResult.error || leaveResult.error || onlineResult.error || scheduleResult.error) return apiError("operation_failed", 500);
-  const dayAdminNotes = (dayAdminNotesResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; note: string; created_at: string; updated_at: string; staff_users: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown } | null }>;
+  const dayAdminNotes = (dayAdminNotesResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; note: string; created_at: string; updated_at: string; staff_users: AttendanceStaff | null }>;
   const monthAdminNotes = (monthAdminNotesResult.data ?? []) as unknown as typeof dayAdminNotes;
-  const dayAdjustments = (dayAdjustmentsResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; workday: number; reason: string; updated_at: string; created_at: string; staff_users: { full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown } | null }>;
+  const dayAdjustments = (dayAdjustmentsResult.data ?? []) as unknown as Array<{ id: string; user_id: string; work_date: string; workday: number; reason: string; updated_at: string; created_at: string; staff_users: AttendanceStaff | null }>;
   const monthAdjustments = (monthAdjustmentsResult.data ?? []) as unknown as typeof dayAdjustments;
-  const leaves = (leaveResult.data ?? []) as unknown as Array<{ id: string; requester_id: string; start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; requester: { id: string; full_name: string } | null }>;
-  const online = (onlineResult.data ?? []) as unknown as Array<{ id: string; work_date: string; staff_id: string; staff: { id: string; full_name: string } | null }>;
+  const leaves = (leaveResult.data ?? []) as unknown as Array<{ id: string; requester_id: string; start_date: string; end_date: string; start_period: string; end_period: string; leave_type: string; requester: (AttendanceStaff & { id: string }) | null }>;
+  const online = (onlineResult.data ?? []) as unknown as Array<{ id: string; work_date: string; staff_id: string; staff: (AttendanceStaff & { id: string }) | null }>;
   const approvedSchedules = (scheduleResult.data ?? []) as unknown as Array<{
     id: string;
     work_date: string;
@@ -297,7 +299,7 @@ export async function GET(request: Request) {
     : { data: [{ id: guard.actor.id, full_name: guard.actor.full_name, username: guard.actor.username }], error: null };
   if (staffResult.error) return apiError("operation_failed", 500);
   const staffRows: StaffRow[] = organizationScope
-    ? ((staffResult.data ?? []) as Array<{ id: string; full_name: string; username: string | null; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown; departments?: { id: string; name: string } | null }>).filter((staff) => (!departmentScope || staff.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: staff.full_name, attendance_exempt: staff.attendance_exempt, roleCode: roleCodeFromRelation(staff.roles) }))
+    ? ((staffResult.data ?? []) as StaffRow[]).filter((staff) => (!departmentScope || staff.department_id === guard.actor.department_id) && isAttendanceListedStaff({ ...staff, roleCode: roleCodeFromRelation(staff.roles) }))
     : ((staffResult.data ?? []) as StaffRow[]);
   const departmentFor = (staff: StaffRow) => Array.isArray(staff.departments) ? staff.departments[0] ?? null : staff.departments ?? null;
   const leavePeriodsForDate = (leave: typeof leaves[number], workDate: string) => {
@@ -367,7 +369,7 @@ export async function GET(request: Request) {
   };
   // Compatibility markers for the existing attendance static contract: withNotes(items, adminNotes)).filter((row: AttendanceRow) => and workday: calculation.workday.
   const contextRows = (items: AttendanceRow[], from: string, to: string, adminNotes: typeof dayAdminNotes, adjustments: typeof dayAdjustments) => {
-    const result: AttendanceRow[] = filterBusinessAttendanceRows(withNotes(items, adminNotes, adjustments)).filter((row: AttendanceRow) => !organizationScope || (!departmentScope || row.staff_users?.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: row.staff_users?.full_name, attendance_exempt: row.staff_users?.attendance_exempt, roleCode: roleCodeFromRelation(row.staff_users?.roles) }));
+    const result: AttendanceRow[] = filterBusinessAttendanceRows(withNotes(items, adminNotes, adjustments)).filter((row: AttendanceRow) => !organizationScope || (!departmentScope || row.staff_users?.department_id === guard.actor.department_id) && isAttendanceListedStaff({ ...row.staff_users, roleCode: roleCodeFromRelation(row.staff_users?.roles) }));
     const existing = new Set(result.map((row) => `${row.user_id}:${row.work_date}`));
     const dates = (start: string, end: string) => {
       const out: string[] = [];
@@ -375,10 +377,10 @@ export async function GET(request: Request) {
       return out;
     };
     for (const admin of adminNotes) {
-      if (!admin.staff_users || admin.work_date < from || admin.work_date > to || !isAttendanceBusinessDate(admin.work_date) || (organizationScope && (!departmentScope || admin.staff_users.department_id === guard.actor.department_id) && !isAttendanceListedStaff({ full_name: admin.staff_users.full_name, attendance_exempt: admin.staff_users.attendance_exempt, roleCode: roleCodeFromRelation(admin.staff_users.roles) }))) continue;
+      if (!admin.staff_users || admin.work_date < from || admin.work_date > to || !isAttendanceBusinessDate(admin.work_date) || (organizationScope && (!departmentScope || admin.staff_users.department_id === guard.actor.department_id) && !isAttendanceListedStaff({ ...admin.staff_users, roleCode: roleCodeFromRelation(admin.staff_users.roles) }))) continue;
       const key = `${admin.user_id}:${admin.work_date}`;
       if (existing.has(key)) continue;
-      result.push({ id: `admin-note-${admin.user_id}-${admin.work_date}`, user_id: admin.user_id, work_date: admin.work_date, check_in: null, check_out: null, note: "", admin_note: admin.note, admin_note_at: admin.updated_at ?? admin.created_at, has_attendance_log: false, status: "admin_note", staff_users: { full_name: admin.staff_users.full_name }, workday: 0 });
+      result.push({ id: `admin-note-${admin.user_id}-${admin.work_date}`, user_id: admin.user_id, work_date: admin.work_date, check_in: null, check_out: null, note: "", admin_note: admin.note, admin_note_at: admin.updated_at ?? admin.created_at, has_attendance_log: false, status: "admin_note", staff_users: { ...admin.staff_users }, workday: 0 });
       existing.add(key);
     }
     for (const adjustment of adjustments) {
@@ -386,7 +388,7 @@ export async function GET(request: Request) {
       const key = `${adjustment.user_id}:${adjustment.work_date}`;
       const existingRow = result.find((row) => `${row.user_id}:${row.work_date}` === key);
       if (existingRow) { existingRow.workday_adjustment = { workday: Number(adjustment.workday), reason: adjustment.reason }; existingRow.workday = Number(adjustment.workday); existingRow.note = `Điều chỉnh công: ${adjustment.workday} (${adjustment.reason})`; continue; }
-      result.push({ id: `workday-adjustment-${adjustment.user_id}-${adjustment.work_date}`, user_id: adjustment.user_id, work_date: adjustment.work_date, check_in: null, check_out: null, note: `Điều chỉnh công: ${adjustment.workday} (${adjustment.reason})`, admin_note: null, admin_note_at: null, has_attendance_log: false, status: "adjustment", staff_users: { full_name: adjustment.staff_users.full_name }, workday: Number(adjustment.workday), workday_adjustment: { workday: Number(adjustment.workday), reason: adjustment.reason } });
+      result.push({ id: `workday-adjustment-${adjustment.user_id}-${adjustment.work_date}`, user_id: adjustment.user_id, work_date: adjustment.work_date, check_in: null, check_out: null, note: `Điều chỉnh công: ${adjustment.workday} (${adjustment.reason})`, admin_note: null, admin_note_at: null, has_attendance_log: false, status: "adjustment", staff_users: { ...adjustment.staff_users }, workday: Number(adjustment.workday), workday_adjustment: { workday: Number(adjustment.workday), reason: adjustment.reason } });
       existing.add(key);
     }
     for (const leave of leaves) {
@@ -399,7 +401,7 @@ export async function GET(request: Request) {
         const leavePeriods = leavePeriodsForDate(leave, workDate);
         const leaveIsFull = leavePeriods.every((period) => period === "full");
             const workday = leaveIsFull ? 1 : 0.5;
-      result.push({ id: `leave-${leave.requester.id}-${workDate}`, user_id: leave.requester.id, work_date: workDate, check_in: null, check_out: null, note: label, status: leave.leave_type === "business" ? "present" : "leave", staff_users: { full_name: leave.requester.full_name }, workday, has_attendance_log: false, attendance_sources: leave.leave_type === "business" ? { business: true } : { leave: true } });
+      result.push({ id: `leave-${leave.requester.id}-${workDate}`, user_id: leave.requester.id, work_date: workDate, check_in: null, check_out: null, note: label, status: leave.leave_type === "business" ? "present" : "leave", staff_users: { ...leave.requester }, workday, has_attendance_log: false, attendance_sources: leave.leave_type === "business" ? { business: true } : { leave: true } });
         existing.add(key);
       }
     }
@@ -408,7 +410,7 @@ export async function GET(request: Request) {
       if (onlineRow.work_date < from || onlineRow.work_date > to || !isAttendanceBusinessDate(onlineRow.work_date)) continue;
       const key = `${onlineRow.staff.id}:${onlineRow.work_date}`;
       if (existing.has(key)) continue;
-      result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { full_name: onlineRow.staff.full_name }, workday: 1, has_attendance_log: false, attendance_sources: { online: true } });
+      result.push({ id: `online-${onlineRow.staff.id}-${onlineRow.work_date}`, user_id: onlineRow.staff.id, work_date: onlineRow.work_date, check_in: null, check_out: null, note: "Làm việc online", status: "present", staff_users: { ...onlineRow.staff }, workday: 1, has_attendance_log: false, attendance_sources: { online: true } });
       existing.add(key);
     }
     for (const event of approvedSchedules.filter((schedule) => schedule.event_assignment_kind === "leadership" && schedule.plan_type === "event")) {
@@ -418,14 +420,14 @@ export async function GET(request: Request) {
       ]));
       for (const participantId of participantIds) {
         const staff = staffRows.find((item) => item.id === participantId);
-        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, roleCode: "employee" }))) continue;
+        if (!staff || (organizationScope && !isAttendanceListedStaff({ ...staff, roleCode: roleCodeFromRelation(staff.roles) }))) continue;
         for (const workDate of dates(event.work_date < from ? from : event.work_date, event.end_date > to ? to : event.end_date)) {
           if (!isAttendanceBusinessDate(workDate)) continue;
           const key = `${participantId}:${workDate}`;
           if (existing.has(key)) continue;
           const eventNotes = attendanceScheduleNoteEntriesFor([event], participantId, workDate).map((entry) => entry.text);
           if (!eventNotes.length) continue;
-          result.push({ id: `event-${event.id}-${participantId}-${workDate}`, user_id: participantId, work_date: workDate, check_in: null, check_out: null, note: eventNotes.join("; "), status: "present", staff_users: { full_name: staff.full_name }, workday: 1, has_attendance_log: false, attendance_sources: { event: true } });
+          result.push({ id: `event-${event.id}-${participantId}-${workDate}`, user_id: participantId, work_date: workDate, check_in: null, check_out: null, note: eventNotes.join("; "), status: "present", staff_users: { ...staff }, workday: 1, has_attendance_log: false, attendance_sources: { event: true } });
           existing.add(key);
         }
       }
@@ -434,7 +436,7 @@ export async function GET(request: Request) {
       const participantIds = Array.from(new Set(schedule.participant_ids ?? []));
       for (const participantId of participantIds) {
         const staff = staffRows.find((item) => item.id === participantId);
-        if (!staff || (organizationScope && !isAttendanceListedStaff({ full_name: staff.full_name, roleCode: "employee" }))) continue;
+        if (!staff || (organizationScope && !isAttendanceListedStaff({ ...staff, roleCode: roleCodeFromRelation(staff.roles) }))) continue;
         for (const workDate of dates(schedule.work_date < from ? from : schedule.work_date, schedule.end_date > to ? to : schedule.end_date)) {
           if (!isAttendanceBusinessDate(workDate)) continue;
           const key = `${participantId}:${workDate}`;
@@ -450,7 +452,7 @@ export async function GET(request: Request) {
             note: entries.map((entry) => entry.text).join("; "),
             status: "present",
             has_attendance_log: false,
-            staff_users: { full_name: staff.full_name },
+            staff_users: { ...staff },
             workday: 1,
             attendance_sources: { business: entries.some((entry) => entry.kind === "business"), event: entries.some((entry) => entry.kind === "event") },
           });
@@ -465,7 +467,7 @@ export async function GET(request: Request) {
           if (dayOfWeek === 0 || dayOfWeek === 6) continue;
           const key = `${staff.id}:${workDate}`;
           if (existing.has(key)) continue;
-          result.push({ id: `absent-${staff.id}-${workDate}`, user_id: staff.id, work_date: workDate, check_in: null, check_out: null, note: "Vắng", status: "absent", staff_users: { full_name: staff.full_name }, workday: 0 });
+          result.push({ id: `absent-${staff.id}-${workDate}`, user_id: staff.id, work_date: workDate, check_in: null, check_out: null, note: "Vắng", status: "absent", staff_users: { ...staff }, workday: 0 });
           existing.add(key);
         }
       }
@@ -493,6 +495,8 @@ export async function GET(request: Request) {
       row.status = dayStatus.code === "leave_full" || dayStatus.code === "leave_half" ? "leave" : dayStatus.code;
     }
     const filtered = result.filter((row) => {
+      // Apply visibility after synthetic rows are materialized as well as to logs.
+      if (organizationScope && ((departmentScope && row.staff_users?.department_id !== guard.actor.department_id) || !isAttendanceListedStaff({ ...row.staff_users, roleCode: roleCodeFromRelation(row.staff_users?.roles) }))) return false;
       if (staffId && row.user_id !== staffId) return false;
       if (departmentId && row.staff_users?.department_id !== departmentId) return false;
       if (!statusFilter) return true;
