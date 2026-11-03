@@ -24,6 +24,21 @@ test("dry-run isolates disposable postgres and refuses leftovers", () => {
   assert.doesNotMatch(script, /systemctl/);
 });
 
+test("restore tolerates dump compatibility errors but requires application tables and migration rows", () => {
+  const restore = script.slice(script.indexOf("  step=restore"), script.indexOf("  apply_projects()"));
+  assert.match(restore, /create schema if not exists supabase_migrations;[\s\S]*pg_restore/);
+  assert.match(restore, /pg_restore --schema=public --schema=supabase_migrations/);
+  assert.doesNotMatch(restore, /--clean|--if-exists|--exit-on-error/);
+  assert.match(restore, /< "\$dump" >"\$work\/restore\.log" 2>&1 \|\| true/);
+  for (const table of ["public.tasks", "public.staff_users", "public.departments", "supabase_migrations.schema_migrations"]) {
+    assert.ok(restore.includes(`select count(*) from ${table}`));
+  }
+  assert.match(restore, /if ! restore_counts=\$\(psql -X -v ON_ERROR_STOP=1 -qAt/);
+  assert.ok(restore.includes('[[ "$restore_counts" =~ ^[0-9]+\\|[0-9]+\\|[0-9]+\\|[1-9][0-9]*$ ]]'));
+  assert.match(restore, /tail -n 20 "\$work\/restore\.log" \| grep 'ERROR' >&2 \|\| true\s+return 1/);
+  assert.match(restore, /echo "\$restore_counts"\s+echo PROJECTS_RESTORE=PASS/);
+});
+
 test("dry-run applies behaviour, idempotency, revert, and reapply with strict psql", () => {
   assert.match(script, /safe-apply-migration\.sh/);
   assert.match(script, /psql -X -v ON_ERROR_STOP=1 -f/);

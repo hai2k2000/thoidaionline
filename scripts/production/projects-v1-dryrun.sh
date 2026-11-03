@@ -71,14 +71,21 @@ main() {
   done
   [[ "$ready" == 1 ]]
   step=restore
-  docker exec -i "$tmp" pg_restore --clean --if-exists --exit-on-error \
-    --schema=public --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres \
-    < "$dump" >"$work/restore.log" 2>&1
+  docker exec -i "$tmp" psql -q -h 127.0.0.1 -U supabase_admin -d postgres \
+    -v ON_ERROR_STOP=1 -c 'create schema if not exists supabase_migrations;' </dev/null >/dev/null
+  docker exec -i "$tmp" pg_restore --schema=public --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres \
+    < "$dump" >"$work/restore.log" 2>&1 || true
   port=$(docker port "$tmp" 5432/tcp | sed -n 's/^127.0.0.1:\([0-9]*\)$/\1/p')
   [[ "$port" =~ ^[0-9]+$ ]]
   export PROJECTS_DB_URL="postgresql://supabase_admin:$db_password@127.0.0.1:$port/postgres"
   export SAFE_MIGRATION_MIGRATIONS_DIR="$BUNDLE_DIR/supabase/migrations"
   export PGHOST=127.0.0.1 PGPORT="$port" PGUSER=supabase_admin PGDATABASE=postgres PGPASSWORD="$db_password"
+  local restore_counts
+  if ! restore_counts=$(psql -X -v ON_ERROR_STOP=1 -qAt -F'|' -c "select (select count(*) from public.tasks), (select count(*) from public.staff_users), (select count(*) from public.departments), (select count(*) from supabase_migrations.schema_migrations)" 2>/dev/null) || ! [[ "$restore_counts" =~ ^[0-9]+\|[0-9]+\|[0-9]+\|[1-9][0-9]*$ ]]; then
+    tail -n 20 "$work/restore.log" | grep 'ERROR' >&2 || true
+    return 1
+  fi
+  echo "$restore_counts"
   echo PROJECTS_RESTORE=PASS
 
   apply_projects() {
