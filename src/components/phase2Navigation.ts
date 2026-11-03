@@ -1,4 +1,5 @@
-﻿export type Phase2NavigationAccess = {
+import { isCollaboratorRole } from "../lib/collaboratorRole.mjs";
+export type Phase2NavigationAccess = {
   roleCode: string;
   departmentCode?: string | null;
   canAccessJournalism?: boolean;
@@ -36,6 +37,10 @@ import { PAUSED_WORK_REPORT_NAV_IDS, WORK_REPORTS_PAUSED } from "../lib/workRepo
 export function getPhase2Navigation(
   access: Phase2NavigationAccess,
 ): Phase2Navigation {
+  if (isCollaboratorRole(access.roleCode)) {
+    // Add future Projects navigation here only after its access policy exists.
+    return { primary: [{ id: "tasks", href: "/my-tasks" }], journalism: [], account: [{ id: "account", href: "/account" }], configuration: [], showEvaluationTab: false };
+  }
   const canViewAllSchedules = access.isDepartmentManager === true || ["admin", "tong_bien_tap", "pho_tong_bien_tap", "truong_phong"].includes(access.roleCode);
   const canAccessDepartmentPlan = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
     || (access.isDepartmentManager === true && Boolean(access.departmentCode));
