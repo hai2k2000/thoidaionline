@@ -14,7 +14,9 @@ test("filters share Tailwind controls across components and use Vietnamese dates
   assert.ok(page.includes("Ngày bắt đầu sau ngày kết thúc"));
 });
 
-test("record type filter disables until a language team or child group is selected", () => {
+test("record type filter disables until a group and any required child are selected", () => {
+  assert.ok(page.includes('const recordTypeDisabled = !resolved.rootId ||'));
+  assert.ok(page.includes('Chọn nhóm hồ sơ trước'));
   assert.ok(page.includes('(resolved.mode === "language" || resolved.mode === "children") && !resolved.subId'));
   assert.ok(page.includes('disabled={recordTypeDisabled}'));
   assert.ok(page.includes('Chọn tổ ngôn ngữ trước'));

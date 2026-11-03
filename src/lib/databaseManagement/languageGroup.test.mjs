@@ -154,6 +154,6 @@ test("leaf and unselected filters preserve their type scopes without mutating in
   assert.deepEqual(resolveCategoryFilter(filterCategories, "plain", ""), { rootId: "plain", subId: "", mode: "none", subOptions: [] });
   assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "plain", "").map((item) => item.id), ["plain-type"]);
   const snapshot = JSON.stringify({ filterCategories, filterTypes });
-  assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "", "").map((item) => item.id), ["staff-type", "letters-type", "vi-type", "foreign-type", "plain-type"]);
+  assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "", ""), []);
   assert.equal(JSON.stringify({ filterCategories, filterTypes }), snapshot);
 });
