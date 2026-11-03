@@ -1,6 +1,6 @@
 # CSDL (Cơ sở dữ liệu hồ sơ): tài liệu bàn giao cho phiên Claude khác
 
-Cập nhật lần cuối: 2026-11-03 (sau PR #120, production artifact-5816e3c). Người viết: phiên Claude ở máy cơ quan. Người duyệt: owner (hai2k2000).
+Cập nhật lần cuối: 2026-11-03 (production artifact-5816e3c = PR #120; repo đã có thêm PR #122–#126). Người viết: phiên Claude ở máy cơ quan. Người duyệt: owner (hai2k2000).
 
 ## 1. Đọc trước
 - **Ngôn ngữ:** owner trao đổi bằng tiếng Việt, ưa câu ngắn.
@@ -8,6 +8,7 @@ Cập nhật lần cuối: 2026-11-03 (sau PR #120, production artifact-5816e3c)
 - **Production:** mọi thao tác trên production (migration, deploy, Nginx) đều cần owner duyệt riêng cho từng việc. Duyệt PR không có nghĩa là duyệt deploy.
 - **Secret:** không đọc, không in. Không chạy `docker top` hay `docker inspect` lên container DB. Không đọc nội dung hồ sơ thật (`db_records.metadata`); chỉ đếm.
 - **Chỉ một máy deploy production tại một thời điểm.** Trước khi activate: `readlink -f /opt/releases/thoidai-work/current`, rồi so release đang chạy với commit sắp deploy để biết những PR nào sẽ lên cùng.
+- **Nhiều máy cùng làm CSDL (máy cơ quan, máy nhà):** trước khi sửa tiếp `repository.ts`, route upload hoặc phần ACL, luôn `git fetch` và `git pull`/merge `origin/integration/production`. PR #123 và #124 đã sửa mạnh các file này.
 - **Merge:** chỉ merge khi `gh pr checks <n>` xanh ở `build-test-package`. Job `isolated-authenticated-e2e` đỏ sẵn từ 27/10 ở `20261020100000` ("db_records does not exist"), không phải lỗi của PR.
 
 ## 2. Trạng thái hiện tại (2026-11-03)
@@ -27,6 +28,10 @@ Cập nhật lần cuối: 2026-11-03 (sau PR #120, production artifact-5816e3c)
   - `20261103120000_doan_the_parent` (PR #115): bật lại `doan_the_quan_ly` ("Các tổ chức đoàn thể", tên do owner chọn) làm nhóm cha của 7 nhóm: `cong_tac_dang`, `chi_hoi_nha_bao`, `cong_doan`, `doan_thanh_nien`, `cuc_bao_chi`, `lien_hiep` (đều restricted) và `phap_ly_dieu_hanh` (không restricted).
   - `20261103140000_keywords_fix_remaining` (PR #116): `keywords` chuyển thành text cho 10 loại của `chi_hoi_nha_bao`, `doan_thanh_nien`, `cuc_bao_chi`.
   - PR #117–#120 chỉ đổi giao diện, không có migration (xem bộ lọc ở mục 3). Ledger production mới nhất: `20261103140000`.
+  - **Sau PR #120, đã merge vào `integration/production` (tới 98bb89b), chưa xác nhận đã deploy — kiểm tra `readlink -f /opt/releases/thoidai-work/current` trước khi deploy:**
+    - PR #123 (`fix/csdl-acl-upload-hardening`): quản lý ACL (`acl.manage`) chỉ cho chủ hồ sơ, Admin (`record.discover` scope `all`) hoặc người có quyền duyệt; ACL `approve` chỉ được là `deny`. Upload/xóa file dùng `assertCanModifyRecordFiles` và `reopenRecordAfterFileChange` (trả `record_locked` nếu hồ sơ đang `pending_review` hoặc đổi trạng thái giữa chừng). `writeDatabaseRecordFile` nhận `{name, bytes, mimeType}`, kiểm MIME theo đuôi file (`fileType.mjs`) và dọn file đã tạo nếu bước sau lỗi (`created`). Lỗi đối soát: `file_change_reconciliation_required`, `record_update_reconciliation_required`.
+    - PR #124 (`fix/csdl-keywords-links`): từ khóa và liên kết ngoài sửa được khi cập nhật hồ sơ, đồng bộ bảng `db_record_keywords`/`db_record_external_links` (`replaceRecordRows`, hoàn tác nếu lỗi); từ khóa lấy từ `input.keywords` hoặc `metadata.keywords`; liên kết ngoài chỉ nhận Google Drive/Docs (`drive.google.com`, `docs.google.com`, https, không user/mật khẩu).
+    - PR #122, #125, #126 không thuộc CSDL: chấm công bỏ qua CTV, Projects V1 (migration `20261103160000_projects_v1`), vai trò "Cộng tác viên" (migration `20261103150000_role_cong_tac_vien`). Hai migration này có trong repo; chưa biết đã áp lên production hay chưa.
 - **Bản gốc khi viết lại RPC:** luôn lấy định nghĩa mới nhất. Hiện CẢ search và transition đều ở `20261102140000`. Hàm `rbac_v2_scope_supported` lấy từ migration mới nhất có ghi đè hàm này. Không dùng bản cũ hơn.
 - **Cấp quyền nhóm hạn chế:** Phân quyền → Theo người dùng → mục "Nhóm hồ sơ hạn chế" (API `PUT /api/permissions/users/[userId]/category-grants`, cần `permission.manage`). Nhóm con hạn chế hiện dạng "Phòng Tổng hợp › Tổ chức – Cán bộ". Đến 2026-11-03 chưa ai được cấp; chỉ Admin thấy các nhóm hạn chế. Đã test bằng Admin và tài khoản thường (tài khoản thường không thấy nhóm hạn chế).
 - **Hồ sơ trên production:** rất ít (khoảng 6 hồ sơ). Có thể cấu trúc lại nhóm và loại mà không phải chuyển dữ liệu lớn, nhưng migration vẫn phải cập nhật `db_records.category_id` khi chuyển loại sang nhóm khác.
