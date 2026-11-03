@@ -34,3 +34,15 @@ test('project UI keeps task upload separate and retry never creates another task
  assert.match(source,/upload\(createdTask,attachment\)/);
  assert.match(source,/setCreatedTask\(result.task.id\)/);
 });
+test('project detail puts tasks before members and collapses members by default',()=>{
+ const source=read('src/components/ProjectDetailShell.tsx');
+ assert.ok(source.indexOf('Công việc trong dự án') < source.indexOf('Thành viên ('));
+ assert.match(source,/<details[^>]*>\s*<summary[^>]*>[^<]*Thành viên/);
+ const membersDetails=source.match(/<details([^>]*)>\s*<summary[^>]*>Thành viên[^]*?<\/details>/)?.[0];
+ assert.ok(membersDetails);
+ assert.doesNotMatch(membersDetails.split('>')[0],/\bopen\b/);
+ assert.match(membersDetails,/m\.role==='lead'\|\|m\.role==='deputy'/);
+ assert.match(membersDetails,/\$\{name\(m\.user_id\)\}/);
+ assert.match(membersDetails,/isLead&&options\?<form/);
+ assert.match(source,/searchParams\.get\("tab"\)==="library"/);
+});

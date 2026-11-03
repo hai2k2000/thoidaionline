@@ -176,6 +176,7 @@ const migrationReference = [
   "supabase/migrations/20261103140000_database_management_v1_keywords_fix_remaining.sql",
   "supabase/migrations/20261103150000_role_cong_tac_vien.sql",
   "supabase/migrations/20261103160000_projects_v1.sql",
+  "supabase/migrations/20261103180000_projects_v1_1_deputy_library.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];

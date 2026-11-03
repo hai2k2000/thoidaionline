@@ -36,8 +36,11 @@ test("Unicode display names never enter storage object keys", () => {
   assert.match(factory, /storagePath\s*=\s*`\$\{taskId\}\/\$\{deps\.newUuid\(\)\}\.\$\{extension\}`/);
   assert.doesNotMatch(factory, /safeName|\$\{deps\.newUuid\(\)\}-\$\{[^}]*file/i);
   assert.match(factory, /fileName:\s*file\.name\.slice/);
-  assert.match(factory, /file\.size\s*>\s*10485760/);
-  assert.match(factory, /application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document/);
+  const policy = readFileSync("src/lib/taskAttachmentPolicy.mjs", "utf8");
+  assert.match(factory, /taskAttachmentMetadata\(file\)/);
+  assert.match(policy, /TASK_ATTACHMENT_MAX_BYTES = 10485760/);
+  assert.match(policy, /file.size>TASK_ATTACHMENT_MAX_BYTES/);
+  assert.match(policy, /application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document/);
   assert.match(factory, /await deps\.removePrivateAttachment\(storagePath\)/);
   assert.match(handlers, /contentType:\s*mimeType/);
 });

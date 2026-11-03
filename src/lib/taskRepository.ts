@@ -232,7 +232,7 @@ const enrichJournalismList = async (
 type TaskAccessRow = {
   id: string;
   project_id: string | null;
-  projects: { project_members: { user_id: string; role: "lead" | "member"; staff_users: { active: boolean } }[] } | null;
+  projects: { project_members: { user_id: string; role: "lead" | "deputy" | "member"; staff_users: { active: boolean } }[] } | null;
   department_id: string | null;
   created_by: string | null;
   owner_id: string | null;

@@ -147,3 +147,5 @@ test("packaging references collaborator role migration", () => {
   assert.match(packager, /20261103150000_role_cong_tac_vien\.sql/);
   assert.match(verifier, /20261103150000_role_cong_tac_vien\.sql/);
 });
+
+test("Projects V1.1 migration is packaged", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.ok(readFileSync(file,"utf8").includes("20261103180000_projects_v1_1_deputy_library.sql")); });

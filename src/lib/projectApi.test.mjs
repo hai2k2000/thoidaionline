@@ -29,7 +29,7 @@ test('lead guard accepts only active leads and create permission honors effectiv
 test('assignment and member routes deny non-leads before calling a mutation RPC',async()=>{
  for(const [path,method] of [['tasks','POST'],['members','POST'],['members','DELETE']]){
   let calls=0;
-  const route=await load(`src/app/api/projects/[id]/${path}/route.ts`,{apiError,rpcFailure,asUuid:v=>v,requireMutationActor:async()=>({ok:true,actor}),requireProjectLead:async()=>apiError('forbidden',403),projectRepository:{assignTask:()=>calls++,setMember:()=>calls++}});
+  const route=await load(`src/app/api/projects/[id]/${path}/route.ts`,{apiError,rpcFailure,asUuid:v=>v,requireMutationActor:async()=>({ok:true,actor}),requireProjectLead:async()=>apiError('forbidden',403),requireProjectLeadOrDeputy:async()=>apiError('forbidden',403),projectRepository:{assignTask:()=>calls++,setMember:()=>calls++}});
   assert.equal((await route[method](new Request('http://localhost',{method,body:'{}'}),context)).status,403);assert.equal(calls,0);
  }
 });
@@ -47,7 +47,7 @@ test('project assignment validates dates, UUIDs and unsupported modes, preservin
 test('assignment passes current actor to RPC and returns task identity for attachment upload',async()=>{
  let called;
  const input={title:'Script',requirements:['One']};
- const route=await load('src/app/api/projects/[id]/tasks/route.ts',{apiError,rpcFailure,apiJson:(body,status)=>Response.json(body,{status}),asUuid:v=>v,requireMutationActor:async()=>({ok:true,actor}),requireProjectLead:async()=>null,readJsonObject:async()=>input,parseProjectAssignment:x=>x,projectRepository:{assignTask:async(...args)=>{called=args;return {ok:true,data:{id:'task'}};}}});
+ const route=await load('src/app/api/projects/[id]/tasks/route.ts',{apiError,rpcFailure,apiJson:(body,status)=>Response.json(body,{status}),asUuid:v=>v,requireMutationActor:async()=>({ok:true,actor}),requireProjectLeadOrDeputy:async()=>null,readJsonObject:async()=>input,parseProjectAssignment:x=>x,projectRepository:{assignTask:async(...args)=>{called=args;return {ok:true,data:{id:'task'}};}}});
  const response=await route.POST(new Request('http://localhost'),context);assert.equal(response.status,201);assert.deepEqual(await response.json(),{task:{id:'task'}});assert.equal(called[0],'actor');assert.deepEqual(called[2],input);
 });
 test('origin and unauthenticated guard rejections stop mutation before project lookup',async()=>{

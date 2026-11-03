@@ -1,0 +1,5 @@
+export type LibraryFolder = { id: string; project_id: string; parent_id: string | null; name: string; system_key: string | null; created_by: string; created_at: string };
+export type LibraryItem = { id: string; project_id: string; folder_id: string | null; kind: 'file' | 'link'; title: string; description: string | null; url: string | null; storage_path: string | null; file_name: string | null; mime_type: string | null; size_bytes: number | null; source: 'manual' | 'task_attachment' | 'progress_report' | 'completion'; source_task_id: string | null; uploaded_by: string; uploaded_by_name: string; task_title: string | null; created_at: string };
+export type LibraryData = { folders: LibraryFolder[]; items: LibraryItem[] };
+export const canChangeLibraryItem = (actorId: string, manager: boolean, item: Pick<LibraryItem, 'source' | 'uploaded_by'>, action: string) => item.source !== 'manual' ? action !== 'delete' && manager : manager || item.uploaded_by === actorId;
+export const canChangeLibraryFolder = (actorId: string, manager: boolean, folder: Pick<LibraryFolder, 'system_key' | 'created_by'>) => !folder.system_key && (manager || folder.created_by === actorId);

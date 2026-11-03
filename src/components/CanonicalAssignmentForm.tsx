@@ -78,7 +78,7 @@ export default function CanonicalAssignmentForm({
   disableAttachments?: boolean;
 }) {
   const singleTaskOnly = Boolean(projectMode) || requestedSingleTaskOnly;
-  const [reviewerId, setReviewerId] = useState(projectMode?.currentUserId ?? "");
+  const [reviewerId, setReviewerId] = useState(projectMode ? (projectMode.leads.find(person => person.id === projectMode.currentUserId)?.id ?? projectMode.leads[0]?.id ?? "") : "");
   const initialCard = {
     title: initialValues?.title,
     description: initialValues?.description ?? initialValues?.content,

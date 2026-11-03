@@ -29,6 +29,8 @@ export type RbacTaskResource = {
   kind: "task";
   projectId?: string | null;
   projectMemberIds?: readonly string[];
+  projectLeadIds?: readonly string[];
+  projectDeputyIds?: readonly string[];
   id: string;
   departmentId: string | null;
   createdBy: string | null;
