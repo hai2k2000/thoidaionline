@@ -186,6 +186,16 @@ async function validateFormMetadata(formDefinitionId: string | null | undefined,
   if (errors.length) throw new Error(`invalid_metadata:${JSON.stringify(errors)}`);
 }
 
+function normalizeKeywords(value: unknown): string[] {
+  const items = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[\n,;]+/) : [];
+  const seen = new Set<string>();
+  return items.map((item) => typeof item === "string" ? item.trim() : "").filter((item) => item && !seen.has(item.toLowerCase()) && seen.add(item.toLowerCase()));
+}
+
+function metadataKeywords(metadata: Record<string, unknown> | undefined) {
+  return metadata && Object.prototype.hasOwnProperty.call(metadata, "keywords") ? normalizeKeywords(metadata.keywords) : undefined;
+}
+
 export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recordId: string) {
   const record = await getRecord(recordId);
   if (!record) return null;
@@ -434,8 +444,9 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
     }
     throw error;
   }
-  if (input.keywords?.length) {
-    const { error: keywordError } = await serverSupabase.from("db_record_keywords").insert(input.keywords.map((keyword) => ({ record_id: data.id, keyword: keyword.trim() })));
+  const createKeywords = input.keywords !== undefined ? normalizeKeywords(input.keywords) : metadataKeywords(input.metadata) ?? [];
+  if (createKeywords.length) {
+    const { error: keywordError } = await serverSupabase.from("db_record_keywords").insert(createKeywords.map((keyword) => ({ record_id: data.id, keyword })));
     if (keywordError) { await cleanupNewRecord(data.id); throw keywordError; }
   }
   if (input.externalLinks?.length) {
@@ -460,6 +471,15 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
   if (!(await canRecord(actor, current, recordId, "edit")) || grantContext.restricted && !canContributeRestricted(actor, grantContext.grantLevel)) throw new Error("permission_denied");
   if (current.status === "pending_review") throw new Error("record_locked");
   if (isDepartmentOnlyRecordType(current.record_type_code) && input.visibility === "public") throw new Error("danh_ba_department_only");
+  const [previousKeywords, previousLinks] = await Promise.all([
+    serverSupabase.from("db_record_keywords").select("record_id,keyword").eq("record_id", recordId),
+    serverSupabase.from("db_record_external_links").select("*").eq("record_id", recordId),
+  ]);
+  if (previousKeywords.error || previousLinks.error) throw previousKeywords.error ?? previousLinks.error;
+  const oldKeywords = previousKeywords.data ?? [];
+  const oldLinks = previousLinks.data ?? [];
+  const nextKeywords = input.keywords !== undefined ? normalizeKeywords(input.keywords) : metadataKeywords(input.metadata);
+  const nextLinks = input.externalLinks;
   const patch: Record<string, unknown> = {};
   if (input.title !== undefined) patch.title = input.title;
   if (input.summary !== undefined) patch.summary = input.summary;
@@ -473,10 +493,48 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
   const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).eq("status", current.status).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,visibility,created_at,updated_at").maybeSingle();
   if (!data && !error) throw new Error("record_locked");
   if (error) throw error;
-  if (reopened) { const { error: reopenError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "reopen_for_edit", old_data: current, new_data: { from_status: current.status, to_status: "draft" } }); if (reopenError) { await serverSupabase.from("db_records").update({ title: current.title, summary: current.summary, metadata: current.metadata, visibility: current.visibility, status: current.status }).eq("id", recordId); throw reopenError; } }
-  const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "update", old_data: current, new_data: data });
-  if (historyError) { await serverSupabase.from("db_records").update({ title: current.title, summary: current.summary, metadata: current.metadata, visibility: current.visibility, status: current.status }).eq("id", recordId); throw historyError; }
+  let keywordsChanged = false;
+  let linksChanged = false;
+  let reopenHistoryId: string | null = null;
+  try {
+    if (nextKeywords !== undefined) {
+      keywordsChanged = true;
+      await replaceRecordRows("db_record_keywords", recordId, nextKeywords.map((keyword) => ({ record_id: recordId, keyword })));
+    }
+    if (nextLinks !== undefined) {
+      linksChanged = true;
+      await replaceRecordRows("db_record_external_links", recordId, nextLinks.map((link) => ({ record_id: recordId, provider: link.provider, url: link.url, media_kind: link.mediaKind ?? null, created_by: actor.id })));
+    }
+    if (reopened) {
+      const { data: history, error: reopenError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "reopen_for_edit", old_data: current, new_data: { from_status: current.status, to_status: "draft" } }).select("id").single();
+      if (reopenError) throw reopenError;
+      reopenHistoryId = history.id;
+    }
+    const oldData = { ...current, keywords: oldKeywords.map((row) => row.keyword), externalLinks: oldLinks };
+    const newData = { ...data, keywords: nextKeywords ?? oldKeywords.map((row) => row.keyword), externalLinks: nextLinks ?? oldLinks };
+    const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "update", old_data: oldData, new_data: newData });
+    if (historyError) throw historyError;
+  } catch (cause) {
+    // Restore complete link rows and only this operation's history; attempt all compensations.
+    const restorations = await Promise.allSettled([
+      serverSupabase.from("db_records").update({ title: current.title, summary: current.summary, metadata: current.metadata, visibility: current.visibility, status: current.status }).eq("id", recordId).then(({ error }) => { if (error) throw error; }),
+      keywordsChanged ? replaceRecordRows("db_record_keywords", recordId, oldKeywords) : Promise.resolve(),
+      linksChanged ? replaceRecordRows("db_record_external_links", recordId, oldLinks) : Promise.resolve(),
+      reopenHistoryId ? serverSupabase.from("db_record_history").delete().eq("id", reopenHistoryId).then(({ error }) => { if (error) throw error; }) : Promise.resolve(),
+    ]);
+    if (restorations.some((result) => result.status === "rejected")) throw new Error("record_update_reconciliation_required", { cause });
+    throw cause;
+  }
   return data as RecordRow;
+}
+
+async function replaceRecordRows(table: "db_record_keywords" | "db_record_external_links", recordId: string, rows: Record<string, unknown>[]) {
+  const { error: deleteError } = await serverSupabase.from(table).delete().eq("record_id", recordId);
+  if (deleteError) throw deleteError;
+  if (rows.length) {
+    const { error: insertError } = await serverSupabase.from(table).insert(rows);
+    if (insertError) throw insertError;
+  }
 }
 
 export async function setDatabaseRecordStatus(actor: DatabaseRecordActor, recordId: string, status: "deleted" | "draft") {
