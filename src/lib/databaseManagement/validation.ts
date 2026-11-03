@@ -104,7 +104,7 @@ export function validateDatabaseAclInput(input: unknown): { ok: true; value: Dat
   if (!(["user", "role", "department"] as const).includes(value.principalType as never)) errors.push({ field: "principalType", code: "invalid_principal_type" });
   if (typeof value.principalId !== "string" || !UUID.test(value.principalId)) errors.push({ field: "principalId", code: "uuid_required" });
   if (!(typeof value.capability === "string" && ["discover", "metadata.view", "preview", "download", "edit", "approve", "delete", "restore", "export", "acl.manage"].includes(value.capability))) errors.push({ field: "capability", code: "invalid_capability" });
-  if (!(["allow", "deny"] as const).includes(value.effect as never)) errors.push({ field: "effect", code: "invalid_effect" });
+  if (!(["allow", "deny"] as const).includes(value.effect as never) || (value.capability === "approve" && value.effect !== "deny")) errors.push({ field: "effect", code: "invalid_effect" });
   if (value.expiresAt !== undefined && value.expiresAt !== null && (typeof value.expiresAt !== "string" || Number.isNaN(Date.parse(value.expiresAt)))) errors.push({ field: "expiresAt", code: "invalid_datetime" });
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: value as DatabaseRecordAclInput };

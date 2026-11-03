@@ -81,7 +81,7 @@ async function visibilityAllowed(actor: DatabaseRecordActor, record: Pick<Record
   return false;
 }
 
-async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "category_id" | "owner_id" | "department_id" | "status" | "visibility" | "record_type_code">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
+async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "category_id" | "owner_id" | "department_id" | "status" | "visibility" | "record_type_code" | "created_by">, recordId: string, capability: Parameters<typeof canAccessDatabaseRecord>[2]) {
   if (!canAccessRecordType(actor, record.record_type_code)) return false;
   const grantContext = await loadCategoryGrantContext(actor, record.category_id);
   if (grantContext.restricted && !canSeeRestricted(actor, grantContext.grantLevel)) return false;
@@ -89,13 +89,16 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ca
   const context = await actorContext(actor);
   const rows = await aclForRecord(recordId);
   const explicitDeny = rows.some((row) => row.capability === capability && row.effect === "deny" && (
-    row.principal_type === "user" && row.principal_id === actor.id
-    || row.principal_type === "role" && row.principal_id === context.roleId
-    || row.principal_type === "department" && row.principal_id === context.departmentId
+    (row.principal_type === "user" && row.principal_id === actor.id)
+    || (row.principal_type === "role" && row.principal_id === context.roleId)
+    || (row.principal_type === "department" && row.principal_id === context.departmentId)
   ));
   if (explicitDeny) return false;
-  // ACL management is limited to records visible to the actor.
-  if (capability === "acl.manage") return visibilityAllowed(actor, record, recordId);
+  if (capability === "acl.manage") {
+    if (record.owner_id === actor.id) return true;
+    if (hasPermissionScope(actor, "record.discover", ["all"])) return true;
+    return canApproveRecord(actor, record, recordId);
+  }
   return canAccessDatabaseRecord(context, rows, capability) || defaultDatabaseRecordAccess(context, capability, record.owner_id, record.department_id);
 }
 
@@ -134,7 +137,6 @@ export type DatabaseRecordApprovalBlockReason =
   | "record_type_restricted"
   | "missing_record_approve_permission"
   | "approval_acl_denied"
-  | "missing_approval_acl_allow"
   | "missing_self_approve_permission";
 
 async function approvalBlockReason(actor: DatabaseRecordActor, record: RecordRow, recordId: string): Promise<DatabaseRecordApprovalBlockReason | null> {
@@ -497,7 +499,7 @@ export async function setDatabaseRecordStatus(actor: DatabaseRecordActor, record
 
 export async function upsertDatabaseRecordAcl(actor: DatabaseRecordActor, recordId: string, input: DatabaseRecordAclInput) {
   const current = await getRecord(recordId);
-  if (!current) throw new Error("record_not_found");
+  if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (!(await canRecord(actor, current, recordId, "acl.manage"))) throw new Error("permission_denied");
   const { data: previous, error: previousError } = await serverSupabase.from("db_record_acl").select("id,record_id,principal_type,principal_id,capability,effect,granted_by,expires_at,created_at").eq("record_id", recordId).eq("principal_type", input.principalType).eq("principal_id", input.principalId).eq("capability", input.capability).maybeSingle();
   if (previousError) throw previousError;
@@ -525,31 +527,49 @@ export async function getDatabaseRecordFile(actor: DatabaseRecordActor, recordId
   return data as { id: string; record_id: string; storage_key: string; original_name: string; mime_type: string; size_bytes: number; sha256: string };
 }
 
-export async function prepareDatabaseRecordFileUpload(actor: DatabaseRecordActor, recordId: string) {
+export async function assertCanModifyRecordFiles(actor: DatabaseRecordActor, recordId: string) {
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
   if (current.status === "pending_review") throw new Error("record_locked");
+  return current;
+}
+
+export async function reopenRecordAfterFileChange(actor: DatabaseRecordActor, recordId: string, expectedStatus: string) {
+  const current = await getRecord(recordId);
+  if (!current || current.status === "deleted") throw new Error("record_not_found");
+  if (current.status !== expectedStatus || current.status === "pending_review") throw new Error("record_locked");
   if (current.status !== "approved" && current.status !== "archived") return current;
   const { data, error } = await serverSupabase.from("db_records").update({ status: "draft" }).eq("id", recordId).eq("status", current.status).select("*").maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("record_locked");
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "reopen_for_edit", old_data: current, new_data: { from_status: current.status, to_status: "draft" } });
-  if (historyError) { await serverSupabase.from("db_records").update({ status: current.status }).eq("id", recordId); throw historyError; }
+  if (historyError) {
+    const { data: restored, error: restoreError } = await serverSupabase.from("db_records").update({ status: current.status }).eq("id", recordId).eq("status", "draft").eq("updated_at", data.updated_at).select("id").maybeSingle();
+    if (restoreError || !restored) throw new Error("file_change_reconciliation_required");
+    throw historyError;
+  }
   return data as RecordRow;
 }
 
 export async function deleteDatabaseRecordFile(actor: DatabaseRecordActor, recordId: string, fileId: string) {
-  const current = await getRecord(recordId);
-  if (!current || current.status === "deleted") throw new Error("record_not_found");
-  if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
+  const current = await assertCanModifyRecordFiles(actor, recordId);
   const { data: file, error: fileError } = await serverSupabase.from("db_record_files").select("id,record_id,storage_key,original_name,mime_type,size_bytes,sha256,created_by,created_at,upload_request_id,storage_backend").eq("id", fileId).eq("record_id", recordId).maybeSingle();
   if (fileError) throw fileError;
   if (!file) throw new Error("file_not_found");
-  await prepareDatabaseRecordFileUpload(actor, recordId);
   const { error: deleteError } = await serverSupabase.from("db_record_files").delete().eq("id", fileId).eq("record_id", recordId);
   if (deleteError) throw deleteError;
-  const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "file_delete", new_data: { file_id: file.id, original_name: file.original_name, size_bytes: file.size_bytes, sha256: file.sha256 } });
-  if (historyError) { await serverSupabase.from("db_record_files").insert(file); throw historyError; }
+  let historyId: string | null = null;
+  try {
+    const { data: history, error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "file_delete", new_data: { file_id: file.id, original_name: file.original_name, size_bytes: file.size_bytes, sha256: file.sha256 } }).select("id").single();
+    if (historyError) throw historyError;
+    historyId = history.id;
+    await reopenRecordAfterFileChange(actor, recordId, current.status);
+  } catch (error) {
+    const { error: restoreError } = await serverSupabase.from("db_record_files").insert(file);
+    const cleanup = historyId ? await serverSupabase.from("db_record_history").delete().eq("id", historyId) : { error: null };
+    if (restoreError || cleanup.error) throw new Error("file_change_reconciliation_required");
+    throw error;
+  }
   return file as { id: string; record_id: string; storage_key: string; original_name: string; size_bytes: number; sha256: string };
 }
