@@ -10,7 +10,7 @@ import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 type JobTitle = { id: string; code: string; name: string; display_order: number; active: boolean };
 type Form = { id?: string; code: string; name: string; display_order: string; active: boolean };
 type JobTitleStatusFilter = "active" | "locked" | "all";
-const canonicalCodes = new Set(["tong_bien_tap","pho_tong_bien_tap","truong_phong","pho_truong_phong","ke_toan_truong","phong_vien","nhan_vien"]);
+const canonicalCodes = new Set(["tong_bien_tap","pho_tong_bien_tap","truong_phong","pho_truong_phong","ke_toan_truong","phong_vien","nhan_vien","ctv"]);
 const blank: Form = { code: "", name: "", display_order: "100", active: true };
 
 export default function JobTitlesPage() {

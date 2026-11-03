@@ -67,7 +67,7 @@ test("user page shows active staff by default and exposes lock controls", () => 
 });
 
 
-test("job-title catalog keeps exactly seven canonical active titles", () => {
+test("historical job-title migration preserves legacy rows and UI exposes status filters", () => {
   const migration = read("../../supabase/migrations/20260819103000_canonical_job_titles.sql");
   const page = read("../app/job-titles/page.tsx");
   const route = read("../app/api/job-titles/route.ts");

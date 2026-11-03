@@ -18,10 +18,11 @@ const json = (body: unknown, init?: ResponseInit) => NextResponse.json(body, {
 
 const canView = (code: string) => ["admin", "tong_bien_tap", "tbt_read_only"].includes(code);
 const isAdmin = (code: string) => code === "admin";
-const CANONICAL_JOB_TITLE_CODES = new Set([
+const CANONICAL_JOB_TITLE_CODES = [
   "tong_bien_tap", "pho_tong_bien_tap", "truong_phong", "pho_truong_phong",
-  "ke_toan_truong", "phong_vien", "nhan_vien",
-]);
+  "ke_toan_truong", "phong_vien", "nhan_vien", "ctv",
+];
+const CANONICAL_JOB_TITLE_CODE_SET = new Set(CANONICAL_JOB_TITLE_CODES);
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
 
 type Body = { id?: unknown; code?: unknown; name?: unknown; display_order?: unknown; active?: unknown };
@@ -54,8 +55,8 @@ async function mutate(request: Request, mode: "create" | "update") {
   if (!/^[a-z0-9][a-z0-9_-]{1,63}$/.test(code)) return json({ error: "Mã chức vụ chỉ gồm a-z, 0-9, _ hoặc - (2-64 ký tự)." }, { status: 400 });
   if (!Number.isInteger(order) || order < 0 || order > 100000) return json({ error: "Thứ tự không hợp lệ." }, { status: 400 });
   const requestedActive = body?.active === undefined ? true : body.active === true;
-  if (requestedActive && !CANONICAL_JOB_TITLE_CODES.has(code)) {
-    return json({ error: "Chỉ 7 chức danh chuẩn được phép hoạt động." }, { status: 400 });
+  if (requestedActive && !CANONICAL_JOB_TITLE_CODE_SET.has(code)) {
+    return json({ error: `Chỉ các chức danh chuẩn được phép hoạt động: ${CANONICAL_JOB_TITLE_CODES.join(", ")}.` }, { status: 400 });
   }
 
   if (mode === "create") {
