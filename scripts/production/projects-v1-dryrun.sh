@@ -98,7 +98,10 @@ main() {
   }
   step=apply; apply_projects
   step=behaviour
-  psql -X -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/supabase/tests/projects_v1_behaviour.sql" >"$work/behaviour.log" 2>&1
+  if ! psql -X -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/supabase/tests/projects_v1_behaviour.sql" >"$work/behaviour.log" 2>&1; then
+    grep -E "ERROR|CONTEXT|DETAIL|HINT|LINE|psql:" "$work/behaviour.log" | head -20 | tee "$evidence/behaviour-error.txt" >&2 || true
+    return 1
+  fi
   echo PROJECTS_BEHAVIOUR=PASS >"$evidence/behaviour.txt"
 
   step=idempotency

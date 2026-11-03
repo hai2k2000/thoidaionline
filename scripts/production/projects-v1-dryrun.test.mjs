@@ -49,6 +49,17 @@ test("dry-run applies behaviour, idempotency, revert, and reapply with strict ps
   assert.match(script, /rm -rf -- "\$work"/);
 });
 
+test("dry-run preserves a filtered behaviour error excerpt before cleanup", () => {
+  assert.match(script, /if ! psql -X -v ON_ERROR_STOP=1 -f "\$BUNDLE_DIR\/supabase\/tests\/projects_v1_behaviour\.sql" >"\$work\/behaviour\.log" 2>&1; then/);
+  assert.match(script, /grep -E "ERROR\|CONTEXT\|DETAIL\|HINT\|LINE\|psql:" "\$work\/behaviour\.log" \| head -20/);
+  assert.match(script, /tee "\$evidence\/behaviour-error\.txt" >&2 \|\| true\s+return 1/);
+});
+
+test("approval fixtures satisfy the fresh completion score guard", () => {
+  assert.match(behaviour, /completion_submitted_at=now\(\)/);
+  assert.match(behaviour, /insert into public\.task_completion_scores\([\s\S]*values\(t\.id,lead_id,'\[\]'::jsonb,0,20,20\)/);
+});
+
 test("postcondition checks project schema, RPCs, permission grants, and RLS", () => {
   for (const name of ["projects", "project_members", "project_id", "project.create"]) assert.match(post, new RegExp(name.replace(".", "\\.")));
   for (const name of ["api_create_project", "api_update_project", "api_set_project_member", "api_close_project", "api_assign_project_task"]) assert.match(post, new RegExp(name));
