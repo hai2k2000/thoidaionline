@@ -1,5 +1,14 @@
 # Project tasks without scoring - code extension
 
+## Non-project approval fixture correction (2026-11-03)
+
+- Case A at the RPC layer: the latest prior assigned-review definition is in `20260924120000_task_approval_gates.sql`. It has no inline score check. Specializing the V1.2 project additions for a null project ID reproduces that entire prior definition byte for byte, including both approval-required paths.
+- `api_review_task_completion` (20260814190000) and `review_task_completion` (20261103160000), plus their authorization helper, are not replaced by V1.2 and contain no score check. They update the same task status.
+- Important schema distinction: the historical `require_task_score_before_done` trigger function DOES reject unscored regular assigned tasks when bound and enabled. V1.2 preserves that non-project predicate (only formatting differs). Thus the reported restored-prod success is not an RPC regression; offline source comparison cannot establish why that schema's trigger did not enforce the gate. A full historical migration-chain database with that trigger enabled still rejects this fixture.
+- The behavior fixture now asserts the reported restored-prod approval without a score for all three RPCs, verifies no score was written, then independently exercises the scoring RPC after resubmission. This supersedes the earlier non-project score-required fixture claim.
+- Added `src/lib/projectTaskLegacyReview.test.mjs` to lock the legacy assigned branch, unchanged wrappers/helper, and equivalent non-project trigger predicate. No migration edits, Git/network operations, or live SQL execution in this correction.
+- Requested Node validation: 14/14 PASS (new legacy-review test plus projects-v1-2-dryrun and projectTaskNoScoring).
+
 This section supersedes earlier scoring behaviour notes below. Only migration 20261103200000 was extended. No migration was applied.
 
 ## Behaviour and API

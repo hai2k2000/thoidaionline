@@ -113,10 +113,23 @@ begin
   t:=public.api_review_task_completion(creator,t.id,'approve');
   if t.status<>'done' or t.progress_percent<>100 then raise exception 'Score-free admin approval failed'; end if;
   if exists(select 1 from public.task_completion_scores s join public.tasks task on task.id=s.task_id where task.project_id=p.id) then raise exception 'Project score leaked'; end if;
-  -- The original non-project trigger still requires a fresh score.
+  -- The latest legacy RPC has no inline score gate. On the restored production
+  -- schema this call succeeds without a score; preserve that non-project behavior.
   update public.tasks set project_id=null,reviewer_id=null,approval_required=false,status='in_progress' where id=t.id;
   t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
-  perform pg_temp.expect_state(format('select public.api_review_assigned_task_completion(%L,%L,''approve'')',creator,t.id),'22023');
+  t:=public.api_review_assigned_task_completion(creator,t.id,'approve');
+  if t.status<>'done' or t.progress_percent<>100 then raise exception 'Legacy assigned approval changed'; end if;
+  update public.tasks set status='in_progress' where id=t.id;
+  t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
+  t:=public.api_review_task_completion(creator,t.id,'approve');
+  if t.status<>'done' or t.progress_percent<>100 then raise exception 'Legacy API approval changed'; end if;
+  update public.tasks set status='in_progress' where id=t.id;
+  t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
+  t:=public.review_task_completion(creator,t.id,'approve');
+  if t.status<>'done' or t.progress_percent<>100 then raise exception 'Legacy completion approval changed'; end if;
+  if exists(select 1 from public.task_completion_scores where task_id=t.id) then raise exception 'Legacy approval unexpectedly wrote a score'; end if;
+  update public.tasks set status='in_progress' where id=t.id;
+  t:=public.api_submit_assigned_task_completion(ctv_id,t.id);
   perform public.api_score_task_completion(creator,t.id,'[]'::jsonb,60,20,20);
   if not exists(select 1 from public.tasks where id=t.id and status='done') then raise exception 'Non-project score approval failed'; end if;
   perform public.api_assert_project_library(creator,p.id,true);
