@@ -88,6 +88,14 @@ main() {
   echo "$restore_counts"
   echo PROJECTS_V11_RESTORE=PASS
 
+  # Restore may leave Supabase default grants on V1 tables owned by supabase_admin.
+  step=restore_acl
+  psql -X -v ON_ERROR_STOP=1 -q >"$work/restore-acl.log" 2>&1 <<'SQL'
+revoke all on table public.projects,public.project_members from public,anon,authenticated;
+grant all on table public.projects,public.project_members to service_role;
+SQL
+  echo PROJECTS_V11_RESTORE_ACL=REASSERTED
+
   apply_projects() {
     apply_out=$(MIGRATION_EVIDENCE_DIR="$evidence" "$BUNDLE_DIR/scripts/production/safe-apply-migration.sh" \
       --file "$migration" --db-url-env PROJECTS_V11_DB_URL --postcondition-sql "$post" --evidence-dir "$evidence" 2>"$work/apply.log")
