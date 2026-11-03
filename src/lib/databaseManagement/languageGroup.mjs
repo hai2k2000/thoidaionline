@@ -95,7 +95,7 @@ export function resolveCategoryFilter(categories, categoryId, languageCode) {
 
 export function recordTypesForFilter(recordTypes, categories, categoryId, languageCode) {
   const resolved = resolveCategoryFilter(categories, categoryId, languageCode);
-  if (!resolved.rootId) return sortRecordTypes(recordTypes);
+  if (!resolved.rootId) return [];
   if ((resolved.mode === "language" || resolved.mode === "children") && !resolved.subId) return [];
   if (resolved.mode === "language") {
     return filterLanguageRecordTypes(recordTypes, categories, resolved.rootId, resolved.subId);
