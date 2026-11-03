@@ -134,21 +134,21 @@ const filterTypes = [
   { id: "foreign-type", category_id: "foreign", name: "Ngoại ngữ", sort_order: 4 },
   { id: "plain-type", category_id: "plain", name: "Báo cáo", sort_order: 5 },
 ];
-test("filter resolves a root to sorted children and aggregates their types", () => {
+test("filter waits for a child selection before listing types", () => {
   assert.deepEqual(resolveCategoryFilter(filterCategories, "other", ""), { rootId: "other", subId: "", mode: "children", subOptions: [{ value: "staff", label: "Cán bộ" }, { value: "letters", label: "Văn thư" }] });
-  assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "other", "").map((item) => item.id), ["staff-type", "letters-type"]);
+  assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "other", ""), []);
 });
 test("child URL restores its parent and narrows types to the selected child", () => {
   const resolved = resolveCategoryFilter(filterCategories, "letters", "");
   assert.equal(resolved.rootId, "other"); assert.equal(resolved.subId, "letters"); assert.equal(resolved.mode, "children");
   assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "letters", "").map((item) => item.id), ["letters-type"]);
 });
-test("content filter uses language families including all languages without a selection", () => {
+test("content filter waits for a language selection", () => {
   assert.equal(resolveCategoryFilter(filterCategories, "root", "zh").mode, "language");
   assert.equal(resolveCategoryFilter(filterCategories, "root", "zh").subId, "zh");
   assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "root", "zh").map((item) => item.id), ["foreign-type"]);
   assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "root", "vi").map((item) => item.id), ["vi-type"]);
-  assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "root", "").map((item) => item.id), ["vi-type", "foreign-type"]);
+  assert.deepEqual(recordTypesForFilter(filterTypes, filterCategories, "root", ""), []);
 });
 test("leaf and unselected filters preserve their type scopes without mutating inputs", () => {
   assert.deepEqual(resolveCategoryFilter(filterCategories, "plain", ""), { rootId: "plain", subId: "", mode: "none", subOptions: [] });
