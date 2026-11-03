@@ -189,5 +189,156 @@ revoke all on function public.api_assign_project_task(uuid,uuid,text,text,uuid,u
 grant execute on function public.api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text) to service_role;
 alter function public.api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text) owner to postgres;
 
+
+-- Project reviewers follow project membership, independent of department titles.
+create or replace function public.validate_task_report_recipient()
+returns trigger
+language plpgsql
+set search_path=public
+as $function$
+declare
+  v_job_title text;
+  v_role text;
+  v_active boolean;
+  v_department uuid;
+begin
+  if new.reviewer_id is not null then
+    select lower(jt.code),lower(r.code),u.active,u.department_id
+    into v_job_title,v_role,v_active,v_department
+    from public.staff_users u
+    join public.roles r on r.id=u.role_id
+    left join public.job_titles jt on jt.id=u.job_title_id and jt.active=true
+    where u.id=new.reviewer_id;
+
+    if not coalesce(v_active,false) then
+      raise exception 'Người duyệt không hợp lệ.' using errcode='22023';
+    end if;
+    if new.reviewer_id=(select manager_id from public.departments where id=new.department_id and active=true) then
+      null;
+    elsif v_job_title in ('truong_phong','pho_truong_phong') then
+      if v_department is distinct from new.department_id then
+        raise exception 'Người duyệt phải thuộc phòng ban của công việc.' using errcode='42501';
+      end if;
+    elsif v_role not in ('phu_trach_phong_tri_su','phu_trach_phong_phong_vien',
+      'phu_trach_phong_bien_tap','pho_tong_bien_tap','tong_bien_tap') then
+      raise exception 'Người duyệt phải là Trưởng hoặc Phó phòng.' using errcode='42501';
+    end if;
+  end if;
+  if new.self_claimable and new.assignment_mode<>'individual' then
+    raise exception 'Kế hoạch tự nhận chỉ hỗ trợ kiểu giao cá nhân.' using errcode='22023';
+  end if;
+  return new;
+end
+$function$;
+revoke all on function public.validate_task_report_recipient() from public,anon,authenticated;
+grant execute on function public.validate_task_report_recipient() to service_role;
+alter function public.validate_task_report_recipient() owner to postgres;
+
+create or replace function public.api_approve_task_claim(
+  p_actor_id uuid,p_task_id uuid,p_decision text,p_reason text default null
+) returns public.tasks language plpgsql security definer set search_path=public,pg_temp
+as $function$
+declare
+  v public.tasks; v_allowed boolean := false; v_role text; v_department uuid; v_status text;
+begin
+  select * into v from public.tasks where id=p_task_id for update;
+  if not found then raise exception 'Không tìm thấy công việc.' using errcode='P0002'; end if;
+  select r.code,u.department_id into v_role,v_department
+  from public.staff_users u join public.roles r on r.id=u.role_id
+  where u.id=p_actor_id and u.active=true;
+  if v.approval_required then
+    select coalesce(
+      v_role in ('admin','tong_bien_tap','pho_tong_bien_tap')
+      or (v_department=v.department_id and exists(select 1 from public.departments d where d.id=v.department_id and d.manager_id=p_actor_id)),
+      false
+    ) into v_allowed;
+    if p_actor_id=v.created_by then v_allowed:=false; end if;
+    if not v_allowed then raise exception 'Không có quyền duyệt giao việc.' using errcode='42501'; end if;
+    if v.status<>'waiting' or p_decision not in ('approve','reject')
+       or (p_decision='reject' and nullif(btrim(p_reason),'') is null) then
+      raise exception 'Quyết định hoặc trạng thái không hợp lệ.' using errcode='22023';
+    end if;
+    v_status:=case when p_decision='approve' then 'in_progress' else 'rejected' end;
+    update public.tasks set status=v_status,updated_at=now() where id=p_task_id returning * into v;
+    insert into public.task_status_events(task_id,from_status,to_status,reason,actor_id)
+    values(p_task_id,'waiting',v_status,nullif(btrim(p_reason),''),p_actor_id);
+    insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,old_data,new_data)
+    values(p_actor_id,'task','tasks',p_task_id,case when p_decision='approve' then 'approve_assignment' else 'reject_assignment' end,
+      jsonb_build_object('status','waiting','approval_required',true),jsonb_build_object('status',v_status,'reason',nullif(btrim(p_reason),'')));
+    return v;
+  end if;
+  if v.task_type<>'assigned' or coalesce(v.self_claimable,false) is not true then
+    raise exception 'Chỉ công việc tự nhận mới cần duyệt nhận việc.' using errcode='22023';
+  end if;
+  select (p_actor_id=v.reviewer_id or exists(
+    select 1 from public.staff_users u join public.roles r on r.id=u.role_id
+    where u.id=p_actor_id and u.active=true and r.code='admin'
+  )) into v_allowed;
+  if not coalesce(v_allowed,false) then raise exception 'Không có quyền duyệt nhận việc.' using errcode='42501'; end if;
+  if v.status<>'waiting' then raise exception 'Công việc không ở trạng thái chờ duyệt nhận việc.' using errcode='22023'; end if;
+  if p_decision not in ('approve','reject') or (p_decision='reject' and nullif(btrim(p_reason),'') is null) then raise exception 'Quyết định hoặc lý do không hợp lệ.' using errcode='22023'; end if;
+  v_status:=case when p_decision='approve' then 'in_progress' else 'rejected' end;
+  update public.tasks set status=v_status,updated_at=now() where id=p_task_id returning * into v;
+  insert into public.task_status_events(task_id,from_status,to_status,reason,actor_id) values(p_task_id,'waiting',v_status,nullif(btrim(p_reason),''),p_actor_id);
+  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,old_data,new_data)
+  values(p_actor_id,'task','tasks',p_task_id,case when p_decision='approve' then 'approve_claim' else 'reject_claim' end,jsonb_build_object('status','waiting'),jsonb_build_object('status',v_status,'reason',nullif(btrim(p_reason),'')));
+  return v;
+end
+$function$;
+revoke all on function public.api_approve_task_claim(uuid,uuid,text,text) from public,anon,authenticated;
+grant execute on function public.api_approve_task_claim(uuid,uuid,text,text) to service_role;
+alter function public.api_approve_task_claim(uuid,uuid,text,text) owner to postgres;
+
+create or replace function public.api_review_assigned_task_completion(
+  p_actor_id uuid,p_task_id uuid,p_decision text,p_reason text default null
+) returns public.tasks language plpgsql security definer set search_path=public,pg_temp
+as $function$
+declare v_before public.tasks; v_after public.tasks; v_status text; v_now timestamptz:=now(); v_action text;
+  v_role text; v_actor_department uuid; v_allowed boolean := false;
+begin
+  select * into v_before from public.tasks where id=p_task_id for update;
+  if not found then raise exception 'Task not found.' using errcode='P0002'; end if;
+  if v_before.approval_required then
+    select r.code,u.department_id into v_role,v_actor_department
+    from public.staff_users u join public.roles r on r.id=u.role_id
+    where u.id=p_actor_id and u.active=true;
+    select coalesce(
+      v_role in ('admin','tong_bien_tap','pho_tong_bien_tap')
+      or (v_actor_department=v_before.department_id and exists(
+        select 1 from public.departments d where d.id=v_before.department_id and d.manager_id=p_actor_id
+      )),false
+    ) into v_allowed;
+    if p_actor_id=v_before.created_by or p_actor_id=v_before.owner_id then v_allowed:=false; end if;
+    if not v_allowed then raise exception 'Task action forbidden.' using errcode='42501'; end if;
+    if v_before.status<>'pending_review' or p_decision not in ('approve','return')
+       or (p_decision='return' and nullif(btrim(p_reason),'') is null)
+       or length(coalesce(p_reason,''))>2000 then raise exception 'Invalid completion review.' using errcode='22023'; end if;
+    v_status:=case when p_decision='approve' then 'done' else 'in_progress' end;
+    update public.tasks set status=v_status,progress_percent=case when p_decision='approve' then 100 else progress_percent end,
+      completed_at=case when p_decision='approve' then v_now else null end,
+      completion_submitted_at=case when p_decision='approve' then completion_submitted_at else null end,updated_at=v_now
+      where id=p_task_id returning * into v_after;
+    v_action:=case when p_decision='approve' then 'approve_completion' else 'request_rework' end;
+    insert into public.task_status_events(task_id,from_status,to_status,reason,actor_id) values(p_task_id,'pending_review',v_status,nullif(btrim(p_reason),''),p_actor_id);
+    insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,old_data,new_data)
+    values(p_actor_id,'task','tasks',p_task_id,v_action,jsonb_build_object('status','pending_review'),jsonb_build_object('status',v_status,'reason',nullif(btrim(p_reason),'')));
+    return v_after;
+  end if;
+  perform public.api_assert_task_action(p_actor_id,p_task_id,'review');
+  if v_before.task_type<>'assigned' or v_before.status<>'pending_review' or p_decision not in ('approve','return')
+     or (p_decision='return' and nullif(btrim(p_reason),'') is null) then raise exception 'Invalid assigned review.' using errcode='22023'; end if;
+  v_status:=case when p_decision='approve' then 'done' else 'rejected' end;
+  update public.tasks set status=v_status,progress_percent=case when p_decision='approve' then 100 else progress_percent end,
+    completed_at=case when p_decision='approve' then v_now else null end,updated_at=v_now where id=p_task_id returning * into v_after;
+  insert into public.task_status_events(task_id,from_status,to_status,reason,actor_id) values(p_task_id,'pending_review',v_status,nullif(btrim(p_reason),''),p_actor_id);
+  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,old_data,new_data)
+  values(p_actor_id,'task','tasks',p_task_id,case when p_decision='approve' then 'approve' else 'return' end,jsonb_build_object('status','pending_review'),jsonb_build_object('status',v_status,'reason',nullif(btrim(p_reason),'')));
+  return v_after;
+end
+$function$;
+revoke all on function public.api_review_assigned_task_completion(uuid,uuid,text,text) from public,anon,authenticated;
+grant execute on function public.api_review_assigned_task_completion(uuid,uuid,text,text) to service_role;
+alter function public.api_review_assigned_task_completion(uuid,uuid,text,text) owner to postgres;
+
 notify pgrst,'reload schema';
 commit;

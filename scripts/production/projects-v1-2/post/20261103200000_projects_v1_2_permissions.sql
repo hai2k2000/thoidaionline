@@ -6,6 +6,10 @@ select case when
  and not has_table_privilege('anon','public.project_library_items','SELECT,INSERT,UPDATE,DELETE')
  and not has_table_privilege('authenticated','public.project_library_folders','SELECT,INSERT,UPDATE,DELETE')
  and exists(select 1 from pg_constraint where conrelid='public.project_members'::regclass and conname='project_members_role_check' and pg_get_constraintdef(oid) like '%deputy%')
+ and exists(select 1 from pg_trigger where tgrelid='public.tasks'::regclass and tgname='validate_task_report_recipient' and tgfoid='public.validate_task_report_recipient()'::regprocedure and tgenabled<>'D' and not tgisinternal)
+ and pg_get_functiondef('public.validate_task_report_recipient()'::regprocedure) like '%api_project_is_lead(new.reviewer_id,new.project_id)%'
+ and pg_get_functiondef('public.api_approve_task_claim(uuid,uuid,text,text)'::regprocedure) like '%api_project_is_lead(p_actor_id,v.project_id)%'
+ and pg_get_functiondef('public.api_review_assigned_task_completion(uuid,uuid,text,text)'::regprocedure) like '%api_project_is_lead(p_actor_id,v_before.project_id)%'
  and to_regprocedure('public.api_project_can_assign(uuid,uuid)') is not null
  and to_regprocedure('public.api_list_project_library(uuid,uuid,uuid)') is not null
  and to_regprocedure('public.api_mutate_project_library_folder(uuid,uuid,uuid,text,text,uuid)') is not null
@@ -19,6 +23,9 @@ select case when
    ('public.api_transfer_project_lead(uuid,uuid,uuid,text)'),
    ('public.api_set_user_permission_override(uuid,uuid,text,text,text)'),
    ('public.api_list_user_approval_permissions(uuid,uuid)'),
+   ('public.validate_task_report_recipient()'),
+   ('public.api_approve_task_claim(uuid,uuid,text,text)'),
+   ('public.api_review_assigned_task_completion(uuid,uuid,text,text)'),
    ('public.enforce_assignee_manager_watcher()'),
    ('public.review_task_completion(uuid,uuid,text,text)'),
    ('public.api_project_actor_can_create(uuid)'),
@@ -44,7 +51,7 @@ select case when
    ('public.file_project_task_attachment()')
   ) expected(signature)
   left join pg_proc p on p.oid=to_regprocedure(expected.signature)
-  where p.oid is null or (expected.signature<>'public.rbac_v2_scope_supported(text,text)' and not p.prosecdef)
+  where p.oid is null or (expected.signature not in ('public.rbac_v2_scope_supported(text,text)','public.validate_task_report_recipient()') and not p.prosecdef)
    or exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl where acl.grantee=0 and acl.privilege_type='EXECUTE')
    or has_function_privilege('anon',p.oid,'EXECUTE')
    or has_function_privilege('authenticated',p.oid,'EXECUTE')

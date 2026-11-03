@@ -15,15 +15,13 @@ do $$
 declare
   host_id uuid; other_id uuid; creator uuid; lead_id uuid; member_id uuid;
   second_lead uuid; tbt_id uuid; ctv_id uuid; outsider uuid; inactive_id uuid; p public.projects; t public.tasks;
-  employee_role uuid; lead_job uuid; ctv_job uuid; f public.project_library_folders; child public.project_library_folders; item public.project_library_items; auto_item public.project_library_items; attachment uuid;
+  employee_role uuid; ctv_job uuid; f public.project_library_folders; child public.project_library_folders; item public.project_library_items; auto_item public.project_library_items; attachment uuid;
   fixture_suffix text := replace(gen_random_uuid()::text,'-','');
 begin
   insert into public.departments(code,name) values('zz_projects_host_'||fixture_suffix,'Project host') returning id into host_id;
   insert into public.departments(code,name) values('zz_projects_other_'||fixture_suffix,'Other department') returning id into other_id;
   select id into employee_role from public.roles where code='nhan_vien';
   if employee_role is null then raise exception 'Fixture needs nhan_vien role'; end if;
-  select id into lead_job from public.job_titles where code='truong_phong' and active;
-  if lead_job is null then raise exception 'Fixture needs truong_phong job title'; end if;
   -- ctv is a fixture-only catalog value; production migrations do not seed it.
   insert into public.job_titles(code,name,display_order,active)
   values('ctv','Project CTV '||fixture_suffix,999,true)
@@ -32,10 +30,9 @@ begin
   if ctv_job is null then raise exception 'Fixture needs ctv job title'; end if;
   insert into public.staff_users(full_name,username,password,role_id,department_id)
   values('Project admin','zz_projects_admin_'||fixture_suffix,'test-only',(select id from public.roles where code='admin'),host_id) returning id into creator;
-  -- The legacy recipient trigger requires a host-department manager/title.
-  -- Staff insertion synchronizes manager_id from this title; do not set it manually.
-  insert into public.staff_users(full_name,username,password,role_id,department_id,job_title_id)
-  values('Project lead','zz_projects_lead_'||fixture_suffix,'test-only',employee_role,host_id,lead_job) returning id into lead_id;
+  -- A plain employee in another department must be able to review project tasks.
+  insert into public.staff_users(full_name,username,password,role_id,department_id)
+  values('Project lead','zz_projects_lead_'||fixture_suffix,'test-only',employee_role,other_id) returning id into lead_id;
   insert into public.staff_users(full_name,username,password,role_id,department_id)
   values('Project member','zz_projects_member_'||fixture_suffix,'test-only',employee_role,host_id) returning id into member_id;
   insert into public.staff_users(full_name,username,password,role_id,department_id,job_title_id)
@@ -77,6 +74,28 @@ begin
   if exists(select 1 from public.project_members where project_id=p.id and user_id=creator) then raise exception 'Admin gained membership'; end if;
   if not exists(select 1 from public.audit_logs where entity_id=p.id and action='transfer_lead') then raise exception 'Transfer audit missing'; end if;
   perform public.api_update_project(creator,p.id,p.code,'Admin changed name',null,host_id);
+  perform public.api_set_project_member(creator,p.id,second_lead,'deputy');
+  t:=public.api_assign_project_task(member_id,p.id,'Cross-department review','Requirements',ctv_id,lead_id,current_date,'17:00');
+  if t.reviewer_id<>lead_id or t.department_id<>host_id then raise exception 'Cross-department reviewer missing'; end if;
+  -- Direct writes exercise the trigger independently of RPC reviewer validation.
+  perform pg_temp.expect_state(format('update public.tasks set reviewer_id=%L where id=%L',second_lead,t.id),'42501');
+  perform pg_temp.expect_state(format('update public.tasks set reviewer_id=%L where id=%L',inactive_id,t.id),'42501');
+  perform pg_temp.expect_state(format('update public.tasks set reviewer_id=null where id=%L',t.id),'42501');
+  perform pg_temp.expect_state(format('update public.tasks set project_id=null,reviewer_id=%L where id=%L',lead_id,t.id),'42501');
+  perform pg_temp.expect_state(format('update public.tasks set self_claimable=true,assignment_mode=''multi_user'' where id=%L',t.id),'22023');
+  update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
+  perform pg_temp.expect_state(format('select public.api_review_task_completion(%L,%L,''reject'',''Revise'')',second_lead,t.id),'42501');
+  perform public.api_score_task_completion(lead_id,t.id,'[]'::jsonb,60,20,20);
+  if not exists(select 1 from public.tasks where id=t.id and status='done') then raise exception 'Cross-department lead scoring/review failed'; end if;
+  -- Approval-required project rows must use the same project authorization.
+  update public.tasks set approval_required=true,status='waiting' where id=t.id;
+  perform pg_temp.expect_state(format('select public.api_approve_task_claim(%L,%L,''approve'')',second_lead,t.id),'42501');
+  t:=public.api_approve_task_claim(lead_id,t.id,'approve');
+  if t.status<>'in_progress' then raise exception 'Project assignment approval failed'; end if;
+  update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
+  perform pg_temp.expect_state(format('select public.api_review_assigned_task_completion(%L,%L,''approve'')',second_lead,t.id),'42501');
+  perform public.api_score_task_completion(lead_id,t.id,'[]'::jsonb,60,20,20);
+  if not exists(select 1 from public.tasks where id=t.id and status='done') then raise exception 'Project approval-required completion failed'; end if;
   t:=public.api_assign_project_task(creator,p.id,'Admin assigned','Requirements',ctv_id,creator,current_date,'17:00');
   if t.reviewer_id<>creator then raise exception 'Admin self reviewer rejected'; end if;
   perform public.api_assert_task_action(creator,t.id,'review');
@@ -86,6 +105,9 @@ begin
   on conflict (task_id) do update set reviewer_id=excluded.reviewer_id,updated_at=now();
   t:=public.api_review_task_completion(creator,t.id,'reject','Revise');
   if t.status<>'rejected' then raise exception 'Admin review failed'; end if;
+  update public.tasks set status='pending_review',completion_submitted_at=now() where id=t.id;
+  perform public.api_score_task_completion(creator,t.id,'[]'::jsonb,60,20,20);
+  if not exists(select 1 from public.tasks where id=t.id and status='done') then raise exception 'Admin scoring/review failed'; end if;
   perform public.api_assert_project_library(creator,p.id,true);
   f:=public.api_create_project_library_folder(creator,p.id,'Admin folder',null);
   item:=public.api_add_project_library_item(member_id,p.id,f.id,'link','Test',null,'https://example.com');
