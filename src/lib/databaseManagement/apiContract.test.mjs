@@ -34,7 +34,7 @@ test("record API accepts language filtering and persists the selected language",
 
 test("approval visibility exposes manager-only diagnostics and ACL management", () => {
   assert.match(repository, /approvalBlockReason/);
-  assert.match(repository, /missing_approval_acl_allow/);
+  assert.doesNotMatch(repository, /missing_approval_acl_allow/);
   assert.match(repository, /missing_self_approve_permission/);
   assert.match(repository, /getDatabaseRecordAclManagement/);
   assert.match(detailRoute, /export async function GET/);

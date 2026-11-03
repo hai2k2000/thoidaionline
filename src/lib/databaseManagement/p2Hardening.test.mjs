@@ -20,7 +20,7 @@ test("P2 status and visibility guards are enforced", () => {
   assert.match(repository, /if \(!data\) throw new Error\("record_locked"\)/);
   assert.match(repository, /rbacPermissions\.includes\("record\.discover"\)/);
   assert.match(repository, /record\.owner_id && record\.owner_id === actor\.id/);
-  assert.match(repository, /capability === "acl\.manage"\) return visibilityAllowed/);
+  assert.match(repository, /capability === "acl\.manage"[\s\S]*canApproveRecord/);
   assert.doesNotMatch(repository, /capability === "acl\.manage"\) return true/);
   for (const source of [restoreRoute, recordRoute]) for (const code of ["record_not_deleted", "record_already_deleted", "record_locked"]) assert.match(source, new RegExp(code));
 });
