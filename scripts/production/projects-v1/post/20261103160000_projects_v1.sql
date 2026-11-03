@@ -13,7 +13,7 @@ select case when
   and (select count(distinct r.code) from public.role_permission_grants g
     join public.roles r on r.id=g.role_id join public.permissions p on p.id=g.permission_id
     where p.code='project.create' and r.code in ('admin','tong_bien_tap') and g.scope='all') = 2
-  and (select count(*) from pg_policies where schemaname='public'
-    and (tablename,policyname) in (('projects','projects_no_direct_access'),('project_members','project_members_no_direct_access'))
-    and cmd='ALL' and qual='false' and with_check='false') = 2
+  and not exists (select 1 from pg_policies
+    where schemaname='public' and tablename in ('projects','project_members')
+      and (roles && array['anon','authenticated','public']::name[]))
   then 'pass' else 'fail' end;

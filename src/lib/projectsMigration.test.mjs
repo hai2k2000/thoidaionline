@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 const sql = readFileSync("supabase/migrations/20261103160000_projects_v1.sql", "utf8");
+test("project tables use default-deny RLS without client-role policies", () => {
+  for (const table of ["projects", "project_members"]) {
+    assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security;`, "i"));
+  }
+  assert.doesNotMatch(sql, /\bcreate policy[^;]*\bon\s+public\.(projects|project_members)\b/i);
+});
 test("project tables and all helpers have explicit service-only ACLs", () => {
   assert.match(sql, /revoke all on table public.projects,public.project_members from public,anon,authenticated/);
   for (const name of ["api_project_actor_can_create", "api_project_is_lead"]) assert.match(sql, new RegExp("'" + name + "\\(uuid"));

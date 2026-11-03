@@ -2,6 +2,7 @@
 -- Populated installations must restore their pre-P1 database backup to preserve relationships.
 begin;
 lock table public.projects,public.project_members,public.tasks in access exclusive mode;
+-- RLS has no client-role policies; dropping the tables removes the default-deny objects.
 do $$ begin
  if exists(select 1 from public.projects) or exists(select 1 from public.tasks where project_id is not null) then
    raise exception 'Projects contain data; restore the verified pre-P1 database backup instead.';

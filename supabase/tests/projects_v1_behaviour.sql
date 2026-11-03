@@ -104,6 +104,10 @@ do $$ declare fn regprocedure; tab text; role_name text; begin
    foreach role_name in array array['anon','authenticated'] loop
      if has_table_privilege(role_name,'public.'||tab,'SELECT,INSERT,UPDATE,DELETE') then raise exception 'Direct table access: % %',role_name,tab; end if;
    end loop;
+  if exists(select 1 from pg_policies where schemaname='public' and tablename=tab
+      and (roles && array['anon','authenticated','public']::name[])) then
+    raise exception 'Client-role policy exists: %',tab;
+  end if;
  end loop;
  for fn in select oid::regprocedure from pg_proc where pronamespace='public'::regnamespace and proname in ('api_create_project','api_update_project','api_set_project_member','api_close_project','api_assign_project_task','api_project_actor_can_create','api_project_is_lead') loop
    if has_function_privilege('anon',fn,'EXECUTE') or has_function_privilege('authenticated',fn,'EXECUTE') or not has_function_privilege('service_role',fn,'EXECUTE') then raise exception 'Bad RPC ACL: %',fn; end if;

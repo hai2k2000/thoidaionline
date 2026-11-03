@@ -26,12 +26,8 @@ create index if not exists idx_tasks_project_id on public.tasks(project_id);
 create index if not exists idx_project_members_user on public.project_members(user_id,project_id);
 alter table public.projects enable row level security;
 alter table public.project_members enable row level security;
-drop policy if exists projects_no_direct_access on public.projects;
-drop policy if exists project_members_no_direct_access on public.project_members;
 revoke all on table public.projects,public.project_members from public,anon,authenticated;
 grant all on table public.projects,public.project_members to service_role;
-create policy projects_no_direct_access on public.projects for all to anon,authenticated using (false) with check (false);
-create policy project_members_no_direct_access on public.project_members for all to anon,authenticated using (false) with check (false);
 
 insert into public.permissions(code,name,module,description) values
  ('project.create','Táº¡o dá»± Ã¡n','projects','Táº¡o khÃ´ng gian dá»± Ã¡n') on conflict (code) do nothing;
