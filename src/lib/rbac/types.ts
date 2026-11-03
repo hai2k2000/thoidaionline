@@ -27,6 +27,8 @@ export type RbacActor = {
 
 export type RbacTaskResource = {
   kind: "task";
+  projectId?: string | null;
+  projectMemberIds?: readonly string[];
   id: string;
   departmentId: string | null;
   createdBy: string | null;

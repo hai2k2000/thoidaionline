@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
-import { canAccessDatabaseRecordForActor, prepareDatabaseRecordFileUpload } from "@/lib/databaseManagement/repository";
+import { canAccessDatabaseRecordForActor, assertCanModifyRecordFiles, reopenRecordAfterFileChange } from "@/lib/databaseManagement/repository";
 import { removeDatabaseRecordFile, writeDatabaseRecordFile } from "@/lib/databaseManagement/storage";
 import { logServerAudit } from "@/lib/serverAudit";
 import { databaseRecordFileType, hasDatabaseRecordFileMagic } from "@/lib/databaseManagement/fileType.mjs";
@@ -67,35 +67,58 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const fileBytes = new Uint8Array(await file.arrayBuffer());
   if (!hasDatabaseRecordFileMagic(file.name, fileBytes)) return NextResponse.json({ error: "unsupported_file_type" }, { status: 415 });
   let storageKey: string | null = null;
+  let storageCreated = false;
   let retainStorageForReconciliation = false;
+  let insertedFileId: string | null = null;
+  let historyId: string | null = null;
+  let completed = false;
   try {
-    await prepareDatabaseRecordFileUpload(actor, recordId);
-    const stored = await writeDatabaseRecordFile(recordId, file, uploadRequestId || undefined);
+    const current = await assertCanModifyRecordFiles(actor, recordId);
+    const stored = await writeDatabaseRecordFile(recordId, { name: file.name, bytes: fileBytes, mimeType }, uploadRequestId || undefined);
     storageKey = stored.storageKey;
+    storageCreated = stored.created;
     const { data, error } = await serverSupabase.from("db_record_files").insert({ record_id: recordId, upload_request_id: uploadRequestId || null, storage_backend: "vps_private", storage_key: stored.storageKey, original_name: file.name, mime_type: mimeType, size_bytes: stored.sizeBytes, sha256: stored.sha256, created_by: actor.id }).select("id,original_name,mime_type,size_bytes,sha256,created_at").single();
     if (error) {
       if (uploadRequestId && error.code === "23505") {
+        // A competing request may own a row for the same deterministic storage key.
+        retainStorageForReconciliation = true;
         const { data: existing, error: retryError } = await serverSupabase.from("db_record_files").select("id,original_name,mime_type,size_bytes,sha256,created_at").eq("record_id", recordId).eq("upload_request_id", uploadRequestId).maybeSingle();
         if (!retryError && existing) return NextResponse.json({ file: existing, reconciled: true }, { headers: { "Cache-Control": "private, no-store" } });
+        throw new Error("file_upload_reconciliation_required");
       }
       throw error;
     }
-    const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "file_upload", old_data: null, new_data: { file_id: data.id, original_name: file.name, size_bytes: stored.sizeBytes, sha256: stored.sha256 } });
-    if (historyError) {
-      const { error: compensationError } = await serverSupabase.from("db_record_files").delete().eq("id", data.id);
-      if (compensationError) {
-        retainStorageForReconciliation = true;
-        throw new Error("file_upload_reconciliation_required");
-      }
-      throw historyError;
-    }
+    insertedFileId = data.id;
+    const { data: history, error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "file_upload", old_data: null, new_data: { file_id: data.id, original_name: file.name, size_bytes: stored.sizeBytes, sha256: stored.sha256 } }).select("id").single();
+    if (historyError) throw historyError;
+    historyId = history.id;
+    await reopenRecordAfterFileChange(actor, recordId, current.status);
+    completed = true;
     let auditStatus: "delivered" | "pending";
     try { auditStatus = await logServerAudit({ actorId: actor.id, module: "database", entityType: "db_record_files", entityId: data.id, action: "upload", idempotencyKey: uploadRequestId || `file-upload:${data.id}`, newData: { record_id: recordId, size_bytes: stored.sizeBytes, sha256: stored.sha256 } }); } catch { retainStorageForReconciliation = true; throw new Error("audit_reconciliation_required"); }
     return NextResponse.json({ file: data, audit_status: auditStatus }, { status: 201, headers: { "Cache-Control": "private, no-store", "X-Audit-Status": auditStatus } });
   } catch (error) {
-    if (storageKey && !retainStorageForReconciliation) await removeDatabaseRecordFile(storageKey).catch(() => undefined);
+    if (insertedFileId && !completed) {
+      try {
+        const { error: compensationError } = await serverSupabase.from("db_record_files").delete().eq("id", insertedFileId).eq("record_id", recordId);
+        if (compensationError) throw compensationError;
+        if (historyId) {
+          const { error: historyCleanupError } = await serverSupabase.from("db_record_history").delete().eq("id", historyId);
+          if (historyCleanupError) throw historyCleanupError;
+        }
+      } catch {
+        retainStorageForReconciliation = true;
+        error = new Error("file_upload_reconciliation_required");
+      }
+    }
+    if (storageKey && storageCreated && !retainStorageForReconciliation) {
+      try {
+        const { data: references, error: referenceError } = await serverSupabase.from("db_record_files").select("id").eq("storage_key", storageKey).limit(1);
+        if (!referenceError && references?.length === 0) await removeDatabaseRecordFile(storageKey);
+      } catch { /* Retain storage if reference verification or cleanup fails. */ }
+    }
     const message = error instanceof Error ? error.message : "file_upload_failed";
-    if (message === "file_upload_reconciliation_required" || message === "audit_reconciliation_required") return NextResponse.json({ error: message }, { status: 500 });
+    if (message === "file_upload_reconciliation_required" || message === "file_change_reconciliation_required" || message === "audit_reconciliation_required") return NextResponse.json({ error: message }, { status: 500 });
     if (message === "record_locked") return NextResponse.json({ error: "record_locked" }, { status: 409 });
     if (message === "permission_denied" || message === "record_not_found") return NextResponse.json({ error: "forbidden" }, { status: 403 });
     return NextResponse.json({ error: message === "invalid_file" ? "invalid_file" : "file_upload_failed" }, { status: 400 });

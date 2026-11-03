@@ -26,7 +26,7 @@ test("repository locks and reopens records with status guards", () => {
 });
 
 test("upload and PATCH routes map record_locked", () => {
-  assert.match(uploadRoute, /prepareDatabaseRecordFileUpload/);
+  assert.match(uploadRoute, /assertCanModifyRecordFiles/);
   assert.match(uploadRoute, /record_locked.*409|409.*record_locked/);
   assert.match(recordRoute, /record_locked.*409|409.*record_locked/);
 });

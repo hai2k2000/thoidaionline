@@ -1,7 +1,19 @@
 import type { DatabaseRecordAclInput, DatabaseRecordInput, DatabaseRecordUpdateInput } from "./types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const URL = /^https:\/\//i;
+function validExternalLink(link: unknown) {
+  if (!link || typeof link !== "object") return false;
+  const value = link as { provider?: unknown; url?: unknown };
+  if (value.provider !== "google_drive" || typeof value.url !== "string") return false;
+  try {
+    const url = new globalThis.URL(value.url);
+    return url.protocol === "https:" && ["drive.google.com", "docs.google.com"].includes(url.hostname.toLowerCase()) && !url.username && !url.password && (!url.port || url.port === "443");
+  } catch { return false; }
+}
+
+function validKeywords(value: unknown) {
+  return Array.isArray(value) && value.every((keyword) => typeof keyword === "string" && keyword.trim().length > 0 && keyword.length <= 120);
+}
 
 export type RecordValidationError = { field: string; code: string };
 
@@ -36,7 +48,7 @@ export function validateDatabaseMetadata(metadata: Record<string, unknown>, fiel
       : ["select", "person", "department", "country", "url"].includes(field.data_type) ? typeof value === "string"
       : false;
     if (!validType) errors.push({ field: `metadata.${field.field_key}`, code: "invalid_type" });
-    if (field.data_type === "url" && typeof value === "string" && !URL.test(value)) errors.push({ field: `metadata.${field.field_key}`, code: "invalid_url" });
+    if (field.data_type === "url" && typeof value === "string" && !/^https:\/\//i.test(value)) errors.push({ field: `metadata.${field.field_key}`, code: "invalid_url" });
     const rules = field.validation && typeof field.validation === "object" ? field.validation as Record<string, unknown> : {};
     if (typeof value === "string" && typeof rules.maxLength === "number" && value.length > rules.maxLength) errors.push({ field: `metadata.${field.field_key}`, code: "max_length" });
     if (Array.isArray(value) && typeof rules.maxItems === "number" && value.length > rules.maxItems) errors.push({ field: `metadata.${field.field_key}`, code: "max_items" });
@@ -66,13 +78,13 @@ export function validateDatabaseRecordInput(input: unknown): { ok: true; value: 
   if (!value.metadata || typeof value.metadata !== "object" || Array.isArray(value.metadata)) errors.push({ field: "metadata", code: "object_required" });
   if (value.languageCode !== undefined && value.languageCode !== null && !["vi", "en", "zh", "lo", "km", "ru"].includes(value.languageCode)) errors.push({ field: "languageCode", code: "invalid_option" });
   if (value.visibility !== undefined && value.visibility !== "department" && value.visibility !== "public") errors.push({ field: "visibility", code: "invalid_option" });
-  if (value.keywords !== undefined && (!Array.isArray(value.keywords) || value.keywords.some((keyword) => typeof keyword !== "string" || keyword.trim().length === 0 || keyword.length > 120))) errors.push({ field: "keywords", code: "invalid_keywords" });
-  if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.some((link) => !link || link.provider !== "google_drive" || typeof link.url !== "string" || !URL.test(link.url)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
+  if (value.keywords !== undefined && !validKeywords(value.keywords)) errors.push({ field: "keywords", code: "invalid_keywords" });
+  if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.some((link) => !validExternalLink(link)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: {
     categoryId: value.categoryId!, recordTypeId: value.recordTypeId!, title: value.title!.trim(),
     summary: value.summary ?? null, departmentId: value.departmentId ?? null, ownerId: value.ownerId ?? null,
-    status: value.status ?? "draft", metadata: value.metadata as Record<string, unknown>, languageCode: value.languageCode ?? null, keywords: value.keywords ?? [], externalLinks: value.externalLinks ?? [], visibility: value.visibility ?? "department",
+    status: value.status ?? "draft", metadata: value.metadata as Record<string, unknown>, languageCode: value.languageCode ?? null, keywords: value.keywords, externalLinks: value.externalLinks ?? [], visibility: value.visibility ?? "department",
   } };
 }
 
@@ -93,6 +105,10 @@ export function validateDatabaseRecordUpdateInput(input: unknown): { ok: true; v
     if (value.visibility !== "department" && value.visibility !== "public") errors.push({ field: "visibility", code: "invalid_option" });
     else result.visibility = value.visibility;
   }
+  if (value.keywords !== undefined && !validKeywords(value.keywords)) errors.push({ field: "keywords", code: "invalid_keywords" });
+  if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.some((link) => !validExternalLink(link)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
+  if (value.keywords !== undefined && validKeywords(value.keywords)) result.keywords = value.keywords as string[];
+  if (value.externalLinks !== undefined && Array.isArray(value.externalLinks) && value.externalLinks.every(validExternalLink)) result.externalLinks = value.externalLinks as DatabaseRecordUpdateInput["externalLinks"];
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: result };
 }
@@ -104,7 +120,7 @@ export function validateDatabaseAclInput(input: unknown): { ok: true; value: Dat
   if (!(["user", "role", "department"] as const).includes(value.principalType as never)) errors.push({ field: "principalType", code: "invalid_principal_type" });
   if (typeof value.principalId !== "string" || !UUID.test(value.principalId)) errors.push({ field: "principalId", code: "uuid_required" });
   if (!(typeof value.capability === "string" && ["discover", "metadata.view", "preview", "download", "edit", "approve", "delete", "restore", "export", "acl.manage"].includes(value.capability))) errors.push({ field: "capability", code: "invalid_capability" });
-  if (!(["allow", "deny"] as const).includes(value.effect as never)) errors.push({ field: "effect", code: "invalid_effect" });
+  if (!(["allow", "deny"] as const).includes(value.effect as never) || (value.capability === "approve" && value.effect !== "deny")) errors.push({ field: "effect", code: "invalid_effect" });
   if (value.expiresAt !== undefined && value.expiresAt !== null && (typeof value.expiresAt !== "string" || Number.isNaN(Date.parse(value.expiresAt)))) errors.push({ field: "expiresAt", code: "invalid_datetime" });
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: value as DatabaseRecordAclInput };

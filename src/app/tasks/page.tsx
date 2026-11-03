@@ -1,3 +1,4 @@
+import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 import { redirect } from "next/navigation";
 import TaskCenterShell from "@/components/TaskCenterShell";
 import { hasOrganizationTaskView } from "@/lib/authorization";
@@ -43,7 +44,9 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
     || user.role_code === "tong_bien_tap"
     || user.role_code === "pho_tong_bien_tap"
     || user.is_department_manager === true;
+  const collaborator = isCollaboratorRole(user.role_code);
   const rawParams = await searchParams;
+  if (collaborator) { delete rawParams.view; delete rawParams.approvalQueue; rawParams.journalism = "exclude"; }
   if (rawParams.view === "evaluations") {
     if (!canViewEvaluations) redirect("/tasks");
     const params = toUrlSearchParams(rawParams); params.delete("view");
@@ -87,10 +90,11 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
 
   return (
     <TaskCenterShell
+      heading={collaborator ? "C\u00d4NG VI\u1ec6C C\u1ee6A T\u00d4I" : undefined}
       canAssignTask={user.permissions.can_assign_task}
       canQuickReport={user.rbacPermissions.includes("task.quick_report.create")}
       canAccessJournalism={journalismAllowed}
-      canClaimTasks={!['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
+      canClaimTasks={!collaborator && !['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
       canReviewTaskApprovals={canReviewTaskApprovals}
       currentUserRole={user.role_code}
       approvalQueue={approvalQueue && {

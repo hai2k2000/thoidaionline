@@ -1,3 +1,5 @@
+import { isCollaboratorRole, isCollaboratorAllowedPath } from "@/lib/collaboratorRole.mjs";
+import { serverSupabase } from "@/lib/serverSupabase";
 import { NextRequest, NextResponse } from "next/server";
 import { getFirstLoginGateDecision } from "@/lib/firstLoginPassword";
 import { verifySignedSessionToken } from "@/lib/sessionToken";
@@ -31,8 +33,28 @@ function nextWithNonce(request: NextRequest) {
   return response;
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) return nextWithNonce(request);
+
+  const authorization = request.headers.get("authorization");
+  const bearer = authorization?.match(/^Bearer\s+([^\s]+)$/i)?.[1];
+  const token = request.cookies.get(SESSION_COOKIE)?.value ?? bearer;
+  const session = verifySignedSessionToken({ token, secret });
+  if (session) {
+    // Resolve the live role so existing sessions respect a role reassignment.
+    const { data, error } = await serverSupabase.from("staff_users")
+      .select("roles(code)").eq("id", session.userId).maybeSingle();
+    if (error) return NextResponse.json({ error: "Authorization unavailable" }, { status: 503 });
+    const roles = data?.roles as unknown as { code: string } | { code: string }[] | null;
+    const roleCode = Array.isArray(roles) ? roles[0]?.code : roles?.code;
+    if (isCollaboratorRole(roleCode) && !isCollaboratorAllowedPath(pathname, request.method)) {
+      return pathname.startsWith("/api/")
+        ? NextResponse.json({ error: "Forbidden", code: "forbidden" }, { status: 403, headers: { "Cache-Control": "private, no-store" } })
+        : NextResponse.redirect(new URL("/my-tasks", request.url));
+    }
+  }
   if (pathname === "/profile") return NextResponse.redirect(new URL("/account", request.url));
   if (/^\/users\/[^/]+\/?$/.test(pathname)) return NextResponse.redirect(new URL("/users", request.url));
   if (pathname.startsWith("/uploads/")) {
@@ -47,13 +69,6 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 32) return nextWithNonce(request);
-
-  const authorization = request.headers.get("authorization");
-  const bearer = authorization?.match(/^Bearer\s+([^\s]+)$/i)?.[1];
-  const token = request.cookies.get(SESSION_COOKIE)?.value ?? bearer;
-  const session = verifySignedSessionToken({ token, secret });
   const decision = getFirstLoginGateDecision(
     request.nextUrl.pathname,
     session?.mustChangePassword === true,
@@ -70,5 +85,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)", "/uploads/:path*"],
+  matcher: ["/((?!_next/static|_next/image|fonts/|favicon\\.ico$|favicon-td\\.png$|thoidai-logo\\.png$|diditravel-logo\\.png$|(?:file|globe|next|vercel|window)\\.svg$).*)", "/uploads/:path*", "/api/:path*"],
 };

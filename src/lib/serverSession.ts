@@ -1,4 +1,5 @@
 import "server-only";
+import { isCollaboratorRole } from "./collaboratorRole.mjs";
 
 import { cookies, headers } from "next/headers";
 import { serverSupabase } from "@/lib/serverSupabase";
@@ -100,7 +101,8 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   };
   if (session.sessionVersion !== row.session_version) return null;
   if (!row.roles) return null;
-  const isDepartmentManager = row.job_titles?.code === "truong_phong";
+  const collaborator = isCollaboratorRole(row.roles.code);
+  const isDepartmentManager = !collaborator && row.job_titles?.code === "truong_phong";
   const avatarResult = row.avatar_path
     ? await serverSupabase.storage.from("profile-avatars").createSignedUrl(row.avatar_path, 3600)
     : null;
@@ -121,11 +123,11 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     session_version: row.session_version,
     must_change_password: row.must_change_password,
     is_department_manager: isDepartmentManager,
-    permissions: normalizePermissions(row.roles.active ? row.roles.role_permissions : null),
+    permissions: normalizePermissions(collaborator ? { can_comment: row.roles.active } : row.roles.active ? row.roles.role_permissions : null),
     avatar_url: avatarResult?.data?.signedUrl ?? null,
     preferences: normalizeAccountPreferences(row.preferences),
-    rbacPermissions: [...new Set(rbacActor.grants.map((grant) => grant.permissionCode))],
-    rbacPermissionScopes: Object.fromEntries((rbacActor.permissions ?? []).map((permission) => [permission.permissionCode, permission.effectiveScopes])),
+    rbacPermissions: [...new Set(rbacActor.grants.filter((grant) => !collaborator || (["task.view", "task.comment"].includes(grant.permissionCode) && grant.scope === "assigned")).map((grant) => grant.permissionCode))],
+    rbacPermissionScopes: Object.fromEntries((rbacActor.permissions ?? []).filter((permission) => !collaborator || ["task.view", "task.comment"].includes(permission.permissionCode)).map((permission) => [permission.permissionCode, collaborator ? permission.effectiveScopes.filter((scope) => scope === "assigned") : permission.effectiveScopes])),
   };
 }
 

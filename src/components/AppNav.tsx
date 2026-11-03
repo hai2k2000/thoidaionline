@@ -1,5 +1,6 @@
 "use client";
 
+import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,6 +18,7 @@ type AppNavProps = {
 };
 
 const labels = {
+  projects: "D\u1ef1 \u00e1n",
   assign: "Giao vi\u1ec7c",
   attendance: "Chấm công",
   "attendance-admin": "Chấm công toàn cơ quan",
@@ -113,7 +115,7 @@ function NavContent({
             onClick={onNavigate}
             className={linkClass(isNavigationActive(currentPath, item.href))}
           >
-            <NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span className="leading-snug">{labels[item.id]}</span>
+            <NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span className="leading-snug">{item.href === "/my-tasks" ? "C\u00f4ng vi\u1ec7c c\u1ee7a t\u00f4i" : labels[item.id]}</span>
           </Link>
               )
             ))}
@@ -198,6 +200,13 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
   const { user, hasPermission, logout } = useAuth();
+  const [projectMembership, setProjectMembership] = useState<{ userId: string; value: boolean } | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    const controller = new AbortController();
+    fetch("/api/projects/access", { signal: controller.signal }).then((response) => response.ok ? response.json() : null).then((data) => { if (!controller.signal.aborted) setProjectMembership({ userId: user.id, value: data?.hasMembership === true }); }).catch(() => {});
+    return () => controller.abort();
+  }, [user, currentPath]);
   const [loggingOut, setLoggingOut] = useState(false);
   const performLogout = async () => {
     if (loggingOut) return;
@@ -207,6 +216,8 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   };
 
   const navigation = getPhase2Navigation({
+    hasProjectMembership: projectMembership?.userId === user?.id && projectMembership?.value === true,
+    canCreateProject: Boolean(user?.rbacPermissionScopes?.["project.create"]?.length),
     roleCode: user?.role_code ?? "",
     departmentCode: user?.department_code,
     canAccessJournalism: user ? canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions }) : false,
@@ -262,9 +273,9 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   return (
     <aside className="w-full lg:w-[252px] lg:shrink-0">
       <div className="fixed right-4 top-4 z-[60]">
-        <NotificationBell />
+        {!isCollaboratorRole(user?.role_code) && <NotificationBell />}
       </div>
-      <HelpBot />
+      {!isCollaboratorRole(user?.role_code) && <HelpBot />}
       <div className="mobile-app-bar mb-3 lg:hidden">
         <div className="min-w-0">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-orange-700">Thời Đại Work</p>

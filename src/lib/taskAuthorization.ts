@@ -56,6 +56,8 @@ export function canTaskBase(
   permission: string,
   resource?: RbacTaskResource,
 ): boolean {
+  if ((permission === "task.view" || permission === "task.comment")
+    && resource?.projectId && resource.projectMemberIds?.includes(actor.id)) return true;
   const scopes = actor.grants
     .filter((grant) => grant.permissionCode === permission)
     .map((grant) => grant.scope);
@@ -75,10 +77,12 @@ export function canTaskBase(
 export function buildTaskListScope(
   actor: RbacActor,
   taskIds: readonly string[],
+  projectIds: readonly string[] = [],
 ): { all: boolean; terms: string[] } {
   const grants = actor.grants.filter((grant) => grant.permissionCode === "task.view");
   if (grants.some((grant) => grant.scope === "all")) return { all: true, terms: [] };
   const terms: string[] = [];
+  if (projectIds.length > 0) terms.push(`project_id.in.(${projectIds.join(",")})`);
   const scopes = new Set(grants.map((grant) => grant.scope));
   if (scopes.has("self") || scopes.has("assigned")) terms.push(`created_by.eq.${actor.id}`);
   if (scopes.has("self")) terms.push(`owner_id.eq.${actor.id}`);
