@@ -1,3 +1,4 @@
+import { isCollaboratorRole } from "./collaboratorRole.mjs";
 import type { PermissionSet } from "./permissions";
 import { isLeadershipAssignmentReviewer } from "./taskReviewerPolicy.mjs";
 import { canCancelCreatorMutation, canEditCreatorMutation, taskLifecycleState } from "./creatorMutationPolicy.mjs";
@@ -131,6 +132,7 @@ export function canAssignToDepartment(
   actor: AuthorizationActor,
   departmentId: string | null,
 ): boolean {
+  if (isCollaboratorRole(actor.roleCode)) return false;
   if (TASK_READ_ONLY_ROLES.has(actor.roleCode)) return false;
   if (!actor.permissions.can_assign_task
     && !["tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode)) return false;
@@ -152,6 +154,13 @@ export function canTaskAction(
   const projectMember = task.projectId
     ? task.projectMembers?.find((member) => member.userId === actor.id)
     : undefined;
+  if (isCollaboratorRole(actor.roleCode)) {
+    const participant = task.assigneeId === actor.id || task.reviewerId === actor.id || isParticipant(actor, task);
+    if (!participant && !projectMember) return false;
+    if (action === "view") return true;
+    if (!participant && action !== "comment") return false;
+    if (!["report", "complete_assigned", "comment", "attachment"].includes(action)) return false;
+  }
   if (action === "view") {
     return hasOrganizationTaskView(actor)
       || Boolean(projectMember)

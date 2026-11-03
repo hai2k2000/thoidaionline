@@ -31,12 +31,12 @@ export async function GET(request: Request) {
   const threshold = Number.parseInt(params.get("threshold") ?? "10", 10);
   const rangeDays = (new Date(`${to}T12:00:00Z`).valueOf() - new Date(`${from}T12:00:00Z`).valueOf()) / 86400000 + 1;
   if (!isDate(from) || !isDate(to) || from > to || rangeDays > 93 || !Number.isInteger(threshold) || threshold < 1 || threshold > 120) return apiError("invalid_request", 400);
-  const staffQuery = serverSupabase.from("staff_users").select("id,full_name,attendance_exempt,department_id,roles(code),departments!staff_users_department_id_fkey(name)").eq("active", true).order("full_name");
+  const staffQuery = serverSupabase.from("staff_users").select("id,full_name,attendance_exempt,department_id,roles(code),job_titles(code),departments!staff_users_department_id_fkey(name)").eq("active", true).order("full_name");
   const staffResult = await staffQuery;
   if (staffResult.error) return apiError("operation_failed", 500);
-  const staffRows = (staffResult.data ?? []) as Array<{ id: string; full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown; departments?: { name: string } | { name: string }[] | null }>;
+  const staffRows = (staffResult.data ?? []) as Array<{ id: string; full_name: string; attendance_exempt?: boolean; department_id?: string | null; roles?: unknown; job_titles?: { code?: string | null } | { code?: string | null }[] | null; departments?: { name: string } | { name: string }[] | null }>;
   const departmentScope = access.orgScope === "department";
-  const staff = staffRows.filter((row) => (!departmentScope || row.department_id === guard.actor.department_id) && isAttendanceListedStaff({ full_name: row.full_name, attendance_exempt: row.attendance_exempt, roleCode: roleCodeFromRelation(row.roles) })).map((row) => ({ id: row.id, full_name: row.full_name, department_name: Array.isArray(row.departments) ? row.departments[0]?.name : row.departments?.name }));
+  const staff = staffRows.filter((row) => (!departmentScope || row.department_id === guard.actor.department_id) && isAttendanceListedStaff({ ...row, jobTitleCode: roleCodeFromRelation(row.job_titles), roleCode: roleCodeFromRelation(row.roles) })).map((row) => ({ id: row.id, full_name: row.full_name, department_name: Array.isArray(row.departments) ? row.departments[0]?.name : row.departments?.name }));
   const staffIds = staff.map((row) => row.id);
   if (!staffIds.length) return apiJson({ from, to, threshold, findings: [], pairSummary: [], counts: { high: 0, medium: 0, low: 0, byType: {} } });
   const logsQuery = serverSupabase.from("attendance_logs").select("user_id,work_date,check_in,check_out").gte("work_date", from).lte("work_date", to).in("user_id", staffIds);

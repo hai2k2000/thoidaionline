@@ -5,10 +5,14 @@ import test from "node:test";
 const config = readFileSync("next.config.ts", "utf8");
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
-test("Projects P1 migration is shipped in both migration reference lists", () => {
+test("CTV and Projects migrations are shipped once in version order in both reference lists", () => {
   for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
     const source = readFileSync(file, "utf8");
-    assert.ok(source.includes('"supabase/migrations/20261103160000_projects_v1.sql"'), file);
+    const ctv = '"supabase/migrations/20261103150000_role_cong_tac_vien.sql"';
+    const projects = '"supabase/migrations/20261103160000_projects_v1.sql"';
+    assert.equal(source.split(ctv).length - 1, 1, file);
+    assert.equal(source.split(projects).length - 1, 1, file);
+    assert.ok(source.indexOf(ctv) < source.indexOf(projects), file);
   }
 });
 
@@ -135,4 +139,11 @@ test("release metadata uses the complete ordered migration reference", () => {
 
 test("artifact migration reference includes database list filters", () => {
   for (const path of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.match(readFileSync(path, "utf8"), /20261027140000_database_management_v1_list_filters\.sql/);
+});
+
+test("packaging references collaborator role migration", () => {
+  const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+  const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");
+  assert.match(packager, /20261103150000_role_cong_tac_vien\.sql/);
+  assert.match(verifier, /20261103150000_role_cong_tac_vien\.sql/);
 });

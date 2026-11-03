@@ -1,3 +1,4 @@
+import { isCollaboratorRole } from "./collaboratorRole.mjs";
 import "server-only";
 
 import { serverSupabase } from "@/lib/serverSupabase";
@@ -460,6 +461,13 @@ export const getTaskScopeTerms = async (
     .select("project_id,staff_users!project_members_user_id_fkey!inner(active)").eq("user_id", actor.id).eq("staff_users.active", true);
   if (memberships.error) return fail(memberships.error);
   const projectIds = (memberships.data ?? []).map((row) => row.project_id as string);
+  if (isCollaboratorRole(actor.roleCode)) {
+    const assignments = await serverSupabase.from("task_assignees").select("task_id").eq("user_id", actor.id);
+    if (assignments.error) return fail(assignments.error);
+    const ids = (assignments.data ?? []).map((row) => row.task_id as string);
+    const projectTerms = projectIds.length ? [`project_id.in.(${projectIds.join(",")})`] : [];
+    return ok([`assignee_id.eq.${actor.id}`, `reviewer_id.eq.${actor.id}`, ...projectTerms, ...(ids.length ? [`id.in.(${ids.join(",")})`] : [])]);
+  }
   if (isTaskRbacV2Enabled()) {
     const rbacActor = await loadRbacActor({ id: actor.id, department_id: actor.departmentId });
     const assignments = await serverSupabase

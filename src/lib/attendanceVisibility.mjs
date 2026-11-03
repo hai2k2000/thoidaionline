@@ -1,3 +1,4 @@
+import { isCollaboratorRole } from "./collaboratorRole.mjs";
 export function normalizeAttendanceName(name) {
   return String(name ?? "")
     .replace(/[Đđ]/g, "d")
@@ -8,8 +9,15 @@ export function normalizeAttendanceName(name) {
     .trim();
 }
 
+export const ATTENDANCE_EXEMPT_JOB_TITLE_CODES = new Set(["ctv"]);
+
 export function isAttendanceListedStaff(staff) {
-  return (staff?.roleCode ?? staff?.["role_" + "code"]) !== "admin" && staff?.attendance_exempt !== true;
+  const jobTitle = Array.isArray(staff?.job_titles) ? staff.job_titles[0] : staff?.job_titles;
+  const jobTitleCode = String(staff?.jobTitleCode ?? staff?.job_title_code ?? jobTitle?.code ?? "").trim().toLowerCase();
+  return (staff?.roleCode ?? staff?.["role_" + "code"]) !== "admin"
+    && !isCollaboratorRole(staff?.roleCode ?? staff?.role_code ?? roleCodeFromRelation(staff?.roles))
+    && staff?.attendance_exempt !== true
+    && !ATTENDANCE_EXEMPT_JOB_TITLE_CODES.has(jobTitleCode);
 }
 
 export function isAttendanceListedUser(user) {

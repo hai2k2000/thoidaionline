@@ -12,7 +12,7 @@ test('project form skips department flow and restricts reviewers to project lead
  assert.match(source, /projectMode \? projectRecipientControls :/);
 });
 test('project navigation depends on membership or create permission', async () => {
- const source = read('src/components/phase2Navigation.ts').replace(/import .*workReportsPause.ts";/, 'const WORK_REPORTS_PAUSED = false; const PAUSED_WORK_REPORT_NAV_IDS = [];');
+ const source = read('src/components/phase2Navigation.ts').replace(/import .*workReportsPause.ts";/, 'const WORK_REPORTS_PAUSED = false; const PAUSED_WORK_REPORT_NAV_IDS = [];').replace('"../lib/collaboratorRole.mjs"', JSON.stringify(new URL('./collaboratorRole.mjs', import.meta.url).href));
  const js = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText;
  const {getPhase2Navigation} = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
  const shows = access => getPhase2Navigation({roleCode:'ctv', ...access}).primary.some(i => i.id === 'projects');
