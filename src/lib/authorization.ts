@@ -22,7 +22,7 @@ export type TaskParticipant = {
 export type TaskAccessSnapshot = {
   id: string;
   projectId?: string | null;
-  projectMembers?: { userId: string; role: "lead" | "member" }[];
+  projectMembers?: { userId: string; role: "lead" | "deputy" | "member" }[];
   departmentId: string | null;
   createdBy: string | null;
   ownerId: string | null;
@@ -181,6 +181,7 @@ export function canTaskAction(
 
   switch (action) {
     case "assign":
+      if (task.projectId) return projectMember?.role === "lead" || projectMember?.role === "deputy";
       return canAssignToDepartment(actor, task.departmentId);
     case "update":
       return canEditTask(actor, task);

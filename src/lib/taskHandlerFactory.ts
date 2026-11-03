@@ -1,3 +1,4 @@
+import { taskAttachmentMetadata } from "./taskAttachmentPolicy.mjs";
 import { TIME_24H_REGEX } from "./time24h.mjs";
 import type {
   AuthorizationActor,
@@ -329,19 +330,10 @@ export function createTaskApplication(deps: Dependencies) {
       if (taskId instanceof Response) return taskId;
       const form = await request.formData().catch(() => null);
       const file = form?.get("file");
-      const allowed = new Set(["application/pdf", "image/png", "image/jpeg",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
-      const extensionMime: Record<string, string> = {
-        pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
-        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      };
-      const extension = file instanceof File ? file.name.split(".").pop()?.toLowerCase() ?? "" : "";
-      const mimeType = file instanceof File && allowed.has(file.type) ? file.type : extensionMime[extension];
-      if (!(file instanceof File) || file.size < 1 || file.size > 10485760 || !mimeType) {
-        return deps.error("invalid_request", 400);
-      }
+      if (!(file instanceof File)) return deps.error("invalid_request", 400);
+      const metadata = taskAttachmentMetadata(file);
+      if (!metadata) return deps.error("invalid_request", 400);
+      const { extension, mimeType } = metadata;
       const storagePath = `${taskId}/${deps.newUuid()}.${extension}`;
       const upload = await deps.uploadPrivateAttachment(storagePath, await file.arrayBuffer(), mimeType);
       if (!upload.ok) return deps.rpcFailure(upload.error);

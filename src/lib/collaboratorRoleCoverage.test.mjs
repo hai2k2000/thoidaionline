@@ -45,7 +45,7 @@ test("CTV role is excluded from attendance regardless of title", () => {
   assert.equal(isAttendanceListedStaff({ roleCode: "nhan_vien" }), true);
 });
 
-const apiAllowlist = new Set(["auth/session", "auth/logout", "auth/mobile-logout", "account/profile", "account/password", "account/avatar", "tasks", "tasks/[id]", "tasks/[id]/comments", "tasks/[id]/attachments", "tasks/[id]/attachments/[attachmentId]", "tasks/[id]/progress-reports", "tasks/[id]/submit-completion", "projects", "projects/[id]", "projects/[id]/members", "projects/[id]/tasks", "projects/access"]);
+const apiAllowlist = new Set(["auth/session", "auth/logout", "auth/mobile-logout", "account/profile", "account/password", "account/avatar", "tasks", "tasks/[id]", "tasks/[id]/comments", "tasks/[id]/attachments", "tasks/[id]/attachments/[attachmentId]", "tasks/[id]/progress-reports", "tasks/[id]/submit-completion", "projects", "projects/[id]", "projects/[id]/members", "projects/[id]/tasks", "projects/access", "projects/[id]/library", "projects/[id]/library/download/[itemId]"]);
 test("every API route outside the explicit allowlist is covered by the central guard", () => {
   const proxy = read("src/proxy.ts");
   assert.match(proxy, /"\/api\/:path\*"/);

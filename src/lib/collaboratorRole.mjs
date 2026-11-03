@@ -9,6 +9,8 @@ export const COLLABORATOR_API_RULES = [
   [`/api/tasks/${UUID}/progress-reports`, ["POST"]], [`/api/tasks/${UUID}/submit-completion`, ["POST"]],
   [`/api/projects`, ["GET"]], [`/api/projects/${UUID}`, ["GET"]], [`/api/projects/${UUID}/members`, ["GET"]],
   [`/api/projects/${UUID}/tasks`, ["GET"]], [`/api/projects/access`, ["GET"]],
+  [`/api/projects/${UUID}/library`, ["GET", "POST", "PATCH", "DELETE"]],
+  [`/api/projects/${UUID}/library/download/${UUID}`, ["GET"]],
 ];
 export function isCollaboratorAllowedPath(pathname, method = "GET") {
   const path = String(pathname ?? "/").split("?")[0].replace(/\/$/, "") || "/";
