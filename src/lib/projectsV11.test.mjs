@@ -5,6 +5,17 @@ import {canTaskAction} from './authorization.ts';
 import {normalizePermissions} from './permissions.ts';
 import {isCollaboratorAllowedPath} from './collaboratorRole.mjs';
 const read=p=>readFileSync(p,'utf8');
+test('every V1.1 RPC and trigger has an explicit service-only ACL and postcondition',()=>{
+ const sql=read('supabase/migrations/20261103180000_projects_v1_1_deputy_library.sql');
+ const post=read('scripts/production/projects-v1-1/post/20261103180000_projects_v1_1_deputy_library.sql');
+ const signatures=['api_set_project_member(uuid,uuid,uuid,text,boolean)','api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text)','api_project_can_assign(uuid,uuid)','guard_project_lead_role()','guard_project_staff_role()','api_assert_project_library(uuid,uuid,boolean)','ensure_project_task_folder(uuid,uuid)','create_project_task_folder()','api_list_project_library(uuid,uuid,uuid)','api_create_project_library_folder(uuid,uuid,text,uuid)','api_mutate_project_library_folder(uuid,uuid,uuid,text,text,uuid)','api_add_project_library_item(uuid,uuid,uuid,text,text,text,text,text,text,text,bigint)','api_mutate_project_library_item(uuid,uuid,uuid,text,text,uuid)','api_get_project_library_file(uuid,uuid,uuid)','file_project_task_attachment()'];
+ for(const signature of signatures){
+  assert.match(sql,new RegExp(`revoke all on function public\\.${signature.replace(/[()[\],]/g,'\\$&')} from public,anon,authenticated;`),signature);
+  assert.ok(post.includes(`'public.${signature}'`),`postcondition missing ${signature}`);
+ }
+ assert.match(post,/p\.oid is null/); assert.match(post,/aclexplode/); assert.match(post,/acl\.grantee=0/);
+ for(const role of ['anon','authenticated','service_role']) assert.ok(post.includes(`has_function_privilege('${role}',p.oid,'EXECUTE')`));
+});
 test('deputy assigns project tasks but cannot review',()=>{
  const actor={id:'deputy',roleCode:'nhan_vien',departmentId:null,permissions:normalizePermissions({})};
  const task={id:'task',projectId:'project',projectMembers:[{userId:'deputy',role:'deputy'}],participants:[]};

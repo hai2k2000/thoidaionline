@@ -17,11 +17,18 @@ test('V1.1 dryrun applies exact migration, behaviour, postcondition, revert and 
  assert.match(script,/revoke all on table public\.projects,public\.project_members from public,anon,authenticated/);
  assert.match(script,/grant all on table public\.projects,public\.project_members to service_role;/);
  assert.ok(script.indexOf('PROJECTS_V11_RESTORE=PASS') < script.indexOf('step=restore_acl'));
- assert.match(script,/step=restore_acl\s+psql -X -v ON_ERROR_STOP=1 -q[^\n]*<<'SQL'\nrevoke all[^\n]*\ngrant all[^\n]*\nSQL\s+echo PROJECTS_V11_RESTORE_ACL=REASSERTED/);
+ assert.match(script,/step=restore_acl\s+psql -X -v ON_ERROR_STOP=1 -q[^\n]*<<'SQL'\n[\s\S]+?\nSQL\s+echo PROJECTS_V11_RESTORE_ACL=REASSERTED/);
  assert.ok(script.indexOf('PROJECTS_V11_RESTORE_ACL=REASSERTED') < script.indexOf('step=apply; apply_projects'));
  assert.match(behaviour,/foreach tab in array array\['projects','project_members','project_library_folders','project_library_items'\] loop/);
  assert.match(behaviour,/has_table_privilege\(role_name,'public\.'\|\|tab,'SELECT,INSERT,UPDATE,DELETE'\)/);
  assert.match(post,/'pass'/);assert.match(post,/relrowsecurity/);assert.match(post,/pg_policies/);
+});
+test('restore reasserts every V1 function ACL and owner before applying V1.1',()=>{
+ const v1=read('supabase/migrations/20261103160000_projects_v1.sql');
+ const acl=v1.match(/do \$\$ declare f text;[\s\S]*?end \$\$;/)?.[0];
+ assert.ok(acl);
+ const restore=script.slice(script.indexOf('step=restore_acl'),script.indexOf('PROJECTS_V11_RESTORE_ACL=REASSERTED'));
+ assert.ok(restore.includes(acl),'restore must mirror the full V1 ACL/owner block');
 });
 test('revert preserves V1 and refuses loss of manual content',()=>{
  assert.match(revert,/raise exception.*manual library content/);

@@ -88,11 +88,12 @@ main() {
   echo "$restore_counts"
   echo PROJECTS_V11_RESTORE=PASS
 
-  # Restore may leave Supabase default grants on V1 tables owned by supabase_admin.
+  # Restore may leave default table grants and PUBLIC EXECUTE on V1 functions.
   step=restore_acl
   psql -X -v ON_ERROR_STOP=1 -q >"$work/restore-acl.log" 2>&1 <<'SQL'
 revoke all on table public.projects,public.project_members from public,anon,authenticated;
 grant all on table public.projects,public.project_members to service_role;
+do $$ declare f text; begin foreach f in array array['enforce_assignee_manager_watcher()','review_task_completion(uuid,uuid,text,text)','api_project_actor_can_create(uuid)','api_project_is_lead(uuid,uuid)','api_assert_task_action(uuid,uuid,text)','api_create_project(uuid,text,text,text,uuid,uuid[])','api_update_project(uuid,uuid,text,text,text,uuid)','api_set_project_member(uuid,uuid,uuid,text,boolean)','api_close_project(uuid,uuid)','api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text)'] loop execute format('revoke all on function public.%s from public,anon,authenticated',f); execute format('grant execute on function public.%s to service_role',f); execute format('alter function public.%s owner to postgres',f); end loop; end $$;
 SQL
   echo PROJECTS_V11_RESTORE_ACL=REASSERTED
 

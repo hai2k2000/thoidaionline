@@ -12,5 +12,37 @@ select case when
  and exists(select 1 from pg_trigger where tgname='file_project_task_attachment' and not tgisinternal)
  and not exists(select 1 from public.projects p where not exists(select 1 from public.project_library_folders f where f.project_id=p.id and f.system_key='task_files' and f.deleted_at is null))
  and not exists(select 1 from public.task_attachments a join public.tasks t on t.id=a.task_id where t.project_id is not null and not exists(select 1 from public.project_library_items i where i.source_attachment_id=a.id))
- and not exists(select 1 from pg_proc p where p.pronamespace='public'::regnamespace and p.proname in ('api_project_can_assign','api_assert_project_library','api_list_project_library','api_create_project_library_folder','api_mutate_project_library_folder','api_add_project_library_item','api_mutate_project_library_item','api_get_project_library_file','file_project_task_attachment','ensure_project_task_folder','guard_project_lead_role','guard_project_staff_role') and (not p.prosecdef or has_function_privilege('anon',p.oid,'EXECUTE') or has_function_privilege('authenticated',p.oid,'EXECUTE') or not has_function_privilege('service_role',p.oid,'EXECUTE')))
+ and not exists(
+  select 1 from (values
+   ('public.enforce_assignee_manager_watcher()'),
+   ('public.review_task_completion(uuid,uuid,text,text)'),
+   ('public.api_project_actor_can_create(uuid)'),
+   ('public.api_project_is_lead(uuid,uuid)'),
+   ('public.api_assert_task_action(uuid,uuid,text)'),
+   ('public.api_create_project(uuid,text,text,text,uuid,uuid[])'),
+   ('public.api_update_project(uuid,uuid,text,text,text,uuid)'),
+   ('public.api_set_project_member(uuid,uuid,uuid,text,boolean)'),
+   ('public.api_close_project(uuid,uuid)'),
+   ('public.api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text)'),
+   ('public.api_project_can_assign(uuid,uuid)'),
+   ('public.guard_project_lead_role()'),
+   ('public.guard_project_staff_role()'),
+   ('public.api_assert_project_library(uuid,uuid,boolean)'),
+   ('public.ensure_project_task_folder(uuid,uuid)'),
+   ('public.create_project_task_folder()'),
+   ('public.api_list_project_library(uuid,uuid,uuid)'),
+   ('public.api_create_project_library_folder(uuid,uuid,text,uuid)'),
+   ('public.api_mutate_project_library_folder(uuid,uuid,uuid,text,text,uuid)'),
+   ('public.api_add_project_library_item(uuid,uuid,uuid,text,text,text,text,text,text,text,bigint)'),
+   ('public.api_mutate_project_library_item(uuid,uuid,uuid,text,text,uuid)'),
+   ('public.api_get_project_library_file(uuid,uuid,uuid)'),
+   ('public.file_project_task_attachment()')
+  ) expected(signature)
+  left join pg_proc p on p.oid=to_regprocedure(expected.signature)
+  where p.oid is null or not p.prosecdef
+   or exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl where acl.grantee=0 and acl.privilege_type='EXECUTE')
+   or has_function_privilege('anon',p.oid,'EXECUTE')
+   or has_function_privilege('authenticated',p.oid,'EXECUTE')
+   or not has_function_privilege('service_role',p.oid,'EXECUTE')
+ )
  then 'pass' else 'fail' end;

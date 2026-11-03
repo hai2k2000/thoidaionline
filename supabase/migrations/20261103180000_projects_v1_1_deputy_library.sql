@@ -7,12 +7,16 @@ create or replace function public.api_project_can_assign(p_actor uuid,p_project 
 language sql stable security definer set search_path=public,pg_temp as $$
  select exists(select 1 from public.project_members m join public.staff_users u on u.id=m.user_id join public.roles r on r.id=u.role_id where m.project_id=p_project and m.user_id=p_actor and m.role in ('lead','deputy') and u.active and r.code<>'cong_tac_vien');
 $$;
+revoke all on function public.api_project_can_assign(uuid,uuid) from public,anon,authenticated;
+grant execute on function public.api_project_can_assign(uuid,uuid) to service_role;
 create or replace function public.guard_project_lead_role() returns trigger
 language plpgsql security definer set search_path=public,pg_temp as $$
 begin
  if new.role in ('lead','deputy') and exists(select 1 from public.staff_users u join public.roles r on r.id=u.role_id where u.id=new.user_id and r.code='cong_tac_vien') then raise exception 'CTV cannot lead a project.' using errcode='22023'; end if;
  return new;
 end $$;
+revoke all on function public.guard_project_lead_role() from public,anon,authenticated;
+grant execute on function public.guard_project_lead_role() to service_role;
 drop trigger if exists guard_project_lead_role on public.project_members;
 create trigger guard_project_lead_role before insert or update on public.project_members for each row execute function public.guard_project_lead_role();
 
@@ -23,6 +27,8 @@ begin
  if new.role_id is distinct from old.role_id and exists(select 1 from public.roles where id=new.role_id and code='cong_tac_vien') and exists(select 1 from public.project_members where user_id=new.id and role in ('lead','deputy')) then raise exception 'Remove project leadership before assigning CTV role.' using errcode='22023'; end if;
  return new;
 end $$;
+revoke all on function public.guard_project_staff_role() from public,anon,authenticated;
+grant execute on function public.guard_project_staff_role() to service_role;
 drop trigger if exists guard_project_staff_role on public.staff_users;
 create trigger guard_project_staff_role before update of role_id on public.staff_users for each row execute function public.guard_project_staff_role();
 
@@ -45,6 +51,9 @@ begin
  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data) values(p_actor_id,'project','project_members',p_project_id,'set_member',to_jsonb(v)); return v;
 end $function$;
 
+revoke all on function public.api_set_project_member(uuid,uuid,uuid,text,boolean) from public,anon,authenticated;
+grant execute on function public.api_set_project_member(uuid,uuid,uuid,text,boolean) to service_role;
+
 create or replace function public.api_assign_project_task(p_actor_id uuid,p_project_id uuid,p_title text,p_description text,p_assignee_id uuid,p_reviewer_id uuid,p_due_date date,p_due_time time,p_evaluation_criteria text default null,p_collaborator_ids uuid[] default '{}'::uuid[],p_watcher_ids uuid[] default '{}'::uuid[],p_priority text default 'normal',p_attachment_url text default null) returns public.tasks
 language plpgsql security definer set search_path=public,pg_temp as $function$
 declare v public.tasks; x uuid; v_host uuid; v_status text;
@@ -63,6 +72,9 @@ begin
  foreach x in array coalesce(p_watcher_ids,'{}') loop if x<>p_assignee_id and not (x=any(coalesce(p_collaborator_ids,'{}'))) then insert into public.task_assignees(task_id,user_id,assignment_role,status) values(v.id,x,'watcher','todo') on conflict do nothing; end if; end loop;
  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data) values(p_actor_id,'project','tasks',v.id,'assign',jsonb_build_object('project_id',p_project_id)); return v;
 end $function$;
+
+revoke all on function public.api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text) from public,anon,authenticated;
+grant execute on function public.api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text) to service_role;
 
 create table if not exists public.project_library_folders (
  id uuid primary key default gen_random_uuid(),
@@ -101,6 +113,8 @@ begin
    (exists(select 1 from public.project_members m where m.project_id=p_project and m.user_id=u.id) or (not p_write and r.code in ('admin','tong_bien_tap'))))
  then raise exception 'Library forbidden' using errcode='42501'; end if;
 end $$;
+revoke all on function public.api_assert_project_library(uuid,uuid,boolean) from public,anon,authenticated;
+grant execute on function public.api_assert_project_library(uuid,uuid,boolean) to service_role;
 create or replace function public.ensure_project_task_folder(p_project uuid,p_actor uuid) returns uuid
 language plpgsql security definer set search_path=public,pg_temp as $$
 declare v uuid;
@@ -110,9 +124,13 @@ begin
  if v is null then insert into public.project_library_folders(project_id,name,system_key,created_by) values(p_project,'Tệp từ công việc','task_files',p_actor) returning id into v; end if;
  return v;
 end $$;
+revoke all on function public.ensure_project_task_folder(uuid,uuid) from public,anon,authenticated;
+grant execute on function public.ensure_project_task_folder(uuid,uuid) to service_role;
 create or replace function public.create_project_task_folder() returns trigger
 language plpgsql security definer set search_path=public,pg_temp as $$
 begin perform public.ensure_project_task_folder(new.id,new.created_by); return new; end $$;
+revoke all on function public.create_project_task_folder() from public,anon,authenticated;
+grant execute on function public.create_project_task_folder() to service_role;
 drop trigger if exists create_project_task_folder on public.projects;
 create trigger create_project_task_folder after insert on public.projects for each row execute function public.create_project_task_folder();
 
@@ -125,6 +143,8 @@ begin
  return jsonb_build_object('folders',coalesce((select jsonb_agg(to_jsonb(f) order by lower(f.name)) from public.project_library_folders f where f.project_id=p_project_id and f.deleted_at is null),'[]'::jsonb),
  'items',coalesce((select jsonb_agg(to_jsonb(i)||jsonb_build_object('uploaded_by_name',u.full_name,'task_title',t.title) order by i.created_at desc) from public.project_library_items i join public.staff_users u on u.id=i.uploaded_by left join public.tasks t on t.id=i.source_task_id where i.project_id=p_project_id and i.folder_id is not distinct from p_folder_id and i.deleted_at is null),'[]'::jsonb));
 end $$;
+revoke all on function public.api_list_project_library(uuid,uuid,uuid) from public,anon,authenticated;
+grant execute on function public.api_list_project_library(uuid,uuid,uuid) to service_role;
 create or replace function public.api_create_project_library_folder(p_actor_id uuid,p_project_id uuid,p_name text,p_parent_id uuid default null) returns public.project_library_folders
 language plpgsql security definer set search_path=public,pg_temp as $$
 declare v public.project_library_folders;
@@ -134,6 +154,8 @@ begin
  insert into public.project_library_folders(project_id,parent_id,name,created_by) values(p_project_id,p_parent_id,btrim(p_name),p_actor_id) returning * into v;
  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data) values(p_actor_id,'project_library','folder',v.id,'create',to_jsonb(v)); return v;
 end $$;
+revoke all on function public.api_create_project_library_folder(uuid,uuid,text,uuid) from public,anon,authenticated;
+grant execute on function public.api_create_project_library_folder(uuid,uuid,text,uuid) to service_role;
 create or replace function public.api_mutate_project_library_folder(p_actor_id uuid,p_project_id uuid,p_folder_id uuid,p_action text,p_name text default null,p_parent_id uuid default null) returns public.project_library_folders
 language plpgsql security definer set search_path=public,pg_temp as $$
 declare v public.project_library_folders; old_data jsonb;
@@ -155,6 +177,8 @@ begin
  else raise exception 'Invalid action' using errcode='22023'; end if;
  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,old_data,new_data) values(p_actor_id,'project_library','folder',v.id,p_action,old_data,to_jsonb(v)); return v;
 end $$;
+revoke all on function public.api_mutate_project_library_folder(uuid,uuid,uuid,text,text,uuid) from public,anon,authenticated;
+grant execute on function public.api_mutate_project_library_folder(uuid,uuid,uuid,text,text,uuid) to service_role;
 create or replace function public.api_add_project_library_item(p_actor_id uuid,p_project_id uuid,p_folder_id uuid,p_kind text,p_title text,p_description text default null,p_url text default null,p_storage_path text default null,p_file_name text default null,p_mime_type text default null,p_size_bytes bigint default null) returns public.project_library_items
 language plpgsql security definer set search_path=public,pg_temp as $$
 declare v public.project_library_items;
@@ -165,6 +189,8 @@ begin
  insert into public.project_library_items(project_id,folder_id,kind,title,description,url,storage_path,file_name,mime_type,size_bytes,uploaded_by) values(p_project_id,p_folder_id,p_kind,btrim(p_title),p_description,p_url,p_storage_path,p_file_name,p_mime_type,p_size_bytes,p_actor_id) returning * into v;
  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data) values(p_actor_id,'project_library','item',v.id,'create',to_jsonb(v)); return v;
 end $$;
+revoke all on function public.api_add_project_library_item(uuid,uuid,uuid,text,text,text,text,text,text,text,bigint) from public,anon,authenticated;
+grant execute on function public.api_add_project_library_item(uuid,uuid,uuid,text,text,text,text,text,text,text,bigint) to service_role;
 create or replace function public.api_mutate_project_library_item(p_actor_id uuid,p_project_id uuid,p_item_id uuid,p_action text,p_title text default null,p_folder_id uuid default null) returns public.project_library_items
 language plpgsql security definer set search_path=public,pg_temp as $$
 declare v public.project_library_items; old_data jsonb; manager boolean;
@@ -185,6 +211,8 @@ begin
  else raise exception 'Invalid action' using errcode='22023'; end if;
  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,old_data,new_data) values(p_actor_id,'project_library','item',v.id,p_action,old_data,to_jsonb(v)); return v;
 end $$;
+revoke all on function public.api_mutate_project_library_item(uuid,uuid,uuid,text,text,uuid) from public,anon,authenticated;
+grant execute on function public.api_mutate_project_library_item(uuid,uuid,uuid,text,text,uuid) to service_role;
 create or replace function public.api_get_project_library_file(p_actor_id uuid,p_project_id uuid,p_item_id uuid) returns public.project_library_items
 language plpgsql security definer set search_path=public,pg_temp as $$
 declare v public.project_library_items;
@@ -194,6 +222,8 @@ begin
  if not found then raise exception 'Item not found' using errcode='P0002'; end if;
  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action) values(p_actor_id,'project_library','item',v.id,'download'); return v;
 end $$;
+revoke all on function public.api_get_project_library_file(uuid,uuid,uuid) from public,anon,authenticated;
+grant execute on function public.api_get_project_library_file(uuid,uuid,uuid) to service_role;
 -- All three task workflows use task_attachments, sharing the original storage object.
 create or replace function public.file_project_task_attachment() returns trigger
 language plpgsql security definer set search_path=public,pg_temp as $$
@@ -207,6 +237,8 @@ begin
  insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data) values(new.uploaded_by,'project_library','task_attachments',new.id,'auto_file',jsonb_build_object('project_id',p));
  return new;
 end $$;
+revoke all on function public.file_project_task_attachment() from public,anon,authenticated;
+grant execute on function public.file_project_task_attachment() to service_role;
 drop trigger if exists file_project_task_attachment on public.task_attachments;
 create trigger file_project_task_attachment after insert on public.task_attachments for each row execute function public.file_project_task_attachment();
 select public.ensure_project_task_folder(id,created_by) from public.projects;
