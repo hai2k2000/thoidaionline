@@ -1,5 +1,7 @@
 ﻿export type Phase2NavigationAccess = {
   roleCode: string;
+  hasProjectMembership?: boolean;
+  canCreateProject?: boolean;
   departmentCode?: string | null;
   canAccessJournalism?: boolean;
   canAssignTask: boolean;
@@ -17,7 +19,7 @@
 };
 
 export type Phase2NavigationItem = {
-  id: "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "assets" | "my-assets" | "asset-status-requests" | "evaluations" | "account" | "users" | "departments"
+  id: "projects" | "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "assets" | "my-assets" | "asset-status-requests" | "evaluations" | "account" | "users" | "departments"
     | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "work-report" | "weekly-report" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar" | "database";
   href: string;
 };
@@ -49,6 +51,7 @@ export function getPhase2Navigation(
           ]
         : []),
       { id: "tasks", href: "/tasks" },
+      ...(access.hasProjectMembership || access.canCreateProject ? [{ id: "projects", href: "/projects" } as const] : []),
       ...(access.isDepartmentManager || ["admin", "tong_bien_tap", "tbt_read_only"].includes(access.roleCode) ? [{ id: "work-report", href: "/reports/work" } as const] : []),
       ...(canAccessDepartmentPlan ? [{ id: "department-plan", href: "/planning/department" } as const] : []),
       { id: "attendance", href: "/my-attendance" },

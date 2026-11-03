@@ -117,6 +117,7 @@ export type TaskParticipantDto = {
 export type TaskListItemDto = {
   id: string;
   project_id?: string | null;
+  project?: { name: string } | null;
   title: string;
   priority: string;
   created_at: string;

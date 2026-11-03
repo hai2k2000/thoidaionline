@@ -17,6 +17,7 @@ type AppNavProps = {
 };
 
 const labels = {
+  projects: "D\u1ef1 \u00e1n",
   assign: "Giao vi\u1ec7c",
   attendance: "Chấm công",
   "attendance-admin": "Chấm công toàn cơ quan",
@@ -198,6 +199,13 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
   const { user, hasPermission, logout } = useAuth();
+  const [projectMembership, setProjectMembership] = useState<{ userId: string; value: boolean } | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    const controller = new AbortController();
+    fetch("/api/projects/access", { signal: controller.signal }).then((response) => response.ok ? response.json() : null).then((data) => { if (!controller.signal.aborted) setProjectMembership({ userId: user.id, value: data?.hasMembership === true }); }).catch(() => {});
+    return () => controller.abort();
+  }, [user, currentPath]);
   const [loggingOut, setLoggingOut] = useState(false);
   const performLogout = async () => {
     if (loggingOut) return;
@@ -207,6 +215,8 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   };
 
   const navigation = getPhase2Navigation({
+    hasProjectMembership: projectMembership?.userId === user?.id && projectMembership?.value === true,
+    canCreateProject: Boolean(user?.rbacPermissionScopes?.["project.create"]?.length),
     roleCode: user?.role_code ?? "",
     departmentCode: user?.department_code,
     canAccessJournalism: user ? canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions }) : false,

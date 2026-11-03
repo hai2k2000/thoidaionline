@@ -54,3 +54,9 @@ test("project reads fail closed before fetching tasks of a nonmember's project",
   assert.deepEqual(await repo.listTasks({ id: "outsider", roleCode: "nhan_vien" }, "project"), { ok: false, error: { code: "42501" } });
   assert.deepEqual(calls, ["project_members"]);
 });
+test('navigation membership lookup scopes its query to the authenticated actor and propagates database failure',async()=>{
+ const calls=[];const q={select:()=>q,eq:(key,value)=>{calls.push([key,value]);return q;},limit:async()=>({data:[{project_id:'project'}],error:null})};
+ const repo=await loadRepository({from:()=>q});
+ assert.deepEqual(await repo.hasMembership('actor'),{ok:true,data:true});assert.deepEqual(calls,[['user_id','actor']]);
+ q.limit=async()=>({data:null,error:{code:'failure'}});assert.deepEqual(await repo.hasMembership('actor'),{ok:false,error:{code:'failure'}});
+});

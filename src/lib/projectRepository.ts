@@ -27,6 +27,18 @@ const readAccess = async (actor: ProjectReader, projectId: string): Promise<Resu
 };
 
 export const projectRepository = {
+  async hasMembership(actorId: string) {
+    const q = await serverSupabase.from("project_members").select("project_id").eq("user_id", actorId).limit(1);
+    return result(Boolean(q.data?.length), q.error);
+  },
+  async options() {
+    const [staff, departments] = await Promise.all([
+      serverSupabase.from("staff_users").select("id,full_name,department_id").eq("active", true).order("full_name"),
+      serverSupabase.from("departments").select("id,name").eq("active", true).order("name"),
+    ]);
+    if (staff.error || departments.error) return failure(staff.error ?? departments.error!);
+    return result({ people: staff.data ?? [], departments: departments.data ?? [] }, null);
+  },
   create: (actorId: string, input: { code: string; name: string; description?: string | null; hostDepartmentId: string; leadIds: string[] }) => rpc<Project>("api_create_project", { p_actor_id: actorId, p_code: input.code, p_name: input.name, p_description: input.description ?? null, p_host_department_id: input.hostDepartmentId, p_lead_ids: input.leadIds }),
   update: (actorId: string, projectId: string, input: { code: string; name: string; description?: string | null; hostDepartmentId: string }) => rpc<Project>("api_update_project", { p_actor_id: actorId, p_project_id: projectId, p_code: input.code, p_name: input.name, p_description: input.description ?? null, p_host_department_id: input.hostDepartmentId }),
   setMember: (actorId: string, projectId: string, userId: string, role: "lead" | "member" | null, remove = role === null) => rpc<ProjectMember | null>("api_set_project_member", { p_actor_id: actorId, p_project_id: projectId, p_user_id: userId, p_role: role, p_remove: remove }),

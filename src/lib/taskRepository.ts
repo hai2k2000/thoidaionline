@@ -38,6 +38,7 @@ import type {
 const TASK_BASE_FIELDS = [
   "id",
   "project_id",
+  "project:projects!tasks_project_id_fkey(name)",
   "title",
   "priority",
   "created_at",
