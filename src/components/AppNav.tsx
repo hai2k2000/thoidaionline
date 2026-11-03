@@ -1,5 +1,6 @@
 "use client";
 
+import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -113,7 +114,7 @@ function NavContent({
             onClick={onNavigate}
             className={linkClass(isNavigationActive(currentPath, item.href))}
           >
-            <NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span className="leading-snug">{labels[item.id]}</span>
+            <NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span className="leading-snug">{item.href === "/my-tasks" ? "C\u00f4ng vi\u1ec7c c\u1ee7a t\u00f4i" : labels[item.id]}</span>
           </Link>
               )
             ))}
@@ -262,9 +263,9 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   return (
     <aside className="w-full lg:w-[252px] lg:shrink-0">
       <div className="fixed right-4 top-4 z-[60]">
-        <NotificationBell />
+        {!isCollaboratorRole(user?.role_code) && <NotificationBell />}
       </div>
-      <HelpBot />
+      {!isCollaboratorRole(user?.role_code) && <HelpBot />}
       <div className="mobile-app-bar mb-3 lg:hidden">
         <div className="min-w-0">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-orange-700">Thời Đại Work</p>

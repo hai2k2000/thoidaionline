@@ -1,4 +1,5 @@
-﻿"use client";
+"use client";
+import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -54,7 +55,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
   journalismStructureOptions: { topics: JournalismStructureTopic[]; series: JournalismStructureSeries[]; canAssign: boolean };
 }) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { notify } = useActionFeedback();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -145,11 +146,19 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
     <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
       <AppNav currentPath={task.journalism ? `/tasks/${task.id}?journalism=only` : `/tasks/${task.id}`} userLabel={userLabel} onLogout={logout} />
       <main className="min-w-0 flex-1 space-y-2.5">
+        {isCollaboratorRole(user?.role_code) && capabilities.report ? <form onSubmit={submitProgress} className="grid gap-3 rounded-xl border bg-white p-4">
+          <h2 className="font-semibold">{"C\u1eadp nh\u1eadt ti\u1ebfn \u0111\u1ed9"}</h2>
+          <input aria-label="Report date" type="date" value={reportedOn} onChange={(event) => setReportedOn(event.target.value)} required className="rounded border p-2" />
+          <select aria-label="Report status" value={reportStatus} onChange={(event) => setReportStatus(event.target.value)} className="rounded border p-2"><option value="in_progress">{"\u0110ang l\u00e0m"}</option><option value="blocked">{"C\u00f3 v\u01b0\u1edbng m\u1eafc"}</option><option value="nearly_done">{"G\u1ea7n ho\u00e0n th\u00e0nh"}</option></select>
+          <textarea aria-label="Progress" value={progressText} onChange={(event) => setProgressText(event.target.value)} required maxLength={10000} className="rounded border p-2" />
+          <textarea aria-label="Blockers" value={blockers} onChange={(event) => setBlockers(event.target.value)} required={reportStatus === "blocked"} maxLength={10000} className="rounded border p-2" />
+          <button disabled={busy} className="rounded bg-orange-600 px-3 py-2 font-semibold text-white">{"L\u01b0u ti\u1ebfn \u0111\u1ed9"}</button>
+        </form> : null}
         <header className="sticky top-3 z-30 rounded-2xl bg-white/95 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
           <div className="mb-2 flex items-center justify-between gap-3">{returnTo ? <Link href={returnTo} className="inline-flex rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-900">← Quay lại Báo cáo công việc</Link> : <span />}</div><div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0"><h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span><span>{deadlineState}</span></div></div>
             <div className="flex max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto pb-1 sm:justify-end">
-              <Link href={`/tasks/${task.id}/print`} className="shrink-0 whitespace-nowrap rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-50">Xuất phiếu giao việc</Link>
+              {!isCollaboratorRole(user?.role_code) && <Link href={`/tasks/${task.id}/print`} className="shrink-0 whitespace-nowrap rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-50">Xuất phiếu giao việc</Link>}
               <span className="shrink-0 rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-800">{statusLabel(task.status, task.approval_required)}</span>
               {canComplete ? <button data-testid="task-completion-action" disabled={busy} onClick={() => jsonPost(`/api/tasks/${task.id}/${completePath}`)} className="shrink-0 whitespace-nowrap rounded-lg bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{personal ? (task.approval_required ? "Gửi duyệt hoàn thành" : "Hoàn thành") : "Gửi kết quả hoàn thành"}</button> : null}
               {hasTaskActions ? <>

@@ -1,5 +1,6 @@
 "use client";
 
+import { isCollaboratorRole } from "./collaboratorRole.mjs";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRoleAccessPolicy } from "@/components/appNavState";
 import { isCatalogPermission } from "@/lib/rbac/permissionCatalog";
@@ -140,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const canAccessModule = (module: ModuleKey) => {
     if (!user) return false;
+    if (isCollaboratorRole(user.role_code)) return false;
     const rolePolicy = getRoleAccessPolicy(user.role_code);
     if (rolePolicy.readOnly) {
       const policyModule = module === "performance"

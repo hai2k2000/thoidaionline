@@ -129,3 +129,10 @@ test("release metadata uses the complete ordered migration reference", () => {
 test("artifact migration reference includes database list filters", () => {
   for (const path of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.match(readFileSync(path, "utf8"), /20261027140000_database_management_v1_list_filters\.sql/);
 });
+
+test("packaging references collaborator role migration", () => {
+  const packager = readFileSync("scripts/package-standalone.mjs", "utf8");
+  const verifier = readFileSync("scripts/verify-standalone-artifact.mjs", "utf8");
+  assert.match(packager, /20261103150000_role_cong_tac_vien\.sql/);
+  assert.match(verifier, /20261103150000_role_cong_tac_vien\.sql/);
+});
