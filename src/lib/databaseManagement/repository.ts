@@ -18,6 +18,7 @@ type RecordRow = {
   record_type_name?: string | null;
   category_code?: string | null;
   category_name?: string | null;
+  subcategory_name?: string | null;
   total_count?: number | null;
 };
 
@@ -308,6 +309,7 @@ export async function listVisibleDatabaseRecords(actor: DatabaseRecordActor, fil
     language_code: row.language_code ?? languageByCategory.get(row.category_id) ?? null,
     category_code: (parentById.get(categoryById.get(row.category_id)?.parent_id ?? "") ?? categoryById.get(row.category_id))?.code ?? null,
     category_name: (parentById.get(categoryById.get(row.category_id)?.parent_id ?? "") ?? categoryById.get(row.category_id))?.name ?? null,
+    subcategory_name: categoryById.get(row.category_id)?.parent_id ? categoryById.get(row.category_id)?.name ?? null : null,
     record_type_code: typeById.get(row.record_type_id)?.code ?? null,
     record_type_name: typeById.get(row.record_type_id)?.name ?? null,
   }));

@@ -96,14 +96,12 @@ export function resolveCategoryFilter(categories, categoryId, languageCode) {
 export function recordTypesForFilter(recordTypes, categories, categoryId, languageCode) {
   const resolved = resolveCategoryFilter(categories, categoryId, languageCode);
   if (!resolved.rootId) return sortRecordTypes(recordTypes);
+  if ((resolved.mode === "language" || resolved.mode === "children") && !resolved.subId) return [];
   if (resolved.mode === "language") {
-    if (resolved.subId) return filterLanguageRecordTypes(recordTypes, categories, resolved.rootId, resolved.subId);
-    const categoryIds = categories.filter((category) => LANGUAGE_OPTIONS.some((option) => option.typeCategoryCode === category.code)).map((category) => category.id);
-    return sortRecordTypes(recordTypes.filter((type) => categoryIds.includes(type.category_id)));
+    return filterLanguageRecordTypes(recordTypes, categories, resolved.rootId, resolved.subId);
   }
   if (resolved.mode === "children") {
-    const ids = resolved.subId ? [resolved.subId] : resolved.subOptions.map((item) => item.value);
-    return sortRecordTypes(recordTypes.filter((type) => ids.includes(type.category_id)));
+    return sortRecordTypes(recordTypes.filter((type) => type.category_id === resolved.subId));
   }
   return sortRecordTypes(recordTypes.filter((type) => type.category_id === resolved.rootId));
 }

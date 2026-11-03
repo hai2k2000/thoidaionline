@@ -79,3 +79,12 @@ test("ACL expiry is validated as a datetime", () => {
   assert.equal(validateDatabaseAclInput({ ...base, expiresAt: "not-a-date" }).ok, false);
   assert.equal(validateDatabaseAclInput({ ...base, expiresAt: "2030-01-01T00:00:00Z" }).ok, true);
 });
+
+test("record list contract exposes the child category name separately", () => {
+  const repository = readFileSync(new URL("./repository.ts", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../../app/database/records/page.tsx", import.meta.url), "utf8");
+  assert.ok(repository.includes('subcategory_name?: string | null;'));
+  assert.ok(repository.includes('subcategory_name: categoryById.get(row.category_id)?.parent_id ? categoryById.get(row.category_id)?.name ?? null : null'));
+  assert.ok(page.includes('subcategory_name?: string | null;'));
+  assert.ok(page.includes('}{row.subcategory_name ? \u0060 \u203a \u0024{row.subcategory_name}\u0060 : ""} \u00b7 {presentRecordType'));
+});
