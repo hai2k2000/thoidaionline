@@ -4,3 +4,7 @@ export async function GET(_request: Request, context: Context) {
   const { id, attachmentId } = await context.params;
   return taskHandlers.downloadAttachment(id, attachmentId);
 }
+export async function DELETE(request: Request, context: Context) {
+  const { id, attachmentId } = await context.params;
+  return taskHandlers.deleteAttachment(request, id, attachmentId);
+}

@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+set +x
+tmp=''
+work=''
+step=init
+
+cleanup() {
+  local rc=$?
+  set +u
+  set +e
+  if [[ -n "$tmp" ]]; then
+    docker rm -f -v "$tmp" >/dev/null 2>&1 || rc=1
+  fi
+  [[ -n "$work" ]] && rm -rf -- "$work"
+  if [[ $rc -ne 0 ]]; then
+    echo "ADMIN_ATTACHMENT_DELETE_DRYRUN_RESULT=FAIL step=$step" >&2
+  else
+    echo "ADMIN_ATTACHMENT_DELETE_DRYRUN_RESULT=PASS step=$step"
+  fi
+  trap - EXIT
+  exit "$rc"
+}
+
+main() {
+  set -Eeuo pipefail
+  trap cleanup EXIT
+  umask 077
+  [[ "${THOIDAI_ADMIN_ATTACHMENT_DELETE_DRYRUN_APPROVED:-0}" == 1 ]] || { echo 'ADMIN_ATTACHMENT_DELETE_DRYRUN_ERROR=approval required' >&2; return 1; }
+  : "${BUNDLE_DIR:?BUNDLE_DIR is required}"; : "${POSTGRES_IMAGE:?POSTGRES_IMAGE is required}"
+  command -v docker >/dev/null; command -v node >/dev/null; command -v psql >/dev/null
+  local evidence="/opt/ops/thoidai-work/admin-task-attachment-delete-evidence/dryrun-$(date -u +%Y%m%dT%H%M%SZ)"
+  local daily=/opt/ops/thoidai-work/backups/managed/daily
+  local backup='' dump='' manifest='' db_password='' port='' candidate="admin-task-attachment-delete-dryrun-$$"
+  local migrations="$BUNDLE_DIR/supabase/migrations"
+  local free_kb docker_root apply_out before after ready=0
+  mkdir -p "$evidence"
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  step=disk
+  source "$BUNDLE_DIR/scripts/production/disk-guard.sh"
+  docker_root=$(docker info --format '{{.DockerRootDir}}')
+  free_kb=$(df -Pk "$docker_root" | awk 'NR==2 {print $4}')
+  disk_guard_require "$free_kb" "$THOIDAI_DISK_DEFAULT_HEADROOM_KB" projects-dryrun
+  work=$(mktemp -d)
+
+  # Latest verified daily backup: fail closed if its checksum does not match.
+  step=backup
+  while IFS= read -r entry; do
+    [[ -f "$daily/$entry/postgres.dump" && -f "$daily/$entry/manifest.txt" ]] && { backup="$daily/$entry"; break; }
+  done < <(find "$daily" -mindepth 1 -maxdepth 1 -type d -name '*-daily' -printf '%f\n' | sort -r)
+  [[ -n "$backup" ]]
+  dump="$backup/postgres.dump"; manifest="$backup/manifest.txt"
+  [[ "$(awk '$2=="postgres.dump" || $2=="*postgres.dump" {print $1; exit}' "$manifest")" == "$(sha256sum "$dump" | awk '{print $1}')" ]]
+  echo ADMIN_ATTACHMENT_DELETE_BACKUP=PASS
+
+  step=postgres
+  local containers
+  containers=$(docker ps -a --format '{{.Names}}')
+  if grep -Eq '^admin-task-attachment-delete-dryrun-[^[:space:]]+$' <<<"$containers"; then
+    echo 'ADMIN_ATTACHMENT_DELETE_DRYRUN_ERROR=leftover dry-run container exists' >&2; return 1
+  fi
+  db_password=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
+  # Claim cleanup ownership only after the leftover check; never remove an old container.
+  tmp="$candidate"
+  POSTGRES_PASSWORD="$db_password" docker run -d --name "$tmp" --memory 512m \
+    -p 127.0.0.1::5432 -e POSTGRES_PASSWORD "$POSTGRES_IMAGE" >/dev/null 2>&1
+  for _ in $(seq 1 90); do
+    if docker exec "$tmp" pg_isready -h 127.0.0.1 -U supabase_admin -d postgres >/dev/null 2>&1; then ready=1; break; fi
+    sleep 2
+  done
+  [[ "$ready" == 1 ]]
+  step=restore
+  docker exec -i "$tmp" psql -q -h 127.0.0.1 -U supabase_admin -d postgres \
+    -v ON_ERROR_STOP=1 -c 'create schema if not exists supabase_migrations;' </dev/null >/dev/null
+  docker exec -i "$tmp" pg_restore --schema=public --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres \
+    < "$dump" >"$work/restore.log" 2>&1 || true
+  port=$(docker port "$tmp" 5432/tcp | sed -n 's/^127.0.0.1:\([0-9]*\)$/\1/p')
+  [[ "$port" =~ ^[0-9]+$ ]]
+  export ADMIN_ATTACHMENT_DELETE_DB_URL="postgresql://supabase_admin:$db_password@127.0.0.1:$port/postgres"
+  export SAFE_MIGRATION_MIGRATIONS_DIR="$BUNDLE_DIR/supabase/migrations"
+  export PGHOST=127.0.0.1 PGPORT="$port" PGUSER=supabase_admin PGDATABASE=postgres PGPASSWORD="$db_password"
+  local restore_counts
+  if ! restore_counts=$(psql -X -v ON_ERROR_STOP=1 -qAt -F'|' -c "select (select count(*) from public.tasks), (select count(*) from public.staff_users), (select count(*) from public.departments), (select count(*) from supabase_migrations.schema_migrations)" 2>/dev/null) || ! [[ "$restore_counts" =~ ^[0-9]+\|[0-9]+\|[0-9]+\|[1-9][0-9]*$ ]]; then
+    tail -n 20 "$work/restore.log" | grep 'ERROR' >&2 || true
+    return 1
+  fi
+  echo "$restore_counts"
+  echo ADMIN_ATTACHMENT_DELETE_RESTORE=PASS
+
+  # Restore may leave default grants on V1 and V1.1 objects; reassert their ACLs.
+  step=restore_acl
+  psql -X -v ON_ERROR_STOP=1 -q >"$work/restore-acl.log" 2>&1 <<'SQL'
+revoke all on all tables in schema public from public,anon,authenticated;
+revoke execute on all functions in schema public from public,anon,authenticated;
+revoke all on all sequences in schema public from public,anon,authenticated;
+revoke all on table public.projects,public.project_members from public,anon,authenticated;
+grant all on table public.projects,public.project_members to service_role;
+do $$ declare f text; begin foreach f in array array['enforce_assignee_manager_watcher()','review_task_completion(uuid,uuid,text,text)','api_project_actor_can_create(uuid)','api_project_is_lead(uuid,uuid)','api_assert_task_action(uuid,uuid,text)','api_create_project(uuid,text,text,text,uuid,uuid[])','api_update_project(uuid,uuid,text,text,text,uuid)','api_set_project_member(uuid,uuid,uuid,text,boolean)','api_close_project(uuid,uuid)','api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text)'] loop execute format('revoke all on function public.%s from public,anon,authenticated',f); execute format('grant execute on function public.%s to service_role',f); execute format('alter function public.%s owner to postgres',f); end loop; end $$;
+revoke all on table public.project_library_folders,public.project_library_items from public,anon,authenticated;
+grant all on table public.project_library_folders,public.project_library_items to service_role;
+do $$ declare f regprocedure; begin
+ for f in select oid::regprocedure from pg_proc where pronamespace='public'::regnamespace and proname in ('api_project_can_assign','guard_project_staff_role','guard_project_lead_role','api_assert_project_library','ensure_project_task_folder','create_project_task_folder','api_list_project_library','api_create_project_library_folder','api_mutate_project_library_folder','api_add_project_library_item','api_mutate_project_library_item','api_get_project_library_file','file_project_task_attachment') loop
+ execute format('revoke all on function %s from public,anon,authenticated',f);
+ execute format('grant execute on function %s to service_role',f);
+ execute format('alter function %s owner to postgres',f);
+ end loop;
+end $$;
+do $$ declare f regprocedure; begin
+ for f in select oid::regprocedure from pg_proc where pronamespace='public'::regnamespace and proname in ('api_assign_task_v2','api_assign_task_batch_v1','api_register_journalism_task_v1','api_change_assigned_task_deadline') loop
+ execute format('revoke all on function %s from public,anon,authenticated',f);
+ execute format('grant execute on function %s to service_role',f);
+ execute format('alter function %s owner to postgres',f);
+ end loop;
+end $$;
+revoke all on function public.api_admin_edit_task_unchecked(uuid,uuid,text,text,date,date,time,text,text,text,text) from public,anon,authenticated,service_role;
+revoke all on function public.api_admin_edit_task(uuid,uuid,text,text,date,date,time,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.api_admin_edit_task(uuid,uuid,text,text,date,date,time,text,text,text,text) to service_role;
+alter function public.api_admin_edit_task(uuid,uuid,text,text,date,date,time,text,text,text,text) owner to postgres;
+revoke all on function public.api_admin_set_task_participants(uuid,uuid,uuid,uuid[],uuid[],uuid,text) from public,anon,authenticated;
+grant execute on function public.api_admin_set_task_participants(uuid,uuid,uuid,uuid[],uuid[],uuid,text) to service_role;
+alter function public.api_admin_set_task_participants(uuid,uuid,uuid,uuid[],uuid[],uuid,text) owner to postgres;
+revoke all on function public.api_add_task_attachment(uuid,uuid,text,text,text,bigint) from public,anon,authenticated;
+grant execute on function public.api_add_task_attachment(uuid,uuid,text,text,text,bigint) to service_role;
+alter function public.api_add_task_attachment(uuid,uuid,text,text,text,bigint) owner to postgres;
+SQL
+  echo ADMIN_ATTACHMENT_DELETE_RESTORE_ACL=REASSERTED
+
+  apply_one() { local file="$1" post="$2" label="$3" post_output;
+  apply_out=$(MIGRATION_EVIDENCE_DIR="$evidence" "$BUNDLE_DIR/scripts/production/safe-apply-migration.sh" --file "$file" --db-url-env ADMIN_ATTACHMENT_DELETE_DB_URL --postcondition-sql "$post" --evidence-dir "$evidence" 2>"$work/$label-apply.log");
+  grep -q '^PASS' <<<"$apply_out";
+  if ! post_output=$(psql -X -v ON_ERROR_STOP=1 -qAt -f "$post" 2>"$work/$label-post.log") || [[ "$post_output" != pass ]]; then
+    cp -- "$work/$label-post.log" "$evidence/$label-postcondition.stderr";
+    return 1;
+  fi
+  [[ "$(psql -X -v ON_ERROR_STOP=1 -qAt -c "select count(*) from supabase_migrations.schema_migrations where version='$(basename "$file" | cut -d_ -f1)'" 2>"$work/$label-ledger.log")" == 1 ]];
+  }
+  step=apply;
+  apply_one "$migrations/20261106130000_admin_task_attachment_delete.sql" "$BUNDLE_DIR/scripts/production/admin-task-attachment-delete/post/20261106130000_admin_task_attachment_delete.sql" admin-task-attachment-delete
+  step=behaviour;
+  psql -X -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/supabase/tests/admin_task_attachment_delete_behaviour.sql" >"$work/behaviour.log" 2>&1 || { grep -E 'ERROR|CONTEXT|DETAIL|HINT|LINE|psql:' "$work/behaviour.log" | head -20 | tee "$evidence/behaviour-error.txt" >&2 || true;
+  return 1;
+  };
+  echo ADMIN_ATTACHMENT_DELETE_BEHAVIOUR=PASS >"$evidence/behaviour.txt"
+  step=idempotency;
+  before=$(psql -X -v ON_ERROR_STOP=1 -qAt -c "select (select count(*) from public.tasks), (select count(*) from public.task_assignees), (select count(*) from public.audit_logs), (select count(*) from public.task_deadline_history), (select count(*) from public.task_assignment_batch_idempotency), (select count(*) from supabase_migrations.schema_migrations)");
+  psql -X -v ON_ERROR_STOP=1 -f "$migrations/20261106130000_admin_task_attachment_delete.sql" >"$work/replay.log" 2>&1;
+  after=$(psql -X -v ON_ERROR_STOP=1 -qAt -c "select (select count(*) from public.tasks), (select count(*) from public.task_assignees), (select count(*) from public.audit_logs), (select count(*) from public.task_deadline_history), (select count(*) from public.task_assignment_batch_idempotency), (select count(*) from supabase_migrations.schema_migrations)");
+  [[ "$before" == "$after" ]];
+  [[ "$(psql -X -v ON_ERROR_STOP=1 -qAt -f "$BUNDLE_DIR/scripts/production/admin-task-attachment-delete/post/20261106130000_admin_task_attachment_delete.sql")" == pass ]];
+  echo ADMIN_ATTACHMENT_DELETE_IDEMPOTENCY=PASS
+  step=revert;
+  psql -X -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/scripts/production/admin-task-attachment-delete-revert.sql" >"$work/revert.log" 2>&1;
+  [[ "$(psql -X -v ON_ERROR_STOP=1 -qAt -c "select to_regprocedure('public.api_admin_delete_task_attachment(uuid,uuid,uuid,text)') is null")" == t ]];
+  psql -X -v ON_ERROR_STOP=1 -q -c "delete from supabase_migrations.schema_migrations where version='20261106130000'" >"$work/ledger-revert.log" 2>&1;
+  step=reapply;
+  apply_one "$migrations/20261106130000_admin_task_attachment_delete.sql" "$BUNDLE_DIR/scripts/production/admin-task-attachment-delete/post/20261106130000_admin_task_attachment_delete.sql" admin-task-attachment-delete-reapply
+  psql -X -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/supabase/tests/admin_task_attachment_delete_behaviour.sql" >"$work/reapply-behaviour.log" 2>&1;
+  step=complete;
+  echo ADMIN_ATTACHMENT_DELETE_DRYRUN_CHECKS=PASS >"$evidence/result.txt"
+}
+main "$@" </dev/null
