@@ -207,8 +207,10 @@ function psql(dbUrl, sql, { input = null, json = false } = {}) {
   const result = spawnSync(command.command, command.args, {
     input: input ?? sql,
     encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
     env: { ...connection.env, PGCONNECT_TIMEOUT: process.env.PGCONNECT_TIMEOUT || "10" },
   });
+  if (result.error) return { status: 1, stdout: "", stderr: `psql spawn failed: ${result.error.code || result.error.message}` };
   return { ...result, stdout: result.stdout || "", stderr: result.stderr || "" };
 }
 
