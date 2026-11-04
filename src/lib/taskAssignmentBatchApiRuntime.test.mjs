@@ -62,6 +62,25 @@ const validCard = (overrides = {}) => ({
   recurrenceEndsOn: null,
   ...overrides,
 });
+test("batch accepts null deadlines, ignores orphan times, and defaults dated tasks", async () => {
+  const harness = makeApp();
+  const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST", body: JSON.stringify({ mode: "batch", batchId: uuid("01"), departmentId: uuid("10"), assigneeId: uuid("11"), tasks: [validCard({ dueDate: null }), validCard({ dueTime: "" })] }),
+  }));
+  assert.equal(response.status, 201);
+  assert.equal(harness.calls[0][2].tasks[0].dueDate, null);
+  assert.equal(harness.calls[0][2].tasks[0].dueTime, null);
+  assert.equal(harness.calls[0][2].tasks[1].dueTime, "17:00");
+});
+test("batch rejects recurrence without a deadline before mutation", async () => {
+  const harness = makeApp();
+  const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST", body: JSON.stringify({ mode: "batch", batchId: uuid("01"), departmentId: uuid("10"), assigneeId: uuid("11"), tasks: [validCard({ dueDate: null, recurrenceFrequency: "weekly" })] }),
+  }));
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error.message, /lặp/);
+  assert.equal(harness.calls.length, 0);
+});
 
 test("batch request normalizes cards and calls the repository once", async () => {
   const harness = makeApp({ batchResult: { batchId: uuid("01"), tasks: [{ ordinal: 1, id: uuid("02"), title: "Việc một" }], count: 1, replayed: false } });
@@ -171,6 +190,25 @@ test("single-task payload remains on the existing assignment path", async () => 
   }));
   assert.equal(response.status, 201);
   assert.equal(harness.calls[0][0], "assign");
+});
+
+test("single and department-group assignment accept an absent deadline and reject unanchored recurrence", async () => {
+  for (const groupDepartmentId of [null, uuid("10")]) {
+    for (const dueDate of [null, "", "2026-09-30"]) {
+      const harness = makeApp();
+      const payload = { ...validCard({ dueDate, dueTime: "" }), departmentId: uuid("10"), assigneeId: uuid("11"), groupDepartmentId };
+      const request = (body) => new Request("https://example.test/api/tasks/assign", { method: "POST", body: JSON.stringify(body) });
+      assert.equal((await harness.app.assign(request(payload))).status, 201);
+      assert.equal(harness.calls[0][2].dueDate, dueDate || null);
+      assert.equal(harness.calls[0][2].dueTime, dueDate ? "17:00" : null);
+      if (!dueDate) {
+        const rejected = await harness.app.assign(request({ ...payload, recurrenceFrequency: "daily" }));
+        assert.equal(rejected.status, 400);
+        assert.match((await rejected.json()).error.message, /lặp/);
+        assert.equal(harness.calls.length, 1);
+      }
+    }
+  }
 });
 
 test("single-task payload preserves an explicit description alongside requirements", async () => {

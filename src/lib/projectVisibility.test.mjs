@@ -51,3 +51,15 @@ test("admin project override is bounded and reaches both RBAC gates", () => {
 test("admin list scope includes all project tasks without widening nonproject scope", () => {
   assert.deepEqual(buildTaskListScope({id:"admin",roleCode:"admin",departmentId:null,grants:[]},[],[]),{all:false,terms:["project_id.not.is.null"]});
 });
+
+test("project deadline action admits leads and admin without widening general edits", () => {
+  const otherCreator = { ...task, createdBy: "another", status: "new" };
+  const lead = { ...actor, id: "lead" };
+  assert.equal(canTaskAction(lead, otherCreator, "assigned_deadline"), true);
+  assert.equal(canTaskAction(lead, otherCreator, "update"), false);
+  for (const status of ["done", "cancelled"]) assert.equal(canTaskAction(lead, { ...otherCreator, status }, "assigned_deadline"), false);
+  assert.equal(canTaskAction({ ...actor, roleCode: "admin" }, { ...otherCreator, status: "done" }, "assigned_deadline"), true);
+  assert.equal(canTaskAction({ ...actor, roleCode: "admin" }, { ...otherCreator, status: "cancelled" }, "assigned_deadline"), false);
+  for (const role of ["deputy", "member"]) assert.equal(canTaskAction(lead, { ...otherCreator, projectMembers: [{ userId: "lead", role }] }, "assigned_deadline"), false);
+  assert.equal(canTaskAction(lead, { ...otherCreator, projectId: null }, "assigned_deadline"), false);
+});

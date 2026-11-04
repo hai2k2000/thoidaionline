@@ -288,8 +288,8 @@ export type AssignedTaskInput = {
   departmentId: string;
   assigneeId: string;
   reviewerId: string;
-  dueDate: string;
-  dueTime: string;
+  dueDate: string | null;
+  dueTime: string | null;
   evaluationCriteria: string | null;
   priority: "low" | "normal" | "high" | "urgent";
   collaboratorIds: string[];
@@ -302,8 +302,8 @@ export type TaskAssignmentBatchTask = {
   title: string;
   description: string;
   requirements: string[];
-  dueDate: string;
-  dueTime: string;
+  dueDate: string | null;
+  dueTime: string | null;
   evaluationCriteria: string | null;
   priority: "low" | "normal" | "high" | "urgent";
   collaboratorIds: string[];

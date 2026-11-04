@@ -314,7 +314,7 @@ export function createTaskApplication(deps: Dependencies) {
       const guarded = await guardedBody(request);
       if (guarded instanceof Response) return guarded;
       const { actor, body } = guarded;
-      const taskId = await authorizeMutation(actor, taskIdValue, "update");
+      const taskId = await authorizeMutation(actor, taskIdValue, "assigned_deadline");
       if (taskId instanceof Response) return taskId;
       const dueDate = dateValue(body.dueDate);
       const reason = cleanText(body.reason, 2000);
@@ -376,7 +376,7 @@ export function createTaskApplication(deps: Dependencies) {
       if (!title || !description || !startDate || !dueDate || startDate > dueDate) {
         return deps.error("invalid_request", 400);
       }
-      if (recurrenceFrequency === undefined || (body.recurrenceEndsOn !== null && !recurrenceEndsOn) || (recurrenceFrequency === null && recurrenceEndsOn !== null) || (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate)) return deps.error("invalid_request", 400);
+      if (recurrenceFrequency === undefined || (body.recurrenceEndsOn !== null && !recurrenceEndsOn) || (recurrenceFrequency === null && recurrenceEndsOn !== null) || (recurrenceEndsOn !== null && dueDate !== null && recurrenceEndsOn < dueDate)) return deps.error("invalid_request", 400);
       if (deps.taskRbacEnabled) {
         if (!deps.taskRbacBaseAllowed) return deps.error("forbidden", 403);
         try {
@@ -567,7 +567,7 @@ export function createTaskApplication(deps: Dependencies) {
             ? card.requirements.map((value) => cleanText(value, 2000)).filter(Boolean)
             : null;
           const dueDate = dateValue(card?.dueDate);
-          const dueTime = timeValue(card?.dueTime);
+          const dueTime = dueDate ? timeValue(card?.dueTime || "17:00") : null;
           const priority = card?.priority === undefined ? "normal" : batchPriority(card?.priority);
           const collaboratorIds = batchIds(card?.collaboratorIds, deps.asUuid);
           const watcherIds = batchIds(card?.watcherIds, deps.asUuid);
@@ -586,11 +586,12 @@ export function createTaskApplication(deps: Dependencies) {
           if (!requirements || requirements.length < 1 || requirements.length > 50) {
             return invalidBatch(index, "requirements", `Việc ${index + 1} cần từ 1 đến 50 yêu cầu`);
           }
-          if (!dueDate) return invalidBatch(index, "dueDate", `Việc ${index + 1} có Ngày hết hạn không hợp lệ`);
-          if (!dueTime) return invalidBatch(index, "dueTime", `Việc ${index + 1} có Giờ hết hạn không hợp lệ`);
+          if (card?.dueDate !== null && card?.dueDate !== undefined && card?.dueDate !== "" && !dueDate) return invalidBatch(index, "dueDate", `Việc ${index + 1} có Ngày hết hạn không hợp lệ`);
+          if (dueDate && !dueTime) return invalidBatch(index, "dueTime", `Việc ${index + 1} có Giờ hết hạn không hợp lệ`);
           if (!priority) return invalidBatch(index, "priority", `Việc ${index + 1} có Mức độ ưu tiên không hợp lệ`);
           if (!collaboratorIds) return invalidBatch(index, "collaboratorIds", `Việc ${index + 1} có Người phối hợp không hợp lệ`);
           if (!watcherIds) return invalidBatch(index, "watcherIds", `Việc ${index + 1} có Người xem không hợp lệ`);
+          if (recurrenceFrequency && !dueDate) return invalidBatch(index, "dueDate", `Việc ${index + 1} cần hạn hoàn thành để lặp lại`);
           if (recurrenceFrequency === undefined) return invalidBatch(index, "recurrenceFrequency", `Việc ${index + 1} có lịch lặp không hợp lệ`);
           if (card?.recurrenceEndsOn !== null && !recurrenceEndsOn) {
             return invalidBatch(index, "recurrenceEndsOn", `Việc ${index + 1} có ngày kết thúc lặp không hợp lệ`);
@@ -598,7 +599,7 @@ export function createTaskApplication(deps: Dependencies) {
           if (recurrenceFrequency === null && recurrenceEndsOn !== null) {
             return invalidBatch(index, "recurrenceEndsOn", `Việc ${index + 1} cần tần suất lặp trước khi đặt ngày kết thúc`);
           }
-          if (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate) {
+          if (recurrenceEndsOn !== null && dueDate !== null && recurrenceEndsOn < dueDate) {
             return invalidBatch(index, "recurrenceEndsOn", `Việc ${index + 1} có ngày kết thúc lặp trước hạn hoàn thành`);
           }
           normalized.push({
@@ -674,7 +675,7 @@ export function createTaskApplication(deps: Dependencies) {
       const assigneeId = deps.asUuid(body?.assigneeId);
       const reviewerId = actor.id;
       const dueDate = dateValue(body?.dueDate);
-      const dueTime = timeValue(body?.dueTime);
+      const dueTime = dueDate ? timeValue(body?.dueTime || "17:00") : null;
       const evaluationCriteria = JSON.stringify(requirements);
       const assignmentPriorities = ["low", "normal", "high", "urgent"] as const;
       const assignmentPriority = body?.priority === undefined
@@ -696,14 +697,15 @@ export function createTaskApplication(deps: Dependencies) {
         ? null : deps.asUuid(body.groupDepartmentId);
       const excludedMemberIds = body?.excludedMemberIds === undefined ? [] : ids(body.excludedMemberIds);
       if (!title || requirements.length < 1 || requirements.length > 50 || !departmentId || !assigneeId || !reviewerId
-        || !dueDate || !dueTime || !assignmentPriority || !collaboratorIds || !watcherIds || !excludedMemberIds
+        || (body?.dueDate != null && body.dueDate !== "" && !dueDate) || (dueDate && !dueTime) || !assignmentPriority || !collaboratorIds || !watcherIds || !excludedMemberIds
         || (body?.groupDepartmentId !== undefined && body?.groupDepartmentId !== null && !groupDepartmentId)
         || recurrenceFrequency === undefined
         || (body?.recurrenceEndsOn !== null && !recurrenceEndsOn)
         || (recurrenceFrequency === null && recurrenceEndsOn !== null)
-        || (recurrenceEndsOn !== null && recurrenceEndsOn < dueDate)) {
+        || (recurrenceEndsOn !== null && dueDate !== null && recurrenceEndsOn < dueDate)) {
         return deps.error("invalid_request", 400);
       }
+      if (recurrenceFrequency && !dueDate) return deps.json({ error: { code: "invalid_request", message: "Cần hạn hoàn thành để lặp lại công việc." } }, 400);
       const legacyAssignmentResult = deps.canAssignToDepartment(actor, departmentId);
       await deps.shadowTaskAction?.(
         guard.actor,

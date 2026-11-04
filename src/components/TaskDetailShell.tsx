@@ -21,7 +21,7 @@ import JournalismAssociationControls from "@/components/JournalismAssociationCon
 import type { JournalismStructureSeries, JournalismStructureTopic } from "@/lib/journalismStructureRepository";
 
 type Capabilities = {
-  report: boolean; completeAssigned: boolean; review: boolean; update: boolean; comment: boolean;
+  report: boolean; completeAssigned: boolean; review: boolean; update: boolean; assignedDeadline?: boolean; comment: boolean;
   journalismMetadataUpdate: boolean;
   journalismPublicationManage: boolean;
   journalismPublicationVerify: boolean;
@@ -45,7 +45,7 @@ const today = () => new Intl.DateTimeFormat("en-CA", {
 const dueText = (task: Pick<TaskDetailDto, "due_date" | "due_time">) =>
   task.due_date
     ? dateText(task.due_time ? `${task.due_date}T${task.due_time}+07:00` : task.due_date)
-    : "—";
+    : "Không có hạn";
 
 export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, capabilities, userLabel, journalismWorkKinds, journalismWorkKindsLoadFailed, journalismStructureOptions }: {
   returnTo: string | null;
@@ -168,7 +168,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
                 {!personal && capabilities.review && task.self_claimable && task.status === "waiting" ? <><button disabled={busy} onClick={() => reviewClaim("approve")} className="shrink-0 whitespace-nowrap rounded bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white">Duyệt nhận việc</button><button disabled={busy} onClick={() => reviewClaim("reject")} className="shrink-0 whitespace-nowrap rounded bg-amber-600 px-2 py-1.5 text-xs font-semibold text-white">Trả lại</button></> : null}
                 {personal && capabilities.personalEdit ? <Link href={`/tasks/personal/${task.id}/edit`} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Sửa</Link> : null}
                 {((personal && capabilities.personalCancel && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status))) || (!personal && capabilities.assignedCancel && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)))) ? <button disabled={busy} onClick={() => { if (window.confirm("Bạn có chắc muốn hủy công việc này?")) void reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy công việc"); }} className="shrink-0 whitespace-nowrap rounded bg-red-700 px-2 py-1.5 text-xs text-white">Hủy công việc</button> : null}
-                {!personal && capabilities.update && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)) ? <button disabled={busy} onClick={async () => { const dueDate = window.prompt("Ngày kết thúc mới (YYYY-MM-DD):", task.due_date ?? ""); if (dueDate) await reasonAction(`/api/tasks/${task.id}/deadline-assigned`, "Đổi ngày", { dueDate }); }} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</button> : null}
+                {!personal && (capabilities.assignedDeadline ?? capabilities.update) && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)) ? <button disabled={busy} onClick={async () => { const dueDate = window.prompt("Ngày kết thúc mới (YYYY-MM-DD):", task.due_date ?? ""); if (dueDate) await reasonAction(`/api/tasks/${task.id}/deadline-assigned`, "Đổi ngày", { dueDate }); }} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</button> : null}
               </> : null}
             </div>
           </div>
