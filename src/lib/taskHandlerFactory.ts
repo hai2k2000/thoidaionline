@@ -327,7 +327,14 @@ export function createTaskApplication(deps: Dependencies) {
     async uploadAttachment(request: Request, taskIdValue: unknown) {
       const guard = await deps.mutationActor();
       if (!guard.ok) return guard.response;
-      const taskId = await authorizeMutation(guard.actor, taskIdValue, "attachment");
+      const taskId = guard.actor.role_code === "admin" ? deps.asUuid(taskIdValue) : await authorizeMutation(guard.actor, taskIdValue, "attachment");
+      if (!taskId) return deps.error("invalid_request", 400);
+      if (!(taskId instanceof Response) && guard.actor.role_code === "admin") {
+        const access = await deps.repository.access(taskId);
+        if (!access.ok) return deps.rpcFailure(access.error);
+        if (!access.data) return deps.error("not_found", 404);
+        if (access.data.status === "cancelled") return deps.error("forbidden", 403);
+      }
       if (taskId instanceof Response) return taskId;
       const form = await request.formData().catch(() => null);
       const file = form?.get("file");
@@ -361,6 +368,22 @@ export function createTaskApplication(deps: Dependencies) {
       if (!attachment.data) return deps.error("not_found", 404);
       const signed = await deps.signPrivateAttachment(attachment.data.storage_path);
       return signed.ok ? deps.json({ url: signed.url }) : deps.rpcFailure(signed.error);
+    },
+    async deleteAttachment(request: Request, taskIdValue: unknown, attachmentIdValue: unknown) {
+      const guard = await deps.mutationActor();
+      if (!guard.ok) return guard.response;
+      if (guard.actor.role_code !== "admin") return deps.error("forbidden", 403);
+      const taskId = deps.asUuid(taskIdValue); const attachmentId = deps.asUuid(attachmentIdValue);
+      if (!taskId || !attachmentId) return deps.error("not_found", 404);
+      const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+      const reason = cleanText(body?.reason, 2000);
+      if (!reason) return deps.error("invalid_request", 400);
+      const result = await deps.repository.deleteAttachment(guard.actor.id, taskId, attachmentId, reason);
+      if (!result.ok) return deps.rpcFailure(result.error);
+      if (!result.data) return deps.error("not_found", 404);
+      try { await deps.removePrivateAttachment(result.data.storage_path); }
+      catch { return deps.error("service_unavailable", 503); }
+      return deps.json({ attachment: result.data });
     },
 
     async createPersonal(request: Request) {
@@ -445,7 +468,8 @@ export function createTaskApplication(deps: Dependencies) {
       const dueTime = hasDueTime ? timeValue(body.dueTime) : null;
       const priority = ["low", "normal", "high", "urgent"].find((value) => value === body.priority);
       const status = ["new", "in_progress", "blocked", "waiting", "pending_review", "done", "rejected", "cancelled"].find((value) => value === body.status);
-      const evaluationCriteria = cleanText(body.evaluationCriteria, 10000) || null;
+      const evaluationCriteria = typeof body.evaluationCriteria === "string" ? body.evaluationCriteria : null;
+      if (evaluationCriteria !== null && evaluationCriteria.length > 10000) return deps.error("invalid_request", 400);
       const reason = cleanText(body.reason, 2000);
       if (!title || !description || !startDate || (hasDueDate && !dueDate) || (dueDate && startDate > dueDate) || !priority || !status || !reason || (hasDueTime && (!dueTime || !dueDate))) return deps.error("invalid_request", 400);
       const result = await deps.repository.adminEditTask(actor.id, taskId, { title, description, startDate, dueDate, dueTime, priority, status, evaluationCriteria, reason });

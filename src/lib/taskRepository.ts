@@ -794,7 +794,7 @@ export const taskRepository: TaskRepository = {
         .eq("task_id", taskId).order("created_at", { ascending: false }),
       serverSupabase.from("task_attachments")
         .select("id,file_name,mime_type,size_bytes,created_at,uploaded_by")
-        .eq("task_id", taskId).order("created_at", { ascending: false }),
+        .eq("task_id", taskId).is("deleted_at", null).order("created_at", { ascending: false }),
       projectTask ? Promise.resolve({ data: null, error: null }) : serverSupabase.from("task_completion_scores")
         .select("id,requirement_results,requirement_score,collaboration_score,initiative_score,total_score,note,created_at,reviewer:staff_users!task_completion_scores_reviewer_id_fkey(full_name)")
         .eq("task_id", taskId).maybeSingle(),
@@ -1059,9 +1059,12 @@ export const taskRepository: TaskRepository = {
   async attachment(taskId, attachmentId) {
     const { data, error } = await serverSupabase.from("task_attachments")
       .select("id,file_name,mime_type,size_bytes,created_at,uploaded_by,storage_path")
-      .eq("task_id", taskId).eq("id", attachmentId).maybeSingle();
+      .eq("task_id", taskId).eq("id", attachmentId).is("deleted_at", null).maybeSingle();
     return error ? fail(error) : ok(data as unknown as (TaskDetailDto["attachments"][number] & { storage_path: string }) | null);
   },
+  deleteAttachment: (actorId, taskId, attachmentId, reason) => mutation("api_admin_delete_task_attachment", {
+    p_actor_id: actorId, p_task_id: taskId, p_attachment_id: attachmentId, p_reason: reason,
+  }),
 
   update: (actorId, taskId, input: LegacyUpdateTaskInput) => mutation(
     "api_update_task",

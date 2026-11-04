@@ -32,6 +32,9 @@ test("CTV and Projects migrations are shipped once in version order in both refe
 test("admin participant migration is packaged", () => {
   for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.match(readFileSync(file, "utf8"), /20261106100000_admin_edit_task_participants\.sql/);
 });
+test("admin attachment delete migration is packaged", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.match(readFileSync(file, "utf8"), /20261106130000_admin_task_attachment_delete\.sql/);
+});
 
 test("Next standalone output is enabled", () => assert.match(config, /output:\s*["']standalone["']/));
 test("standalone tracing excludes development-only source payloads", () => assert.match(config, /outputFileTracingExcludes/));

@@ -113,7 +113,8 @@ export const taskHandlers = createTaskApplication({
       : { ok: true as const };
   },
   removePrivateAttachment: async (path) => {
-    await privateAttachments.remove([path]);
+    const { error } = await privateAttachments.remove([path]);
+    if (error) throw new Error("storage_delete_failed");
   },
   signPrivateAttachment: async (path) => {
     const { data, error } = await privateAttachments.createSignedUrl(path, 60);
