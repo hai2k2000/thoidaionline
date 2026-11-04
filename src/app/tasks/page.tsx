@@ -1,3 +1,6 @@
+import { JOURNALISM_UI_HIDDEN } from "@/lib/journalismUiHidden.mjs";
+import { projectRepository } from "@/lib/projectRepository";
+import { projectReader } from "@/lib/projectApiGuards";
 import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 import { redirect } from "next/navigation";
 import TaskCenterShell from "@/components/TaskCenterShell";
@@ -54,11 +57,11 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
   }
   const view = resolveTaskCenterView(rawParams.view, canViewEvaluations);
   const parsedQuery = parseTaskListSearchParams(toUrlSearchParams(rawParams), { defaultJournalism: forceJournalism ? "only" : "exclude" });
-  const query = forceJournalism ? { ...parsedQuery, journalism: "only" as const, approvalQueue: undefined } : parsedQuery;
+  const query = forceJournalism && !JOURNALISM_UI_HIDDEN ? { ...parsedQuery, journalism: "only" as const, approvalQueue: undefined } : parsedQuery;
   if (query.journalism === "only" && !journalismAllowed) redirect("/tasks");
-  const workKindsResult = journalismAllowed ? await listJournalismWorkKinds(query.journalismWorkKindId ?? null) : null;
+  const workKindsResult = !JOURNALISM_UI_HIDDEN && journalismAllowed ? await listJournalismWorkKinds(query.journalismWorkKindId ?? null) : null;
   const journalismWorkKinds = workKindsResult?.ok ? workKindsResult.data : [];
-  const structureFilters = journalismAllowed ? await listJournalismStructureFilters(user, query.topicId ?? null, query.seriesId ?? null) : { topics: [], series: [] };
+  const structureFilters = !JOURNALISM_UI_HIDDEN && journalismAllowed ? await listJournalismStructureFilters(user, query.topicId ?? null, query.seriesId ?? null) : { topics: [], series: [] };
 
   let tasks: TaskListResult = {
     items: [], total: 0, page: query.page, pageSize: query.pageSize,
@@ -88,6 +91,10 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
     departments = (result.data ?? []) as { id: string; name: string }[];
   }
 
+  const projectsResult = await projectRepository.list(projectReader(user));
+  const projects = (projectsResult.ok ? projectsResult.data : []).map(({ id, name, status }) => ({ id, name, status }))
+    .sort((a, b) => Number(a.status === "closed") - Number(b.status === "closed") || a.name.localeCompare(b.name, "vi"));
+
   return (
     <TaskCenterShell
       heading={collaborator ? "C\u00d4NG VI\u1ec6C C\u1ee6A T\u00d4I" : undefined}
@@ -102,6 +109,7 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
         completion: approvalQueue[1].ok ? approvalQueue[1].data : { items: [], total: 0, page: 1, pageSize: 100 },
       }}
       currentUserId={user.id}
+      projects={projects}
       departments={departments}
       journalismWorkKinds={journalismWorkKinds}
       journalismTopics={structureFilters.topics}
