@@ -35,11 +35,11 @@ test("canonical form owns recipient scope, defaults, fields, validation, and pay
     "Đổi người",
     "role=\"combobox\"",
     "Escape",
-    "pointerdown",
     "onCancel",
   ]) assert.match(form, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), marker);
   assert.match(form, /createTaskCard\(`card-\$\{index \+ 1\}`\)/);
   assert.match(form, /createTaskCard/);
+  assert.match(await read("ParticipantSelector.tsx"), /pointerdown/);
 });
 
 test("project assignment enables optional deadline and normalizes nullable dates", async () => {

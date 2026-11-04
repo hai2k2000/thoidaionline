@@ -4,7 +4,8 @@ import test from "node:test";
 
 const shell = readFileSync(new URL("../components/TaskAssignShell.tsx", import.meta.url), "utf8");
 const form = readFileSync(new URL("../components/CanonicalAssignmentForm.tsx", import.meta.url), "utf8");
-const assignment = shell + form;
+const picker = readFileSync(new URL("../components/ParticipantSelector.tsx", import.meta.url), "utf8");
+const assignment = shell + form + picker;
 const page = readFileSync(new URL("../app/tasks/assign/page.tsx", import.meta.url), "utf8");
 const repository = readFileSync(new URL("./taskAssignmentRepository.ts", import.meta.url), "utf8");
 
