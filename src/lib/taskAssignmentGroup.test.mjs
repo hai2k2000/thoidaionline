@@ -39,10 +39,10 @@ test("group exclusions are validated and primary cannot be excluded", () => {
   assert.ok(result.ok && !result.collaboratorIds.includes("member"));
 });
 
-test("individual mode is unchanged but rejects invisible or cross-department participants", () => {
+test("individual collaborators cross departments but watcher scope stays unchanged", () => {
   const individual = resolveAssignmentSelection({ ...base, groupDepartmentId: null, collaboratorIds: ["member"], excludedMemberIds: [] });
   assert.deepEqual(individual.ok && individual.collaboratorIds, ["member"]);
-  assert.equal(resolveAssignmentSelection({ ...base, groupDepartmentId: null, collaboratorIds: ["outside"], excludedMemberIds: [] }).ok, false);
+  assert.equal(resolveAssignmentSelection({ ...base, groupDepartmentId: null, collaboratorIds: ["outside"], excludedMemberIds: [] }).ok, true);
   assert.equal(resolveAssignmentSelection({ ...base, groupDepartmentId: null, watcherIds: ["outside"], excludedMemberIds: [] }).ok, false);
 });
 

@@ -15,6 +15,7 @@ export default async function LegacyRedirectPage({
   searchParams,
 }: LegacyRedirectPageProps) {
   const user = await getSessionUser();
+  if ((await searchParams).scope === "collaborating") return <TasksPage searchParams={searchParams} basePath="/my-tasks" />;
   if (user && isCollaboratorRole(user.role_code)) return <TasksPage searchParams={searchParams} basePath="/my-tasks" />;
   redirect(buildLegacyTaskRedirectFromParams("/my-tasks", await searchParams));
 }

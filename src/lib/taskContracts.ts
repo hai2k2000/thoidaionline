@@ -111,7 +111,7 @@ export type TaskParticipantDto = {
   user_id: string;
   assignment_role: AssignmentRole;
   status: string;
-  staff_users: { full_name: string | null } | null;
+  staff_users: { full_name: string | null; departments?: { name: string } | null } | null;
 };
 
 export type TaskListItemDto = {
@@ -239,7 +239,7 @@ export type TaskDetailDto = TaskListItemDto & {
 export type TaskListQuery = {
   projectId?: string | null;
   search: string | null;
-  scope: "all" | "assigned" | "personal" | "watching" | "cancelled";
+  scope: "all" | "assigned" | "collaborating" | "personal" | "watching" | "cancelled";
   taskType: CanonicalTaskType | null;
   category?: "duty" | null;
   status: CanonicalTaskStatus | null;

@@ -6,6 +6,7 @@ import { canAssignToDepartment, canTaskAction } from "./authorization.ts";
 import { apiError, apiJson } from "./apiResponse.ts";
 import { createTaskApplication } from "./taskHandlerFactory.ts";
 import { normalizeLegacyEvaluationInput } from "./legacyEvaluationValidation.ts";
+import { resolveAssignmentSelection } from "./taskAssignmentGroup.ts";
 
 const uuid = (suffix) => `00000000-0000-4000-8000-0000000000${suffix}`;
 const actor = {
@@ -22,7 +23,7 @@ const actor = {
   permissions: normalizePermissions({ can_assign_task: true }),
 };
 
-const makeApp = ({ batchResult = { batchId: uuid("90"), tasks: [], count: 0, replayed: false }, user = actor, selectedActor = null } = {}) => {
+const makeApp = ({ batchResult = { batchId: uuid("90"), tasks: [], count: 0, replayed: false }, user = actor, selectedActor = null, resolveParticipants = async (_actor, input) => ({ ok: true, collaboratorIds: input.collaboratorIds, watcherIds: input.watcherIds }) } = {}) => {
   const calls = [];
   const result = (data) => Promise.resolve({ ok: true, data });
   const repository = {
@@ -39,7 +40,7 @@ const makeApp = ({ batchResult = { batchId: uuid("90"), tasks: [], count: 0, rep
     rpcFailure: (error) => error.code === "23505" ? apiError("conflict", 409) : apiError("operation_failed", 500),
     asUuid: (value) => typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value) ? value : null,
     canAssignToDepartment,
-    resolveAssignmentParticipants: async (_actor, input) => ({ ok: true, collaboratorIds: input.collaboratorIds, watcherIds: input.watcherIds }),
+    resolveAssignmentParticipants: resolveParticipants,
     canTaskAction,
     taskRbacEnabled: false,
     normalizeLegacyEvaluationInput,
@@ -62,6 +63,24 @@ const validCard = (overrides = {}) => ({
   recurrenceFrequency: null,
   recurrenceEndsOn: null,
   ...overrides,
+});
+
+test("single and batch use real cross-department selection for manager and admin on behalf", async () => {
+  const manager = { id: uuid("12"), roleCode: "truong_phong", roleLevel: 2, departmentId: uuid("10"), permissions: normalizePermissions({ can_assign_task: true }) };
+  const resolveParticipants = async (effectiveActor, input) => resolveAssignmentSelection({
+    ...input, broad: false, actorRoleCode: effectiveActor.roleCode, actorDepartmentId: effectiveActor.departmentId,
+    department: { id: uuid("10"), managerId: uuid("12") },
+    people: [{ id: uuid("12"), departmentId: uuid("10"), canReview: true, canReviewOutsideDepartment: false }, { id: uuid("11"), departmentId: uuid("10"), canReview: false, canReviewOutsideDepartment: false }, { id: uuid("20"), departmentId: uuid("21"), canReview: false, canReviewOutsideDepartment: false }],
+  });
+  for (const mode of ["single", "batch"]) for (const onBehalf of [false, true]) {
+    const harness = makeApp({ user: { ...actor, id: uuid("12"), role_code: onBehalf ? "admin" : "truong_phong" }, selectedActor: manager, resolveParticipants });
+    const card = validCard({ collaboratorIds: [uuid("20")] });
+    const payload = { departmentId: uuid("10"), assigneeId: uuid("11"), ...(onBehalf ? { onBehalfOfId: manager.id } : {}), ...(mode === "batch" ? { mode, batchId: uuid("01"), tasks: [card, card] } : card) };
+    const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", { method: "POST", body: JSON.stringify(payload) }));
+    assert.equal(response.status, 201, `${mode}, onBehalf=${onBehalf}`);
+    const saved = harness.calls[0][2];
+    for (const item of mode === "batch" ? saved.tasks : [saved]) assert.deepEqual(item.collaboratorIds, [uuid("20")]);
+  }
 });
 
 test("non-admin cannot submit on behalf of a leader", async () => {
