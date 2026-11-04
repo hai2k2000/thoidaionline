@@ -45,7 +45,7 @@ test('deputy guard excludes collaborators and inactive deputies',async()=>{
 test('library source integrates safe download, upload cleanup, mobile tree, breadcrumb and protected actions',()=>{
  const api=read('src/app/api/projects/[id]/library/route.ts');const ui=read('src/components/ProjectLibrary.tsx');const download=read('src/app/api/projects/[id]/library/download/[itemId]/route.ts');
  assert.ok(api.indexOf('listMembers')<api.indexOf('storage.upload'));assert.match(api,/storage.remove\(\[storagePath\]\)/);
- assert.ok(download.indexOf('projectLibraryRepository.file')<download.indexOf('/library/file/'));assert.doesNotMatch(download,/createSignedUrl|supa/);
+ assert.match(download,/library\/file\/\$\{itemId\}\?disposition=attachment/); assert.ok(!download.includes('signedUrl'));
  for(const token of ['multiple','breadcrumb','lg:hidden','lg:block','canChangeLibraryItem','canChangeLibraryFolder','source_task_id','uploaded_by_name','Suspense'])assert.ok(ui.includes(token),token);
  assert.match(read('src/app/projects/[id]/page.tsx'),/<Suspense[\s\S]*ProjectDetailShell/);
 });
