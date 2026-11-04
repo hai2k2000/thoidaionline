@@ -27,14 +27,6 @@ begin
   raise exception 'Owner missing manager accepted';
  exception when invalid_parameter_value then null;
  end;
- update public.staff_users set department_id=null where id=missing_worker;
- update public.task_assignees set assignment_role='assignee' where task_id=t and user_id=missing_worker;
- begin
-  update public.task_assignees set assignment_role='owner' where task_id=t and user_id=missing_worker;
-    set constraints all immediate;
-  raise exception 'Owner missing department accepted';
- exception when invalid_parameter_value then null;
- end;
  insert into public.projects(code,name,host_department_id,created_by) values('ZZ-MW-'||suffix,'Project fixture',d,manager_id) returning id into p;
  insert into public.tasks(title,created_by,department_id,task_type,task_category,plan_period,status,project_id)
  values('Project unchanged',manager_id,d,'assigned','regular','ad_hoc','new',p) returning id into t;
