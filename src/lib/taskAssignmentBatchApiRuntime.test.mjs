@@ -253,3 +253,16 @@ test("single-task payload preserves an explicit description alongside requiremen
   assert.equal(harness.calls[0][2].description, "Mô tả riêng");
   assert.equal(harness.calls[0][2].evaluationCriteria, JSON.stringify(["Yêu cầu"]));
 });
+test("batch treats missing or empty recurrence fields as Không lặp", async () => {
+  const harness = makeApp();
+  const missing = validCard({});
+  delete missing.recurrenceFrequency;
+  delete missing.recurrenceEndsOn;
+  const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST", body: JSON.stringify({ mode: "batch", batchId: uuid("01"), departmentId: uuid("10"), assigneeId: uuid("11"), tasks: [missing, validCard({ recurrenceFrequency: "", recurrenceEndsOn: "" })] }),
+  }));
+  assert.equal(response.status, 201);
+  assert.equal(harness.calls[0][2].tasks[0].recurrenceFrequency, null);
+  assert.equal(harness.calls[0][2].tasks[1].recurrenceFrequency, null);
+  assert.equal(harness.calls[0][2].tasks[1].recurrenceEndsOn, null);
+});
