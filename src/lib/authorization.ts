@@ -42,6 +42,7 @@ export type TaskAction =
   | "view"
   | "assign"
   | "update"
+  | "assigned_deadline"
   | "assigned_cancel"
   | "admin_edit"
   | "claim"
@@ -175,7 +176,7 @@ export function canTaskAction(
   if (actor.roleCode === "tbt_read_only") return false;
   if (actor.roleCode === "tong_bien_tap" && ![
     "assign", "comment", "leader_evaluate", "review",
-    "update", "assigned_cancel", "personal_edit", "personal_deadline", "personal_cancel",
+    "update", "assigned_deadline", "assigned_cancel", "personal_edit", "personal_deadline", "personal_cancel",
   ].includes(action)) {
     return false;
   }
@@ -185,6 +186,11 @@ export function canTaskAction(
       if (actor.roleCode === "admin" && task.projectId) return true;
       if (task.projectId) return projectMember?.role === "lead" || projectMember?.role === "deputy";
       return canAssignToDepartment(actor, task.departmentId);
+    case "assigned_deadline":
+      if (task.projectId) return task.taskType === "assigned"
+        && task.status !== "cancelled"
+        && (actor.roleCode === "admin" || (projectMember?.role === "lead" && task.status !== "done"));
+      return canEditTask(actor, task);
     case "update":
       return canEditTask(actor, task);
     case "assigned_cancel":

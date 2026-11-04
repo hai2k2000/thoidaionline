@@ -25,11 +25,14 @@ test("project wrappers preserve actor, participants, nullable reviewer and RPC f
   assert.deepEqual(calls[1].args.p_collaborator_ids, ["other"]);
   assert.deepEqual(calls[1].args.p_watcher_ids, ["watcher"]);
   assert.equal(calls[1].args.p_priority, "normal");
+  await repo.assignTask("lead", "project", { title: "Undated", description: "Requirements", assigneeId: "ctv", dueDate: null, dueTime: null });
+  assert.equal(calls[2].args.p_due_date, null);
+  assert.equal(calls[2].args.p_due_time, null);
   await repo.setMember("lead", "project", "ctv", null);
-  assert.equal(calls[2].args.p_remove, true);
+  assert.equal(calls[3].args.p_remove, true);
   assert.deepEqual(await repo.close("lead", "project"), { ok: false, error: { code: "42501" } });
   await repo.update("lead", "project", { code: "VIDEO", name: "Updated", hostDepartmentId: "host" });
-  assert.deepEqual(calls[4], { name: "api_update_project", args: { p_actor_id: "lead", p_project_id: "project", p_code: "VIDEO", p_name: "Updated", p_description: null, p_host_department_id: "host" } });
+  assert.deepEqual(calls[5], { name: "api_update_project", args: { p_actor_id: "lead", p_project_id: "project", p_code: "VIDEO", p_name: "Updated", p_description: null, p_host_department_id: "host" } });
 });
 
 test("member lists are scoped to memberships and task filters never replace project scope", async () => {

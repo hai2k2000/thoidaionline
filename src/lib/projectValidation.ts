@@ -9,7 +9,10 @@ export function parseProject(body: Record<string, unknown> | null) {
 }
 export function parseProjectAssignment(body: Record<string, unknown> | null): ProjectAssignmentInput | null {
   if (!body || typeof body.title !== "string" || !body.title.trim() || body.title.length > 500 || typeof body.description !== "string" || body.description.length > 10000 || !asUuid(body.assigneeId) || (body.reviewerId != null && !asUuid(body.reviewerId))) return null;
-  if (typeof body.dueDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(body.dueDate) || !Number.isFinite(Date.parse(body.dueDate)) || new Date(body.dueDate).toISOString().slice(0,10) !== body.dueDate || typeof body.dueTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.dueTime)) return null;
+  const dueDate = body.dueDate === null || body.dueDate === "" ? null : body.dueDate;
+  const dueTime = body.dueTime === null || body.dueTime === "" ? null : body.dueTime;
+  if (dueDate !== null && (typeof dueDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !Number.isFinite(Date.parse(dueDate)) || new Date(dueDate).toISOString().slice(0,10) !== dueDate)) return null;
+  if (dueTime !== null && (typeof dueTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(dueTime))) return null;
   const collaboratorIds = projectIds(body.collaboratorIds ?? []); const watcherIds = projectIds(body.watcherIds ?? []);
   if (!collaboratorIds || !watcherIds || !["low","normal","high","urgent"].includes(String(body.priority ?? "normal"))) return null;
   if (body.recurrenceFrequency || body.groupDepartmentId || body.tasks || body.cards) return null;
@@ -18,5 +21,5 @@ export function parseProjectAssignment(body: Record<string, unknown> | null): Pr
   const evaluationCriteria = JSON.stringify(requirements);
   const description = body.description.trim() || requirements.map((item) => `- ${item}`).join("\n");
   if (!description || description.length > 10000 || evaluationCriteria.length > 10000) return null;
-  return { title: body.title.trim(), description, assigneeId: body.assigneeId as string, reviewerId: body.reviewerId as string | null | undefined, dueDate: body.dueDate, dueTime: body.dueTime, evaluationCriteria, collaboratorIds, watcherIds, priority: (body.priority ?? "normal") as ProjectAssignmentInput["priority"] };
+  return { title: body.title.trim(), description, assigneeId: body.assigneeId as string, reviewerId: body.reviewerId as string | null | undefined, dueDate, dueTime: dueDate ? dueTime || "17:00" : null, evaluationCriteria, collaboratorIds, watcherIds, priority: (body.priority ?? "normal") as ProjectAssignmentInput["priority"] };
 }

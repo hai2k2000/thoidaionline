@@ -42,6 +42,14 @@ test("canonical form owns recipient scope, defaults, fields, validation, and pay
   assert.match(form, /createTaskCard/);
 });
 
+test("project assignment enables optional deadline and normalizes nullable dates", async () => {
+  const shell = await read("ProjectDetailShell.tsx");
+  assert.match(shell, /projectMode=\{\{[\s\S]*\}\} optionalDeadline/);
+  const form = await read("CanonicalAssignmentForm.tsx");
+  assert.match(form, /dueDate: taskCards\[0\]\.dueDate \|\| null/);
+  assert.match(form, /dueTime: taskCards\[0\]\.dueDate \? taskCards\[0\]\.dueTime \|\| "17:00" : null/);
+});
+
 test("initial values cover compatible canonical fields and submit remains caller-owned", async () => {
   const form = await read("CanonicalAssignmentForm.tsx");
   for (const field of ["title", "content", "description", "requirements", "dueDate", "dueTime", "priority", "collaboratorIds", "watcherIds"]) {
@@ -91,4 +99,23 @@ test("shell keeps API, attachment, notification, and redirect lifecycle outside 
   assert.match(shell, /\/api\/tasks\/\$\{result\.task\.id\}\/attachments/);
   assert.match(shell, /router\.refresh\(\)/);
   assert.match(shell, /\/tasks/);
+});
+
+test("project single-card submit executes nullable payload normalization", async () => {
+ const form=await read("CanonicalAssignmentForm.tsx");
+ const expression=form.match(/const payload = ([\s\S]*?);\r?\n    try/)[1];
+ const build=new Function("taskCards","projectMode", "const singleTaskOnly=true,departmentId='host',assigneeId='member',reviewerId='lead',assignmentMode='individual',excludedMemberIds=[];return "+expression);
+ for(const [dueDate,dueTime,wantDate,wantTime] of [["","",null,null],["","17:00",null,null],["2026-11-10","","2026-11-10","17:00"],["2026-11-10","09:30","2026-11-10","09:30"]]) {
+  const payload=build([{title:'Task',description:'Details',requirements:[],dueDate,dueTime}],{});
+  assert.equal(payload.dueDate,wantDate);assert.equal(payload.dueTime,wantTime);assert.equal(payload.reviewerId,'lead');
+ }
+});
+test("project deadline sorting puts undated tasks last without mutating input", async()=>{
+ const shell=await read("ProjectDetailShell.tsx");
+ const expression=shell.match(/const visibleTasks=([^;]+);/)[1];
+ const sort=new Function('tasks',"const status='',assignee='';return "+expression);
+ const tasks=[{id:'none1',due_date:null},{id:'late',due_date:'2026-11-12'},{id:'none2',due_date:null},{id:'early',due_date:'2026-11-10'}];
+ assert.deepEqual(sort(tasks).map(t=>t.id),['early','late','none1','none2']);
+ assert.equal(tasks[0].id,'none1');
+ assert.ok(shell.includes("Kh\u00f4ng c\u00f3 h\u1ea1n"));
 });

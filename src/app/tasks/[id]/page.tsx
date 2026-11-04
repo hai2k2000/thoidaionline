@@ -64,6 +64,7 @@ export default async function TaskDetailPage({ params, searchParams }: Props) {
     completeAssigned: action("complete_assigned"),
     review: action("review"),
     update: action("update"),
+    assignedDeadline: action("assigned_deadline"),
     comment: action("comment"),
     attachment: action("attachment"),
     evaluate: action("evaluate"),
