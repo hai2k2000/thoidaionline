@@ -561,3 +561,12 @@ test("TBT step2 may submit leader evaluation but ordinary watcher may not", asyn
   const denied = new Request("https://example.test/api/tasks/evaluations", { method: "POST", body: JSON.stringify(body) });
   assert.equal((await watcher.app.submitQualitativeEvaluation(denied, taskId)).status, 403);
 });
+
+test("GET tasks forwards normalized sort to repository", async () => {
+  for (const [value, expected] of [["", "deadline"], ["deadline", "deadline"], ["newest", "newest"], ["priority", "priority"], ["invalid", "deadline"]]) {
+    const harness = makeHarness();
+    const response = await harness.app.list(new Request("https://example.test/api/tasks?sort=" + value));
+    assert.equal(response.status, 200);
+    assert.equal(harness.calls[0][2].sort, expected);
+  }
+});

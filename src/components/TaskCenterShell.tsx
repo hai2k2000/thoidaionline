@@ -103,6 +103,16 @@ function FilterFields({ query, projects = [], departments, journalismWorkKinds, 
       {basePath === "/duty-schedule" ? <input type="hidden" name="scope" value="personal" /> : query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
       {query.category ? <input type="hidden" name="category" value={query.category} /> : null}
       {query.status ? <input type="hidden" name="status" value={query.status} /> : null}
+      {query.sort && query.sort !== "deadline" ? <input type="hidden" name="sort" value={query.sort} /> : null}
+      <label className="grid gap-1 text-xs font-semibold text-slate-600">Sắp xếp
+        <select aria-label="Sắp xếp" value={query.sort ?? "deadline"} onChange={(event) => {
+          window.location.href = taskListHref(query, { sort: event.target.value as TaskListQuery["sort"], page: 1 }).replace(/^\/tasks/, basePath);
+        }} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal">
+          <option value="deadline">Hạn hoàn thành gần nhất</option>
+          <option value="newest">Mới giao nhất</option>
+          <option value="priority">Ưu tiên cao nhất</option>
+        </select>
+      </label>
       <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm theo tên công việc" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
       <select name="projectId" aria-label="Dự án" defaultValue={query.projectId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5"><option value="">Dự án · Tất cả</option><option value="none">Không thuộc dự án</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}{project.status === "closed" ? " (đã đóng)" : ""}</option>)}</select>
       <select name="state" defaultValue={query.statusGroup ?? ""} onChange={(event) => {

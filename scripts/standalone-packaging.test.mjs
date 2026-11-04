@@ -163,3 +163,5 @@ test("Projects reopen migration is packaged once", () => { for (const file of ["
 test("Cancelled project task delete migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261105200000_project_cancelled_task_delete.sql").length - 1, 1); });
 
 test("Collaborator manager watch migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261105230000_collaborator_manager_watch.sql").length - 1, 1); });
+
+test("Task deadline sort migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261106120000_task_list_deadline_sort.sql").length - 1, 1); });

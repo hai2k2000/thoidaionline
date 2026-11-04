@@ -9,6 +9,7 @@ test("Task Center counts each active filter once", () => {
   ));
   assert.equal(countTaskListFilters(query), 9);
   assert.equal(countTaskListFilters(parseTaskListSearchParams(new URLSearchParams())), 0);
+  assert.equal(parseTaskListSearchParams(new URLSearchParams()).sort, "deadline");
 });
 
 test("Task Center assignment source filter round-trips through canonical URL state", () => {
@@ -47,6 +48,7 @@ test("Task Center filters round-trip through canonical URL state", () => {
     plannedPublicationTo: null,
     page: 3,
     pageSize: 25,
+    sort: "deadline",
   });
   assert.equal(
     taskListHref(parsed, { page: 4 }),
@@ -82,5 +84,15 @@ test("invalid filters fall back safely without widening page size", () => {
     plannedPublicationTo: null,
     page: 1,
     pageSize: 25,
+    sort: "deadline",
   });
+});
+
+test("sort accepts supported values, defaults invalid values, and round-trips non-default", () => {
+  assert.equal(parseTaskListSearchParams(new URLSearchParams("sort=invalid")).sort, "deadline");
+  const parsed = parseTaskListSearchParams(new URLSearchParams("sort=priority&scope=watching&page=2"));
+  assert.equal(parsed.sort, "priority");
+  assert.match(taskListHref(parsed, { page: 3 }), /sort=priority/);
+  assert.match(taskListHref(parsed, { page: 3 }), /scope=watching/);
+  assert.doesNotMatch(taskListHref({ ...parsed, sort: "deadline" }, {}), /sort=/);
 });

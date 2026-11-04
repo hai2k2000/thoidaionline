@@ -10,6 +10,7 @@ const TASK_STATUSES = [
 const DEADLINE_STATES = ["on_time", "due_soon", "overdue", "no_deadline"];
 const JOURNALISM_FILTERS = ["only", "exclude"];
 const ASSIGNMENT_SOURCES = ["leadership_assigned", "self_registered"];
+const TASK_SORTS = ["deadline", "newest", "priority"];
 const PUBLICATION_STATUSES = ["not_published", "scheduled", "published", "withdrawn"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -60,6 +61,7 @@ export function parseTaskListSearchParams(params, options = {}) {
   const requestedJournalism = member(JOURNALISM_FILTERS, params.get("journalism")) ?? null;
   const approvalQueue = member(["assignment", "completion"], params.get("approvalQueue")) ?? null;
   const assignmentSource = member(ASSIGNMENT_SOURCES, params.get("assignmentSource")) ?? null;
+  const sort = member(TASK_SORTS, params.get("sort")) ?? "deadline";
   const defaultJournalism = hidden ? null : options.defaultJournalism ?? null;
   const category = params.get("category") === "duty" ? "duty" : null;
   const isNormalOnly = requestedJournalism === "exclude";
@@ -80,6 +82,7 @@ export function parseTaskListSearchParams(params, options = {}) {
       ?? (parsedJournalismWorkKindId || parsedPublicationStatus || parsedPlannedPublicationFrom || parsedPlannedPublicationTo || parsedTopicId || parsedSeriesId ? "only" : defaultJournalism),
     ...(approvalQueue ? { approvalQueue } : {}),
     ...(assignmentSource ? { assignmentSource } : {}),
+    sort,
     journalismWorkKindId: isNormalOnly ? null : parsedJournalismWorkKindId,
     publicationStatus: isNormalOnly ? null : parsedPublicationStatus,
     plannedPublicationFrom: isNormalOnly ? null : parsedPlannedPublicationFrom,
@@ -132,6 +135,7 @@ export function taskListHref(query, patch) {
   if (next.journalism) params.set("journalism", next.journalism);
   if (next.approvalQueue) params.set("approvalQueue", next.approvalQueue);
   if (next.assignmentSource) params.set("assignmentSource", next.assignmentSource);
+  if (next.sort && next.sort !== "deadline") params.set("sort", next.sort);
   if (next.journalismWorkKindId) params.set("workKind", next.journalismWorkKindId);
   if (next.publicationStatus) params.set("publicationStatus", next.publicationStatus);
   if (next.plannedPublicationFrom) params.set("plannedFrom", next.plannedPublicationFrom);

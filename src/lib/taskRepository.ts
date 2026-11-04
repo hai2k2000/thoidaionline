@@ -514,6 +514,21 @@ export const getTaskScopeTerms = async (
   return ok(terms);
 };
 
+const applyTaskListOrder = <T extends { order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): T }>(query: T, sort: "deadline" | "newest" | "priority" = "deadline") => {
+  if (sort === "newest") return query.order("created_at", { ascending: false }).order("id", { ascending: true });
+  if (sort === "priority") {
+    return query.order("list_priority_rank", { ascending: true })
+      .order("list_closed", { ascending: true })
+      .order("list_due_at", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
+  }
+  return query.order("list_closed", { ascending: true })
+    .order("list_due_at", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
+};
+
 export const taskRepository: TaskRepository = {
   async list(actor, query) {
     const hasJournalismSubfilter = Boolean(
@@ -531,15 +546,14 @@ export const taskRepository: TaskRepository = {
     const scope = await getTaskScopeTerms(actor);
     if (!scope.ok) return scope;
 
-    let dbQuery = serverSupabase
+    let dbQuery = applyTaskListOrder(serverSupabase
       .from("tasks")
       .select(
         journalismOnly
           ? journalismListFields(true, Boolean(query.topicId), Boolean(query.seriesId))
           : actor.canAccessJournalism === false ? NON_JOURNALISM_TASK_FIELDS : TASK_LIST_FIELDS,
         { count: "exact" },
-      )
-      .order("created_at", { ascending: false });
+      ), query.sort);
     if (scope.data.length > 0) dbQuery = dbQuery.or(scope.data.join(","));
     if (query.scope === "personal") {
       dbQuery = dbQuery.eq("owner_id", actor.id).or(

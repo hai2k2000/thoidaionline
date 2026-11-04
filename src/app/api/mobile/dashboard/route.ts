@@ -13,7 +13,7 @@ export async function GET() {
     permissions: guard.actor.permissions,
   };
   const taskResult = await taskRepository.list(actor, {
-    search: null, scope: "all", taskType: null, status: null, statusGroup: null,
+    search: null, sort: "newest", scope: "all", taskType: null, status: null, statusGroup: null,
     fromDate: null, toDate: null, deadlineState: null, departmentId: null,
     page: 1, pageSize: 300,
   });
