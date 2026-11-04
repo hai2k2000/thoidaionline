@@ -28,8 +28,9 @@ begin
  exception when invalid_parameter_value then null;
  end;
  insert into public.projects(code,name,host_department_id,created_by) values('ZZ-MW-'||suffix,'Project fixture',d,manager_id) returning id into p;
- insert into public.tasks(title,created_by,department_id,task_type,task_category,plan_period,status,project_id)
- values('Project unchanged',manager_id,d,'assigned','regular','ad_hoc','new',p) returning id into t;
+ insert into public.project_members(project_id,user_id,role,added_by) values(p,manager_id,'lead',manager_id) on conflict do nothing;
+ insert into public.tasks(title,created_by,department_id,task_type,task_category,plan_period,status,project_id,reviewer_id)
+ values('Project unchanged',manager_id,d,'assigned','regular','ad_hoc','new',p,manager_id) returning id into t;
  insert into public.task_assignees(task_id,user_id,assignment_role,status) values(t,worker_id,'assignee','todo'),(t,missing_worker,'owner','todo');
  if exists(select 1 from public.task_assignees a where a.task_id=t and a.assignment_role='watcher') then raise exception 'Project watcher added'; end if;
 end $test$;
