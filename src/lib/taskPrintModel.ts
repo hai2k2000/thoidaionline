@@ -117,7 +117,7 @@ export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignme
     title: task.title,
     description: task.description ?? "—",
     requirements: parseRequirements(task.evaluation_criteria),
-    deadline: task.due_date ? `${task.due_date}${task.due_time ? ` ${task.due_time.slice(0, 5)}` : ""}` : "—",
+    deadline: task.due_date ? `${task.due_date}${task.due_time ? ` ${task.due_time.slice(0, 5)}` : ""}` : "Không có hạn",
     priority: priorityLabels[task.priority] ?? task.priority ?? "—",
     notes: task.journalism?.editorial_notes?.trim() || "—",
     journalism,

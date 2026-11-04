@@ -31,8 +31,11 @@ export async function POST(request: Request) {
   const workKindId = asUuid(journalism?.workKindId);
   const title = text(body?.title, 500);
   const description = text(body?.description, 10000);
-  const dueDate = typeof body?.dueDate === "string" ? body.dueDate : null;
-  const dueTime = typeof body?.dueTime === "string" ? body.dueTime : null;
+  const dueDate = typeof body?.dueDate === "string" ? body.dueDate || null : null;
+  const dueTime = dueDate ? body?.dueTime || "17:00" : null;
+  const invalidDeadline = (body?.dueDate != null && body.dueDate !== "" && !dueDate)
+    || (dueDate !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || date(dueDate)?.slice(0, 10) !== dueDate))
+    || (dueDate !== null && (typeof dueTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(dueTime)));
   const plannedPublicationAt = journalism?.plannedPublicationAt;
   const hasInvalidPlannedPublicationAt = plannedPublicationAt !== undefined
     && plannedPublicationAt !== null
@@ -40,7 +43,7 @@ export async function POST(request: Request) {
     && date(plannedPublicationAt) === null;
   const hasRecurrence = (body?.recurrenceFrequency !== undefined && body?.recurrenceFrequency !== null && body?.recurrenceFrequency !== "")
     || (body?.recurrenceEndsOn !== undefined && body?.recurrenceEndsOn !== null && body?.recurrenceEndsOn !== "");
-  if (!body || !journalism || !departmentId || !assigneeId || !reviewerId || !workKindId || !title || !description || !dueDate || !dueTime || hasRecurrence || hasInvalidPlannedPublicationAt) {
+  if (!body || !journalism || !departmentId || !assigneeId || !reviewerId || !workKindId || !title || !description || invalidDeadline || hasRecurrence || hasInvalidPlannedPublicationAt) {
     return apiError("invalid_request", 400);
   }
   if (!canUseJournalism({ roleCode: guard.actor.role_code, departmentCode: guard.actor.department_code, rbacPermissions: guard.actor.rbacPermissions })) return apiError("forbidden", 403);

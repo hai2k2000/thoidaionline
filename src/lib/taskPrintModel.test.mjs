@@ -24,6 +24,9 @@ const baseTask = {
   priority: "high",
   journalism: null,
 };
+test("an undated task prints Không có hạn", () => {
+  assert.equal(printModule.buildWorkAssignmentPrintModel({ ...baseTask, due_date: null, due_time: null }).deadline, "Không có hạn");
+});
 
 test("print mapping uses assignment domain roles instead of treating watchers as collaborators", () => {
   assert.equal(typeof printModule.buildWorkAssignmentPrintModel, "function");

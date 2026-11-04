@@ -2,6 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { addTaskCard, buildBatchPayload, createTaskCard, removeTaskCard, validateTaskCards } from "./taskAssignmentCards.mjs";
 const card = (overrides = {}) => ({ cardId: "card-1", title: "Việc một", description: "Mô tả một", requirements: ["Yêu cầu một"], dueDate: "2026-09-30", dueTime: "17:30", collaboratorIds: [], watcherIds: [], priority: "normal", recurrenceFrequency: null, recurrenceEndsOn: null, attachment: null, ...overrides });
+test("deadline is optional, but a supplied date must be real and recurrence needs an anchor", () => {
+  assert.deepEqual(validateTaskCards([card({ dueDate: "", dueTime: "" })]), []);
+  assert.deepEqual(validateTaskCards([card({ dueTime: "" })]), []);
+  assert.equal(validateTaskCards([card({ dueDate: "2026-02-30" })])[0].field, "dueDate");
+  assert.match(validateTaskCards([card({ dueDate: "", recurrenceFrequency: "weekly" })])[0].message, /lặp/);
+});
+test("payload ignores an orphan time and defaults a dated task to 17:00", () => {
+  const { tasks } = buildBatchPayload({ cards: [card({ dueDate: "" }), card({ dueTime: "" })] });
+  assert.equal(tasks[0].dueDate, null);
+  assert.equal(tasks[0].dueTime, null);
+  assert.equal(tasks[1].dueTime, "17:00");
+});
 test("default cards are independent and have stable keys", () => { const first = createTaskCard("card-1"); const second = createTaskCard("card-2"); assert.equal(first.cardId, "card-1"); assert.equal(second.cardId, "card-2"); assert.notEqual(first, second); assert.deepEqual(first.requirements, [""]); assert.notEqual(first.requirements, second.requirements); });
 test("add task creates a clean card and never exceeds twenty", () => { const cards = [card()]; const added = addTaskCard(cards, "card-2"); assert.equal(added.length, 2); assert.equal(added[1].title, ""); assert.notEqual(added[1].requirements, cards[0].requirements); assert.equal(addTaskCard(Array.from({ length: 20 }, (_, index) => card({ cardId: `card-${index}` })), "card-21").length, 20); });
 test("remove task preserves one card and closes the middle gap", () => { const remaining = removeTaskCard([card({ cardId: "one" }), card({ cardId: "two" }), card({ cardId: "three" })], 1); assert.deepEqual(remaining.map((item) => item.cardId), ["one", "three"]); assert.equal(removeTaskCard([card()], 0).length, 1); });
