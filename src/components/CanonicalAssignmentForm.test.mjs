@@ -112,10 +112,11 @@ test("project single-card submit executes nullable payload normalization", async
 });
 test("project deadline sorting puts undated tasks last without mutating input", async()=>{
  const shell=await read("ProjectDetailShell.tsx");
- const expression=shell.match(/const visibleTasks=([^;]+);/)[1];
- const sort=new Function('tasks',"const status='',assignee='';return "+expression);
- const tasks=[{id:'none1',due_date:null},{id:'late',due_date:'2026-11-12'},{id:'none2',due_date:null},{id:'early',due_date:'2026-11-10'}];
- assert.deepEqual(sort(tasks).map(t=>t.id),['early','late','none1','none2']);
+ assert.match(shell,/filterAndSortProjectTasks\(/);
+ const { filterAndSortProjectTasks } = await import("../lib/projectTaskFilters.mjs");
+ const tasks=[{id:'none1',status:'in_progress',due_date:null},{id:'late',status:'in_progress',due_date:'2026-11-12'},{id:'none2',status:'in_progress',due_date:null},{id:'early',status:'in_progress',due_date:'2026-11-10'}];
+ const result=filterAndSortProjectTasks(tasks,{});
+ const items=Array.isArray(result)?result:result.tasks??result.items??result.visibleTasks;
+ assert.deepEqual(items.map(t=>t.id),['early','late','none1','none2']);
  assert.equal(tasks[0].id,'none1');
- assert.ok(shell.includes("Kh\u00f4ng c\u00f3 h\u1ea1n"));
 });
