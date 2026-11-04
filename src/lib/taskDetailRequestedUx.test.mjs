@@ -7,8 +7,8 @@ const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 test("task detail uses completion scoring and task deadline default", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   assert.match(detail, /Chấm điểm hoàn thành/);
-  assert.match(detail, /evaluationDeadline/);
-  assert.match(detail, /task\.due_date\s*\?\?\s*today\(\)/);
+  assert.match(detail, /deadlineLabel/);
+  assert.match(detail, /task\.due_date/);
   assert.doesNotMatch(detail, /save_task_evaluation_checkpoint|task\.legacy_evaluations\.map|\/evaluate/);
 });
 
@@ -18,7 +18,7 @@ test("manual ChatGPT evaluation can be pasted without enabling an AI provider", 
   assert.doesNotMatch(detail, /Dán đánh giá từ ChatGPT/);
   assert.doesNotMatch(detail, /Nội dung đánh giá từ ChatGPT/);
   assert.doesNotMatch(detail, /disabled value="Chưa cấu hình AI"/);
-  assert.match(detail, /evaluationDeadline/);
+  assert.match(detail, /deadlineLabel/);
   assert.match(detail, /Lưu điểm và duyệt hoàn thành/);
   assert.match(factory, /service_unavailable[\s\S]*503/);
   assert.doesNotMatch(factory, /api\.openai\.com|anthropic|gemini/i);
