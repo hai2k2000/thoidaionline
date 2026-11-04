@@ -186,6 +186,7 @@ const migrationReference = [
   "supabase/migrations/20261105230000_collaborator_manager_watch.sql",
   "supabase/migrations/20261106100000_admin_edit_task_participants.sql",
   "supabase/migrations/20261106120000_task_list_deadline_sort.sql",
+  "supabase/migrations/20261106150000_manager_deputy_watch_projects.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];

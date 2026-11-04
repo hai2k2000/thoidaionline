@@ -1,6 +1,7 @@
 "use client";
 
 import { JOURNALISM_UI_HIDDEN } from "@/lib/journalismUiHidden.mjs";
+import PersonFilter from "@/components/PersonFilter";
 import ProjectBadge from "@/components/ProjectBadge";
 
 import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
@@ -31,6 +32,8 @@ type Props = {
   currentUserId: string;
   projects?: { id: string; name: string; status: "active" | "closed" }[];
   departments: { id: string; name: string }[];
+  personOptions?: { id: string; fullName: string; username: string; departmentName: string }[];
+  canFilterByPerson?: boolean;
   journalismWorkKinds: { id: string; name: string; is_active: boolean }[];
   journalismTopics: { id: string; name: string; is_active: boolean }[];
   journalismSeries: { id: string; name: string; is_active: boolean }[];
@@ -96,7 +99,7 @@ const participantNames = (task: TaskListResult["items"][number], role: "assignee
   task.task_assignees.filter((row) => row.assignment_role === role).map((row) => row.staff_users?.full_name).filter(Boolean).join(", ") || "—";
 
 const assigneeDisplay = (task: TaskListResult["items"][number]) => { const owner = task.task_assignees.find((row) => row.assignment_role === "owner")?.staff_users?.full_name; const assignees = task.task_assignees.filter((row) => row.assignment_role === "assignee").map((row) => row.staff_users?.full_name).filter(Boolean); return <>{owner ? <><strong>{owner}</strong>{assignees.length ? ", " : ""}</> : null}{assignees.join(", ") || (!owner ? "—" : "")}</>; };
-function FilterFields({ query, projects = [], departments, journalismWorkKinds, journalismTopics, journalismSeries, canAccessJournalism, basePath = "/tasks" }: Pick<Props, "query" | "projects" | "departments" | "journalismWorkKinds" | "journalismTopics" | "journalismSeries" | "canAccessJournalism" | "basePath">) {
+function FilterFields({ query, projects = [], departments, personOptions = [], canFilterByPerson = false, journalismWorkKinds, journalismTopics, journalismSeries, canAccessJournalism, basePath = "/tasks" }: Pick<Props, "query" | "projects" | "departments" | "personOptions" | "canFilterByPerson" | "journalismWorkKinds" | "journalismTopics" | "journalismSeries" | "canAccessJournalism" | "basePath">) {
   const journalismFilter = query.journalism ?? "exclude";
   return (
     <>
@@ -113,6 +116,7 @@ function FilterFields({ query, projects = [], departments, journalismWorkKinds, 
           <option value="priority">Ưu tiên cao nhất</option>
         </select>
       </label>
+      {canFilterByPerson ? <PersonFilter query={query} basePath={basePath} people={personOptions} /> : null}
       <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm theo tên công việc" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
       <select name="projectId" aria-label="Dự án" defaultValue={query.projectId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5"><option value="">Dự án · Tất cả</option><option value="none">Không thuộc dự án</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}{project.status === "closed" ? " (đã đóng)" : ""}</option>)}</select>
       <select name="state" defaultValue={query.statusGroup ?? ""} onChange={(event) => {
@@ -186,7 +190,7 @@ function ApprovalQueue({ queue, data, onRefresh }: { queue: "assignment" | "comp
 }
 
 export default function TaskCenterShell(props: Props) {
-  const { canAccessJournalism, canClaimTasks, canReviewTaskApprovals, canSeeDepartmentCollaborating = false, canQuickReport, approvalQueue, currentUserId, currentUserRole, projects = [], departments, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "QUẢN LÝ CÔNG VIỆC", taskMode = false } = props;
+  const { canAccessJournalism, canClaimTasks, canReviewTaskApprovals, canSeeDepartmentCollaborating = false, canQuickReport, approvalQueue, currentUserId, currentUserRole, projects = [], departments, personOptions = [], canFilterByPerson = false, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "QUẢN LÝ CÔNG VIỆC", taskMode = false } = props;
   const router = useRouter();
   const tableRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -276,10 +280,10 @@ export default function TaskCenterShell(props: Props) {
 
               <details className="mt-3 rounded-xl border bg-white p-3 shadow-sm md:hidden">
                 <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>
-                <form action={basePath} className="mt-3 grid gap-3"><FilterFields key={JSON.stringify([query.projectId, query.journalism, query.assignmentSource, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} projects={projects} departments={departments} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} /></form>
+                <form action={basePath} className="mt-3 grid gap-3"><FilterFields key={JSON.stringify([query.personId, query.projectId, query.journalism, query.assignmentSource, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} projects={projects} departments={departments} personOptions={personOptions} canFilterByPerson={canFilterByPerson} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} /></form>
               </details>
               <form action={basePath} className="mt-3 hidden gap-2.5 rounded-xl border bg-white p-3 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-7">
-                <FilterFields key={JSON.stringify([query.projectId, query.journalism, query.assignmentSource, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} projects={projects} departments={departments} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} />
+                <FilterFields key={JSON.stringify([query.personId, query.projectId, query.journalism, query.assignmentSource, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} projects={projects} departments={departments} personOptions={personOptions} canFilterByPerson={canFilterByPerson} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} />
               </form>
 
               {bulkPrintEnabled && selectedTaskIds.length ? <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3"><span className="text-sm font-semibold text-orange-900">Đã chọn: {selectedTaskIds.length} công việc</span><button type="button" disabled={bulkBusy} onClick={() => void bulkPrint()} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Xuất phiếu giao việc hàng loạt (ZIP)</button>{adminBulk ? <><button type="button" disabled={bulkBusy} onClick={() => void bulkCancel()} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Huỷ công việc</button><span className="text-xs text-slate-600">Xoá công việc: ADMIN DELETE CONTRACT NOT FOUND</span></> : null}</div> : null}

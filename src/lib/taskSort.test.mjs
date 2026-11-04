@@ -1,3 +1,4 @@
+import { loadDepartmentLeaderIds, hasGlobalPersonFilter } from './taskDepartmentLeaders.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -10,9 +11,9 @@ const compiled=ts.transpileModule(order+'\nasync function list(actor, query) {'+
 const expected={deadline:['list_closed','list_due_at','created_at','id'],newest:['created_at','id'],priority:['list_priority_rank','list_closed','list_due_at','created_at','id']};
 for(const sort of Object.keys(expected)) for(const scope of ['all','assigned','personal','collaborating','department_collaborating','watching','cancelled']) test('repository order '+scope+'/'+sort,async()=>{
  const calls=[];
- const db={from(table){const q=new Proxy({},{get(_t,method){if(method==='then')return done=>done({data:table==='departments'?[{id:'dep'}]:table==='task_assignees'?[{task_id:'task'}]:[],error:null,count:0});return(...args)=>{if(table==='tasks')calls.push([method,...args]);return q;};}});return q;}};
+ const db={from(table){const q=new Proxy({},{get(_t,method){if(method==='then')return done=>done({data:table==='departments'?[{id:'dep',active:true,manager_id:'actor'}]:table==='task_assignees'?[{task_id:'task'}]:[],error:null,count:0});return(...args)=>{if(table==='tasks')calls.push([method,...args]);return q;};}});return q;}};
  const ok=data=>({ok:true,data});
- const run=new Function('serverSupabase','getTaskScopeTerms','TASK_LIST_FIELDS','NON_JOURNALISM_TASK_FIELDS','ok','fail','isTaskListRangeExhausted','enrichJournalismList','enrichAssignmentApprovers',compiled+';return list;')(db,async()=>ok([]),'id','id',ok,error=>({ok:false,error}),()=>false,async items=>ok(items),async items=>ok(items));
+ const run=new Function('loadDepartmentLeaderIds','hasGlobalPersonFilter','serverSupabase','getTaskScopeTerms','TASK_LIST_FIELDS','NON_JOURNALISM_TASK_FIELDS','ok','fail','isTaskListRangeExhausted','enrichJournalismList','enrichAssignmentApprovers',compiled+';return list;')(loadDepartmentLeaderIds,hasGlobalPersonFilter,db,async()=>ok([]),'id','id',ok,error=>({ok:false,error}),()=>false,async items=>ok(items),async items=>ok(items));
  const result=await run({id:'actor',permissions:{}},parseTaskListSearchParams(new URLSearchParams({scope,sort,page:'2'})));
  assert.equal(result.ok,true);
  assert.deepEqual(calls.filter(c=>c[0]==='order').map(c=>c.slice(1)),expected[sort].map(key=>[key,key==='list_due_at'?{ascending:true,nullsFirst:false}:{ascending:key!=='created_at'}]));

@@ -47,6 +47,7 @@ export function parseTaskListSearchParams(params, options = {}) {
   const pageSize = Number(params.get("pageSize") ?? "25");
   const search = params.get("q")?.normalize("NFC").trim() ?? "";
   const departmentId = params.get("department");
+  const personId = params.get("personId");
   const journalismWorkKindId = params.get("workKind");
   const topicId = params.get("topicId");
   const seriesId = params.get("seriesId");
@@ -77,6 +78,7 @@ export function parseTaskListSearchParams(params, options = {}) {
     toDate: validDate(params.get("to")),
     deadlineState: member(DEADLINE_STATES, params.get("deadline")) ?? null,
     departmentId: departmentId && UUID.test(departmentId) ? departmentId : null,
+    ...(personId && UUID.test(personId) ? { personId } : {}),
     ...(projectId && (projectId === "none" || UUID.test(projectId)) ? { projectId } : {}),
     journalism: requestedJournalism
       ?? (parsedJournalismWorkKindId || parsedPublicationStatus || parsedPlannedPublicationFrom || parsedPlannedPublicationTo || parsedTopicId || parsedSeriesId ? "only" : defaultJournalism),
@@ -131,6 +133,7 @@ export function taskListHref(query, patch) {
   if (next.toDate) params.set("to", next.toDate);
   if (next.deadlineState) params.set("deadline", next.deadlineState);
   if (next.departmentId) params.set("department", next.departmentId);
+  if (next.personId) params.set("personId", next.personId);
   if (next.projectId) params.set("projectId", next.projectId);
   if (next.journalism) params.set("journalism", next.journalism);
   if (next.approvalQueue) params.set("approvalQueue", next.approvalQueue);
@@ -160,6 +163,7 @@ export function countTaskListFilters(query) {
     query.fromDate,
     query.toDate,
     query.departmentId,
+    query.personId,
     query.projectId,
     query.journalism,
     query.journalismWorkKindId,

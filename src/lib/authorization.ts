@@ -230,6 +230,9 @@ export function canTaskAction(
       return Boolean(projectMember) || actor.permissions.can_comment
         && canTaskAction(actor, task, "view");
     case "attachment":
+      if (task.projectId && !projectMember && actor.roleCode !== "admin"
+        && task.participants.some((participant) => participant.userId === actor.id && participant.assignmentRole === "watcher")
+        && ![task.createdBy, task.ownerId, task.assigneeId].includes(actor.id)) return false;
       return actor.roleCode === "admin"
         || task.createdBy === actor.id
         || task.ownerId === actor.id

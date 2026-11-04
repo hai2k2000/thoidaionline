@@ -1,4 +1,5 @@
-﻿import "server-only";
+import { loadDepartmentLeaderIds } from "@/lib/taskDepartmentLeaders.mjs";
+import "server-only";
 
 import { serverSupabase } from "@/lib/serverSupabase";
 
@@ -111,12 +112,10 @@ export const notificationRepository = {
     const href = (taskId: string) => `/tasks/${taskId}`;
 
     const participantByTask = new Map(participantRows.map((row) => [row.task_id, row]));
-    const managedDepartments = await serverSupabase.from("departments").select("id")
-      .eq("manager_id", userId).eq("active", true);
+    const managedDepartments = await loadDepartmentLeaderIds(serverSupabase, userId);
     if (managedDepartments.error) return { ok: false };
-    const managedIds = (managedDepartments.data ?? []).map((row) => row.id as string);
-    const watchedTasks = tasks.filter((task) => !task.project_id
-      && participantByTask.get(task.id)?.assignment_role === "watcher"
+    const managedIds = managedDepartments.data;
+    const watchedTasks = tasks.filter((task) => participantByTask.get(task.id)?.assignment_role === "watcher"
       && ![task.assignee_id, task.owner_id, task.created_by].includes(userId));
     if (managedIds.length && watchedTasks.length) {
       const seen = new Set<string>();

@@ -5,6 +5,15 @@ import test from "node:test";
 const config = readFileSync("next.config.ts", "utf8");
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
+test('manager deputy project watcher migration follows deadline sort in each migration reference', () => {
+  for (const path of ['scripts/package-standalone.mjs', 'scripts/verify-standalone-artifact.mjs']) {
+    const source = readFileSync(path, 'utf8');
+    const migration = 'supabase/migrations/20261106150000_manager_deputy_watch_projects.sql';
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf('supabase/migrations/20261106120000_task_list_deadline_sort.sql'));
+  }
+});
+
 test("CTV and Projects migrations are shipped once in version order in both reference lists", () => {
   for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
     const source = readFileSync(file, "utf8");
