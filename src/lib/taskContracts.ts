@@ -216,6 +216,8 @@ export type TaskAttachmentDto = { id: string; file_name: string; mime_type: stri
 export type TaskCompletionScoreDto = { id: string; requirement_results: Array<{ index: number; achieved: boolean }>; requirement_score: number; collaboration_score: number; initiative_score: number; total_score: number; note: string | null; created_at: string; reviewer: { full_name: string | null } | null; };
 
 export type TaskDetailDto = TaskListItemDto & {
+  entered_by: string | null;
+  entered_by_user: { full_name: string | null } | null;
   description: string | null;
   attachment_url: string | null;
   effort_weight: number | null;
@@ -282,6 +284,7 @@ export type LegacyCreateTaskInput = {
 };
 
 export type AssignedTaskInput = {
+  onBehalfOfId?: string | null;
   title: string;
   description: string;
   requirements: string[];
@@ -313,6 +316,7 @@ export type TaskAssignmentBatchTask = {
 };
 
 export type TaskAssignmentBatchInput = {
+  onBehalfOfId?: string | null;
   batchId: string;
   departmentId: string;
   assigneeId: string;

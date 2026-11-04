@@ -78,6 +78,7 @@ export const taskHandlers = createTaskApplication({
   asUuid,
   canAssignToDepartment,
   resolveAssignmentParticipants: (actor, input) => taskAssignmentRepository.resolveParticipants(actor, input),
+  resolveAssignmentActor: (id) => taskAssignmentRepository.assigner(id),
   canTaskAction,
   shadowTaskAction,
   taskRbacEnabled: isTaskRbacV2Enabled(),

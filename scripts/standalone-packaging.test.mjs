@@ -15,6 +15,9 @@ test("CTV and Projects migrations are shipped once in version order in both refe
     assert.equal(source.split(projects).length - 1, 1, file);
     assert.ok(source.indexOf(ctv) < source.indexOf(projects), file);
     assert.equal(source.split(optional).length - 1, 1, file);
+    const onBehalf = '"supabase/migrations/20261104130000_task_assignment_on_behalf.sql"';
+    assert.equal(source.split(onBehalf).length - 1, 1, file);
+    assert.ok(source.indexOf(optional) < source.indexOf(onBehalf), file);
   }
 });
 

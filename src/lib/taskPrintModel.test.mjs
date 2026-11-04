@@ -28,6 +28,14 @@ test("an undated task prints Không có hạn", () => {
   assert.equal(printModule.buildWorkAssignmentPrintModel({ ...baseTask, due_date: null, due_time: null }).deadline, "Không có hạn");
 });
 
+test("on-behalf assignment prints the chosen leader, not the entering admin", () => {
+  const result = printModule.buildWorkAssignmentPrintModel({
+    ...baseTask, assignment_source: "leadership_assigned", created_by: "leader",
+    entered_by: "admin", entered_by_user: { full_name: "Admin nhập liệu" },
+  });
+  assert.equal(result.assigner, "Nguyễn Người Giao");
+});
+
 test("print mapping uses assignment domain roles instead of treating watchers as collaborators", () => {
   assert.equal(typeof printModule.buildWorkAssignmentPrintModel, "function");
   const result = printModule.buildWorkAssignmentPrintModel(baseTask);

@@ -6,12 +6,34 @@ import { resolveAssignmentSelection } from "@/lib/taskAssignmentGroup";
 import { isSystemAdminStaff, sortStaffRows } from "@/lib/staffOrdering";
 import { isEligibleAssignmentReviewer, isLeadershipAssignmentReviewer } from "@/lib/taskReviewerPolicy.mjs";
 import { deriveAssignmentScope } from "@/lib/taskAssignmentScope.mjs";
+import { normalizePermissions } from "@/lib/permissions";
+import { canAccessTaskAssignment } from "@/lib/taskAssignAccess";
 
 export type AssignmentDepartment = { id: string; code?: string | null; name: string; managerId: string | null; hasManager: boolean };
 export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; roleCode: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
 export type AssignmentScope = { kind: "own_department" | "global_default"; departmentId: string | null; departmentName: string | null; canChooseOtherDepartment: boolean };
 
 export const taskAssignmentRepository = {
+  async assigners() {
+    const [users, departments, permissions] = await Promise.all([
+      serverSupabase.from("staff_users").select("id,full_name,department_id,role_id,roles(code,name,level,active),job_titles(code,name,active)").eq("active", true).order("full_name"),
+      serverSupabase.from("departments").select("id,name,manager_id").eq("active", true),
+      serverSupabase.from("role_permissions").select("*"),
+    ]);
+    if (users.error || departments.error || permissions.error) return null;
+    return (users.data ?? []).flatMap((row) => {
+      const role = row.roles as unknown as { code: string; name: string; level: number; active: boolean } | null;
+      const job = row.job_titles as unknown as { code: string; name: string; active: boolean } | null;
+      const department = departments.data.find((item) => item.id === row.department_id);
+      const permission = normalizePermissions(permissions.data.find((item) => item.role_id === row.role_id));
+      if (!role?.active || role.code === "admin" || !isEligibleAssignmentReviewer({ roleCode: role.code, jobTitleCode: job?.active ? job.code : null, isDepartmentManager: departments.data.some((item) => item.manager_id === row.id) })
+        || !canAccessTaskAssignment({ role_code: role.code, can_assign_task: permission.can_assign_task })) return [];
+      return [{ id: row.id as string, fullName: row.full_name as string, label: `${row.full_name} — ${job?.active ? job.name : role.name} (${department?.name ?? "Chưa có phòng"})`, actor: { id: row.id as string, departmentId: row.department_id as string | null, roleCode: role.code, roleLevel: role.level, permissions: permission } }];
+    });
+  },
+  async assigner(id: string): Promise<AuthorizationActor | null> {
+    return (await this.assigners())?.find((person) => person.id === id)?.actor ?? null;
+  },
   async options(actor: AuthorizationActor) {
     const broad = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode);
     let departmentsQuery = serverSupabase.from("departments")

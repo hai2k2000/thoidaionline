@@ -1,6 +1,12 @@
 const LEGACY_UNKNOWN_LABEL = "Không xác định (dữ liệu cũ)";
 const hasIdentity = (value) => typeof value === "string" && value.trim().length > 0;
 
+export function getEnteredByDisplay(task) {
+  return hasIdentity(task.entered_by)
+    ? `Admin nhập thay: ${task.entered_by_user?.full_name?.trim() || "—"}`
+    : null;
+}
+
 /** Resolve the user-facing source without changing the stored assignment origin. */
 export function getAssignmentSourceDisplay(task) {
   if (task.assignment_source === "self_registered") return "Tự đăng ký";

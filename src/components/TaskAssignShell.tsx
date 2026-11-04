@@ -16,7 +16,7 @@ import Time24hInput from "@/components/Time24hInput";
 
 const controlClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900";
 
-export default function TaskAssignShell({ departments, people, assignmentScope = null, userLabel, actorRoleCode, canManageEventAssignment, journalismMode, journalismSelfCreate = false, userId, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
+export default function TaskAssignShell({ departments: initialDepartments, people: initialPeople, assignmentScope: initialScope = null, userLabel, actorRoleCode, canManageEventAssignment, journalismMode, journalismSelfCreate = false, userId, journalismDepartment, journalismWorkKinds, journalismWorkKindsLoaded }: {
   departments: AssignmentDepartment[];
   people: AssignmentPerson[];
   assignmentScope?: AssignmentScope | null;
@@ -33,6 +33,16 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   const router = useRouter();
   const { logout } = useAuth();
   const { notify } = useActionFeedback();
+  const onBehalfMode = actorRoleCode === "admin" && !journalismMode;
+  const [onBehalfOfId, setOnBehalfOfId] = useState("");
+  const [assigners, setAssigners] = useState<Array<{ id: string; label: string }>>([]);
+  const [chosenOptions, setChosenOptions] = useState<{ departments: AssignmentDepartment[]; people: AssignmentPerson[]; scope: AssignmentScope; roleCode: string } | null>(null);
+  const [scopeLoading, setScopeLoading] = useState(false);
+  const scopeRequest = useRef(0);
+  const departments = onBehalfMode ? chosenOptions?.departments ?? [] : initialDepartments;
+  const people = useMemo(() => onBehalfMode ? chosenOptions?.people ?? [] : initialPeople, [onBehalfMode, chosenOptions, initialPeople]);
+  const assignmentScope = onBehalfMode ? chosenOptions?.scope ?? null : initialScope;
+  const effectiveRoleCode = onBehalfMode ? chosenOptions?.roleCode ?? "" : actorRoleCode;
   const [departmentId] = useState(journalismMode ? journalismDepartment?.id ?? "" : assignmentScope?.departmentId ?? "");
   const [assigneeId, setAssigneeId] = useState(journalismSelfCreate ? userId ?? "" : "");
   const [formActivated] = useState(journalismMode || journalismSelfCreate);
@@ -65,6 +75,36 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     : null;
   const selectedAssignee = people.find((person) => person.id === assigneeId) ?? null;
   const recipientReady = journalismSelfCreate || Boolean(assigneeId && selectedDepartment);
+
+  useEffect(() => {
+    if (!onBehalfMode) return;
+    const controller = new AbortController();
+    fetch("/api/tasks/assign", { signal: controller.signal }).then(async (response) => {
+      if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể tải người giao việc."));
+      const data = await response.json();
+      setAssigners(data.assigners);
+    }).catch((error) => { if (!controller.signal.aborted) setMessage(errorMessage(error, "Không thể tải người giao việc.")); });
+    return () => controller.abort();
+  }, [onBehalfMode]);
+
+  const chooseAssigner = async (id: string) => {
+    const request = ++scopeRequest.current;
+    setOnBehalfOfId(id); setChosenOptions(null); setBatchId(null); setAssigneeId("");
+    setCollaboratorIds([]); setWatcherIds([]); setExcludedMemberIds([]);
+    setMessage(id ? "" : "Chọn người giao việc.");
+    setScopeLoading(Boolean(id));
+    if (!id) return;
+    try {
+      const response = await fetch(`/api/tasks/assign?onBehalfOfId=${encodeURIComponent(id)}`);
+      if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể tải phạm vi giao việc."));
+      const options = await response.json();
+      if (request === scopeRequest.current) setChosenOptions(options);
+    } catch (error) {
+      if (request === scopeRequest.current) setMessage(errorMessage(error, "Không thể tải phạm vi giao việc."));
+    } finally {
+      if (request === scopeRequest.current) setScopeLoading(false);
+    }
+  };
 
   const updateTaskCard = (index: number, patch: Record<string, unknown>) => {
     setTaskCards((current) => current.map((card, cardIndex) => cardIndex === index ? { ...card, ...patch } : card));
@@ -185,6 +225,9 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
   };
 
   const submitCanonical = async ({ payload, cards, assigneeId }: CanonicalAssignmentSubmit) => {
+    if (onBehalfMode && (!onBehalfOfId || !chosenOptions || scopeLoading)) {
+      setMessage("Chọn người giao việc."); throw new Error("Chọn người giao việc.");
+    }
     if (submittingRef.current) return;
     submittingRef.current = true; setBusy(true); setMessage("");
     const batch = cards.length > 1;
@@ -192,7 +235,7 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
     if (currentBatchId) setBatchId(currentBatchId);
     setBatchAttachmentFailures([]); setPendingBatchAttachments([]); setBatchTaskResults([]);
     try {
-      const response = await fetch("/api/tasks/assign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const response = await fetch("/api/tasks/assign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(onBehalfMode ? { ...payload, onBehalfOfId } : payload) });
       if (!response.ok) {
         if (response.status === 409 && currentBatchId) throw new Error("Batch ID đã được dùng cho dữ liệu khác. Không tự tạo mã mới; hãy kiểm tra lại phiên giao việc.");
         throw new Error(await responseErrorMessage(response, "Không thể giao công việc."));
@@ -339,7 +382,8 @@ export default function TaskAssignShell({ departments, people, assignmentScope =
           </div>
         </header>
         {!journalismMode ? <>
-          <CanonicalAssignmentForm optionalDeadline departments={departments} people={people} assignmentScope={assignmentScope} actorRoleCode={actorRoleCode} onSubmit={submitCanonical} submitLabel={taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"} disabled={busy} />
+          {onBehalfMode && <div className="mt-3 rounded-xl border bg-white p-4"><Field label="Người giao việc"><select required value={onBehalfOfId} disabled={busy} onChange={(event) => void chooseAssigner(event.target.value)} className={controlClass}><option value="">Chọn người giao việc.</option>{assigners.map((person) => <option key={person.id} value={person.id}>{person.label}</option>)}</select>{scopeLoading ? <span className="text-sm font-normal text-slate-500">Đang tải phạm vi giao việc…</span> : null}</Field></div>}
+          <CanonicalAssignmentForm key={onBehalfOfId + (chosenOptions ? ":ready" : ":empty")} optionalDeadline departments={departments} people={people} assignmentScope={assignmentScope} actorRoleCode={effectiveRoleCode} onSubmit={submitCanonical} submitLabel={taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"} disabled={busy || (onBehalfMode && (!onBehalfOfId || !chosenOptions || scopeLoading))} />
         </> : null}
         {journalismMode && <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
           <input type="hidden" name="recipientReady" disabled={!recipientReady} value="true" readOnly />
