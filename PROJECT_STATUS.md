@@ -1355,3 +1355,31 @@ Production safety:
 ## Projects reopen offline handoff (2026-11-04)
 
 Implemented reopen RPC/API and isolated close/reopen confirmation UI, behavior fixtures, rehearsal/revert and packaging references. Targeted tests 45/45, workflow tests 74/74, TypeScript, ESLint and Bash syntax PASS. Build blocked only by offline Google Fonts. Live SQL remains for Claude disposable rehearsal. No commit/push/SSH/Docker/production changes. See docs/projects-reopen-report.md.
+
+## Project library file proxy (2026-11-04)
+
+Implemented same-origin server-side streaming for project library files, legacy download compatibility, Range forwarding, MIME/disposition security headers, and native-dialog browser previews. Targeted library tests 27/27 PASS, workflow Node tests 78/78 PASS, TypeScript and ESLint PASS. CI-placeholder build blocked only by offline Google Fonts; live browser/storage acceptance remains unverified. No migration, deployment, commit, or push performed. See `PROJECT_LIBRARY_FILE_PROXY_REPORT.md`.
+
+## Project library file proxy - round 2 (2026-11-04)
+
+Current Phase: implementation complete; offline validation
+Current Task: browser DOCX/XLSX preview and PDF-only CSP exception
+
+Completed:
+- Added lazy browser parsers, sanitized sandboxed DOCX srcdoc, XLSX sheet tabs/text tables, size/render limits, abort cleanup and requested viewer actions/messages.
+- Enabled Office Xem via MIME or extension; legacy formats remain download-only.
+- Removed CSP only for inline PDF, preserving sandbox for other inline types and existing nosniff/no-store headers.
+
+Validation:
+- Focused library/Office Node suite: 30/30 PASS; exact workflow Node suite: 78/78 PASS.
+- TypeScript, touched-file ESLint and diff whitespace checks: PASS.
+- CI-placeholder build: blocked only by two offline Google Fonts fetches; no Office module-resolution errors. ExcelJS browser mapping requires no added polyfills.
+
+Blockers:
+- Full build completion requires font availability; live authenticated browser acceptance is unverified.
+
+Follow Up:
+- Manual Chrome PDF/DOCX/XLSX and storage acceptance in an authenticated environment.
+
+Next:
+- Owner handoff; no commit/push or deployment per this task's explicit instructions. See PROJECT_LIBRARY_FILE_PROXY_REPORT.md round 2 for changed files and evidence.

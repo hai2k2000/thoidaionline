@@ -18,13 +18,22 @@ export function libraryFileMime(item: FileMetadata): string {
   const stored = (item.mime_type || '').split(';')[0].trim().toLowerCase();
   return stored || extensionTypes[(item.file_name || item.title).split('.').pop()?.toLowerCase() || ''] || 'application/octet-stream';
 }
+export function libraryOfficeKind(item: FileMetadata): 'docx' | 'xlsx' | null {
+  const mime = libraryFileMime(item);
+  if (mime === extensionTypes.docx) return 'docx';
+  if (mime === extensionTypes.xlsx) return 'xlsx';
+  const extension = (item.file_name || item.title).split('.').pop()?.toLowerCase();
+  return extension === 'docx' || extension === 'xlsx' ? extension : null;
+}
 export function libraryPreviewMime(item: FileMetadata): string | null {
+  const office = libraryOfficeKind(item);
+  if (office) return extensionTypes[office];
   const mime = libraryFileMime(item);
   return inlineTypes.has(mime) ? mime : null;
 }
 export function libraryFileHeaders(item: FileMetadata, requestedDisposition: string): Headers {
   const mime = libraryFileMime(item);
-  const inline = requestedDisposition === 'inline' && Boolean(libraryPreviewMime(item));
+  const inline = requestedDisposition === 'inline' && inlineTypes.has(mime);
   const name = item.file_name || item.title || 'download';
   const fallback = Array.from(name, c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126 && !['"', '\\'].includes(c) ? c : '_').join('');
   const encoded = encodeURIComponent(name).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
@@ -34,6 +43,7 @@ export function libraryFileHeaders(item: FileMetadata, requestedDisposition: str
     'X-Content-Type-Options': 'nosniff',
     'Cache-Control': 'private, no-store',
   });
+  // Chrome's built-in PDF viewer cannot run under CSP sandbox; omit CSP only for PDF.
   if (inline && mime !== 'application/pdf') headers.set('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox");
   return headers;
 }
