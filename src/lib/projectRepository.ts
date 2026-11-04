@@ -46,6 +46,7 @@ export const projectRepository = {
   reopen: (actorId: string, projectId: string) => rpc<Project>("api_reopen_project", { p_actor_id: actorId, p_project_id: projectId }),
   transferLead: (actorId: string, projectId: string, userId: string, ownRole: "lead" | "deputy" | "member") => rpc<unknown>("api_transfer_project_lead", { p_actor_id: actorId, p_project_id: projectId, p_new_lead_id: userId, p_actor_role: ownRole }),
   assignTask: (actorId: string, projectId: string, input: ProjectAssignmentInput) => rpc<{ id: string }>("api_assign_project_task", { p_actor_id: actorId, p_project_id: projectId, p_title: input.title, p_description: input.description, p_assignee_id: input.assigneeId, p_reviewer_id: input.reviewerId ?? null, p_due_date: input.dueDate, p_due_time: input.dueTime, p_evaluation_criteria: input.evaluationCriteria ?? null, p_collaborator_ids: input.collaboratorIds ?? [], p_watcher_ids: input.watcherIds ?? [], p_priority: input.priority ?? "normal", p_attachment_url: input.attachmentUrl ?? null }),
+  deleteCancelledTasks: (actorId: string, projectId: string, taskIds: string[]) => rpc<{ deleted: number; storage_paths: string[] }>("api_delete_cancelled_project_tasks", { p_actor_id: actorId, p_project_id: projectId, p_task_ids: taskIds }),
   async list(actor: ProjectReader): Promise<Result<Project[]>> {
     let query = serverSupabase.from("projects").select(PROJECT_FIELDS).order("created_at", { ascending: false });
     if (!canReadAll(actor)) {
