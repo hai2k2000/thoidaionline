@@ -158,3 +158,5 @@ test("Projects V1.1 migration is packaged", () => { for (const file of ["scripts
 test("Projects V1.2 migration is packaged", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.ok(readFileSync(file,"utf8").includes("20261103200000_projects_v1_2_permissions.sql")); });
 
 test("Asset bulk import migration is packaged", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.ok(readFileSync(file,"utf8").includes("20261104100000_asset_bulk_import.sql")); });
+
+test("Projects reopen migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261105100000_projects_reopen.sql").length - 1, 1); });

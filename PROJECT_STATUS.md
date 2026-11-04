@@ -1351,3 +1351,7 @@ Validation:
 
 Production safety:
 - No SSH, Docker, network, database, migration, deployment, or commit performed.
+
+## Projects reopen offline handoff (2026-11-04)
+
+Implemented reopen RPC/API and isolated close/reopen confirmation UI, behavior fixtures, rehearsal/revert and packaging references. Targeted tests 45/45, workflow tests 74/74, TypeScript, ESLint and Bash syntax PASS. Build blocked only by offline Google Fonts. Live SQL remains for Claude disposable rehearsal. No commit/push/SSH/Docker/production changes. See docs/projects-reopen-report.md.
