@@ -1,3 +1,4 @@
+import { loadDepartmentLeaderIds } from './taskDepartmentLeaders.mjs';
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -79,31 +80,31 @@ test("collaboration query filters participant role and excludes owners without a
   assert.match(source, /if \(taskIds.length > 0\) \{\s*terms.push\(`id.in./);
 });
 
-test("department collaboration scope is manager-only and excludes same-department/project work", () => {
+test("department collaboration scope is leader-only and excludes same-department/project work", () => {
   const query = parseTaskListSearchParams(new URLSearchParams("scope=department_collaborating&page=2"));
   assert.equal(query.scope, "department_collaborating");
   assert.match(taskListHref(query, { page: 3 }), /scope=department_collaborating/);
   const source = readFileSync('src/lib/taskRepository.ts', 'utf8');
   const branch = source.split('query.scope === "department_collaborating"')[1].split('query.scope === "watching"')[0];
-  assert.match(branch, /manager_id/);
+  assert.match(branch, /loadDepartmentLeaderIds/);
   assert.match(branch, /assignment_role.*assignee/);
   assert.match(branch, /project_id/);
   assert.match(branch, /department_id/);
 });
 
-test("department scope enforces primary-manager membership even when actor has department-management permissions", async () => {
+test("department scope permits primary managers and deputies but rejects mere permission holders", async () => {
   const source = readFileSync('src/lib/taskRepository.ts', 'utf8');
   const body = source.split('query.scope === "department_collaborating") {')[1].split('    } else if (query.scope === "watching")')[0];
   const compiled = ts.transpileModule(`async function run(actor, query, serverSupabase, dbQuery, ok, fail) { ${body}; return ok({ matched: true }); }`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-  const run = new Function(`${compiled}; return run;`)();
-  for (const primary of [false, true]) {
+  const run = new Function("loadDepartmentLeaderIds", `${compiled}; return run;`)(loadDepartmentLeaderIds);
+  for (const primary of [false, true, "deputy"]) {
     const calls = [];
     const db = { from(table) {
       const filters = [];
       const q = new Proxy({}, { get(_target, method) {
         if (method === "then") return done => {
           calls.push([table, filters]);
-          const data = table === "departments" ? (primary ? [{ id: "managed" }] : []) : [{ task_id: "foreign-task" }, { task_id: "foreign-task" }];
+          const data = table === "departments" ? (primary ? [{ id: "managed", active: true, manager_id: primary === true ? "actor" : "manager" }] : []) : table === "staff_users" ? {active: true, department_id: "managed", roles: {code: primary === "deputy" ? "pho_truong_phong" : "nhan_vien", active: true}} : [{ task_id: "foreign-task" }, { task_id: "foreign-task" }];
           done({ data, error: null });
         };
         return (...args) => { filters.push([method, ...args]); return q; };
@@ -113,13 +114,13 @@ test("department scope enforces primary-manager membership even when actor has d
     const dbQuery = { in(...args) { predicates.push(["in", ...args]); return this; }, is(...args) { predicates.push(["is", ...args]); return this; } };
     const result = await run({ id: "actor", isDepartmentManager: true, departmentId: "managed" }, { page: 2, pageSize: 25 }, db, dbQuery, data => ({ ok: true, data }), error => ({ ok: false, error }));
     assert.equal(result.ok, true);
-    assert.deepEqual(calls[0][1].filter(([method]) => method === "eq"), [["eq", "manager_id", "actor"], ["eq", "active", true]]);
+    assert.ok(calls.some(([table, filters]) => table === "departments" && filters.some(([op, key, value]) => op === "eq" && key === "active" && value === true)));
     if (!primary) {
       assert.deepEqual(result.data, { items: [], total: 0, page: 2, pageSize: 25 });
-      assert.equal(calls.length, 1);
+      assert.equal(calls.length, 2);
       assert.equal(predicates.length, 0);
     } else {
-      const filters = calls[1][1];
+      const filters = calls.find(([table]) => table === "task_assignees")[1];
       for (const predicate of [["eq", "assignment_role", "assignee"], ["eq", "staff_users.department_id", "managed"], ["neq", "tasks.department_id", "managed"], ["is", "tasks.project_id", null]]) assert.ok(filters.some(value => JSON.stringify(value) === JSON.stringify(predicate)));
       assert.deepEqual(predicates, [["in", "id", ["foreign-task"]], ["is", "project_id", null]]);
     }
@@ -127,9 +128,9 @@ test("department scope enforces primary-manager membership even when actor has d
   assert.ok(source.indexOf('dbQuery.or(scope.data.join(","))') < source.indexOf('query.scope === "department_collaborating"'));
 });
 
-test("manager notification is deduplicated, read-aware and excludes self assignments and projects", async () => {
+test("manager notification is deduplicated, read-aware and excludes self assignments and includes projects", async () => {
   const now = new Date().toISOString();
-  for (const selfField of [null, "assignee_id", "owner_id", "created_by", "project_id"]) {
+  for (const recipient of ["manager", "deputy"]) for (const selfField of [null, "assignee_id", "owner_id", "created_by", "project_id"]) {
     const calls = [];
     const db = { from(table) {
       const filters = [];
@@ -137,29 +138,30 @@ test("manager notification is deduplicated, read-aware and excludes self assignm
         if (method === "then") return done => {
           calls.push([table, filters]);
           let data = [];
-          if (table === "departments") data = [{ id: "department" }];
+          if (table === "departments") data = [{ id: "department", active: true, manager_id: "manager" }];
+          if (table === "staff_users") data = {active: true, department_id: "department", job_titles: {code: recipient === "deputy" ? "pho_truong_phong" : "nhan_vien", active: true}};
           if (table === "task_assignees") {
             if (filters.some(([op, key]) => op === "eq" && key === "user_id")) data = [{ task_id: "task", assignment_role: "watcher", assigned_at: now }];
             else data = Array(2).fill({ task_id: "task", user_id: "staff", assigned_at: now, staff_users: { full_name: "An" } });
           }
-          if (table === "tasks") data = [{ id: "task", title: "Test", project_id: null, created_at: now, due_date: null, ...(selfField ? { [selfField]: "manager" } : {}) }];
-          if (table === "user_notification_reads") data = [{ notification_key: "department-collaboration:task:staff:manager" }];
+          if (table === "tasks") data = [{ id: "task", title: "Test", project_id: null, created_at: now, due_date: null, ...(selfField ? { [selfField]: recipient } : {}) }];
+          if (table === "user_notification_reads") data = [{ notification_key: `department-collaboration:task:staff:${recipient}` }];
           done({ data, error: null });
         };
         return (...args) => { filters.push([method, ...args]); return q; };
       } }); return q;
     } };
     const { notificationRepository } = await loadModule('src/lib/notificationRepository.ts', db);
-    const result = await notificationRepository.list("manager");
+    const result = await notificationRepository.list(recipient);
     assert.equal(result.ok, true);
     const events = result.items.filter(item => item.kind === "department_collaboration");
-    assert.equal(events.length, selfField ? 0 : 1);
+    assert.equal(events.length, selfField && selfField !== "project_id" ? 0 : 1);
     if (!selfField) {
       assert.equal(events[0].message, 'Nhân viên An của phòng bạn được thêm phối hợp vào việc “Test”');
       assert.equal(events[0].unread, false);
       assert.equal(events[0].href, "/tasks/task");
       const filters = calls.find(([table, filters]) => table === "task_assignees" && filters.some(([op]) => op === "gte"))[1];
-      assert.ok(filters.some(([op, key, value]) => op === "neq" && key === "user_id" && value === "manager"));
+      assert.ok(filters.some(([op, key, value]) => op === "neq" && key === "user_id" && value === recipient));
       assert.ok(filters.some(([op, key]) => op === "gte" && key === "assigned_at"));
     }
   }

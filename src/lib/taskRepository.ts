@@ -1,3 +1,4 @@
+import { loadDepartmentLeaderIds, hasGlobalPersonFilter } from "@/lib/taskDepartmentLeaders.mjs";
 import { isCollaboratorRole } from "./collaboratorRole.mjs";
 import "server-only";
 
@@ -514,6 +515,21 @@ export const getTaskScopeTerms = async (
   return ok(terms);
 };
 
+const applyTaskListOrder = <T extends { order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): T }>(query: T, sort: "deadline" | "newest" | "priority" = "deadline") => {
+  if (sort === "newest") return query.order("created_at", { ascending: false }).order("id", { ascending: true });
+  if (sort === "priority") {
+    return query.order("list_priority_rank", { ascending: true })
+      .order("list_closed", { ascending: true })
+      .order("list_due_at", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
+  }
+  return query.order("list_closed", { ascending: true })
+    .order("list_due_at", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
+};
+
 export const taskRepository: TaskRepository = {
   async list(actor, query) {
     const hasJournalismSubfilter = Boolean(
@@ -530,16 +546,22 @@ export const taskRepository: TaskRepository = {
     }
     const scope = await getTaskScopeTerms(actor);
     if (!scope.ok) return scope;
+    let personId: string | null = null;
+    if (query.personId) {
+      const leaders = hasGlobalPersonFilter(actor.roleCode) ? {data: ["global"], error: null} : await loadDepartmentLeaderIds(serverSupabase, actor.id);
+      if (leaders.error) return fail(leaders.error);
+      if (leaders.data.length) personId = query.personId;
+    }
 
-    let dbQuery = serverSupabase
+    let dbQuery = applyTaskListOrder(serverSupabase
       .from("tasks")
       .select(
-        journalismOnly
+        (journalismOnly
           ? journalismListFields(true, Boolean(query.topicId), Boolean(query.seriesId))
-          : actor.canAccessJournalism === false ? NON_JOURNALISM_TASK_FIELDS : TASK_LIST_FIELDS,
+          : actor.canAccessJournalism === false ? NON_JOURNALISM_TASK_FIELDS : TASK_LIST_FIELDS)
+          + (personId ? ",person_filter:task_assignees!left(user_id)" : ""),
         { count: "exact" },
-      )
-      .order("created_at", { ascending: false });
+      ), query.sort);
     if (scope.data.length > 0) dbQuery = dbQuery.or(scope.data.join(","));
     if (query.scope === "personal") {
       dbQuery = dbQuery.eq("owner_id", actor.id).or(
@@ -558,10 +580,9 @@ export const taskRepository: TaskRepository = {
         .or(`assignee_id.is.null,assignee_id.neq.${actor.id}`)
         .or(`owner_id.is.null,owner_id.neq.${actor.id}`);
     } else if (query.scope === "department_collaborating") {
-      const departments = await serverSupabase.from("departments").select("id")
-        .eq("manager_id", actor.id).eq("active", true);
+      const departments = await loadDepartmentLeaderIds(serverSupabase, actor.id);
       if (departments.error) return fail(departments.error);
-      const departmentIds = (departments.data ?? []).map((row) => row.id as string);
+      const departmentIds: string[] = departments.data;
       if (departmentIds.length === 0) return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
       const ids = new Set<string>();
       for (const departmentId of departmentIds) {
@@ -627,6 +648,12 @@ export const taskRepository: TaskRepository = {
         return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
       }
       dbQuery = dbQuery.eq("department_id", query.departmentId);
+    }
+    if (personId) {
+      // An independent left embed keeps all displayed participants and performs
+      // the person match in SQL, without an unbounded task-id list in the URL.
+      dbQuery = dbQuery.eq("person_filter.user_id", personId)
+        .or(`assignee_id.eq.${personId},owner_id.eq.${personId},person_filter.not.is.null`);
     }
     if (query.projectId === "none") dbQuery = dbQuery.is("project_id", null);
     else if (query.projectId) dbQuery = dbQuery.eq("project_id", query.projectId);

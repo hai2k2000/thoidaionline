@@ -8,6 +8,13 @@ import { can } from "./rbac/authorization.ts";
 const actor = { id: "ctv", departmentId: "other", roleCode: "nhan_vien", roleLevel: 1, permissions: normalizePermissions({}) };
 const task = { id: "task", departmentId: "host", createdBy: "lead", ownerId: "worker", assigneeId: "worker", reviewerId: "lead", departmentManagerId: "manager", selfClaimable: false, taskType: "assigned", status: "pending_review", participants: [], projectId: "project", projectMembers: [{ userId: "ctv", role: "member" }, { userId: "lead", role: "lead" }] };
 
+test('non-member department watcher can read and comment under normal watcher rules but cannot mutate', () => {
+  const watcher = {...actor, id: 'manager', departmentId: 'host', permissions: normalizePermissions({can_comment: true, can_assign_task: true})};
+  const watched = {...task, projectMembers: [], participants: [{userId: 'manager', assignmentRole: 'watcher'}]};
+  for (const action of ['view', 'comment']) assert.equal(canTaskAction(watcher, watched, action), true, action);
+  for (const action of ['assign', 'review', 'report', 'attachment', 'update', 'assigned_deadline', 'assigned_cancel']) assert.equal(canTaskAction(watcher, watched, action), false, action);
+});
+
 test("legacy project membership permits view/comment without department or workflow access", () => {
   for (const action of ["view", "comment"]) assert.equal(canTaskAction(actor, task, action), true, action);
   for (const action of ["report", "complete_assigned", "review", "update", "attachment"]) assert.equal(canTaskAction(actor, task, action), false, action);

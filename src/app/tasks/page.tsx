@@ -13,6 +13,7 @@ import { listJournalismWorkKinds, taskRepository } from "@/lib/taskRepository";
 import { listJournalismStructureFilters } from "@/lib/journalismStructureRepository";
 import type { TaskListResult } from "@/lib/taskContracts";
 import { canUseJournalism } from "@/lib/journalismScope.mjs";
+import { loadDepartmentLeaderIds, hasGlobalPersonFilter } from "@/lib/taskDepartmentLeaders.mjs";
 
 type TasksPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -58,6 +59,26 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
   const view = resolveTaskCenterView(rawParams.view, canViewEvaluations);
   const parsedQuery = parseTaskListSearchParams(toUrlSearchParams(rawParams), { defaultJournalism: forceJournalism ? "only" : "exclude" });
   const query = forceJournalism && !JOURNALISM_UI_HIDDEN ? { ...parsedQuery, journalism: "only" as const, approvalQueue: undefined } : parsedQuery;
+  const leaderDepartments = await loadDepartmentLeaderIds(serverSupabase, user.id);
+  const globalPersonFilter = hasGlobalPersonFilter(user.role_code);
+  const canFilterByPerson = globalPersonFilter || (!leaderDepartments.error && leaderDepartments.data.length > 0);
+  if (!canFilterByPerson) delete query.personId;
+  const personOptions: {id: string; fullName: string; username: string; departmentName: string}[] = [];
+  if (canFilterByPerson) {
+    for (let from = 0; ; from += 500) {
+      let peopleQuery = serverSupabase.from("staff_users")
+        .select("id,full_name,username,departments!staff_users_department_id_fkey(name)")
+        .eq("active", true).order("full_name").order("id").range(from, from + 499);
+      if (!globalPersonFilter) peopleQuery = peopleQuery.in("department_id", leaderDepartments.data);
+      const people = await peopleQuery;
+      if (people.error) throw new Error("Cannot load personnel filters.");
+      for (const person of people.data ?? []) {
+        const department = Array.isArray(person.departments) ? person.departments[0] : person.departments;
+        personOptions.push({id: person.id, fullName: person.full_name, username: person.username, departmentName: department?.name ?? ""});
+      }
+      if ((people.data?.length ?? 0) < 500) break;
+    }
+  }
   if (query.journalism === "only" && !journalismAllowed) redirect("/tasks");
   const workKindsResult = !JOURNALISM_UI_HIDDEN && journalismAllowed ? await listJournalismWorkKinds(query.journalismWorkKindId ?? null) : null;
   const journalismWorkKinds = workKindsResult?.ok ? workKindsResult.data : [];
@@ -92,8 +113,6 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
   }
 
   const projectsResult = await projectRepository.list(projectReader(user));
-  const managedDepartments = await serverSupabase.from("departments").select("id")
-    .eq("manager_id", user.id).eq("active", true).limit(1);
   const projects = (projectsResult.ok ? projectsResult.data : []).map(({ id, name, status }) => ({ id, name, status }))
     .sort((a, b) => Number(a.status === "closed") - Number(b.status === "closed") || a.name.localeCompare(b.name, "vi"));
 
@@ -105,7 +124,9 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
       canAccessJournalism={journalismAllowed}
       canClaimTasks={!collaborator && !['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
       canReviewTaskApprovals={canReviewTaskApprovals}
-      canSeeDepartmentCollaborating={!managedDepartments.error && Boolean(managedDepartments.data?.length)}
+      canSeeDepartmentCollaborating={!leaderDepartments.error && Boolean(leaderDepartments.data.length)}
+      canFilterByPerson={canFilterByPerson}
+      personOptions={personOptions}
       currentUserRole={user.role_code}
       approvalQueue={approvalQueue && {
         assignment: approvalQueue[0].ok ? approvalQueue[0].data : { items: [], total: 0, page: 1, pageSize: 100 },

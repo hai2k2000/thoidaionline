@@ -15,7 +15,7 @@ class WorkService {
   static const _tokenKey = 'thoidai_work_session_token';
 
   Future<List<TaskItem>> loadTasks(AuthSession session) async {
-    final body = await _getJson('/api/tasks?pageSize=300');
+    final body = await _getJson('/api/tasks?pageSize=300&sort=newest');
     final payload = body['tasks'];
     final rows = payload is Map<String, dynamic> ? payload['items'] : payload;
     if (rows is! List) return const [];

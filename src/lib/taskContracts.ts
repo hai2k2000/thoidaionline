@@ -238,6 +238,8 @@ export type TaskDetailDto = TaskListItemDto & {
 };
 
 export type TaskListQuery = {
+  personId?: string | null;
+  sort: "deadline" | "newest" | "priority";
   projectId?: string | null;
   search: string | null;
   scope: "all" | "assigned" | "collaborating" | "department_collaborating" | "personal" | "watching" | "cancelled";
