@@ -141,3 +141,44 @@ test("Personal Plan, Online Work, and Task boundaries remain explicit", () => {
   assert.match(read("./workScheduleRepository.ts"), /api_create_personal_work_schedule/);
   assert.doesNotMatch(onlineRepository, /event_assignment/);
 });
+
+
+test("all-staff migration changes only reporter eligibility and preserves RPC ACLs", () => {
+  const previous = read("../../supabase/migrations/20260921150000_event_assignment_v1.sql");
+  const migration = read("../../supabase/migrations/20261106180000_event_assignment_all_staff.sql");
+  const oldPredicate = "(lower(coalesce(sj.code,'')) like 'phong_vien%' or lower(coalesce(sr.code,''))='phong_vien')";
+  const newPredicate = "lower(trim(coalesce(sr.code,''))) not in ('admin','cong_tac_vien')\n        and lower(trim(coalesce(s.username,''))) <> 'admin'\n        and lower(trim(coalesce(s.full_name,''))) <> 'admin'";
+  for (const name of ["api_create_event_assignment", "api_update_event_assignment"]) {
+    const definition = (source) => source.slice(source.indexOf("create or replace function public." + name)).split("end $function$;")[0];
+    assert.equal(definition(migration).replace(/\r\n/g, "\n"), definition(previous).replace(oldPredicate, newPredicate).replace(/\r\n/g, "\n"));
+    for (const prefix of ["revoke all on function", "grant execute on function", "alter function"]) {
+      const acl = previous.split("\n").find((line) => line.startsWith(prefix) && line.includes(name + "("));
+      assert.ok(migration.includes(acl));
+    }
+  }
+  assert.doesNotMatch(migration, /phong_vien/);
+  assert.doesNotMatch(migration, /create or replace function public.api_set_event_assignment_status/);
+});
+
+test("assignment opens directly from header and retains grouped searchable staff selection", () => {
+  const panel = read("../components/EventAssignmentPanel.tsx");
+  const shell = read("../components/WorkSchedulePageShell.tsx");
+  assert.match(shell, /onClick=\{\(\) => setEventOpen\(true\)\}/);
+  assert.match(shell, /open=\{eventOpen\} onOpenChange=\{setEventOpen\}/);
+  assert.match(panel, /Sự kiện đã phân công/);
+  assert.doesNotMatch(panel, /Chọn phóng viên/);
+  assert.match(panel, /Chọn nhân sự/);
+  assert.match(panel, /selected.length/);
+  assert.match(panel, /sortStaffRows\(people\)/);
+  assert.match(panel, /person.departments\?\.name/);
+  assert.match(panel, /person.job_titles\?\.name/);
+  assert.match(panel, /search.trim/);
+  assert.match(read("./workScheduleRepository.ts"), /departments\(name,code\)/);
+  assert.match(read("../components/TaskAssignShell.tsx"), /work-schedule\/staff\?eventAssignment=1/);
+});
+
+test("dry-run restores a verified disposable backup and asserts body plus restricted grants", () => {
+  const script = read("../../scripts/production/event-assignment-all-staff-dryrun.sh");
+  for (const text of ["*-daily", "sha256sum", "pg_restore", "disk_guard_require", "safe-apply-migration.sh", "20261106180000", "phong_vien", "has_function_privilege('service_role'", "has_function_privilege('anon'", "has_function_privilege('authenticated'", "acl.grantee=0"]) assert.ok(script.includes(text), text);
+  assert.doesNotMatch(script, /systemctl|docker system prune/);
+});

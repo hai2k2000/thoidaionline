@@ -382,7 +382,7 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
           <h1 className="text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {!JOURNALISM_UI_HIDDEN ? <>{!journalismMode ? <span className="rounded-lg border border-orange-500 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800">Công việc thường</span> : <span className="rounded-lg border border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">Công việc nghiệp vụ báo chí</span>}</> : null}
-            {canManageEventAssignment ? <a href="/work-schedule" className="ml-auto rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</a> : null}
+            {canManageEventAssignment ? <a href="/work-schedule/staff?eventAssignment=1" className="ml-auto rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</a> : null}
           </div>
         </header>
         {!journalismMode ? <>

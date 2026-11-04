@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Time24hInput from "@/components/Time24hInput";
+import { sortStaffRows } from "@/lib/staffOrdering";
 
-type Person = { id: string; full_name: string };
+type Person = { id: string; full_name: string; username?: string | null; department_id?: string | null; active?: boolean; roles?: { code?: string } | null; job_titles?: { code?: string; name?: string } | null; departments?: { name?: string; code?: string } | null };
 type EventRow = {
   id: string;
   work_date: string;
@@ -19,9 +20,9 @@ type EventRow = {
   participant_ids: string[];
 };
 
-export default function EventAssignmentPanel({ people }: { people: Person[] }) {
+export default function EventAssignmentPanel({ people, open, onOpenChange, onChanged }: { people: Person[]; open: boolean; onOpenChange: (open: boolean) => void; onChanged: () => void }) {
   const [rows, setRows] = useState<EventRow[]>([]);
-  const [open, setOpen] = useState(false);
+  const setOpen = onOpenChange;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [saved, setSaved] = useState(false);
@@ -36,6 +37,33 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
   };
 
   useEffect(() => { reload(); }, []);
+
+
+  const [search, setSearch] = useState("");
+  const filteredPeople = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase("vi");
+    return sortStaffRows(people).filter((person) => {
+      const label = `${person.full_name} ${person.job_titles?.name ?? person.job_titles?.code ?? ""}`.toLocaleLowerCase("vi");
+      return !query || label.includes(query);
+    });
+  }, [people, search]);
+  const groupedPeople = useMemo(() => {
+    const groups = new Map<string, Person[]>();
+    for (const person of filteredPeople) {
+      const name = person.departments?.name ?? "Chưa xác định phòng ban";
+      groups.set(name, [...(groups.get(name) ?? []), person]);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "vi"));
+  }, [filteredPeople]);
+
+  const close = () => {
+    setOpen(false);
+    setEditing(null);
+    setSelected([]);
+    setSearch("");
+    setMessage("");
+    setSaved(false);
+  };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -62,15 +90,18 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
         body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error();
-      setMessage("Đã lưu sự kiện và phân công phóng viên.");
+      setMessage("Đã lưu sự kiện và phân công nhân sự.");
       setSaved(true);
       setTimeout(() => {
         setOpen(false);
         setEditing(null);
         setSelected([]);
+        setSearch("");
+        setMessage("");
         setSaved(false);
       }, 500);
       reload();
+      onChanged();
     } catch {
       setMessage("Không thể lưu sự kiện. Vui lòng kiểm tra lại.");
     } finally {
@@ -84,30 +115,25 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id: row.id, action, workflowRevision: row.workflow_revision }),
     });
-    if (response.ok) reload();
+    if (response.ok) { reload(); onChanged(); }
   };
 
   return (
     <section className="mt-3 rounded-xl border border-orange-200 bg-orange-50/40 p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-bold text-orange-950">Phân công sự kiện</h2>
-          <p className="mt-1 text-xs text-slate-600">Sự kiện có hiệu lực ngay, không tạo Giao việc.</p>
-        </div>
-        <button type="button" onClick={() => { setEditing(null); setSelected([]); setMessage(""); setSaved(false); setOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white">Phân công sự kiện</button>
-      </div>
+      <details>
+        <summary className="cursor-pointer font-semibold text-orange-950">Sự kiện đã phân công ({rows.length})</summary>
       {message ? <p role="status" className="mt-2 text-sm text-slate-700">{message}</p> : null}
       <div className="mt-3 grid gap-2">
-        {rows.map((row) => (
+      {rows.map((row) => (
           <article key={row.id} className="rounded-lg border bg-white p-3 text-sm">
             <p className="font-semibold">{row.title}</p>
             <p className="text-slate-600">{row.work_date} {row.start_time.slice(0, 5)}-{row.end_time.slice(0, 5)} · {row.event_type}</p>
-            <p className="text-slate-600">Phóng viên: {row.participant_ids.map((id) => people.find((person) => person.id === id)?.full_name ?? id).join(", ")}</p>
+            <p className="text-slate-600">Nhân sự: {row.participant_ids.map((id) => people.find((person) => person.id === id)?.full_name ?? id).join(", ")}</p>
             <span className="inline-flex rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold text-orange-800">Được phân công</span>
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold">{row.event_status}</span>
               {row.event_status === "SCHEDULED" ? <>
-                <button type="button" onClick={() => { setEditing(row); setSelected(row.participant_ids); setOpen(true); }} className="rounded border px-2 py-1 text-xs font-semibold">Sửa</button>
+                <button type="button" onClick={() => { setEditing(row); setSelected(row.participant_ids); setMessage(""); setSearch(""); setSaved(false); setOpen(true); }} className="rounded border px-2 py-1 text-xs font-semibold">Sửa</button>
                 <button type="button" onClick={() => void setStatus(row, "complete")} className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Hoàn tất</button>
                 <button type="button" onClick={() => void setStatus(row, "cancel")} className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white">Hủy</button>
               </> : null}
@@ -115,8 +141,10 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
           </article>
         ))}
       </div>
+      </details>
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true">
-        <form onSubmit={submit} className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
+        <form onSubmit={submit} className="max-h-[calc(100dvh-2rem)] overflow-y-auto w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
+          {message ? <p role="status" className="text-sm text-slate-700">{message}</p> : null}
           <h3 className="text-lg font-semibold">{editing ? "Sửa sự kiện" : "Phân công sự kiện"}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-medium">Loại sự kiện<input name="eventType" required maxLength={100} defaultValue={editing?.event_type ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
@@ -128,8 +156,8 @@ export default function EventAssignmentPanel({ people }: { people: Person[] }) {
           </div>
           <label className="mt-3 block text-sm font-medium">Địa điểm<input name="location" maxLength={500} defaultValue={editing?.location ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
           <label className="mt-3 block text-sm font-medium">Nội dung<textarea name="notes" maxLength={2000} defaultValue={editing?.notes ?? ""} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
-          <fieldset className="mt-3 rounded border p-3"><legend className="px-1 text-sm font-semibold">Chọn phóng viên</legend><div className="grid gap-2 sm:grid-cols-2">{people.map((person) => <label key={person.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected.includes(person.id)} onChange={() => setSelected((current) => current.includes(person.id) ? current.filter((id) => id !== person.id) : [...current, person.id])} />{person.full_name}</label>)}</div></fieldset>
-          <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setOpen(false)} disabled={busy || saved} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={busy || saved} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">{busy ? "Đang lưu..." : saved ? "Đã lưu" : "Lưu sự kiện"}</button></div>
+          <fieldset className="mt-3 rounded border p-3"><legend className="px-1 text-sm font-semibold">Chọn nhân sự · đã chọn {selected.length}</legend><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên hoặc chức danh" aria-label="Tìm nhân sự" className="mb-3 min-h-10 w-full rounded border px-3 py-2 text-sm" /><div className="grid gap-3">{groupedPeople.map(([department, members]) => <div key={department}><h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-600">{department}</h4><div className="grid gap-2 sm:grid-cols-2">{members.map((person) => <label key={person.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected.includes(person.id)} onChange={() => setSelected((current) => current.includes(person.id) ? current.filter((id) => id !== person.id) : [...current, person.id])} /><span>{person.full_name}<span className="ml-1 text-xs text-slate-500">({person.job_titles?.name ?? person.job_titles?.code ?? "Nhân sự"})</span></span></label>)}</div></div>)}</div></fieldset>
+          <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={close} disabled={busy || saved} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={busy || saved} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">{busy ? "Đang lưu..." : saved ? "Đã lưu" : "Lưu sự kiện"}</button></div>
         </form>
       </div> : null}
     </section>

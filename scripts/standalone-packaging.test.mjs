@@ -180,3 +180,12 @@ test("Cancelled project task delete migration is packaged once", () => { for (co
 test("Collaborator manager watch migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261105230000_collaborator_manager_watch.sql").length - 1, 1); });
 
 test("Task deadline sort migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261106120000_task_list_deadline_sort.sql").length - 1, 1); });
+
+test('all-staff event migration ships after manager deputy migration in both lists', () => {
+  for (const file of ['scripts/package-standalone.mjs', 'scripts/verify-standalone-artifact.mjs']) {
+    const source = readFileSync(file, 'utf8');
+    const migration = 'supabase/migrations/20261106180000_event_assignment_all_staff.sql';
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf('supabase/migrations/20261106150000_manager_deputy_watch_projects.sql'));
+  }
+});
