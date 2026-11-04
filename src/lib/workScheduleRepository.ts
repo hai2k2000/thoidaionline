@@ -37,7 +37,7 @@ const eventFields = [
 export const workScheduleRepository = {
   async allPeople() {
     const { data, error } = await serverSupabase.from("staff_users")
-      .select("id,username,full_name,department_id,roles(code),job_titles(code)")
+      .select("id,username,full_name,active,list_order,department_id,departments(name,code),roles(code,level),job_titles(code,name,display_order)")
       .eq("active", true).order("full_name");
     return error ? { ok: false as const, error } : {
       ok: true as const,

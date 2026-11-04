@@ -91,6 +91,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261106120000_task_list_deadline_sort.sql",
   "supabase/migrations/20261106130000_admin_task_attachment_delete.sql",
   "supabase/migrations/20261106150000_manager_deputy_watch_projects.sql",
+  "supabase/migrations/20261106180000_event_assignment_all_staff.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ], "artifact migration mismatch");

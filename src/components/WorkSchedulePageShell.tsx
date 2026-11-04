@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useId } from "react";
+import { createPortal } from "react-dom";
+import { splitCellEvents, summarizeParticipants } from "@/lib/workScheduleEventCards.mjs";
 import AppNav from "@/components/AppNav";
 import EventAssignmentPanel from "@/components/EventAssignmentPanel";
 import { personalPlanErrorMessage } from "@/lib/personalPlanError";
@@ -12,7 +14,8 @@ type Person = {
   full_name: string;
   department_id?: string | null;
   roles?: { code?: string } | null;
-  job_titles?: { code?: string } | null;
+  job_titles?: { code?: string; name?: string } | null;
+  departments?: { name?: string; code?: string } | null;
 };
 
 type Row = {
@@ -66,6 +69,47 @@ const canMutatePersonalPlan = (row: Row, currentUserId: string | undefined, isAd
     state: personalScheduleLifecycleState(row.approval_status),
   });
 
+const planTypeLabel = (row: Row) => row.plan_type === "event" ? "Sự kiện" : row.plan_type === "business" ? "Công tác" : "Kế hoạch";
+const eventTime = (row: Row) => row.start_time ? `${row.start_time.slice(0, 5)}${row.end_time ? ` - ${row.end_time.slice(0, 5)}` : ""}` : "Cả ngày";
+
+function EventCard({ row, participantNames, onOpen }: { row: Row; participantNames: string[]; onOpen: () => void }) {
+  const [tooltip, setTooltip] = useState<{ top: number; left: number } | null>(null);
+  const cardRef = useRef<HTMLButtonElement>(null);
+  const tooltipId = useId();
+  useEffect(() => {
+    if (!tooltip) return;
+    const close = () => setTooltip(null);
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [tooltip]);
+  const updateTooltip = () => {
+    if (!cardRef.current || window.matchMedia("(hover: none)").matches) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const width = Math.min(320, window.innerWidth - 24);
+    setTooltip({ top: Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - 212)), left: Math.min(Math.max(12, rect.left), window.innerWidth - width - 12) });
+  };
+  const summary = summarizeParticipants(participantNames, 5);
+  return <>
+    <button ref={cardRef} type="button" onClick={() => { setTooltip(null); onOpen(); }} onPointerEnter={(event) => { if (event.pointerType !== "touch") updateTooltip(); }} onFocus={(event) => { if (event.currentTarget.matches(":focus-visible")) updateTooltip(); }} onPointerLeave={() => setTooltip(null)} onBlur={() => setTooltip(null)}
+      aria-describedby={tooltip ? tooltipId : undefined} aria-haspopup="dialog"
+      aria-label={`${eventTime(row)} ${row.title}`} className="mb-1 block w-full max-h-24 overflow-hidden rounded-lg border-l-4 border-orange-500 bg-orange-50 p-2 text-left text-xs text-orange-950 shadow-sm transition hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">
+      <span className="block font-bold">{eventTime(row)}</span>
+      <span className="line-clamp-2 break-words font-semibold [overflow-wrap:anywhere]">{planTypeLabel(row)}: {row.title}</span>
+      <span className={`mt-1 block max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ${row.approval_status === "REJECTED" ? "bg-red-100 text-red-700" : row.approval_status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>{row.event_assignment_kind === "leadership" ? "Được phân công" : approvalLabel(row.approval_status)}</span>
+    </button>
+    {tooltip ? createPortal(<div id={tooltipId} role="tooltip" style={{ position: "fixed", top: tooltip.top, left: tooltip.left, width: "min(320px, calc(100vw - 24px))", maxHeight: "min(200px, calc(100dvh - 24px))", zIndex: 70 }} className="pointer-events-none overflow-hidden rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-800 shadow-xl [overflow-wrap:anywhere]">
+      <p className="font-semibold">{eventTime(row)}</p><p className="line-clamp-4 break-words font-semibold">{row.title}</p><p className="mt-1 line-clamp-2 break-words">{row.location || "Chưa có địa điểm"}</p><p className="mt-1 line-clamp-3">Người tham gia: {summary.names.join(", ") || "Chưa có"}{summary.remaining ? ` và ${summary.remaining} người khác` : ""}</p>
+    </div>, document.body) : null}
+  </>;
+}
+
 export default function WorkSchedulePageShell({
   people,
   currentUserId,
@@ -78,6 +122,7 @@ export default function WorkSchedulePageShell({
   description = "Lịch toàn cơ quan · TBT · Phó TBT · Trưởng phòng · Phóng viên",
   enableEventAssignment = false,
   eventPeople,
+  eventAssignmentOpen = false,
 }: {
   people: Person[];
   currentUserId?: string;
@@ -90,6 +135,7 @@ export default function WorkSchedulePageShell({
   description?: string;
   enableEventAssignment?: boolean;
   eventPeople?: Person[];
+  eventAssignmentOpen?: boolean;
 }) {
   const [period, setPeriod] = useState<"day" | "week" | "month">("week");
   const [anchor, setAnchor] = useState(iso(new Date()));
@@ -109,7 +155,37 @@ export default function WorkSchedulePageShell({
   const [createBusy, setCreateBusy] = useState(false);
   const [createMessage, setCreateMessage] = useState("");
   const [editingRow, setEditingRow] = useState<Row | null>(null);
+  const [detailRows, setDetailRows] = useState<Row[] | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
   const [planType, setPlanType] = useState<"business" | "event">("business");
+  const [eventOpen, setEventOpen] = useState(eventAssignmentOpen);
+
+  useEffect(() => {
+    if (!detailRows) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    detailRef.current?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setDetailRows(null); }
+      if (event.key !== "Tab") return;
+      const controls = detailRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input, select, textarea, [tabindex="0"]');
+      if (!controls?.length) { event.preventDefault(); return; }
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === detailRef.current)) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKey);
+      previousFocus?.focus();
+    };
+  }, [detailRows]);
 
   const weeks = useMemo(() => {
     const [year, monthNumber] = month.split("-").map(Number);
@@ -197,11 +273,11 @@ export default function WorkSchedulePageShell({
     ? people.filter((person) => selected.includes(person.id))
     : people.filter((person) => person.id === currentUserId);
   const selectedCount = displayedPeople.length;
-  const names = (ids: string[]) =>
+  const participantNames = (ids: string[]) =>
     ids
-      .map((id) => people.find((person) => person.id === id)?.full_name)
-      .filter(Boolean)
-      .join(", ");
+      .map((id) => people.find((person) => person.id === id)?.full_name ?? eventPeople?.find((person) => person.id === id)?.full_name)
+      .filter((name): name is string => Boolean(name));
+  const names = (ids: string[]) => participantNames(ids).join(", ");
 
   const selectAll = () => setSelected(people.map((person) => person.id));
   const clearAll = () => setSelected([]);
@@ -275,6 +351,7 @@ export default function WorkSchedulePageShell({
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">{title}</h1>
             <p className="text-sm text-slate-600">{description}</p>
+            {enableEventAssignment ? <button type="button" onClick={() => setEventOpen(true)} className="mt-3 rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</button> : null}
           </header>
 
           {canReviewPersonalPlans ? <div className="mt-3 flex gap-2 border-b border-slate-200" role="tablist" aria-label="Kế hoạch cá nhân">
@@ -462,7 +539,7 @@ export default function WorkSchedulePageShell({
               ) : null}
             </div> : null}
           </section> : null}
-          {activeTab === "personal" && enableEventAssignment ? <EventAssignmentPanel people={eventPeople ?? people} /> : null}
+          {enableEventAssignment ? <EventAssignmentPanel people={eventPeople ?? people} open={eventOpen} onOpenChange={setEventOpen} onChanged={() => setRetryToken((value) => value + 1)} /> : null}
 
           {canReviewPersonalPlans && activeTab === "approval" ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm" role="tabpanel">
             <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ duyệt</h2>
@@ -517,22 +594,46 @@ export default function WorkSchedulePageShell({
                         {person.full_name}
                         <span className="block text-xs font-normal text-slate-500">{role(person)}</span>
                       </td>
-                      {range.days.map((date) => (
-                        <td key={iso(date)} className="p-1">
-                          {rows
-                            .filter(
-                              (row) =>
-                                row.work_date <= iso(date) && row.end_date >= iso(date) && row.participant_ids.includes(person.id),
-                            )
-                            .map((row) => (
-                              <article
-                                key={row.id}
-                                className="mb-1 rounded-lg border-l-4 border-orange-500 bg-orange-50 p-2 text-xs text-orange-950"
-                              >
-                                <b>{row.start_time ? `${row.start_time.slice(0, 5)}${row.end_time ? `-${row.end_time.slice(0, 5)}` : ""}` : ""}</b>
-                                <p className="font-semibold">{row.plan_type === "business" ? "Công tác: " : row.plan_type === "event" ? "Sự kiện: " : ""}{row.title}</p>
-                                {row.location ? <p>{row.location}</p> : null}
-                                <p>{names(row.participant_ids)}</p>
+                      {range.days.map((date) => {
+                        const cellRows = rows.filter((row) =>
+                          row.work_date <= iso(date) && row.end_date >= iso(date) && row.participant_ids.includes(person.id),
+                        );
+                        const { visible, overflow } = splitCellEvents(cellRows, 3);
+                        return <td key={iso(date)} className="p-1">
+                          {visible.map((row) => <EventCard key={row.id} row={row}
+                            participantNames={participantNames(row.participant_ids)}
+                            onOpen={() => setDetailRows([row])} />)}
+                          {overflow.length > 0 ? <button type="button"
+                            onClick={() => setDetailRows(cellRows)}
+                            aria-label={`Xem tất cả sự kiện của ${person.full_name} ngày ${iso(date)}`}
+                            className="min-h-9 w-full rounded px-2 py-1 text-left text-xs font-semibold text-orange-800 hover:bg-orange-100 focus-visible:ring-2 focus-visible:ring-orange-500">
+                            +{overflow.length} sự kiện
+                          </button> : null}
+                        </td>;
+                      })}
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </section> : null}
+          {detailRows ? createPortal(
+            <div style={{ position: "fixed", inset: 0, zIndex: 60 }} className="flex items-center justify-center bg-slate-950/40 p-4"
+              onClick={(event) => { if (event.target === event.currentTarget) setDetailRows(null); }}>
+              <div ref={detailRef} role="dialog" aria-modal="true" aria-labelledby="event-detail-title" tabIndex={-1}
+                className="max-h-[85dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl outline-none">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 id="event-detail-title" className="text-lg font-semibold">Chi tiết sự kiện{detailRows.length > 1 ? ` (${detailRows.length})` : ""}</h2>
+                  <button type="button" onClick={() => setDetailRows(null)} aria-label="Đóng chi tiết sự kiện" className="min-h-10 min-w-10 rounded hover:bg-slate-100">×</button>
+                </div>
+                <div className="mt-3 space-y-4">
+                  {detailRows.map((row) => <article key={row.id} className="space-y-2 break-words rounded-lg border border-orange-200 p-3 text-sm [overflow-wrap:anywhere]">
+                    <h3 className="whitespace-pre-wrap font-semibold">{row.title}</h3>
+                    <p>Loại: {planTypeLabel(row)}{row.event_type ? ` · ${row.event_type}` : ""}</p>
+                    <p>Ngày: {row.work_date} - {row.end_date}</p>
+                    <p>Thời gian: {eventTime(row)}</p>
+                    <p>Địa điểm: {row.location || "Chưa có"}</p>
+                    {row.notes ? <p className="whitespace-pre-wrap">Ghi chú: {row.notes}</p> : null}
+                    <p>Người tham gia: {names(row.participant_ids) || "Chưa có"}</p>
                                 {row.event_assignment_kind === "leadership" ? <div className="mt-1 space-y-1"><span className="inline-flex rounded-full bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-800">Được phân công</span>{row.event_assignments?.[0]?.assigner?.full_name ? <p>Người phân công: {row.event_assignments[0].assigner.full_name}</p> : null}{row.event_status ? <p>Trạng thái: {row.event_status}</p> : null}</div> : null}
                                 {!viewAll ? <div className="mt-2 space-y-1">
                                   <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${row.approval_status === "REJECTED" ? "bg-red-100 text-red-700" : row.approval_status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>{approvalLabel(row.approval_status)}</span>
@@ -542,16 +643,12 @@ export default function WorkSchedulePageShell({
                                   {row.reviewed_at ? <p>Thời gian duyệt: {new Date(row.reviewed_at).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</p> : null}
                                   {row.approval_status === "REJECTED" && row.review_note ? <p className="text-red-700">Lý do từ chối: {row.review_note}</p> : null}
                                 </div> : null}
-                                {currentUserId && canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => void deletePlan(row.id)} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Hủy kế hoạch</button></div> : null}
-                              </article>
-                            ))}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </section> : null}
+                                {currentUserId && canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setDetailRows(null); setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => { setDetailRows(null); void deletePlan(row.id); }} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Hủy kế hoạch</button></div> : null}
+                  </article>)}
+                </div>
+              </div>
+            </div>, document.body,
+          ) : null}
           {activeTab === "personal" && createOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="create-plan-title" onClick={(event) => { if (event.target === event.currentTarget) { setEditingRow(null); setCreateOpen(false); } }}>
             <form key={editingRow?.id ?? "new"} onSubmit={createPlan} className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
               <div className="flex items-center justify-between"><h2 id="create-plan-title" className="text-lg font-semibold">{editingRow ? "Sửa kế hoạch cá nhân" : "Tạo kế hoạch cá nhân"}</h2><button type="button" onClick={() => { setEditingRow(null); setCreateOpen(false); }} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>

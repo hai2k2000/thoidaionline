@@ -1,13 +1,9 @@
 import { apiError, apiJson, readJsonObject, requireMutationActor, requireReadActor, rpcFailure } from "@/lib/serverApi";
 import { validateEventAssignmentInput } from "@/lib/eventAssignmentValidation";
 import { workScheduleRepository } from "@/lib/workScheduleRepository";
-
+import { canAssignEvents } from "@/lib/workScheduleEventAccess";
 function validRange(from: string, to: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) && from <= to;
-}
-
-function canManage(actor: { role_code: string; is_department_manager: boolean }) {
-  return ["admin", "tong_bien_tap", "pho_tong_bien_tap", "truong_phong"].includes(actor.role_code) || actor.is_department_manager;
 }
 
 function parsed(body: Record<string, unknown>) {
@@ -52,7 +48,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (!canManage(guard.actor)) return apiError("forbidden", 403);
+  if (!canAssignEvents(guard.actor)) return apiError("forbidden", 403);
   const input = parsed((await readJsonObject(request)) ?? {});
   if (!input || (input.id && input.workflowRevision === undefined)) return apiError("invalid_request", 400);
   const result = await workScheduleRepository.saveEventAssignment(guard.actor.id, input);
@@ -62,7 +58,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const guard = await requireMutationActor();
   if (!guard.ok) return guard.response;
-  if (!canManage(guard.actor)) return apiError("forbidden", 403);
+  if (!canAssignEvents(guard.actor)) return apiError("forbidden", 403);
   const body = (await readJsonObject(request)) ?? {};
   const id = typeof body.id === "string" ? body.id : "";
   const action = body.action === "cancel" || body.action === "complete" ? body.action : null;
