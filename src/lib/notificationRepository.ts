@@ -2,7 +2,7 @@
 
 import { serverSupabase } from "@/lib/serverSupabase";
 
-export type NotificationKind = "assignment" | "deadline" | "comment" | "status" | "deadline_change";
+export type NotificationKind = "assignment" | "department_collaboration" | "deadline" | "comment" | "status" | "deadline_change";
 
 export type NotificationItem = {
   key: string;
@@ -111,6 +111,33 @@ export const notificationRepository = {
     const href = (taskId: string) => `/tasks/${taskId}`;
 
     const participantByTask = new Map(participantRows.map((row) => [row.task_id, row]));
+    const managedDepartments = await serverSupabase.from("departments").select("id")
+      .eq("manager_id", userId).eq("active", true);
+    if (managedDepartments.error) return { ok: false };
+    const managedIds = (managedDepartments.data ?? []).map((row) => row.id as string);
+    const watchedTasks = tasks.filter((task) => !task.project_id
+      && participantByTask.get(task.id)?.assignment_role === "watcher"
+      && ![task.assignee_id, task.owner_id, task.created_by].includes(userId));
+    if (managedIds.length && watchedTasks.length) {
+      const seen = new Set<string>();
+      for (const batch of chunks(watchedTasks.map((task) => task.id))) {
+        const collaborators = await serverSupabase.from("task_assignees")
+          .select("task_id,user_id,assigned_at,staff_users!inner(full_name,department_id)")
+          .in("task_id", batch).eq("assignment_role", "assignee")
+          .in("staff_users.department_id", managedIds).neq("user_id", userId)
+          .gte("assigned_at", assignmentCutoff());
+        if (collaborators.error) return { ok: false };
+        for (const row of collaborators.data ?? []) {
+          const key = `department-collaboration:${row.task_id}:${row.user_id}:${userId}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const staff = row.staff_users as unknown as { full_name: string | null };
+          items.push({ key, kind: "department_collaboration", title: "Nhân viên được thêm phối hợp",
+            message: `Nhân viên ${staff.full_name ?? "của bạn"} của phòng bạn được thêm phối hợp vào việc “${taskTitle(row.task_id)}”`,
+            href: href(row.task_id), createdAt: row.assigned_at, unread: true, rank: 2 });
+        }
+      }
+    }
     for (const task of tasks) {
       const participant = participantByTask.get(task.id);
       const directlyAssigned = task.assignee_id === userId || task.owner_id === userId;

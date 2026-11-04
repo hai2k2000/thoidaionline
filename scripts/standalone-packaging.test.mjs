@@ -161,3 +161,5 @@ test("Asset bulk import migration is packaged", () => { for (const file of ["scr
 
 test("Projects reopen migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261105100000_projects_reopen.sql").length - 1, 1); });
 test("Cancelled project task delete migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261105200000_project_cancelled_task_delete.sql").length - 1, 1); });
+
+test("Collaborator manager watch migration is packaged once", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.equal(readFileSync(file,"utf8").split("supabase/migrations/20261105230000_collaborator_manager_watch.sql").length - 1, 1); });
