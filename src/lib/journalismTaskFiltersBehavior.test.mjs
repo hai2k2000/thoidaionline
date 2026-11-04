@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseTaskListSearchParams, taskListHref } from "./taskFilters.mjs";
+import { parseTaskListSearchParams as parseFilters, taskListHref } from "./taskFilters.mjs";
+
+const parseTaskListSearchParams = (params) => parseFilters(params, { journalismUiHidden: false });
 
 test("Journalism filters accept bounded valid values", () => {
   const id = "11111111-1111-4111-8111-111111111111";

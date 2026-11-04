@@ -237,6 +237,7 @@ export type TaskDetailDto = TaskListItemDto & {
 };
 
 export type TaskListQuery = {
+  projectId?: string | null;
   search: string | null;
   scope: "all" | "assigned" | "personal" | "watching" | "cancelled";
   taskType: CanonicalTaskType | null;

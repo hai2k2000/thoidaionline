@@ -1,3 +1,5 @@
+import { JOURNALISM_UI_HIDDEN } from "./journalismUiHidden.mjs";
+
 const TASK_SCOPES = ["all", "assigned", "personal", "watching", "cancelled"];
 const TASK_TYPES = ["assigned", "personal"];
 const TASK_STATUS_GROUPS = ["completed", "unfinished", "returned", "cancelled"];
@@ -30,10 +32,16 @@ const validDate = (value) => {
 
 /**
  * @param {URLSearchParams} params
- * @param {{ defaultJournalism?: "only" | "exclude" | null }} [options]
+ * @param {{ defaultJournalism?: "only" | "exclude" | null, journalismUiHidden?: boolean }} [options]
  * @returns {import("./taskContracts").TaskListQuery}
  */
 export function parseTaskListSearchParams(params, options = {}) {
+  const hidden = options.journalismUiHidden ?? JOURNALISM_UI_HIDDEN;
+  if (hidden) {
+    params = new URLSearchParams(params);
+    for (const key of ["journalism", "workKind", "topicId", "seriesId", "publicationStatus", "plannedFrom", "plannedTo"]) params.delete(key);
+  }
+  const projectId = params.get("projectId");
   const page = Number(params.get("page") ?? "1");
   const pageSize = Number(params.get("pageSize") ?? "25");
   const search = params.get("q")?.normalize("NFC").trim() ?? "";
@@ -52,7 +60,7 @@ export function parseTaskListSearchParams(params, options = {}) {
   const requestedJournalism = member(JOURNALISM_FILTERS, params.get("journalism")) ?? null;
   const approvalQueue = member(["assignment", "completion"], params.get("approvalQueue")) ?? null;
   const assignmentSource = member(ASSIGNMENT_SOURCES, params.get("assignmentSource")) ?? null;
-  const defaultJournalism = options.defaultJournalism ?? null;
+  const defaultJournalism = hidden ? null : options.defaultJournalism ?? null;
   const category = params.get("category") === "duty" ? "duty" : null;
   const isNormalOnly = requestedJournalism === "exclude";
   return {
@@ -67,6 +75,7 @@ export function parseTaskListSearchParams(params, options = {}) {
     toDate: validDate(params.get("to")),
     deadlineState: member(DEADLINE_STATES, params.get("deadline")) ?? null,
     departmentId: departmentId && UUID.test(departmentId) ? departmentId : null,
+    ...(projectId && (projectId === "none" || UUID.test(projectId)) ? { projectId } : {}),
     journalism: requestedJournalism
       ?? (parsedJournalismWorkKindId || parsedPublicationStatus || parsedPlannedPublicationFrom || parsedPlannedPublicationTo || parsedTopicId || parsedSeriesId ? "only" : defaultJournalism),
     ...(approvalQueue ? { approvalQueue } : {}),
@@ -119,6 +128,7 @@ export function taskListHref(query, patch) {
   if (next.toDate) params.set("to", next.toDate);
   if (next.deadlineState) params.set("deadline", next.deadlineState);
   if (next.departmentId) params.set("department", next.departmentId);
+  if (next.projectId) params.set("projectId", next.projectId);
   if (next.journalism) params.set("journalism", next.journalism);
   if (next.approvalQueue) params.set("approvalQueue", next.approvalQueue);
   if (next.assignmentSource) params.set("assignmentSource", next.assignmentSource);
@@ -146,6 +156,7 @@ export function countTaskListFilters(query) {
     query.fromDate,
     query.toDate,
     query.departmentId,
+    query.projectId,
     query.journalism,
     query.journalismWorkKindId,
     query.publicationStatus,

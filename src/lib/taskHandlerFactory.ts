@@ -165,7 +165,7 @@ export function createTaskApplication(deps: Dependencies) {
       const guard = await deps.readActor();
       if (!guard.ok) return guard.response;
       const url = new URL(request.url);
-      const query = parseTaskListSearchParams(url.searchParams, { defaultJournalism: "exclude" });
+      const query = parseTaskListSearchParams(url.searchParams, { defaultJournalism: "exclude", journalismUiHidden: false });
       if (query.journalism === "only" && !canUseJournalism({
         roleCode: guard.actor.role_code,
         departmentCode: guard.actor.department_code,

@@ -1,3 +1,4 @@
+import { JOURNALISM_UI_HIDDEN } from "../lib/journalismUiHidden.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildLegacyTaskRedirect, getPhase2Navigation, isNavigationActive, LEGACY_TASK_REDIRECTS } from "./phase2Navigation.ts";
@@ -13,14 +14,14 @@ for (const [roleCode, departmentCode, visible] of [
   ["truong_phong", "communications", false], ["admin", "business", false],
 ]) test("Journalism sidebar scope: " + roleCode + "/" + departmentCode, () => {
   const navigation = getPhase2Navigation({ ...employee, roleCode, departmentCode, canAccessJournalism: true, canManageJournalismStructures: true });
-  assert.deepEqual(navigation.journalism, visible ? [...journalismItems, { id: "journalism-structures", href: "/journalism/structures" }] : []);
+  assert.deepEqual(navigation.journalism, visible && !JOURNALISM_UI_HIDDEN ? [...journalismItems, { id: "journalism-structures", href: "/journalism/structures" }] : []);
   assert.equal([...navigation.primary, ...navigation.configuration].some(item => item.id.startsWith("journalism-")), false);
   const all = [...navigation.primary, ...navigation.journalism, ...navigation.configuration, ...navigation.account];
   assert.equal(new Set(all.map(item => item.href)).size, all.length);
 });
 test("existing Journalism permissions still gate section and structures", () => {
   assert.deepEqual(getPhase2Navigation({ ...employee, departmentCode: "editorial" }).journalism, []);
-  assert.deepEqual(getPhase2Navigation({ ...employee, departmentCode: "editorial", canAccessJournalism: true }).journalism, journalismItems);
+  assert.deepEqual(getPhase2Navigation({ ...employee, departmentCode: "editorial", canAccessJournalism: true }).journalism, JOURNALISM_UI_HIDDEN ? [] : journalismItems);
 });
 test("work and schedule navigation is preserved", () => {
   const navigation = getPhase2Navigation({ ...employee, canAssignTask: true });

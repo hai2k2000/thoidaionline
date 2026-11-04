@@ -1,5 +1,6 @@
 "use client";
 
+import { JOURNALISM_UI_HIDDEN } from "@/lib/journalismUiHidden.mjs";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
@@ -377,7 +378,7 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
         <header className="rounded-2xl border bg-white p-4 shadow-sm">
           <h1 className="text-2xl font-bold sm:text-3xl">GIAO VIỆC</h1>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {!journalismMode ? <span className="rounded-lg border border-orange-500 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800">Công việc thường</span> : <span className="rounded-lg border border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">Công việc nghiệp vụ báo chí</span>}
+            {!JOURNALISM_UI_HIDDEN ? <>{!journalismMode ? <span className="rounded-lg border border-orange-500 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800">Công việc thường</span> : <span className="rounded-lg border border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">Công việc nghiệp vụ báo chí</span>}</> : null}
             {canManageEventAssignment ? <a href="/work-schedule" className="ml-auto rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</a> : null}
           </div>
         </header>
@@ -385,7 +386,7 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
           {onBehalfMode && <div className="mt-3 rounded-xl border bg-white p-4"><Field label="Người giao việc"><select required value={onBehalfOfId} disabled={busy} onChange={(event) => void chooseAssigner(event.target.value)} className={controlClass}><option value="">Chọn người giao việc.</option>{assigners.map((person) => <option key={person.id} value={person.id}>{person.label}</option>)}</select>{scopeLoading ? <span className="text-sm font-normal text-slate-500">Đang tải phạm vi giao việc…</span> : null}</Field></div>}
           <CanonicalAssignmentForm key={onBehalfOfId + (chosenOptions ? ":ready" : ":empty")} optionalDeadline departments={departments} people={people} assignmentScope={assignmentScope} actorRoleCode={effectiveRoleCode} onSubmit={submitCanonical} submitLabel={taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"} disabled={busy || (onBehalfMode && (!onBehalfOfId || !chosenOptions || scopeLoading))} />
         </> : null}
-        {journalismMode && <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
+        {!JOURNALISM_UI_HIDDEN && journalismMode && <form onSubmit={submit} className="mt-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-2">
           <input type="hidden" name="recipientReady" disabled={!recipientReady} value="true" readOnly />
           <fieldset disabled={!journalismMode && !recipientReady} className="contents disabled:opacity-60">
             <div className="grid gap-3 lg:col-span-2 lg:grid-cols-3">
