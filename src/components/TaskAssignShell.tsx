@@ -70,7 +70,7 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
   const [journalismErrors, setJournalismErrors] = useState<Record<string, string>>({});
   const selectedDepartment = departments.find((department) => department.id === departmentId);
   const scopedPeople = useMemo(
-    () => people.filter((person) => person.departmentId === departmentId),
+    () => people.filter((person) => (person.memberDepartmentIds ?? [person.departmentId]).includes(departmentId)),
     [departmentId, people],
   );
   const isEditorialBoard = selectedDepartment?.code === "leadership";

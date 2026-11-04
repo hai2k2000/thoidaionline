@@ -1,3 +1,26 @@
+# Manager In Own Department List
+
+Current Phase: implementation complete; full validation blocked
+Current Task: preserve real departments and additional leadership assignment membership
+
+Completed:
+- Added shared pure membership helper for options and server participant resolution.
+- Updated both assignment form filters and preserved the selected department on recipient choice.
+- Verified normal department manager reviewers, group expansion, project/collaborator scope and adjacent attendance/duty/work-schedule consumers.
+
+Validation:
+- Focused tests: 23/23 PASS; related suite: 151/151 PASS.
+- TypeScript, changed-file ESLint and diff whitespace: PASS.
+
+Blockers:
+- Full ESLint: pre-existing state mutation at src/app/database/records/[id]/page.tsx:41.
+- Build: release lineage gate requires integration/production; task branch is fix/manager-in-own-department.
+
+Next:
+- See .codex-report.md for evidence. Source changes are intentionally uncommitted; task forbids commit/push/network/deploy.
+
+---
+
 # Authentication Reliability Fix
 
 Current Phase: implementation complete; pre-production validation
