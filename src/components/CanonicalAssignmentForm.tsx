@@ -124,7 +124,7 @@ export default function CanonicalAssignmentForm({
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const selectedDepartment = departments.find((department) => department.id === departmentId);
-  const scopedPeople = useMemo(() => projectMode ? people : people.filter((person) => person.departmentId === departmentId), [departmentId, people, projectMode]);
+  const scopedPeople = useMemo(() => projectMode ? people : people.filter((person) => (person.memberDepartmentIds ?? [person.departmentId]).includes(departmentId)), [departmentId, people, projectMode]);
   const collaboratorPeople = projectMode ? people : collaboratorCandidates ?? scopedPeople;
   const departmentById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments]);
   const filteredRecipientPeople = useMemo(() => {
@@ -152,8 +152,9 @@ export default function CanonicalAssignmentForm({
     setCardErrors((current) => { const next = { ...current }; delete next[index]; return next; });
   };
   const chooseRecipient = (person: AssignmentPerson) => {
-    if (!person.departmentId) return;
-    setDepartmentId(person.departmentId); setAssigneeId(person.id); setExcludedMemberIds([]); setChoosingOtherDepartment(false);
+    const nextDepartmentId = (person.memberDepartmentIds ?? [person.departmentId]).includes(departmentId) ? departmentId : person.departmentId;
+    if (!nextDepartmentId) return;
+    setDepartmentId(nextDepartmentId); setAssigneeId(person.id); setExcludedMemberIds([]); setChoosingOtherDepartment(false);
     setRecipientPickerOpen(false); setRecipientSearch(""); setFormActivated(true); setBatchId(null); resetTransientState();
   };
   const changeRecipient = () => {

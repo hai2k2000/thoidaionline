@@ -7,10 +7,11 @@ import { isSystemAdminStaff, sortStaffRows } from "@/lib/staffOrdering";
 import { isEligibleAssignmentReviewer, isLeadershipAssignmentReviewer } from "@/lib/taskReviewerPolicy.mjs";
 import { deriveAssignmentScope } from "@/lib/taskAssignmentScope.mjs";
 import { normalizePermissions } from "@/lib/permissions";
+import { assignmentMemberDepartmentIds } from "@/lib/assignmentDepartmentMembership.mjs";
 import { canAccessTaskAssignment } from "@/lib/taskAssignAccess";
 
 export type AssignmentDepartment = { id: string; code?: string | null; name: string; managerId: string | null; hasManager: boolean };
-export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; roleCode: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
+export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; memberDepartmentIds?: string[]; roleCode: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
 export type CollaboratorCandidate = { id: string; fullName: string; username?: string | null; departmentName?: string | null };
 export type AssignmentScope = { kind: "own_department" | "global_default"; departmentId: string | null; departmentName: string | null; canChooseOtherDepartment: boolean };
 
@@ -48,7 +49,6 @@ export const taskAssignmentRepository = {
     if (departments.error || people.error || allDepartments.error) return { ok: false as const };
     const managerIds = new Set((departments.data ?? []).map((row) => row.manager_id).filter(Boolean));
     const leadershipDepartment = (departments.data ?? []).find((row) => row.code === "leadership");
-    const normalizePersonDepartment = (row: (typeof people.data)[number]) => leadershipDepartment && leadershipDepartment.id === (departments.data ?? []).find((department) => department.code === "leadership")?.id && ((row.roles as unknown as { code?: string } | null)?.code === "pho_tong_bien_tap" || (row.job_titles as unknown as { code?: string } | null)?.code === "truong_phong") ? leadershipDepartment.id as string : row.department_id as string | null;
     const normalizedDepartments = (departments.data ?? []).map((row) => ({
       id: row.id as string,
       code: row.code as string | null,
@@ -71,7 +71,8 @@ export const taskAssignmentRepository = {
       ))).map((row) => ({
         id: row.id as string,
         fullName: row.full_name as string,
-        departmentId: normalizePersonDepartment(row),
+        departmentId: row.department_id as string | null,
+        memberDepartmentIds: assignmentMemberDepartmentIds({ departmentId: row.department_id as string | null, roleCode: (row.roles as unknown as { code?: string } | null)?.code, jobTitleCode: (row.job_titles as unknown as { code?: string } | null)?.code, leadershipDepartmentId: leadershipDepartment?.id as string | undefined }),
         roleCode: (row.roles as unknown as { code?: string } | null)?.code ?? null,
         canReview: isEligibleAssignmentReviewer({
           roleCode: (row.roles as unknown as { code?: string } | null)?.code,
@@ -103,7 +104,7 @@ export const taskAssignmentRepository = {
       people: (people.data ?? []).map((row) => ({
         isSystemAdmin: isSystemAdminStaff(row),
         id: row.id as string,
-        departmentId: leadership.data?.id === input.departmentId && (((row.roles as unknown as { code?: string } | null)?.code === "pho_tong_bien_tap") || ((row.job_titles as unknown as { code?: string } | null)?.code === "truong_phong")) ? input.departmentId : row.department_id as string | null,
+        departmentId: assignmentMemberDepartmentIds({ departmentId: row.department_id as string | null, roleCode: (row.roles as unknown as { code?: string } | null)?.code, jobTitleCode: (row.job_titles as unknown as { code?: string } | null)?.code, leadershipDepartmentId: leadership.data?.id as string | undefined }).includes(input.departmentId) ? input.departmentId : row.department_id as string | null,
         roleCode: (row.roles as unknown as { code?: string } | null)?.code ?? null,
         canReview: isEligibleAssignmentReviewer({
           roleCode: (row.roles as unknown as { code?: string } | null)?.code,

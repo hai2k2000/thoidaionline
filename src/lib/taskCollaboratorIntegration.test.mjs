@@ -166,3 +166,59 @@ test("manager notification is deduplicated, read-aware and excludes self assignm
     }
   }
 });
+
+
+test("assignment options retain managers in their real department and leadership; server validates both", async () => {
+  const rows = [
+    { id: "manager", username: "manager", full_name: "Test Manager", department_id: "a", active: true, roles: { code: "nhan_vien" }, job_titles: { code: "truong_phong" } },
+    { id: "deputy", username: "deputy", full_name: "Test Deputy", department_id: "a", active: true, roles: { code: "pho_tong_bien_tap" }, job_titles: null },
+    { id: "member", username: "member", full_name: "Test Member", department_id: "a", active: true, roles: { code: "phong_vien" }, job_titles: null },
+  ];
+  const departments = [{ id: "a", code: "a", name: "A", active: true, manager_id: "manager" }, { id: "board", code: "leadership", name: "Board", active: true, manager_id: "deputy" }];
+  const db = { from(table) {
+    let data = table === "staff_users" ? rows : departments;
+    let single = false;
+    const q = { select() { return q; }, eq(key, value) { data = data.filter(row => row[key] === value); return q; }, order() { return q; }, maybeSingle() { single = true; return q; }, then(done) { done({ data: single ? data[0] ?? null : data, error: null }); } };
+    return q;
+  } };
+  const { taskAssignmentRepository: repo } = await loadModule('src/lib/taskAssignmentRepository.ts', db);
+  const actor = { id: "deputy", roleCode: "pho_tong_bien_tap", departmentId: "a" };
+  const options = await repo.options(actor);
+  for (const id of ["manager", "deputy"]) {
+    const person = options.people.find(person => person.id === id);
+    assert.equal(person.departmentId, "a");
+    assert.deepEqual(person.memberDepartmentIds, ["a", "board"]);
+  }
+  const managerId = options.departments.find(department => department.id === "a").managerId;
+  assert.equal(options.people.find(person => person.id === managerId).canReview, true);
+  for (const departmentId of ["a", "board"]) {
+    const result = await repo.resolveParticipants(actor, { departmentId, assigneeId: "manager", reviewerId: departmentId === "a" ? managerId : "deputy", collaboratorIds: [], watcherIds: [], groupDepartmentId: null, excludedMemberIds: [] });
+    assert.equal(result.ok, true);
+    const group = await repo.resolveParticipants(actor, { departmentId, assigneeId: "deputy", reviewerId: "deputy", collaboratorIds: [], watcherIds: [], groupDepartmentId: departmentId, excludedMemberIds: [] });
+    assert.equal(group.ok, true);
+    assert.deepEqual(group.collaboratorIds, departmentId === "a" ? ["member"] : ["manager"]);
+  }
+  const denied = await repo.resolveParticipants({ ...actor, roleCode: "truong_phong" }, { departmentId: "board", assigneeId: "manager", reviewerId: "deputy", collaboratorIds: [], watcherIds: [], groupDepartmentId: null, excludedMemberIds: [] });
+  assert.equal(denied.ok, false);
+});
+
+test("assignment client filters membership and retains the selected department", () => {
+  for (const file of ['CanonicalAssignmentForm.tsx', 'TaskAssignShell.tsx']) {
+    const source = readFileSync('src/components/' + file, 'utf8');
+    assert.match(source, /person\.memberDepartmentIds \?\? \[person\.departmentId\]/);
+    assert.match(source, /\.includes\(departmentId\)/);
+  }
+  const form = readFileSync('src/components/CanonicalAssignmentForm.tsx', 'utf8');
+  const body = form.split('const chooseRecipient = (person: AssignmentPerson) => {')[1].split('  };')[0];
+  const choose = new Function('person', 'departmentId', 'setDepartmentId', 'setAssigneeId', 'setExcludedMemberIds', 'setChoosingOtherDepartment', 'setRecipientPickerOpen', 'setRecipientSearch', 'setFormActivated', 'setBatchId', 'resetTransientState', body);
+  for (const [person, current, expected] of [
+    [{ id: 'manager', departmentId: 'a', memberDepartmentIds: ['a', 'board'] }, 'board', 'board'],
+    [{ id: 'manager', departmentId: 'a', memberDepartmentIds: ['a', 'board'] }, 'a', 'a'],
+    [{ id: 'member', departmentId: 'a' }, 'board', 'a'],
+    [{ id: 'leader', departmentId: null, memberDepartmentIds: ['board'] }, 'board', 'board'],
+  ]) {
+    let selected;
+    choose(person, current, value => { selected = value; }, ...Array(9).fill(() => {}));
+    assert.equal(selected, expected);
+  }
+});
