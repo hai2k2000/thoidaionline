@@ -182,6 +182,7 @@ const migrationReference = [
   "supabase/migrations/20261103200000_projects_v1_2_permissions.sql",
   "supabase/migrations/20261104100000_asset_bulk_import.sql",
   "supabase/migrations/20261105100000_projects_reopen.sql",
+  "supabase/migrations/20261105200000_project_cancelled_task_delete.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];

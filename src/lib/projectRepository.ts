@@ -3,7 +3,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 
 export type ProjectMember = { project_id: string; user_id: string; role: "lead" | "deputy" | "member"; added_by: string; added_at: string; staff_users?: { id: string; full_name: string; active: boolean; roles?: { code: string } | null } | null };
 export type Project = { id: string; code: string; name: string; description: string | null; status: "active" | "closed"; host_department_id: string; created_by: string; created_at: string; updated_at: string; closed_at: string | null };
-export type ProjectTask = { id: string; project_id: string; title: string; status: string; assignee_id: string | null; reviewer_id: string | null; due_date: string | null; due_time?: string | null; completion_submitted_at?: string | null; completed_at?: string | null; priority: string };
+export type ProjectTask = { id: string; project_id: string; title: string; status: string; assignee_id: string | null; reviewer_id: string | null; due_date: string | null; due_time?: string | null; completion_submitted_at?: string | null; completed_at?: string | null; priority: string; created_by: string | null; created_at: string; created_by_user?: { full_name: string } | { full_name: string }[] | null };
 export type ProjectAssignmentInput = {
   title: string; description: string; assigneeId: string; reviewerId?: string | null; dueDate: string | null; dueTime: string | null;
   evaluationCriteria?: string | null; collaboratorIds?: string[]; watcherIds?: string[]; priority?: "low" | "normal" | "high" | "urgent"; attachmentUrl?: string | null;
@@ -46,6 +46,7 @@ export const projectRepository = {
   reopen: (actorId: string, projectId: string) => rpc<Project>("api_reopen_project", { p_actor_id: actorId, p_project_id: projectId }),
   transferLead: (actorId: string, projectId: string, userId: string, ownRole: "lead" | "deputy" | "member") => rpc<unknown>("api_transfer_project_lead", { p_actor_id: actorId, p_project_id: projectId, p_new_lead_id: userId, p_actor_role: ownRole }),
   assignTask: (actorId: string, projectId: string, input: ProjectAssignmentInput) => rpc<{ id: string }>("api_assign_project_task", { p_actor_id: actorId, p_project_id: projectId, p_title: input.title, p_description: input.description, p_assignee_id: input.assigneeId, p_reviewer_id: input.reviewerId ?? null, p_due_date: input.dueDate, p_due_time: input.dueTime, p_evaluation_criteria: input.evaluationCriteria ?? null, p_collaborator_ids: input.collaboratorIds ?? [], p_watcher_ids: input.watcherIds ?? [], p_priority: input.priority ?? "normal", p_attachment_url: input.attachmentUrl ?? null }),
+  deleteCancelledTasks: (actorId: string, projectId: string, taskIds: string[]) => rpc<{ deleted: number; storage_paths: string[] }>("api_delete_cancelled_project_tasks", { p_actor_id: actorId, p_project_id: projectId, p_task_ids: taskIds }),
   async list(actor: ProjectReader): Promise<Result<Project[]>> {
     let query = serverSupabase.from("projects").select(PROJECT_FIELDS).order("created_at", { ascending: false });
     if (!canReadAll(actor)) {
@@ -73,7 +74,7 @@ export const projectRepository = {
   async listTasks(actor: ProjectReader, projectId: string, filters: { status?: string; assigneeId?: string } = {}): Promise<Result<ProjectTask[]>> {
     const access = await readAccess(actor, projectId);
     if (!access.ok) return access;
-    let query = serverSupabase.from("tasks").select("id,project_id,title,status,assignee_id,reviewer_id,due_date,due_time,completion_submitted_at,completed_at,priority").eq("project_id", projectId).order("created_at", { ascending: false });
+    let query = serverSupabase.from("tasks").select("id,project_id,title,status,assignee_id,reviewer_id,due_date,due_time,completion_submitted_at,completed_at,priority,created_by,created_at,created_by_user:staff_users!tasks_created_by_fkey(full_name)").eq("project_id", projectId).order("created_at", { ascending: false });
     if (filters.status) query = query.eq("status", filters.status);
     if (filters.assigneeId) query = query.eq("assignee_id", filters.assigneeId);
     const q = await query;
