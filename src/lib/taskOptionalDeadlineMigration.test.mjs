@@ -12,7 +12,7 @@ const sources = {
 };
 const body = (sql, name) => sql.match(new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\$function\\$;`, "i"))?.[0];
 test("optional deadline migration preserves function bodies and ACL except explicit deadline edits", () => {
-  const sql = read("20261104120000_task_assignment_optional_deadline.sql");
+  const sql = read("20261105140000_task_assignment_optional_deadline.sql");
   assert.deepEqual([...sql.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1]), [...Object.keys(sources), "api_assign_project_task"]);
   for (const [name, source] of Object.entries(sources)) {
     let expected = body(read(source), name);
@@ -31,7 +31,7 @@ test("optional deadline migration preserves function bodies and ACL except expli
 });
 
 test("optional deadline migration appends the project assignment RPC from the latest project definition", () => {
-  const sql = read("20261104120000_task_assignment_optional_deadline.sql");
+  const sql = read("20261105140000_task_assignment_optional_deadline.sql");
   const source = read("20261103200000_projects_v1_2_permissions.sql");
   const expected = body(source, "api_assign_project_task")
     .replace("begin\n", "begin\n p_due_time := case when p_due_date is null then null else coalesce(p_due_time,time '17:00') end;\n")

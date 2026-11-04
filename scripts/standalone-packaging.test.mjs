@@ -10,7 +10,7 @@ test("CTV and Projects migrations are shipped once in version order in both refe
     const source = readFileSync(file, "utf8");
     const ctv = '"supabase/migrations/20261103150000_role_cong_tac_vien.sql"';
     const projects = '"supabase/migrations/20261103160000_projects_v1.sql"';
-    const optional = '"supabase/migrations/20261104120000_task_assignment_optional_deadline.sql"';
+    const optional = '"supabase/migrations/20261105140000_task_assignment_optional_deadline.sql"';
     assert.equal(source.split(ctv).length - 1, 1, file);
     assert.equal(source.split(projects).length - 1, 1, file);
     assert.ok(source.indexOf(ctv) < source.indexOf(projects), file);
