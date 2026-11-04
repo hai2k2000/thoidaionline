@@ -1,7 +1,7 @@
 import { classifyTaskDeadline } from "./deadlineClassification.mjs";
 
 export const DEFAULT_PROJECT_TASK_FILTERS = Object.freeze({
-  search: "", status: "", assignee: "", creator: "", deadlineState: "",
+  search: "", status: "", assignee: "", creator: "", reviewer: "", collaborator: "", priority: "", mine: false, deadlineState: "",
   dateFrom: "", dateTo: "", sort: "due_asc",
 });
 
@@ -9,7 +9,7 @@ export function normalizeProjectTaskFilters(filters = {}) {
   return { ...DEFAULT_PROJECT_TASK_FILTERS, ...filters };
 }
 
-const searchText = value => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLowerCase().trim();
+export const searchText = value => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLowerCase().trim();
 
 export function filterAndSortProjectTasks(tasks, filters = {}, now = new Date()) {
   const f = normalizeProjectTaskFilters(filters);
@@ -19,6 +19,10 @@ export function filterAndSortProjectTasks(tasks, filters = {}, now = new Date())
     (!search || searchText(task.title).includes(search)) &&
     (!f.assignee || task.assignee_id === f.assignee) &&
     (!f.creator || task.created_by === f.creator) &&
+    (!f.reviewer || task.reviewer_id === f.reviewer) &&
+    (!f.collaborator || (task.collaborator_ids ?? []).includes(f.collaborator)) &&
+    (!f.priority || task.priority === f.priority) &&
+    (!f.mine || (Boolean(f.currentUserId) && (task.assignee_id === f.currentUserId || task.reviewer_id === f.currentUserId || (task.collaborator_ids ?? []).includes(f.currentUserId)))) &&
     (!f.deadlineState || classifyTaskDeadline(task, now) === f.deadlineState) &&
     (!f.dateFrom || (task.due_date && task.due_date >= f.dateFrom)) &&
     (!f.dateTo || (task.due_date && task.due_date <= f.dateTo))
