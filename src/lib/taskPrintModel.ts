@@ -1,3 +1,5 @@
+// @ts-expect-error Explicit extension supports direct Node regression tests.
+import { parseTaskRequirements } from "./taskRequirements.ts";
 import type { TaskDetailDto } from "./taskContracts";
 import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "./taskAssignmentDisplay.mjs";
 
@@ -73,15 +75,6 @@ const departmentDisplayName = (task: TaskDetailDto) => {
   return departmentLabels[raw.toLowerCase()] ?? raw;
 };
 
-const parseRequirements = (value: string | null) => {
-  try {
-    const parsed = JSON.parse(value ?? "[]");
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
-  } catch {
-    return [];
-  }
-};
-
 const participantName = (row: TaskDetailDto["task_assignees"][number] | null | undefined) => row?.staff_users?.full_name?.trim() || null;
 
 export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignmentPrintModel {
@@ -116,7 +109,7 @@ export function buildWorkAssignmentPrintModel(task: TaskDetailDto): WorkAssignme
     collaborators,
     title: task.title,
     description: task.description ?? "—",
-    requirements: parseRequirements(task.evaluation_criteria),
+    requirements: parseTaskRequirements(task.evaluation_criteria),
     deadline: task.due_date ? `${task.due_date}${task.due_time ? ` ${task.due_time.slice(0, 5)}` : ""}` : "Không có hạn",
     priority: priorityLabels[task.priority] ?? task.priority ?? "—",
     notes: task.journalism?.editorial_notes?.trim() || "—",

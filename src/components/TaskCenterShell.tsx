@@ -1,5 +1,7 @@
 "use client";
 
+import { parseTaskRequirements } from "@/lib/taskRequirements";
+
 import { JOURNALISM_UI_HIDDEN } from "@/lib/journalismUiHidden.mjs";
 import PersonFilter from "@/components/PersonFilter";
 import ProjectBadge from "@/components/ProjectBadge";
@@ -85,7 +87,7 @@ const canEditOwnTask = (task: TaskListResult["items"][number], currentUserId: st
 };
 
 const requirementsOf = (task: TaskListResult["items"][number]) => {
-  try { const value = JSON.parse(task.evaluation_criteria ?? "[]"); return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []; } catch { return []; }
+  return parseTaskRequirements(task.evaluation_criteria);
 };
 const periodRange = (period: "day" | "week" | "month") => {
   const now = new Date(); const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()); const end = new Date(start);

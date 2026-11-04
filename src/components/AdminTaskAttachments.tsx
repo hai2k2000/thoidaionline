@@ -19,14 +19,8 @@ export default function AdminTaskAttachments({ task }: { task: TaskDetailDto }) 
     } catch (error) { setMessage(errorMessage(error, "Không thể tải tệp lên.")); }
     finally { setBusy(false); }
   }
-  async function open(id: string) {
-    setBusy(true); setMessage("");
-    try {
-      const response = await fetch(`/api/tasks/${task.id}/attachments/${id}`);
-      if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể mở tệp."));
-      const { url } = await response.json(); window.location.assign(url);
-    } catch (error) { setMessage(errorMessage(error, "Không thể mở tệp.")); }
-    finally { setBusy(false); }
+  function open(id: string) {
+    window.open(`/api/tasks/${task.id}/attachments/${id}`, "_blank", "noopener,noreferrer");
   }
   async function remove(id: string) {
     setBusy(true); setMessage("");

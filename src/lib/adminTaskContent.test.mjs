@@ -1,23 +1,96 @@
 ﻿import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseAdminRequirements, serializeAdminRequirements } from './taskRequirements.ts';
+import vm from 'node:vm';
+import ts from 'typescript';
+import { parseTaskRequirements, serializeAdminRequirements } from './taskRequirements.ts';
 import { createTaskApplication } from './taskHandlerFactory.ts';
 import { isCollaboratorAllowedApiPath } from './collaboratorRole.mjs';
 
-test('requirements JSON round-trip retains content and order', () => {
+test('requirements parser and serializer retain JSON content and order', () => {
   const values = ['first', '"quoted"\ntext', 'last'];
-  assert.deepEqual(parseAdminRequirements(serializeAdminRequirements(values)), { mode: 'json', requirements: values });
+  assert.deepEqual(parseTaskRequirements(serializeAdminRequirements(values)), values);
 });
-test('legacy text, malformed JSON and non-string arrays remain verbatim', () => {
-  for (const text of ['  Legacy\ntext  ', '[invalid', '[1,"a"]', '{"a":1}']) assert.deepEqual(parseAdminRequirements(text), { mode: 'legacy', text });
+test('plain text, multiline text, malformed JSON and non-array JSON remain visible', () => {
+  assert.deepEqual(parseTaskRequirements('  Legacy  '), ['Legacy']);
+  assert.deepEqual(parseTaskRequirements(' first\n\n second\r\nthird '), ['first', 'second', 'third']);
+  for (const text of ['[invalid', '[1,"a"]', '{"a":1}']) assert.deepEqual(parseTaskRequirements(text), [text]);
+  assert.deepEqual(parseTaskRequirements(''), []);
+  assert.deepEqual(parseTaskRequirements(null), []);
+  assert.deepEqual(parseTaskRequirements(undefined), []);
+  assert.deepEqual(parseTaskRequirements('   '), []);
+  assert.deepEqual(parseTaskRequirements('[" first ", "", " ", "second"]'), ['first', 'second']);
+  for (const text of ['null', '123', 'true', '"text"']) assert.deepEqual(parseTaskRequirements(text), [text]);
 });
 test('no silent truncation, assignment limits and empty initial state', () => {
-  assert.deepEqual(parseAdminRequirements(null), { mode: 'json', requirements: [] });
-  assert.equal(parseAdminRequirements(JSON.stringify(Array(51).fill('a'))).requirements.length, 51);
+  assert.equal(parseTaskRequirements(JSON.stringify(Array(51).fill('a'))).length, 51);
   assert.throws(() => serializeAdminRequirements(Array(51).fill('a')));
   assert.throws(() => serializeAdminRequirements(['x'.repeat(2001)]));
   assert.throws(() => serializeAdminRequirements(Array(6).fill('x'.repeat(2000))));
   assert.equal(JSON.parse(serializeAdminRequirements(Array(50).fill('a'))).length, 50);
+  assert.equal(serializeAdminRequirements([' first ', '', '  second  ']), '["first","second"]');
+  assert.throws(() => serializeAdminRequirements(['', '   ']));
+});
+
+test('admin editor edits and submits all requirements for normal and project tasks', async () => {
+  const source = readFileSync(new URL('../components/AdminTaskEditForm.tsx', import.meta.url), 'utf8');
+  assert.match(source, /parseTaskRequirements\(task\.evaluation_criteria\)/);
+  assert.match(source, /body\.evaluationCriteria = serializeAdminRequirements\(criteria\)/);
+  assert.doesNotMatch(source, /parseAdminRequirements|mode === ["']legacy|criteria\.text/);
+  assert.match(source, /Yêu cầu công việc/);
+  assert.equal(serializeAdminRequirements([]), '[]');
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  for (const project_id of [null, 'project']) {
+    for (const existing of ['["first","second"]', 'first\nsecond']) {
+      const states = []; let cursor = 0; let payload;
+      const jsx = (type, props) => ({ type, props });
+      const context = {
+        exports: {},
+        require(name) {
+          if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
+          if (name === 'react') return { useState(initial) {
+            const index = cursor++;
+            if (!(index in states)) states[index] = typeof initial === 'function' ? initial() : initial;
+            return [states[index], value => { states[index] = value; }];
+          } };
+          if (name === 'next/navigation') return { useRouter: () => ({ push() {}, refresh() {} }) };
+          if (name.endsWith('taskRequirements')) return { parseTaskRequirements, serializeAdminRequirements, MAX_TASK_REQUIREMENTS: 50 };
+          if (name.endsWith('ActionFeedbackProvider')) return { useActionFeedback: () => ({ notify() {} }) };
+          if (name.endsWith('actionFeedback')) return { errorMessage: error => error.message };
+          return { default: () => null };
+        },
+        FormData: class { get() { return ''; } },
+        fetch: async (url, options) => { payload = JSON.parse(options.body); return { ok: true }; },
+      };
+      vm.runInNewContext(compiled, context);
+      const render = () => { cursor = 0; return context.exports.default({ task: { id: 'task', project_id, evaluation_criteria: existing } }); };
+      function nodes(node) {
+        if (!node || typeof node !== 'object') return [];
+        if (Array.isArray(node)) return node.flatMap(nodes);
+        return [node, ...nodes(node.props?.children)];
+      }
+      const tree = render();
+      const inputs = nodes(tree).filter(node => node.type === 'input' && node.props['aria-label']);
+      assert.equal(inputs.length, 2);
+      inputs[0].props.onChange({ target: { value: 'edited first' } });
+      await render().props.onSubmit({ preventDefault() {}, currentTarget: {} });
+      assert.deepEqual(JSON.parse(payload.evaluationCriteria), ['edited first', 'second']);
+    }
+  }
+});
+
+test('every task evaluation criteria display reader uses the shared parser', () => {
+  const files = [
+    '../components/TaskDetailShell.tsx',
+    '../components/TaskCenterShell.tsx',
+    '../components/TaskDetailModal.tsx',
+    './taskPrintModel.ts',
+  ];
+  for (const file of files) {
+    const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+    assert.match(source, /parseTaskRequirements\(task\.evaluation_criteria\)/ , file);
+    assert.doesNotMatch(source, /JSON\.parse\([^\n]*evaluation_criteria/, file);
+    assert.doesNotMatch(source, /\{task\.evaluation_criteria\s*\|\|/, file);
+  }
 });
 const taskId='11111111-1111-4111-8111-111111111111';
 const attachmentId='22222222-2222-4222-8222-222222222222';

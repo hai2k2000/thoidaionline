@@ -1,4 +1,5 @@
 import { taskAttachmentMetadata } from "./taskAttachmentPolicy.mjs";
+import { taskAttachmentHeaders, taskAttachmentRange } from "./taskAttachmentResponse.mjs";
 import { TIME_24H_REGEX } from "./time24h.mjs";
 import type {
   AuthorizationActor,
@@ -63,7 +64,7 @@ type Dependencies = {
   newUuid: () => string;
   uploadPrivateAttachment: (path: string, data: ArrayBuffer, mimeType: string) => Promise<{ ok: true } | { ok: false; error: { code?: string | null } }>;
   removePrivateAttachment: (path: string) => Promise<void>;
-  signPrivateAttachment: (path: string) => Promise<{ ok: true; url: string } | { ok: false; error: { code?: string | null } }>;
+  downloadPrivateAttachment: (path: string, range?: string) => Promise<{ ok: true; data: Blob } | { ok: false; error: { code?: string | null } }>;
 };
 
 const toActor = (user: ServerAuthUser): AuthorizationActor => ({
@@ -355,7 +356,7 @@ export function createTaskApplication(deps: Dependencies) {
       return deps.json({ attachment: result.data }, 201);
     },
 
-    async downloadAttachment(taskIdValue: unknown, attachmentIdValue: unknown) {
+    async downloadAttachment(taskIdValue: unknown, attachmentIdValue: unknown, request?: Request) {
       const guard = await deps.readActor();
       if (!guard.ok) return guard.response;
       const taskId = deps.asUuid(taskIdValue);
@@ -366,8 +367,26 @@ export function createTaskApplication(deps: Dependencies) {
       const attachment = await deps.repository.attachment(taskId, attachmentId);
       if (!attachment.ok) return deps.rpcFailure(attachment.error);
       if (!attachment.data) return deps.error("not_found", 404);
-      const signed = await deps.signPrivateAttachment(attachment.data.storage_path);
-      return signed.ok ? deps.json({ url: signed.url }) : deps.rpcFailure(signed.error);
+      const metadata = attachment.data;
+      const headers = taskAttachmentHeaders(metadata);
+      const rangeHeader = request?.headers.get("range");
+      const range = taskAttachmentRange(rangeHeader, metadata.size_bytes);
+      if (range === false) {
+        headers.set("Content-Range", `bytes */${metadata.size_bytes}`);
+        return new Response(null, { status: 416, headers });
+      }
+      const downloaded = await deps.downloadPrivateAttachment(metadata.storage_path, range ? rangeHeader! : undefined);
+      if (!downloaded.ok) return deps.rpcFailure(downloaded.error);
+      let data = downloaded.data;
+      if (range) {
+        const length = range.end - range.start + 1;
+        // Storage may ignore Range and return the full Blob; still serve correct partial bytes.
+        if (data.size === metadata.size_bytes) data = data.slice(range.start, range.end + 1);
+        if (data.size !== length) return deps.error("service_unavailable", 503);
+        headers.set("Content-Range", `bytes ${range.start}-${range.end}/${metadata.size_bytes}`);
+      }
+      headers.set("Content-Length", String(data.size));
+      return new Response(data.stream(), { status: range ? 206 : 200, headers });
     },
     async deleteAttachment(request: Request, taskIdValue: unknown, attachmentIdValue: unknown) {
       const guard = await deps.mutationActor();
