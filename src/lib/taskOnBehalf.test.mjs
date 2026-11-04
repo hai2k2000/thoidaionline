@@ -24,7 +24,7 @@ test("admin-only selector precedes recipient selection and payload carries its v
   assert.match(source, /key=\{onBehalfOfId/);
 });
 test("migration replaces signatures and checks actor and chosen assigner", () => {
-  const sql = read("../../supabase/migrations/20261104130000_task_assignment_on_behalf.sql");
+  const sql = read("../../supabase/migrations/20261105150000_task_assignment_on_behalf.sql");
   assert.match(sql, /add column if not exists entered_by uuid references public.staff_users\(id\)/i);
   assert.match(sql, /p_on_behalf_of uuid default null/i);
   assert.match(sql, /v_caller_role is distinct from 'admin'/i);
