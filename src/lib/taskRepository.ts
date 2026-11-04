@@ -1001,6 +1001,11 @@ export const taskRepository: TaskRepository = {
     p_priority: input.priority, p_status: input.status,
     p_evaluation_criteria: input.evaluationCriteria, p_reason: input.reason,
   }),
+  adminSetTaskParticipants: (actorId, taskId, input) => mutation("api_admin_set_task_participants", {
+    p_actor_id: actorId, p_task_id: taskId, p_assignee_id: input.assigneeId,
+    p_collaborator_ids: input.collaboratorIds, p_watcher_ids: input.watcherIds,
+    p_reviewer_id: input.reviewerId, p_reason: input.reason,
+  }),
 
   submitStructuredProgress: (actorId, taskId, input) => mutation(
     "api_submit_task_progress_report",

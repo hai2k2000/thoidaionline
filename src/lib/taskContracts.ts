@@ -414,7 +414,8 @@ export interface TaskRepository {
   completePersonal(
     actorId: string, taskId: string,
   ): Promise<RepositoryResult<{ id: string }>>;
-  adminEditTask(actorId: string, taskId: string, input: { title: string; description: string; startDate: string; dueDate: string; dueTime: string | null; priority: string; status: string; evaluationCriteria: string | null; reason: string }): Promise<RepositoryResult<unknown>>;
+  adminEditTask(actorId: string, taskId: string, input: { title: string; description: string; startDate: string; dueDate: string | null; dueTime: string | null; priority: string; status: string; evaluationCriteria: string | null; reason: string }): Promise<RepositoryResult<unknown>>;
+  adminSetTaskParticipants(actorId: string, taskId: string, input: { assigneeId: string; collaboratorIds: string[]; watcherIds: string[]; reviewerId: string | null; reason: string }): Promise<RepositoryResult<unknown>>;
   submitStructuredProgress(actorId: string, taskId: string, input: { reportedOn: string; reportStatus: string; progressText: string; blockers: string | null }): Promise<RepositoryResult<unknown>>;
   submitQualitativeEvaluation(actorId: string, taskId: string, input: QualitativeEvaluationInput): Promise<RepositoryResult<TaskQualitativeEvaluationDto>>;
   submitAssignedCompletion(actorId: string, taskId: string): Promise<RepositoryResult<unknown>>;
