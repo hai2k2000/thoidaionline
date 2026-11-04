@@ -12,7 +12,7 @@ const sources = {
 };
 const body = (sql, name) => sql.match(new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\$function\\$;`, "i"))?.[0];
 test("optional deadline migration preserves function bodies and ACL except explicit deadline edits", () => {
-  const sql = read("20261104100000_task_assignment_optional_deadline.sql");
+  const sql = read("20261104120000_task_assignment_optional_deadline.sql");
   assert.deepEqual([...sql.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1]), Object.keys(sources));
   for (const [name, source] of Object.entries(sources)) {
     let expected = body(read(source), name);

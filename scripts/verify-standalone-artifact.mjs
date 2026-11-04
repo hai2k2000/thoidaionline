@@ -79,7 +79,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261103140000_database_management_v1_keywords_fix_remaining.sql",
   "supabase/migrations/20261103150000_role_cong_tac_vien.sql",
   "supabase/migrations/20261103160000_projects_v1.sql",
-  "supabase/migrations/20261104100000_task_assignment_optional_deadline.sql",
+  "supabase/migrations/20261104120000_task_assignment_optional_deadline.sql",
   "supabase/migrations/20261103180000_projects_v1_1_deputy_library.sql",
   "supabase/migrations/20261103200000_projects_v1_2_permissions.sql",
   "supabase/migrations/20261104100000_asset_bulk_import.sql",
