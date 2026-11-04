@@ -153,3 +153,5 @@ test("packaging references collaborator role migration", () => {
 test("Projects V1.1 migration is packaged", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.ok(readFileSync(file,"utf8").includes("20261103180000_projects_v1_1_deputy_library.sql")); });
 
 test("Projects V1.2 migration is packaged", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.ok(readFileSync(file,"utf8").includes("20261103200000_projects_v1_2_permissions.sql")); });
+
+test("Asset bulk import migration is packaged", () => { for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.ok(readFileSync(file,"utf8").includes("20261104100000_asset_bulk_import.sql")); });

@@ -1,9 +1,11 @@
 "use client";
 
+import { ASSET_COLUMNS, ASSET_SHEET, TRACKING_MODES, CONDITIONS, parseAssetSheet, type ExcelRow, type ExcelError } from "@/lib/assetExcelSpec.mjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import AppNav from "@/components/AppNav";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { useAuth } from "@/lib/auth";
 import { filterAssetList, isAssetInWarehouse, isAssetUnassigned, presentAssetCustody, summarizeAssetList, normalizeVietnamese, type AssetQuickFilter } from "@/lib/assetListPresentation";
 import { presentAssetCondition } from "@/lib/assetStatusPresentation";
@@ -54,8 +56,17 @@ function MetadataBadge({ children, tone = "slate" }: { children: ReactNode; tone
 
 export default function AssetsPage() {
   const router = useRouter();
+  const { notify } = useActionFeedback();
   const { loading: authLoading, user, logout, hasPermission } = useAuth();
 
+  const [excelBusy, setExcelBusy] = useState(false);
+  const [excelNotice, setExcelNotice] = useState("");
+  const [importRows, setImportRows] = useState<ExcelRow[]>([]);
+  const [importErrors, setImportErrors] = useState<ExcelError[]>([]);
+  const [validCount, setValidCount] = useState(0);
+  const [validated, setValidated] = useState(false);
+  const [excelOptionsLoaded, setExcelOptionsLoaded] = useState(false);
+  const importDialog = useRef<HTMLDialogElement>(null);
   const [rows, setRows] = useState<AssetRow[]>([]);
   const [message, setMessage] = useState("Đang tải danh sách tài sản...");
   const [loaded, setLoaded] = useState(false);
@@ -125,6 +136,7 @@ export default function AssetsPage() {
         setDepartments(payload?.departments ?? []);
         setUsers(payload?.users ?? []);
       }
+      setExcelOptionsLoaded(true);
     }
   }, [hasPermission]);
 
@@ -194,6 +206,84 @@ export default function AssetsPage() {
 
   const openAsset = (id?: string) => { saveViewState(); if (id) router.push(`/assets/${id}`); };
 
+  const downloadExcel = async (template: boolean) => {
+    setExcelBusy(true); setExcelNotice("");
+    try {
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet(ASSET_SHEET);
+      sheet.columns = [...ASSET_COLUMNS.map(c => ({ header: c.header, key: c.key, width: c.width })), ...(!template ? [{ header: "Trạng thái sử dụng", key: "usage", width: 22 }, { header: "Ngày cấp phát", key: "assigned_at", width: 25 }] : [])];
+      sheet.views = [{ state: "frozen", ySplit: 1 }]; sheet.getRow(1).font = { bold: true };
+      if (template) {
+        const person = users.find(u => departments.some(d => d.id === u.department_id));
+        const room = departments.find(d => d.id === person?.department_id);
+        sheet.addRow({ asset_name: "Máy in dùng chung", category: "Thiết bị văn phòng", tracking_mode: "Cá thể", quantity: 1, department: departments[0]?.name ?? "Phòng mẫu (thay bằng phòng thực tế)", location: locations[0]?.name ?? "", condition_status: "Bình thường" });
+        sheet.addRow({ asset_name: "Bộ bàn ghế", category: "Nội thất", tracking_mode: "Theo lô", quantity: 5, department: room?.name ?? departments[0]?.name ?? "Phòng mẫu (thay bằng phòng thực tế)", assignee: person?.full_name ?? "Nhân viên mẫu (thay bằng người thực tế)", location: locations[0]?.name ?? "", condition_status: "Bình thường" });
+        const guide = workbook.addWorksheet("Hướng dẫn");
+        guide.columns = [{ header: "Cột", width: 28 }, { header: "Hướng dẫn", width: 110 }, { header: "Phòng đang hoạt động", width: 35 }, { header: "Vị trí đang hoạt động", width: 35 }];
+        guide.getRow(1).font = { bold: true };
+        ASSET_COLUMNS.forEach(c => guide.addRow([c.header, c.help]));
+        guide.addRow(["Hình thức theo dõi", Object.values(TRACKING_MODES).join(" / ")]);
+        guide.addRow(["Tình trạng", Object.values(CONDITIONS).join(" / ")]);
+        guide.addRow(["Lưu ý", "Thay hoặc xóa 2 dòng ví dụ trước khi nhập. Tối đa 1000 dòng. Mã đã tồn tại sẽ bị từ chối. Các cột trạng thái sử dụng/ngày cấp phát chỉ để tham khảo, không được nhập lại."]);
+        departments.forEach((d, i) => { guide.getCell(i + 2, 3).value = d.name; });
+        locations.forEach((l, i) => { guide.getCell(i + 2, 4).value = l.name; });
+        for (let r = 2; r <= 1001; r++) {
+          for (const [column, labels] of [[4, Object.values(TRACKING_MODES)], [9, Object.values(CONDITIONS)]] as const) sheet.getCell(r, column).dataValidation = { type: "list", allowBlank: true, formulae: ['"' + labels.join(",") + '"'], showErrorMessage: true, errorTitle: "Giá trị không hợp lệ", error: "Vui lòng chọn giá trị trong danh sách." };
+          for (const [column, letter, count] of [[6, "C", departments.length], [8, "D", locations.length]] as const) if (count) sheet.getCell(r, column).dataValidation = { type: "list", allowBlank: true, formulae: [`'Hướng dẫn'!$${letter}$2:$${letter}$${count + 1}`] };
+        }
+      } else {
+        filteredRows.map(row => {
+          const assignment = row.currentAssignment;
+          return sheet.addRow({ asset_code: row.asset_code, asset_name: row.asset_name, category: row.category, tracking_mode: TRACKING_MODES[row.tracking_mode ?? "individual"], quantity: row.quantity ?? 1, department: assignment ? row.assigned_department_name ?? departmentById.get(assignment.department_id ?? "") ?? "" : "", assignee: assignment?.assignee_id ? row.assignee_name ?? userById.get(assignment.assignee_id) ?? "" : "", location: locationById.get(row.location_id ?? "") ?? "", condition_status: CONDITIONS[row.condition_status ?? "normal"], serial_number: row.serial_number ?? "", note: row.note ?? "", usage: row.status === "liquidated" ? "Đã thanh lý" : assignment ? "Đang sử dụng" : "Chưa phân công", assigned_at: assignment?.assigned_at ?? "" });
+        });
+      }
+      const buffer = await workbook.xlsx.writeBuffer();
+      const url = URL.createObjectURL(new Blob([new Uint8Array(buffer)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      const now = new Date(), pad = (n: number) => String(n).padStart(2, "0");
+      const link = document.createElement("a"); link.href = url; link.download = template ? "mau-nhap-tai-san.xlsx" : `danh-sach-tai-san-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.xlsx`;
+      link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setExcelNotice("Không thể tạo file Excel. Vui lòng thử lại."); }
+    finally { setExcelBusy(false); }
+  };
+
+  const uploadExcel = async (file?: File) => {
+    setValidated(false); setImportRows([]); setValidCount(0); setImportErrors([]);
+    if (!file) return;
+    setExcelBusy(true);
+    try {
+      if (!file.name.toLowerCase().endsWith(".xlsx")) throw new Error("Vui lòng chọn file .xlsx.");
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(await file.arrayBuffer());
+      const sheet = workbook.getWorksheet(ASSET_SHEET); if (!sheet) throw new Error(`Không tìm thấy sheet ${ASSET_SHEET}.`);
+      const matrix: string[][] = [];
+      for (let r = 1; r <= sheet.rowCount; r++) {
+        const cells: string[] = [];
+        sheet.getRow(r).eachCell({ includeEmpty: true }, (cell, col) => { cells[col - 1] = cell.text; });
+        matrix.push(cells);
+      }
+      const parsed = parseAssetSheet(matrix); setImportRows(parsed.rows);
+      if (parsed.errors.length) { setImportErrors(parsed.errors); return; }
+      const response = await fetch("/api/assets/bulk-import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "validate", rows: parsed.rows }) });
+      const result = await response.json(); if (!response.ok) throw new Error("Không thể kiểm tra dữ liệu. Vui lòng thử lại.");
+      setImportErrors(result.errors ?? []); setValidCount(result.valid_count ?? 0); setValidated(result.ok === true);
+    } catch (error) { setImportErrors([{ row_number: 1, message: error instanceof Error ? error.message : "Không đọc được file Excel." }]); }
+    finally { setExcelBusy(false); }
+  };
+
+  const commitExcel = async () => {
+    if (!validated || excelBusy || importErrors.length || !validCount) return;
+    setExcelBusy(true);
+    try {
+      const response = await fetch("/api/assets/bulk-import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "commit", rows: importRows }) });
+      const result = await response.json();
+      if (result.errors?.length) { setImportErrors(result.errors); setValidCount(result.valid_count ?? 0); setValidated(false); return; }
+      if (!response.ok || typeof result.imported !== "number") throw new Error(result.error ?? "Không thể nhập tài sản.");
+      notify("success", `Đã nhập ${result.imported} tài sản`); importDialog.current?.close(); setValidated(false); await loadData();
+    } catch (error) { setImportErrors([{ row_number: 1, message: error instanceof Error ? error.message : "Không thể nhập tài sản." }]); setValidated(false); }
+    finally { setExcelBusy(false); }
+  };
+
   const hasActiveFilters = Boolean(qName || qDepartment || qLocation || qCondition || qUsage || qAssignee || quickFilter !== "all");
 
   return (
@@ -211,6 +301,19 @@ export default function AssetsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3">{loaded && !message ? <p className="text-sm text-slate-600"><span className="font-bold text-slate-900">{summary.total} tài sản</span><span className="mx-2 text-slate-300">·</span>{summary.assigned} đã phân công<span className="mx-2 text-slate-300">·</span><span className="font-semibold text-amber-800">{summary.unassigned} chưa phân công</span></p> : null}{hasPermission("asset.manage") ? <Link href="/assets/new" className="inline-flex min-h-11 items-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300">+ Thêm tài sản</Link> : null}</div>
           </header>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {(hasPermission("asset.view") || hasPermission("asset.manage")) ? <button type="button" disabled={excelBusy || !loaded || !excelOptionsLoaded || Boolean(message)} onClick={() => void downloadExcel(false)} className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold disabled:opacity-50">Xuất Excel</button> : null}
+            {hasPermission("asset.manage") ? <><button type="button" disabled={excelBusy || !loaded || !excelOptionsLoaded} onClick={() => void downloadExcel(true)} className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold disabled:opacity-50">Tải file mẫu</button><button type="button" disabled={excelBusy} onClick={() => { setImportRows([]); setImportErrors([]); setValidCount(0); setValidated(false); const input = importDialog.current?.querySelector("input"); if (input) input.value = ""; importDialog.current?.showModal(); }} className="min-h-11 rounded-lg bg-orange-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Nhập từ Excel</button></> : null}
+          </div>
+          {excelNotice ? <p role="status" className="mb-4 rounded-lg bg-orange-50 p-3 text-sm text-orange-900">{excelNotice}</p> : null}
+          <dialog ref={importDialog} aria-labelledby="excel-import-title" onCancel={event => { if (excelBusy) event.preventDefault(); }} className="fixed inset-0 m-auto max-h-[85vh] w-[min(640px,94vw)] overflow-y-auto rounded-2xl p-6 shadow-xl backdrop:bg-black/40">
+            <h2 id="excel-import-title" className="text-lg font-bold">Nhập tài sản từ Excel</h2>
+            <p className="mt-2 text-sm text-slate-600">Chọn file .xlsx theo mẫu, tối đa 1000 dòng. Kiểm tra dữ liệu trước khi nhập.</p>
+            <input key={importRows.length ? "selected" : "empty"} aria-label="Chọn file Excel" type="file" accept=".xlsx" disabled={excelBusy} onChange={event => void uploadExcel(event.target.files?.[0])} className="my-4 w-full rounded-lg border p-3" />
+            <p role="status">{excelBusy ? "Đang xử lý..." : `Số dòng hợp lệ: ${validCount}`}</p>
+            <ul role="alert" className="my-3 max-h-64 overflow-y-auto text-sm text-rose-700">{importErrors.map((error, i) => <li key={i}>Dòng {error.row_number}: {error.message}</li>)}</ul>
+            <div className="mt-4 flex justify-end gap-3"><button type="button" disabled={excelBusy} onClick={() => importDialog.current?.close()} className="min-h-11 rounded-lg border px-4">Đóng</button><button type="button" disabled={excelBusy || !validated || importErrors.length > 0 || !validCount} onClick={() => void commitExcel()} className="min-h-11 rounded-lg bg-orange-600 px-4 font-semibold text-white disabled:opacity-50">Nhập {validCount} tài sản</button></div>
+          </dialog>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3"><div><p className="text-sm font-bold tracking-tight text-slate-900">Bộ lọc danh sách</p><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Thu hẹp danh sách theo tài sản, đơn vị, người sử dụng và tình trạng.</p></div><button type="button" onClick={clearFilters} aria-label="Xóa tất cả bộ lọc" className={`min-h-9 rounded-lg px-2.5 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-orange-300 ${hasActiveFilters ? "text-orange-700 hover:bg-orange-50 hover:text-orange-900" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"}`}>Xóa lọc</button></div>

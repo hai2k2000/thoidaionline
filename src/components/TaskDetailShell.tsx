@@ -9,8 +9,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import type { TaskDetailDto } from "@/lib/taskContracts";
-import { deadlineLabel } from "@/lib/deadlinePresentation.mjs";
-import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
+import { deadlineLabel, classifyTaskDeadline, deadlineTone } from "@/lib/deadlinePresentation.mjs";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
@@ -157,7 +156,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
         </form> : null}
         <header className={projectTask ? "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" : "sticky top-3 z-30 rounded-2xl bg-white/95 px-4 py-4 shadow-sm backdrop-blur sm:px-5"}>
           <div className="mb-2 flex items-center justify-between gap-3">{returnTo ? <Link href={returnTo} className="inline-flex rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-900">← Quay lại Báo cáo công việc</Link> : <span />}</div><div className={projectTask ? "flex flex-col gap-4" : "mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"}>
-            <div className="min-w-0">{projectTask ? <div className="mb-3"><ProjectBadge projectId={task.project_id} projectName={task.project?.name} /></div> : null}<h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1>{!projectTask ? <ProjectBadge projectId={task.project_id} projectName={task.project?.name} /> : null}<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span><span className={deadlineState === "overdue" ? "font-semibold text-red-700" : "font-semibold text-slate-700"}>{deadlineLabel(deadlineState)}</span></div></div>
+            <div className="min-w-0">{projectTask ? <div className="mb-3"><ProjectBadge projectId={task.project_id} projectName={task.project?.name} /></div> : null}<h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{task.title}</h1>{!projectTask ? <ProjectBadge projectId={task.project_id} projectName={task.project?.name} /> : null}<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600"><span><b>Hạn:</b> {dueText(task)}</span>{deadlineLabel(deadlineState) !== null ? <span className={"font-semibold " + deadlineTone(deadlineState)}>{deadlineLabel(deadlineState)}</span> : null}</div></div>
             <div className={projectTask ? "flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 [&>button]:min-h-11 [&>a]:min-h-11 [&>a]:inline-flex [&>a]:items-center" : "flex max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto pb-1 sm:justify-end"}>
               {!isCollaboratorRole(user?.role_code) && <Link href={`/tasks/${task.id}/print`} className="shrink-0 whitespace-nowrap rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-50">Xuất phiếu giao việc</Link>}
               <span className="shrink-0 rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-800">{statusLabel(task.status, task.approval_required, projectTask)}</span>
