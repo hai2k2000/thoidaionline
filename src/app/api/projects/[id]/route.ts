@@ -19,6 +19,7 @@ export async function PATCH(request: Request, { params }: Context) {
   const guard = await requireMutationActor(); if (!guard.ok) return guard.response; const { id } = await params; if (!asUuid(id)) return apiError("invalid_request", 400); const denied = await requireProjectLead(guard.actor, id); if (denied) return denied; const body = await readJsonObject(request);
   const action = body?.action;
   if (action === "close") { const result = await projectRepository.close(guard.actor.id, id); return result.ok ? apiJson({ project: result.data }) : rpcFailure(result.error); }
+  if (action === "reopen") { const result = await projectRepository.reopen(guard.actor.id, id); return result.ok ? apiJson({ project: result.data }) : rpcFailure(result.error); }
   const input = parseProject(body); if (!input) return apiError("invalid_request", 400);
   const result = await projectRepository.update(guard.actor.id, id, input);
   return result.ok ? apiJson({ project: result.data }) : rpcFailure(result.error);
