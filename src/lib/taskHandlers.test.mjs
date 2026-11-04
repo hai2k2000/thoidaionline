@@ -91,6 +91,8 @@ const makeHarness = ({
   const participantResolutionCalls = [];
   const result = (data) => Promise.resolve({ ok: true, data });
   const repository = {
+    adminEditTask: (...args) => { calls.push(["adminEditTask", ...args]); return result({}); },
+    adminSetTaskParticipants: (...args) => { calls.push(["adminSetTaskParticipants", ...args]); return result({}); },
     list: (actor, query) => {
       calls.push(["list", actor.id, query]);
       return result({ items: [], total: 0, page: 1, pageSize: 25 });
@@ -147,6 +149,35 @@ const makeHarness = ({
   });
   return { app, calls, shadowCalls, participantResolutionCalls };
 };
+
+const adminBody = { title: "Task", description: "Content", startDate: "2026-11-04", dueDate: null, dueTime: null, priority: "normal", status: "in_progress", reason: "Correction" };
+const adminRequest = body => new Request("https://example.test/api/tasks/admin-edit", { method: "PATCH", body: JSON.stringify(body) });
+test("admin edit accepts no deadline and rejects time without date", async () => {
+  const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }) });
+  assert.equal((await h.app.adminEditTask(adminRequest(adminBody), taskId)).status, 200);
+  assert.equal(h.calls[0][3].dueDate, null);
+  assert.equal(h.calls[0][3].dueTime, null);
+  for (const change of [{ dueTime: "17:00" }, { dueDate: "invalid" }, { dueDate: "2026-11-03" }, { startDate: "" }]) {
+    assert.equal((await h.app.adminEditTask(adminRequest({ ...adminBody, ...change }), taskId)).status, 400);
+  }
+});
+test("admin participant edit validates UUIDs, reason and disjoint roles", async () => {
+  const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }) });
+  const body = { assigneeId: taskId, collaboratorIds: [], watcherIds: [], reviewerId: null, reason: "Correction" };
+  assert.equal((await h.app.adminSetTaskParticipants(adminRequest(body), taskId)).status, 200);
+  for (const change of [{ assigneeId: "bad" }, { collaboratorIds: [taskId] }, { collaboratorIds: [employeeId], watcherIds: [employeeId] }, { watcherIds: ["bad"] }, { reviewerId: "bad" }, { reason: " " }]) {
+    assert.equal((await h.app.adminSetTaskParticipants(adminRequest({ ...body, ...change }), taskId)).status, 400);
+  }
+});
+test("non-admin cannot edit admin content or participants", async () => {
+  const h = makeHarness();
+  assert.equal((await h.app.adminEditTask(adminRequest(adminBody), taskId)).status, 403);
+  assert.equal((await h.app.adminSetTaskParticipants(adminRequest({}), taskId)).status, 403);
+});
+test("admin edit page does not reject missing task dates", () => {
+  const page = readFileSync("src/app/tasks/[id]/admin-edit/page.tsx", "utf8");
+  assert.doesNotMatch(page, /!detail\.data\.(?:start_date|due_date)/);
+});
 
 test("project lead and admin review without score; rejection requires a comment", async () => {
   for (const role of ["nhan_vien", "admin"]) {
