@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import AdminTaskAttachments from "@/components/AdminTaskAttachments";
 import AdminTaskEditForm from "@/components/AdminTaskEditForm";
 import AdminTaskParticipantsForm from "@/components/AdminTaskParticipantsForm";
 import { getSessionUser } from "@/lib/serverSession";
@@ -23,6 +24,7 @@ export default async function AdminTaskEditPage({ params }: Props) {
       <h1 className="my-4 text-2xl font-bold">CHỈNH SỬA CÔNG VIỆC</h1>
       <div className="grid gap-4">
         <AdminTaskEditForm task={task}/>
+        <AdminTaskAttachments task={task}/>
         {options ? <AdminTaskParticipantsForm task={task} people={options.people} reviewers={options.reviewers}/> : null}
       </div>
     </div>
