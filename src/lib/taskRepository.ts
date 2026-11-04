@@ -557,6 +557,28 @@ export const taskRepository: TaskRepository = {
       dbQuery = dbQuery.in("id", collaboratorTaskIds)
         .or(`assignee_id.is.null,assignee_id.neq.${actor.id}`)
         .or(`owner_id.is.null,owner_id.neq.${actor.id}`);
+    } else if (query.scope === "department_collaborating") {
+      const departments = await serverSupabase.from("departments").select("id")
+        .eq("manager_id", actor.id).eq("active", true);
+      if (departments.error) return fail(departments.error);
+      const departmentIds = (departments.data ?? []).map((row) => row.id as string);
+      if (departmentIds.length === 0) return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
+      const ids = new Set<string>();
+      for (const departmentId of departmentIds) {
+        for (let from = 0; ; from += 500) {
+          const collaborators = await serverSupabase.from("task_assignees")
+            .select("task_id,staff_users!inner(department_id),tasks!inner(department_id,project_id)")
+            .eq("assignment_role", "assignee")
+            .eq("staff_users.department_id", departmentId)
+            .neq("tasks.department_id", departmentId).is("tasks.project_id", null)
+            .order("task_id").order("user_id").range(from, from + 499);
+          if (collaborators.error) return fail(collaborators.error);
+          for (const row of collaborators.data ?? []) ids.add(row.task_id as string);
+          if ((collaborators.data?.length ?? 0) < 500) break;
+        }
+      }
+      if (ids.size === 0) return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
+      dbQuery = dbQuery.in("id", [...ids]).is("project_id", null);
     } else if (query.scope === "watching") {
       const watcher = await serverSupabase
         .from("task_assignees")

@@ -25,6 +25,7 @@ type Props = {
   canAccessJournalism: boolean;
   canClaimTasks: boolean;
   canReviewTaskApprovals: boolean;
+  canSeeDepartmentCollaborating?: boolean;
   currentUserRole: string;
   approvalQueue: { assignment: TaskListResult; completion: TaskListResult } | null;
   currentUserId: string;
@@ -175,7 +176,7 @@ function ApprovalQueue({ queue, data, onRefresh }: { queue: "assignment" | "comp
 }
 
 export default function TaskCenterShell(props: Props) {
-  const { canAccessJournalism, canClaimTasks, canReviewTaskApprovals, canQuickReport, approvalQueue, currentUserId, currentUserRole, projects = [], departments, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "QUẢN LÝ CÔNG VIỆC", taskMode = false } = props;
+  const { canAccessJournalism, canClaimTasks, canReviewTaskApprovals, canSeeDepartmentCollaborating = false, canQuickReport, approvalQueue, currentUserId, currentUserRole, projects = [], departments, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "QUẢN LÝ CÔNG VIỆC", taskMode = false } = props;
   const router = useRouter();
   const tableRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -248,14 +249,15 @@ export default function TaskCenterShell(props: Props) {
           </header>
 
           <>
-              {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : <div className="mt-3 rounded-xl border bg-white p-3"><label className="flex items-center gap-2 text-sm font-semibold">Phạm vi công việc<select value={query.scope ?? "all"} onChange={(e)=>{window.location.href=listHref({scope:e.target.value as TaskListQuery["scope"],...(e.target.value === "collaborating" ? { taskType: null, approvalQueue: null } : {}),page:1});}} className="rounded border px-3 py-2 font-normal"><option value="all">Tất cả</option><option value="assigned">Được giao cho tôi</option><option value="personal">Nhiệm vụ cá nhân</option><option value="collaborating">Việc phối hợp</option><option value="watching">Tôi theo dõi</option><option value="cancelled">Đã hủy</option></select></label></div>}
+      {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : <div className="mt-3 rounded-xl border bg-white p-3"><label className="flex items-center gap-2 text-sm font-semibold">Phạm vi công việc<select value={query.scope ?? "all"} onChange={(e)=>{window.location.href=listHref({scope:e.target.value as TaskListQuery["scope"],...(e.target.value === "collaborating" || e.target.value === "department_collaborating" ? { taskType: null, approvalQueue: null } : {}),page:1});}} className="rounded border px-3 py-2 font-normal"><option value="all">Tất cả</option><option value="assigned">Được giao cho tôi</option><option value="personal">Nhiệm vụ cá nhân</option><option value="collaborating">Việc phối hợp</option>{canSeeDepartmentCollaborating ? <option value="department_collaborating">Việc phối hợp của phòng tôi</option> : null}<option value="watching">Tôi theo dõi</option><option value="cancelled">Đã hủy</option></select></label></div>}
 
               {!taskMode && basePath === "/tasks" ? <nav aria-label="Loại công việc" className="mt-3 flex flex-wrap gap-2 rounded-xl border bg-white p-3">
                 {!JOURNALISM_UI_HIDDEN ? <>
                   <Link href={listHref({ journalism: "exclude", page: 1 })} className={tabClass(query.journalism !== "only")}>Công việc thường</Link>
                   {canAccessJournalism ? <Link href={listHref({ journalism: "only", page: 1 })} className={tabClass(query.journalism === "only")}>Công việc nghiệp vụ báo chí</Link> : null}
                 </> : null}
-                <Link href={listHref({ scope: "collaborating", taskType: null, approvalQueue: null, page: 1 })} className={tabClass(query.scope === "collaborating")}>Việc phối hợp</Link>
+      <Link href={listHref({ scope: "collaborating", taskType: null, approvalQueue: null, page: 1 })} className={tabClass(query.scope === "collaborating")}>Việc phối hợp</Link>
+      {canSeeDepartmentCollaborating ? <Link href={listHref({ scope: "department_collaborating", taskType: null, approvalQueue: null, page: 1 })} className={tabClass(query.scope === "department_collaborating")}>Việc phối hợp của phòng tôi</Link> : null}
                 {canReviewTaskApprovals ? <>
                   <Link href={listHref({ approvalQueue: "assignment", page: 1 })} className={tabClass(query.approvalQueue === "assignment")}>Chờ duyệt giao việc</Link>
                   <Link href={listHref({ approvalQueue: "completion", page: 1 })} className={tabClass(query.approvalQueue === "completion")}>Chờ duyệt hoàn thành</Link>

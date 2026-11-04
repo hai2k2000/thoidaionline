@@ -92,6 +92,8 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
   }
 
   const projectsResult = await projectRepository.list(projectReader(user));
+  const managedDepartments = await serverSupabase.from("departments").select("id")
+    .eq("manager_id", user.id).eq("active", true).limit(1);
   const projects = (projectsResult.ok ? projectsResult.data : []).map(({ id, name, status }) => ({ id, name, status }))
     .sort((a, b) => Number(a.status === "closed") - Number(b.status === "closed") || a.name.localeCompare(b.name, "vi"));
 
@@ -103,6 +105,7 @@ export async function TasksPage({ searchParams, basePath = "/tasks", forceJourna
       canAccessJournalism={journalismAllowed}
       canClaimTasks={!collaborator && !['tong_bien_tap', 'tbt_read_only'].includes(user.role_code)}
       canReviewTaskApprovals={canReviewTaskApprovals}
+      canSeeDepartmentCollaborating={!managedDepartments.error && Boolean(managedDepartments.data?.length)}
       currentUserRole={user.role_code}
       approvalQueue={approvalQueue && {
         assignment: approvalQueue[0].ok ? approvalQueue[0].data : { items: [], total: 0, page: 1, pageSize: 100 },

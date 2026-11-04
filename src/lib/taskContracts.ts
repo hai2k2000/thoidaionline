@@ -239,7 +239,7 @@ export type TaskDetailDto = TaskListItemDto & {
 export type TaskListQuery = {
   projectId?: string | null;
   search: string | null;
-  scope: "all" | "assigned" | "collaborating" | "personal" | "watching" | "cancelled";
+  scope: "all" | "assigned" | "collaborating" | "department_collaborating" | "personal" | "watching" | "cancelled";
   taskType: CanonicalTaskType | null;
   category?: "duty" | null;
   status: CanonicalTaskStatus | null;

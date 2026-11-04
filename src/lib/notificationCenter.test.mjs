@@ -15,7 +15,9 @@ test("notification API is session-scoped and supports marking read", () => {
 test("notification repository covers assignments deadlines comments and changes", () => {
   const source = read("./notificationRepository.ts");
   for (const table of ["task_assignees", "task_comments", "task_status_events", "task_deadline_history", "user_notification_reads"]) assert.match(source, new RegExp(table));
-  for (const kind of ["assignment", "deadline", "comment", "status", "deadline_change"]) assert.match(source, new RegExp(`kind: "${kind}"`));
+  for (const kind of ["assignment", "department_collaboration", "deadline", "comment", "status", "deadline_change"]) assert.match(source, new RegExp(`kind: "${kind}"`));
+  assert.match(source, /Nhân viên .*được thêm phối hợp/);
+  assert.match(source, /assignment_role.*watcher/);
   assert.match(source, /user_id\.is\.null,user_id\.neq/);
   assert.match(source, /\.neq\("actor_id", userId\)/);
 });
