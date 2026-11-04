@@ -10,7 +10,7 @@ export type TaskAuthorizationDecision = {
 const WORKFLOW_BASE_ACTIONS = new Set([
   "submit", "return", "resubmit", "approve", "score", "rescore", "update",
   "deadline", "cancel", "reopen", "attachment", "report", "complete_assigned",
-  "review", "assigned_cancel", "claim", "personal_edit", "personal_deadline",
+  "review", "assigned_deadline", "assigned_cancel", "claim", "personal_edit", "personal_deadline",
   "personal_cancel", "personal_complete",
 ]);
 

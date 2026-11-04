@@ -443,9 +443,18 @@ alter function public.api_register_journalism_task_v1(uuid,text,text,uuid,date,t
 create or replace function public.api_change_assigned_task_deadline(p_actor_id uuid,p_task_id uuid,p_new_due_date date,p_reason text)
 returns public.tasks language plpgsql security definer set search_path=public,pg_temp
 as $function$
-declare v_before public.tasks; v_after public.tasks;
+declare v_before public.tasks; v_after public.tasks; v_admin boolean;
 begin
-  v_before := public.api_assert_task_creator_mutation(p_actor_id,p_task_id,'edit');
+  select * into v_before from public.tasks where id=p_task_id for update;
+  if not found then raise exception 'Task not found.' using errcode='P0002'; end if;
+  if v_before.project_id is not null then
+    select exists(select 1 from public.staff_users u join public.roles r on r.id=u.role_id where u.id=p_actor_id and u.active and r.active and r.code='admin') into v_admin;
+    if v_before.status='cancelled' or (not v_admin and (v_before.status='done' or not public.api_project_is_lead(p_actor_id,v_before.project_id))) then
+      raise exception 'Project deadline change forbidden.' using errcode='42501';
+    end if;
+  else
+    v_before := public.api_assert_task_creator_mutation(p_actor_id,p_task_id,'edit');
+  end if;
   if v_before.task_type is distinct from 'assigned' or p_new_due_date is null or p_new_due_date<v_before.start_date or p_new_due_date is not distinct from v_before.due_date or nullif(btrim(p_reason),'') is null or length(p_reason)>2000 then raise exception 'Invalid assigned deadline change.' using errcode='22023'; end if;
   update public.tasks set due_date=p_new_due_date,due_time=coalesce(due_time,time '17:00'),updated_at=now() where id=p_task_id returning * into v_after;
   insert into public.task_deadline_history(task_id,old_due_date,new_due_date,reason,changed_by) values(p_task_id,v_before.due_date,p_new_due_date,btrim(p_reason),p_actor_id);
@@ -456,6 +465,29 @@ $function$;
 
 revoke all on function public.api_change_assigned_task_deadline(uuid,uuid,date,text) from public,anon,authenticated;
 grant execute on function public.api_change_assigned_task_deadline(uuid,uuid,date,text) to service_role;
+
+create or replace function public.api_assign_project_task(p_actor_id uuid,p_project_id uuid,p_title text,p_description text,p_assignee_id uuid,p_reviewer_id uuid,p_due_date date,p_due_time time,p_evaluation_criteria text default null,p_collaborator_ids uuid[] default '{}'::uuid[],p_watcher_ids uuid[] default '{}'::uuid[],p_priority text default 'normal',p_attachment_url text default null) returns public.tasks
+language plpgsql security definer set search_path=public,pg_temp as $function$
+declare v public.tasks; x uuid; v_host uuid; v_status text;
+begin
+ p_due_time := case when p_due_date is null then null else coalesce(p_due_time,time '17:00') end;
+ select status,host_department_id into v_status,v_host from public.projects where id=p_project_id for update;
+ if not found or v_status<>'active' then raise exception 'Project is closed or missing.' using errcode='42501'; end if;
+ if not public.api_project_can_assign(p_actor_id,p_project_id) then raise exception 'Only project leads and deputies may assign.' using errcode='42501'; end if;
+ p_reviewer_id := coalesce(p_reviewer_id,case when public.api_project_is_lead(p_actor_id,p_project_id) then p_actor_id else (select m.user_id from public.project_members m join public.staff_users u on u.id=m.user_id where m.project_id=p_project_id and m.role='lead' and u.active order by m.added_at,m.user_id limit 1) end);
+ if nullif(btrim(p_title),'') is null or nullif(btrim(p_description),'') is null or length(p_title)>500 or length(p_description)>10000 or length(p_evaluation_criteria)>10000 or length(p_attachment_url)>2048 or p_priority is null or p_priority not in ('low','normal','high','urgent') then raise exception 'Invalid assignment input.' using errcode='22023'; end if;
+ if not exists(select 1 from public.project_members m join public.staff_users u on u.id=m.user_id where m.project_id=p_project_id and m.user_id=p_assignee_id and u.active) then raise exception 'Assignee must be an active project member.' using errcode='22023'; end if;
+ if not (exists(select 1 from public.project_members m join public.staff_users u on u.id=m.user_id where m.project_id=p_project_id and m.user_id=p_reviewer_id and m.role='lead' and u.active) or (p_reviewer_id=p_actor_id and exists(select 1 from public.staff_users u join public.roles r on r.id=u.role_id where u.id=p_actor_id and u.active and r.code='admin'))) then raise exception 'Reviewer must be a project lead.' using errcode='22023'; end if;
+ if exists(select 1 from unnest(coalesce(p_collaborator_ids,'{}') || coalesce(p_watcher_ids,'{}')) candidate(id) where not exists(select 1 from public.project_members m join public.staff_users u on u.id=m.user_id where m.project_id=p_project_id and m.user_id=candidate.id and u.active)) then raise exception 'All project participants must be active members.' using errcode='22023'; end if;
+ insert into public.tasks(title,description,project_id,department_id,assignee_id,owner_id,reviewer_id,created_by,assignment_mode,due_date,due_time,status,progress_percent,plan_period,self_claimable,task_type,priority,attachment_url,evaluation_criteria,start_date) values(btrim(p_title),btrim(p_description),p_project_id,v_host,p_assignee_id,p_assignee_id,p_reviewer_id,p_actor_id,case when cardinality(coalesce(p_collaborator_ids,'{}'))>0 then 'multi_user' else 'individual' end,p_due_date,p_due_time,'new',0,'ad_hoc',false,'assigned',p_priority,p_attachment_url,nullif(btrim(p_evaluation_criteria),''),timezone('Asia/Ho_Chi_Minh',now())::date) returning * into v;
+ insert into public.task_assignees(task_id,user_id,assignment_role,status) values(v.id,p_assignee_id,'owner','todo');
+ foreach x in array coalesce(p_collaborator_ids,'{}') loop if x<>p_assignee_id then insert into public.task_assignees(task_id,user_id,assignment_role,status) values(v.id,x,'assignee','todo') on conflict do nothing; end if; end loop;
+ foreach x in array coalesce(p_watcher_ids,'{}') loop if x<>p_assignee_id and not (x=any(coalesce(p_collaborator_ids,'{}'))) then insert into public.task_assignees(task_id,user_id,assignment_role,status) values(v.id,x,'watcher','todo') on conflict do nothing; end if; end loop;
+ insert into public.audit_logs(actor_id,module,entity_type,entity_id,action,new_data) values(p_actor_id,'project','tasks',v.id,'assign',jsonb_build_object('project_id',p_project_id)); return v;
+end $function$;
+revoke all on function public.api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text) from public,anon,authenticated;
+grant execute on function public.api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text) to service_role;
+alter function public.api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text) owner to postgres;
 
 notify pgrst,'reload schema';
 commit;

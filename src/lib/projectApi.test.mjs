@@ -43,6 +43,9 @@ test('project assignment validates dates, UUIDs and unsupported modes, preservin
  const id='00000000-0000-4000-8000-000000000001';const input={title:'Script',description:'Details',requirements:[' First ','Second'],assigneeId:id,reviewerId:id,dueDate:'2026-11-10',dueTime:'17:30',collaboratorIds:[id],watcherIds:[],priority:'high'};
  assert.equal(parseProjectAssignment(input).evaluationCriteria,'["First","Second"]');
  for(const patch of [{dueDate:'2026-02-30'},{dueTime:'25:00'},{reviewerId:'bad'},{collaboratorIds:['bad']},{priority:'bad'},{recurrenceFrequency:'daily'},{groupDepartmentId:id},{requirements:['x'.repeat(2001)]}]) assert.equal(parseProjectAssignment({...input,...patch}),null);
+ const undated=parseProjectAssignment({...input,dueDate:null,dueTime:null});
+ assert.equal(undated.dueDate,null); assert.equal(undated.dueTime,null);
+ assert.equal(parseProjectAssignment({...input,dueDate:'2026-11-10',dueTime:null}).dueTime,'17:00');
 });
 test('assignment passes current actor to RPC and returns task identity for attachment upload',async()=>{
  let called;
@@ -60,4 +63,16 @@ test('creation returns partial membership failures with the created identity rat
  const id='00000000-0000-4000-8000-000000000001';let args;
  const route=await load('src/app/api/projects/route.ts',{apiError,rpcFailure,apiJson:(body,status)=>Response.json(body,{status}),requireMutationActor:async()=>({ok:true,actor}),isProjectCreator:()=>true,readJsonObject:async()=>({leadIds:['actor'],memberIds:[id]}),parseProject:()=>({code:'VIDEO',name:'Video',hostDepartmentId:id}),projectIds:x=>x,projectRepository:{options:async()=>({ok:true,data:{people:[{id:'actor'},{id}]}}),create:async()=>({ok:true,data:{id:'project'}}),setMember:async(...values)=>{args=values;return {ok:false,error:{code:'42501'}};}}});
  const response=await route.POST(new Request('http://localhost'));assert.equal(response.status,201);assert.deepEqual(await response.json(),{project:{id:'project'},failedMemberIds:[id]});assert.equal(args[0],'actor');
+});
+
+test('assignment route accepts nullable deadlines through the real validator',async()=>{
+ const {parseProjectAssignment}=await load('src/lib/projectValidation.ts',{asUuid:value=>typeof value==='string'&&/^[0-9a-f-]{36}$/.test(value)?value:null});
+ const id='00000000-0000-4000-8000-000000000001';
+ for(const [dueDate,dueTime,expectedTime] of [[null,null,null],[null,'09:00',null],['2026-11-10',null,'17:00'],['2026-11-10','09:00','09:00']]) {
+  let called;
+  const input={title:'Task',description:'Details',requirements:[],assigneeId:id,dueDate,dueTime};
+  const route=await load('src/app/api/projects/[id]/tasks/route.ts',{apiError,rpcFailure,apiJson:(body,status)=>Response.json(body,{status}),asUuid:v=>v,requireMutationActor:async()=>({ok:true,actor}),requireProjectLeadOrDeputy:async()=>null,readJsonObject:async()=>input,parseProjectAssignment,projectRepository:{assignTask:async(...args)=>{called=args;return {ok:true,data:{id:'task'}};}}});
+  assert.equal((await route.POST(new Request('http://localhost'),context)).status,201);
+  assert.equal(called[2].dueDate,dueDate);assert.equal(called[2].dueTime,expectedTime);
+ }
 });

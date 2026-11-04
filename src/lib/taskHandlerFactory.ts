@@ -314,7 +314,7 @@ export function createTaskApplication(deps: Dependencies) {
       const guarded = await guardedBody(request);
       if (guarded instanceof Response) return guarded;
       const { actor, body } = guarded;
-      const taskId = await authorizeMutation(actor, taskIdValue, "update");
+      const taskId = await authorizeMutation(actor, taskIdValue, "assigned_deadline");
       if (taskId instanceof Response) return taskId;
       const dueDate = dateValue(body.dueDate);
       const reason = cleanText(body.reason, 2000);
