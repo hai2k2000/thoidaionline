@@ -57,6 +57,15 @@ test("project reads fail closed before fetching tasks of a nonmember's project",
   assert.deepEqual(await repo.listTasks({ id: "outsider", roleCode: "nhan_vien" }, "project"), { ok: false, error: { code: "42501" } });
   assert.deepEqual(calls, ["project_members"]);
 });
+test("project task collaborator ids exclude watchers and the primary assignee", async () => {
+  let selected;
+  const q = { select(value) { selected = value; return q; }, eq: () => q, order: () => q, then(resolve) { resolve({ data: [{ id: "task", assignee_id: "owner", task_assignees: [{ user_id: "owner", assignment_role: "assignee" }, { user_id: "collab", assignment_role: "assignee" }, { user_id: "watcher", assignment_role: "watcher" }] }], error: null }); } };
+  const repo = await loadRepository({ from: () => q });
+  const result = await repo.listTasks({ id: "admin", roleCode: "admin" }, "project");
+  assert.match(selected, /task_assignees\(user_id,assignment_role\)/);
+  assert.deepEqual(result.data[0].collaborator_ids, ["collab"]);
+  assert.equal("task_assignees" in result.data[0], false);
+});
 test('navigation membership lookup scopes its query to the authenticated actor and propagates database failure',async()=>{
  const calls=[];const q={select:()=>q,eq:(key,value)=>{calls.push([key,value]);return q;},limit:async()=>({data:[{project_id:'project'}],error:null})};
  const repo=await loadRepository({from:()=>q});

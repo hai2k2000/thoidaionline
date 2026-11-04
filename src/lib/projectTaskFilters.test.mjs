@@ -2,6 +2,7 @@
 import test from "node:test";
 import { classifyTaskDeadline } from "./deadlineClassification.mjs";
 import { DEFAULT_PROJECT_TASK_FILTERS, filterAndSortProjectTasks, normalizeProjectTaskFilters } from "./projectTaskFilters.mjs";
+import { readProjectFilterQuery, writeProjectFilterQuery, activeProjectFilterCount } from "./projectFilterQuery.mjs";
 
 const now = new Date("2026-08-17T05:00:00Z");
 const tasks = [
@@ -14,6 +15,31 @@ const tasks = [
   { id: "far", title: "Xa nhất", status: "new", assignee_id: null, created_by: "u3", creator: { full_name: "Lê Chi" }, due_date: "2026-08-30", created_at: "2026-08-07T00:00:00Z" },
 ];
 const ids = result => result.tasks.map(task => task.id);
+test("task filters round trip in URL and reset all active controls", () => {
+  const filters = { ...DEFAULT_PROJECT_TASK_FILTERS, reviewer: "lead", collaborator: "me", priority: "urgent", mine: true, deadlineState: "no_deadline", sort: "title_asc" };
+  const query = writeProjectFilterQuery(new URLSearchParams("tab=library"), filters, DEFAULT_PROJECT_TASK_FILTERS);
+  assert.deepEqual(readProjectFilterQuery(new URLSearchParams(query), DEFAULT_PROJECT_TASK_FILTERS), filters);
+  assert.equal(activeProjectFilterCount(filters, DEFAULT_PROJECT_TASK_FILTERS), 5);
+  assert.equal(readProjectFilterQuery(new URLSearchParams("mine=0"), DEFAULT_PROJECT_TASK_FILTERS).mine, false);
+  assert.equal(writeProjectFilterQuery(new URLSearchParams(query), DEFAULT_PROJECT_TASK_FILTERS, DEFAULT_PROJECT_TASK_FILTERS), "tab=library");
+});
+
+test("reviewer, collaborator, priority and my-work filters intersect", () => {
+  const rows = [
+    { id: "a", title: "A", status: "new", assignee_id: "me", reviewer_id: "lead", collaborator_ids: ["other"], priority: "low" },
+    { id: "b", title: "B", status: "new", assignee_id: "other", reviewer_id: "lead", collaborator_ids: ["me"], priority: "normal" },
+    { id: "c", title: "C", status: "new", reviewer_id: "me", priority: "high" },
+    { id: "d", title: "D", status: "new", created_by: "me", priority: "urgent" },
+  ];
+  assert.deepEqual(ids(filterAndSortProjectTasks(rows, { reviewer: "lead" })), ["a", "b"]);
+  assert.deepEqual(ids(filterAndSortProjectTasks(rows, { collaborator: "me" })), ["b"]);
+  for (const [index, priority] of ["low", "normal", "high", "urgent"].entries()) {
+    assert.deepEqual(ids(filterAndSortProjectTasks(rows, { priority })), [rows[index].id]);
+  }
+  assert.deepEqual(ids(filterAndSortProjectTasks(rows, { mine: true, currentUserId: "me" })), ["a", "b", "c"]);
+  assert.deepEqual(ids(filterAndSortProjectTasks(rows, { mine: true })), []);
+  assert.deepEqual(ids(filterAndSortProjectTasks(rows, { mine: true, currentUserId: "me", reviewer: "lead", collaborator: "me", priority: "normal" })), ["b"]);
+});
 
 test("default filters hide cancelled and report hidden count", () => {
   const result = filterAndSortProjectTasks(tasks, {}, now);
