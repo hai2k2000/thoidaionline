@@ -22,7 +22,7 @@ const actor = {
   permissions: normalizePermissions({ can_assign_task: true }),
 };
 
-const makeApp = ({ batchResult = { batchId: uuid("90"), tasks: [], count: 0, replayed: false } } = {}) => {
+const makeApp = ({ batchResult = { batchId: uuid("90"), tasks: [], count: 0, replayed: false }, user = actor, selectedActor = null } = {}) => {
   const calls = [];
   const result = (data) => Promise.resolve({ ok: true, data });
   const repository = {
@@ -31,8 +31,9 @@ const makeApp = ({ batchResult = { batchId: uuid("90"), tasks: [], count: 0, rep
   };
   const app = createTaskApplication({
     repository,
-    readActor: async () => ({ ok: true, actor }),
-    mutationActor: async () => ({ ok: true, actor }),
+    readActor: async () => ({ ok: true, actor: user }),
+    mutationActor: async () => ({ ok: true, actor: user }),
+    resolveAssignmentActor: async () => selectedActor,
     json: apiJson,
     error: apiError,
     rpcFailure: (error) => error.code === "23505" ? apiError("conflict", 409) : apiError("operation_failed", 500),
@@ -61,6 +62,37 @@ const validCard = (overrides = {}) => ({
   recurrenceFrequency: null,
   recurrenceEndsOn: null,
   ...overrides,
+});
+
+test("non-admin cannot submit on behalf of a leader", async () => {
+  const harness = makeApp();
+  const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", {
+    method: "POST", body: JSON.stringify({ ...validCard(), departmentId: uuid("10"), assigneeId: uuid("11"), onBehalfOfId: uuid("12") }),
+  }));
+  assert.equal(response.status, 403);
+  assert.match((await response.json()).error.message, /quyền.*nhập thay/);
+  assert.equal(harness.calls.length, 0);
+});
+
+test("admin keeps caller identity but uses the chosen leader for reviewer in single and batch", async () => {
+  const user = { ...actor, role_code: "admin" };
+  const selectedActor = { id: uuid("12"), roleCode: "tong_bien_tap", roleLevel: 1, departmentId: uuid("13"), permissions: normalizePermissions({ can_assign_task: true }) };
+  for (const mode of ["single", "batch"]) {
+    const harness = makeApp({ user, selectedActor });
+    const payload = { departmentId: uuid("10"), assigneeId: uuid("11"), onBehalfOfId: uuid("12"), ...(mode === "batch" ? { mode, batchId: uuid("01"), tasks: [validCard({ dueDate: null })] } : validCard({ dueDate: null })) };
+    const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", { method: "POST", body: JSON.stringify(payload) }));
+    assert.equal(response.status, 201);
+    assert.equal(harness.calls[0][1], user.id);
+    assert.equal(harness.calls[0][2].onBehalfOfId, selectedActor.id);
+    if (mode === "single") assert.equal(harness.calls[0][2].reviewerId, selectedActor.id);
+  }
+});
+
+test("admin cannot borrow own global scope for a department leader", async () => {
+  const harness = makeApp({ user: { ...actor, role_code: "admin" }, selectedActor: { id: uuid("12"), roleCode: "truong_phong", roleLevel: 2, departmentId: uuid("13"), permissions: normalizePermissions({ can_assign_task: true }) } });
+  const response = await harness.app.assign(new Request("https://example.test/api/tasks/assign", { method: "POST", body: JSON.stringify({ ...validCard(), departmentId: uuid("10"), assigneeId: uuid("11"), onBehalfOfId: uuid("12") }) }));
+  assert.equal(response.status, 403);
+  assert.equal(harness.calls.length, 0);
 });
 test("batch accepts null deadlines, ignores orphan times, and defaults dated tasks", async () => {
   const harness = makeApp();

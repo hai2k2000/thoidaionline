@@ -177,6 +177,7 @@ const migrationReference = [
   "supabase/migrations/20261103150000_role_cong_tac_vien.sql",
   "supabase/migrations/20261103160000_projects_v1.sql",
   "supabase/migrations/20261105140000_task_assignment_optional_deadline.sql",
+  "supabase/migrations/20261105150000_task_assignment_on_behalf.sql",
   "supabase/migrations/20261103180000_projects_v1_1_deputy_library.sql",
   "supabase/migrations/20261103200000_projects_v1_2_permissions.sql",
   "supabase/migrations/20261104100000_asset_bulk_import.sql",

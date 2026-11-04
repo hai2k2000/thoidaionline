@@ -23,6 +23,7 @@ type Guard =
   | { ok: false; response: Response };
 
 type Dependencies = {
+  resolveAssignmentActor?: (id: string) => Promise<AuthorizationActor | null>;
   repository: TaskRepository;
   readActor: () => Promise<Guard>;
   mutationActor: () => Promise<Guard>;
@@ -540,8 +541,16 @@ export function createTaskApplication(deps: Dependencies) {
     async assign(request: Request) {
       const guard = await deps.mutationActor();
       if (!guard.ok) return guard.response;
-      const actor = toActor(guard.actor);
+      let actor = toActor(guard.actor);
       const body = await bodyObject(request);
+      const onBehalfOfId = body?.onBehalfOfId == null ? null : deps.asUuid(body.onBehalfOfId);
+      if (body?.onBehalfOfId != null) {
+        if (guard.actor.role_code !== "admin") return deps.json({ error: { code: "forbidden", message: "Bạn không có quyền nhập thay người giao việc." } }, 403);
+        if (!onBehalfOfId) return deps.error("invalid_request", 400);
+        const selectedActor = await deps.resolveAssignmentActor?.(onBehalfOfId);
+        if (!selectedActor) return deps.error("forbidden", 403);
+        actor = selectedActor;
+      }
       if (body?.mode === "batch") {
         const invalidBatch = (taskIndex: number | null, field: string, message: string) =>
           deps.json({ error: { code: "invalid_request", taskIndex, field, message } }, 400);
@@ -661,8 +670,8 @@ export function createTaskApplication(deps: Dependencies) {
           if (!resolved.ok) return invalidBatch(index, "participants", `Việc ${index + 1} có người tham gia không hợp lệ`);
           resolvedTasks.push({ ...task, collaboratorIds: resolved.collaboratorIds, watcherIds: resolved.watcherIds });
         }
-        const input: TaskAssignmentBatchInput = { batchId, departmentId, assigneeId, tasks: resolvedTasks };
-        const result = await deps.repository.assignBatch(actor.id, input);
+        const input: TaskAssignmentBatchInput = { batchId, departmentId, assigneeId, tasks: resolvedTasks, ...(onBehalfOfId ? { onBehalfOfId } : {}) };
+        const result = await deps.repository.assignBatch(guard.actor.id, input);
         return result.ok
           ? deps.json(result.data, 201)
           : deps.rpcFailure(result.error);
@@ -748,6 +757,7 @@ export function createTaskApplication(deps: Dependencies) {
       });
       if (!resolved.ok) return deps.error("invalid_request", 400);
       const input: AssignedTaskInput = {
+        ...(onBehalfOfId ? { onBehalfOfId } : {}),
         title, description, requirements, departmentId, assigneeId, reviewerId, dueDate, dueTime,
         evaluationCriteria,
         priority: assignmentPriority,

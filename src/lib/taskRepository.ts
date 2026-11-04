@@ -101,6 +101,8 @@ const NON_JOURNALISM_TASK_FIELDS = [
 ].join(",");
 
 const TASK_DETAIL_FIELDS = [
+  "entered_by",
+  "entered_by_user:staff_users!tasks_entered_by_fkey(full_name)",
   ...TASK_BASE_FIELDS.filter((field) => !field.startsWith("completion_score:")),
   "description",
   "effort_weight",
@@ -845,6 +847,7 @@ export const taskRepository: TaskRepository = {
     "api_assign_task_v2",
     {
       p_actor_id: actorId,
+      p_on_behalf_of: input.onBehalfOfId ?? null,
       p_title: input.title,
       p_description: input.description,
       p_department_id: input.departmentId,
@@ -867,6 +870,7 @@ export const taskRepository: TaskRepository = {
       {
         p_actor_id: actorId,
         p_batch_id: input.batchId,
+        p_on_behalf_of: input.onBehalfOfId ?? null,
         p_department_id: input.departmentId,
         p_assignee_id: input.assigneeId,
         p_tasks: input.tasks.map((task) => ({
