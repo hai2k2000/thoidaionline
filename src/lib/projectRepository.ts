@@ -3,7 +3,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 
 export type ProjectMember = { project_id: string; user_id: string; role: "lead" | "deputy" | "member"; added_by: string; added_at: string; staff_users?: { id: string; full_name: string; active: boolean; roles?: { code: string } | null } | null };
 export type Project = { id: string; code: string; name: string; description: string | null; status: "active" | "closed"; host_department_id: string; created_by: string; created_at: string; updated_at: string; closed_at: string | null };
-export type ProjectTask = { id: string; project_id: string; title: string; status: string; assignee_id: string | null; reviewer_id: string | null; due_date: string | null; priority: string };
+export type ProjectTask = { id: string; project_id: string; title: string; status: string; assignee_id: string | null; reviewer_id: string | null; due_date: string | null; due_time?: string | null; completion_submitted_at?: string | null; completed_at?: string | null; priority: string };
 export type ProjectAssignmentInput = {
   title: string; description: string; assigneeId: string; reviewerId?: string | null; dueDate: string; dueTime: string;
   evaluationCriteria?: string | null; collaboratorIds?: string[]; watcherIds?: string[]; priority?: "low" | "normal" | "high" | "urgent"; attachmentUrl?: string | null;
@@ -72,7 +72,7 @@ export const projectRepository = {
   async listTasks(actor: ProjectReader, projectId: string, filters: { status?: string; assigneeId?: string } = {}): Promise<Result<ProjectTask[]>> {
     const access = await readAccess(actor, projectId);
     if (!access.ok) return access;
-    let query = serverSupabase.from("tasks").select("id,project_id,title,status,assignee_id,reviewer_id,due_date,priority").eq("project_id", projectId).order("created_at", { ascending: false });
+    let query = serverSupabase.from("tasks").select("id,project_id,title,status,assignee_id,reviewer_id,due_date,due_time,completion_submitted_at,completed_at,priority").eq("project_id", projectId).order("created_at", { ascending: false });
     if (filters.status) query = query.eq("status", filters.status);
     if (filters.assigneeId) query = query.eq("assignee_id", filters.assigneeId);
     const q = await query;

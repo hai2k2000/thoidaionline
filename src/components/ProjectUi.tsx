@@ -1,5 +1,4 @@
-import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
-import { deadlineLabel } from "@/lib/deadlinePresentation.mjs";
+import { classifyTaskDeadline, deadlineLabel } from "@/lib/deadlinePresentation.mjs";
 
 export const projectTaskStatuses: Record<string, string> = { new: "Mới", waiting: "Chờ giao", in_progress: "Đang thực hiện", blocked: "Tạm dừng", pending_review: "Chờ duyệt", done: "Hoàn thành", rejected: "Từ chối", cancelled: "Đã hủy" };
 
@@ -8,10 +7,12 @@ export function TaskStatusChip({ status }: { status: string }) {
   return <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{projectTaskStatuses[status] ?? status}</span>;
 }
 
-export function DeadlineChip({ dueDate }: { dueDate: string | null }) {
-  const state = classifyTaskDeadline({ due_date: dueDate, completion_submitted_at: null });
-  const tone = state === "overdue" ? "bg-rose-50 text-rose-700" : state === "due_soon" ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600";
-  return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${tone}`}>{deadlineLabel(state)}</span>;
+export function DeadlineChip({ task }: { task: { status: string; due_date: string | null; due_time?: string | null; completion_submitted_at?: string | null; completed_at?: string | null } }) {
+  const state = classifyTaskDeadline(task);
+  const label = deadlineLabel(state);
+  if (label === null) return null;
+  const tone = state === "overdue" || state === "submitted_late" ? "bg-rose-50 text-rose-700" : state === "due_soon" ? "bg-amber-50 text-amber-800" : state === "submitted_on_time" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600";
+  return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${tone}`}>{label}</span>;
 }
 
 export function ProjectIcon({ kind = "folder" }: { kind?: "folder" | "file" | "link" | "image" | "sheet" }) {
