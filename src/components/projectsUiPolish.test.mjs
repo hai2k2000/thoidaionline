@@ -11,7 +11,7 @@ test('project detail uses a centered column while ordinary tasks retain the side
 });
 test('deadline presentation translates all classifier states', async () => {
   const { deadlineLabel } = await import('../lib/deadlinePresentation.mjs');
-  for (const [state, label] of Object.entries({on_time:'Đúng hạn',due_soon:'Sắp đến hạn',overdue:'Quá hạn',no_deadline:'Không có hạn'})) assert.equal(deadlineLabel(state), label);
+  for (const [state, label] of Object.entries({on_time:'Còn hạn',due_soon:'Sắp đến hạn',overdue:'Quá hạn',no_deadline:'Không có hạn'})) assert.equal(deadlineLabel(state), label);
   assert.equal(deadlineLabel('unknown'), 'Chưa xác định');
   assert.doesNotMatch(source('TaskDetailShell.tsx'), /<span>\{deadlineState\}<\/span>/);
 });

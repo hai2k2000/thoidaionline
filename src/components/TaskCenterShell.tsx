@@ -12,7 +12,7 @@ import JournalismSummary from "@/components/JournalismSummary";
 import { useAuth } from "@/lib/auth";
 import { countTaskListFilters, taskListHref } from "@/lib/taskFilters.mjs";
 import { journalismLabels, journalismPublicationStatusLabel } from "@/lib/journalismUi.mjs";
-import { classifyTaskDeadline } from "@/lib/deadlineClassification.mjs";
+import { classifyTaskDeadline, deadlineLabel as presentDeadlineLabel, deadlineTone } from "@/lib/deadlinePresentation.mjs";
 import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
 import type { TaskCenterView } from "@/lib/taskCenterView";
 import type { TaskListQuery, TaskListResult } from "@/lib/taskContracts";
@@ -58,9 +58,8 @@ const tabClass = (active: boolean) => `rounded-full border px-3.5 py-2 text-sm f
 }`;
 
 const deadlineLabel = (task: TaskListResult["items"][number]) => {
-  if (task.status === "cancelled") return "Đã hủy";
   const state = classifyTaskDeadline(task);
-  return state === "no_deadline" ? "Không có hạn" : state === "overdue" ? "Quá hạn" : state === "due_soon" ? "Sắp đến hạn" : "Đúng hạn";
+  return presentDeadlineLabel(state) === null ? null : <span className={deadlineTone(state)}>{presentDeadlineLabel(state)}</span>;
 };
 
 const dueText = (dueDate: string | null, dueTime: string | null) => {
