@@ -96,7 +96,7 @@ export default function CanonicalAssignmentForm({
   };
   const initialCards = (initialValues?.cards?.length ? initialValues.cards : [initialCard]).map((value, index) => ({
     ...createTaskCard(`card-${index + 1}`),
-    ...value,
+    ...Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)),
     requirements: value.requirements ?? [""],
     collaboratorIds: value.collaboratorIds ?? [],
     watcherIds: value.watcherIds ?? [],

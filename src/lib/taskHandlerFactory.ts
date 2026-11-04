@@ -165,7 +165,7 @@ export function createTaskApplication(deps: Dependencies) {
       const guard = await deps.readActor();
       if (!guard.ok) return guard.response;
       const url = new URL(request.url);
-      const query = parseTaskListSearchParams(url.searchParams, { defaultJournalism: "exclude" });
+      const query = parseTaskListSearchParams(url.searchParams, { defaultJournalism: "exclude", journalismUiHidden: false });
       if (query.journalism === "only" && !canUseJournalism({
         roleCode: guard.actor.role_code,
         departmentCode: guard.actor.department_code,
@@ -580,14 +580,14 @@ export function createTaskApplication(deps: Dependencies) {
           const priority = card?.priority === undefined ? "normal" : batchPriority(card?.priority);
           const collaboratorIds = batchIds(card?.collaboratorIds, deps.asUuid);
           const watcherIds = batchIds(card?.watcherIds, deps.asUuid);
-          const recurrenceFrequency = card?.recurrenceFrequency === null
+          const recurrenceFrequency = card?.recurrenceFrequency == null || card?.recurrenceFrequency === ""
             ? null
             : card?.recurrenceFrequency === "daily"
               || card?.recurrenceFrequency === "weekly"
               || card?.recurrenceFrequency === "monthly"
               ? card.recurrenceFrequency
               : undefined;
-          const recurrenceEndsOn = card?.recurrenceEndsOn === null
+          const recurrenceEndsOn = card?.recurrenceEndsOn == null || card?.recurrenceEndsOn === ""
             ? null
             : dateValue(card?.recurrenceEndsOn);
           if (!card || !title) return invalidBatch(index, "title", `Việc ${index + 1} chưa có Tên công việc`);
@@ -602,7 +602,7 @@ export function createTaskApplication(deps: Dependencies) {
           if (!watcherIds) return invalidBatch(index, "watcherIds", `Việc ${index + 1} có Người xem không hợp lệ`);
           if (recurrenceFrequency && !dueDate) return invalidBatch(index, "dueDate", `Việc ${index + 1} cần hạn hoàn thành để lặp lại`);
           if (recurrenceFrequency === undefined) return invalidBatch(index, "recurrenceFrequency", `Việc ${index + 1} có lịch lặp không hợp lệ`);
-          if (card?.recurrenceEndsOn !== null && !recurrenceEndsOn) {
+          if (card?.recurrenceEndsOn != null && card?.recurrenceEndsOn !== "" && !recurrenceEndsOn) {
             return invalidBatch(index, "recurrenceEndsOn", `Việc ${index + 1} có ngày kết thúc lặp không hợp lệ`);
           }
           if (recurrenceFrequency === null && recurrenceEndsOn !== null) {
@@ -694,8 +694,8 @@ export function createTaskApplication(deps: Dependencies) {
         || body?.recurrenceFrequency === "weekly"
         || body?.recurrenceFrequency === "monthly"
         ? body.recurrenceFrequency
-        : body?.recurrenceFrequency === null ? null : undefined;
-      const recurrenceEndsOn = body?.recurrenceEndsOn === null
+        : body?.recurrenceFrequency == null || body?.recurrenceFrequency === "" ? null : undefined;
+      const recurrenceEndsOn = body?.recurrenceEndsOn == null || body?.recurrenceEndsOn === ""
         ? null : dateValue(body?.recurrenceEndsOn);
       const ids = (value: unknown) => Array.isArray(value)
         ? [...new Set(value.map(deps.asUuid).filter((id): id is string => id !== null))]
@@ -709,7 +709,7 @@ export function createTaskApplication(deps: Dependencies) {
         || (body?.dueDate != null && body.dueDate !== "" && !dueDate) || (dueDate && !dueTime) || !assignmentPriority || !collaboratorIds || !watcherIds || !excludedMemberIds
         || (body?.groupDepartmentId !== undefined && body?.groupDepartmentId !== null && !groupDepartmentId)
         || recurrenceFrequency === undefined
-        || (body?.recurrenceEndsOn !== null && !recurrenceEndsOn)
+        || (body?.recurrenceEndsOn != null && body?.recurrenceEndsOn !== "" && !recurrenceEndsOn)
         || (recurrenceFrequency === null && recurrenceEndsOn !== null)
         || (recurrenceEndsOn !== null && dueDate !== null && recurrenceEndsOn < dueDate)) {
         return deps.error("invalid_request", 400);

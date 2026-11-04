@@ -598,7 +598,9 @@ export const taskRepository: TaskRepository = {
       }
       dbQuery = dbQuery.eq("department_id", query.departmentId);
     }
-    if (!journalismOnly || actor.canAccessJournalism === false) {
+    if (query.projectId === "none") dbQuery = dbQuery.is("project_id", null);
+    else if (query.projectId) dbQuery = dbQuery.eq("project_id", query.projectId);
+    if (query.journalism === "exclude" || actor.canAccessJournalism === false) {
       dbQuery = applyJournalismExcludeFilter(dbQuery);
     }
     if (query.journalismWorkKindId) {

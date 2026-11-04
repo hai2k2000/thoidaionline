@@ -1,4 +1,5 @@
 import { isCollaboratorRole } from "../lib/collaboratorRole.mjs";
+import { JOURNALISM_UI_HIDDEN } from "../lib/journalismUiHidden.mjs";
 export type Phase2NavigationAccess = {
   roleCode: string;
   hasProjectMembership?: boolean;
@@ -76,7 +77,7 @@ export function getPhase2Navigation(
       ...(access.canManageAssets ? [{ id: "asset-status-requests", href: "/assets/status-requests" } as const] : []),
       { id: "database", href: "/database/records" } as const,
     ],
-    journalism: canAccessJournalism ? [
+    journalism: !JOURNALISM_UI_HIDDEN && canAccessJournalism ? [
       { id: "journalism-tasks", href: "/journalism/tasks" },
       { id: "journalism-calendar", href: "/journalism/calendar" },
       { id: "journalism-reports", href: "/journalism/reports" },
