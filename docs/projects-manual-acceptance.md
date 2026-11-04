@@ -32,7 +32,7 @@
    **Kết quả mong đợi:** phó giao được; người duyệt là trưởng, không chọn phó làm người duyệt. [ ] Đạt / [ ] Lỗi — ghi chú: ...
 3. **Ai đăng nhập:** M. **Vào đâu:** `/projects/[id]` → “Công việc trong dự án”. **Làm gì:** chọn “Mọi trạng thái”, “Mọi người”; xem danh sách và tìm nút “Giao việc trong dự án”. Lặp lại bằng U sau C.1 để kiểm tra task không giao cho mình.
    **Kết quả mong đợi:** thấy mọi task dự án nhưng không có quyền giao. [ ] Đạt / [ ] Lỗi — ghi chú: ...
-4. **Ai đăng nhập:** M, rồi P. **Vào đâu:** bấm `[TEST] Phó giao việc` → `/tasks/[task-id]`. **Làm gì [DỮ LIỆU]:** M bấm “Gửi kết quả hoàn thành”; P mở lại task.
+4. **Ai đăng nhập:** M, rồi P. **Vào đâu:** bấm `[TEST] Phó giao việc` → `/tasks/[task-id]`. **Làm gì [DỮ LIỆU]:** M bấm “Hoàn thành”; P mở lại task.
    **Kết quả mong đợi:** “Chờ duyệt”; P không thấy nút duyệt “Hoàn thành”/“Từ chối”, dù P là người giao. Giữ task chờ cho C.2. [ ] Đạt / [ ] Lỗi — ghi chú: ...
 
 ## C. Chuyển trưởng dự án
@@ -47,14 +47,14 @@
 
 1. **Ai đăng nhập:** admin không là thành viên. **Vào đâu:** `/projects` → dự án thử `/projects/[id]` → “Thành viên”. **Làm gì [DỮ LIỆU]:** xác nhận admin không có trong danh sách; dùng “Giao việc trong dự án” giao `[TEST] Admin override` cho U theo B.2, “Người duyệt” chọn chính admin.
    **Kết quả mong đợi:** mở/giao được mà không cần thêm admin vào dự án. [ ] Đạt / [ ] Lỗi — ghi chú: ...
-2. **Ai đăng nhập:** U, rồi admin, U, admin. **Vào đâu:** bấm `[TEST] Admin override` → `/tasks/[task-id]`. **Làm gì [DỮ LIỆU]:** U “Gửi kết quả hoàn thành”; admin “Từ chối”, nhập `Thử quyền admin`; U gửi lại; admin “Hoàn thành”.
+2. **Ai đăng nhập:** U, rồi admin, U, admin. **Vào đâu:** bấm `[TEST] Admin override` → `/tasks/[task-id]`. **Làm gì [DỮ LIỆU]:** U “Hoàn thành”; admin “Từ chối”, nhập `Thử quyền admin`; U gửi lại; admin “Hoàn thành”.
    **Kết quả mong đợi:** lần lượt “Chờ duyệt” → “Đang thực hiện” → “Chờ duyệt” → “Hoàn thành”, không chấm điểm; admin vẫn không là thành viên. [ ] Đạt / [ ] Lỗi — ghi chú: ...
 
 ## E. Duyệt không chấm điểm
 
-1. **Ai đăng nhập:** M (trưởng mới), rồi trinhdao. **Vào đâu:** dự án thử `/projects/[id]`. **Làm gì [DỮ LIỆU]:** sau G.2, M thêm trinhdao là “Thành viên”, giao `[TEST] Duyệt không điểm` cho trinhdao theo B.2 nhưng chọn “Người duyệt” M. Trinhdao bấm task → `/tasks/[task-id]` → “Gửi kết quả hoàn thành”.
+1. **Ai đăng nhập:** M (trưởng mới), rồi trinhdao. **Vào đâu:** dự án thử `/projects/[id]`. **Làm gì [DỮ LIỆU]:** sau G.2, M thêm trinhdao là “Thành viên”, giao `[TEST] Duyệt không điểm` cho trinhdao theo B.2 nhưng chọn “Người duyệt” M. Trinhdao bấm task → `/tasks/[task-id]` → “Hoàn thành”.
    **Kết quả mong đợi:** task chuyển `Chờ duyệt`; không thấy biểu mẫu điểm. [ ] Đạt / [ ] Lỗi — ghi chú: ...
-2. **Ai đăng nhập:** M, rồi trinhdao. **Vào đâu:** `/tasks/[task-id]` của `[TEST] Duyệt không điểm`. **Làm gì [DỮ LIỆU]:** M bấm “Từ chối” (thao tác trả lại), để trống lý do và xác nhận: phải báo “Vui lòng nhập lý do.”, vẫn “Chờ duyệt”. Thử lại với `Bổ sung tệp nghiệm thu`; xem “Trao đổi” có lý do. Trinhdao thực hiện F.1 rồi bấm “Gửi kết quả hoàn thành”.
+2. **Ai đăng nhập:** M, rồi trinhdao. **Vào đâu:** `/tasks/[task-id]` của `[TEST] Duyệt không điểm`. **Làm gì [DỮ LIỆU]:** M bấm “Từ chối” (thao tác trả lại), để trống lý do và xác nhận: phải báo “Vui lòng nhập lý do.”, vẫn “Chờ duyệt”. Thử lại với `Bổ sung tệp nghiệm thu`; xem “Trao đổi” có lý do. Trinhdao thực hiện F.1 rồi bấm “Hoàn thành”.
    **Kết quả mong đợi:** lý do được lưu; task về `Đang thực hiện`; gửi lại thành `Chờ duyệt`. [ ] Đạt / [ ] Lỗi — ghi chú: ...
 3. **Ai đăng nhập:** M. **Vào đâu:** cùng task `/tasks/[task-id]`. **Làm gì [DỮ LIỆU]:** bấm “Hoàn thành”; kiểm tra toàn bộ chi tiết trước/sau duyệt.
    **Kết quả mong đợi:** “Hoàn thành”; không có “Chấm điểm”, “Chấm điểm hoàn thành”, tổng điểm hay biểu mẫu điểm. [ ] Đạt / [ ] Lỗi — ghi chú: ...
