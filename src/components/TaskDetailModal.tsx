@@ -1,5 +1,7 @@
 "use client";
 
+import { parseTaskRequirements } from "@/lib/taskRequirements";
+
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { PersonnelEvaluationTask } from "@/lib/evaluationRepository";
@@ -24,6 +26,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function TaskDetailModal({ task, onClose }: { task: PersonnelEvaluationTask; onClose: () => void }) {
+  const requirements = parseTaskRequirements(task.evaluation_criteria);
   const dialogRef = useRef<HTMLElement>(null);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   useEffect(() => {
@@ -49,7 +52,7 @@ export default function TaskDetailModal({ task, onClose }: { task: PersonnelEval
           <div className="rounded-lg bg-slate-50 p-3"><b>Tiến độ</b><p>{task.progress_percent}%</p></div>
           <div className="rounded-lg bg-slate-50 p-3"><b>Ngày tạo</b><p>{dateText(task.created_at)}</p></div>
         </aside>
-        {activeTab === "overview" ? <div className="space-y-3"><Section title="Nội dung công việc"><p className="whitespace-pre-wrap text-sm leading-7">{task.description || "—"}</p></Section><Section title="Tiêu chí đánh giá"><p className="whitespace-pre-wrap text-sm leading-7">{task.evaluation_criteria || "—"}</p></Section><Section title={`Minh chứng đính kèm (${task.attachments.length})`}><Timeline empty="Chưa có minh chứng đính kèm.">{task.attachments.map((row) => <li key={row.id}>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB · {dateText(row.created_at)}</li>)}</Timeline></Section></div> : null}
+        {activeTab === "overview" ? <div className="space-y-3"><Section title="Nội dung công việc"><p className="whitespace-pre-wrap text-sm leading-7">{task.description || "—"}</p></Section><Section title="Yêu cầu công việc">{requirements.length ? <ul className="list-disc space-y-1 pl-5 text-sm leading-7">{requirements.map((item, index) => <li key={index} className="whitespace-pre-wrap">{item}</li>)}</ul> : <p>—</p>}</Section><Section title={`Minh chứng đính kèm (${task.attachments.length})`}><Timeline empty="Chưa có minh chứng đính kèm.">{task.attachments.map((row) => <li key={row.id}>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB · {dateText(row.created_at)}</li>)}</Timeline></Section></div> : null}
         {activeTab === "progress" ? <div className="space-y-3"><Section title="Báo cáo tiến triển & vướng mắc"><Timeline empty="Chưa có báo cáo.">{task.progress_reports.map((row) => <li key={row.id}><b>{dateText(row.reported_on)} · {row.report_status}</b><p className="whitespace-pre-wrap">{row.progress_text}</p>{row.blockers ? <p className="text-red-700">Vướng mắc: {row.blockers}</p> : null}</li>)}</Timeline></Section><Section title="Tiến độ cũ"><Timeline empty="Chưa có dữ liệu cũ.">{task.progress_logs.map((row) => <li key={row.id}>{dateText(row.created_at)} · {row.old_progress ?? 0}% → {row.new_progress}%{row.note ? ` · ${row.note}` : ""}</li>)}</Timeline></Section></div> : null}
         {activeTab === "comments" ? <Section title="Trao đổi"><Timeline empty="Chưa có trao đổi.">{task.comments.map((row) => <li key={row.id}><b>{row.author_name ?? "Người dùng"} · {dateText(row.created_at)}</b><p className="whitespace-pre-wrap">{row.content}</p></li>)}</Timeline></Section> : null}
         {activeTab === "evaluations" ? <div className="space-y-3"><Section title="Đánh giá ChatGPT / Lãnh đạo"><Timeline empty="Chưa có đánh giá.">{task.qualitative_evaluations.map((row) => <li key={row.id}><b>{dateText(row.evaluation_deadline)} · {row.evaluation_source === "leader" ? "Lãnh đạo" : "ChatGPT"} · {row.evaluator_name ?? "Người đánh giá"}</b><p className="whitespace-pre-wrap">{row.evaluation_text}</p></li>)}</Timeline></Section><Section title="Đánh giá trước đây"><Timeline empty="Chưa có nhận xét cũ.">{task.legacy_evaluations.map((row) => <li key={row.id}><b>{dateText(row.checkpoint_date)}</b><p className="whitespace-pre-wrap">{row.opinion || "Không có nhận xét."}</p></li>)}</Timeline></Section></div> : null}

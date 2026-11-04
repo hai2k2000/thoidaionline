@@ -1,4 +1,6 @@
 ﻿"use client";
+
+import { parseTaskRequirements } from "@/lib/taskRequirements";
 import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 
 import ProjectBadge from "@/components/ProjectBadge";
@@ -66,7 +68,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
   const [progressText, setProgressText] = useState("");
   const [blockers, setBlockers] = useState("");
   const [comment, setComment] = useState("");
-  const requirements = (() => { try { const value = JSON.parse(task.evaluation_criteria ?? "[]"); return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []; } catch { return []; } })();
+  const requirements = parseTaskRequirements(task.evaluation_criteria);
   const [requirementResults, setRequirementResults] = useState(requirements.map(() => false));
   const [requirementScore, setRequirementScore] = useState(0);
   const [collaborationScore, setCollaborationScore] = useState(5);
@@ -126,11 +128,8 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
     await request(`/api/tasks/${task.id}/attachments`, { method: "POST", body: new FormData(formElement) });
     formElement.reset();
   };
-  const download = async (id: string) => {
-    const response = await request(`/api/tasks/${task.id}/attachments/${id}`, { method: "GET" });
-    if (!response) return;
-    const payload = await response.json() as { url?: string };
-    if (payload.url) window.location.assign(payload.url);
+  const download = (id: string) => {
+    window.open(`/api/tasks/${task.id}/attachments/${id}`, "_blank", "noopener,noreferrer");
   };
   const personal = task.task_type === "personal";
   const deadlineState = classifyTaskDeadline(task);

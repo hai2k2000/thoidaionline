@@ -116,10 +116,13 @@ export const taskHandlers = createTaskApplication({
     const { error } = await privateAttachments.remove([path]);
     if (error) throw new Error("storage_delete_failed");
   },
-  signPrivateAttachment: async (path) => {
-    const { data, error } = await privateAttachments.createSignedUrl(path, 60);
-    return error || !data?.signedUrl
-      ? { ok: false as const, error: { code: "storage_sign_failed" } }
-      : { ok: true as const, url: data.signedUrl };
+  downloadPrivateAttachment: async (path, range) => {
+    const { data, error } = await privateAttachments.download(path, {}, {
+      cache: "no-store",
+      ...(range ? { headers: { Range: range } } : {}),
+    });
+    return error || !data
+      ? { ok: false as const, error: { code: "storage_download_failed" } }
+      : { ok: true as const, data };
   },
 });
