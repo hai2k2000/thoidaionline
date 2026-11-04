@@ -11,6 +11,7 @@ import { canAccessTaskAssignment } from "@/lib/taskAssignAccess";
 
 export type AssignmentDepartment = { id: string; code?: string | null; name: string; managerId: string | null; hasManager: boolean };
 export type AssignmentPerson = { id: string; fullName: string; departmentId: string | null; roleCode: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
+export type CollaboratorCandidate = { id: string; fullName: string; username?: string | null; departmentName?: string | null };
 export type AssignmentScope = { kind: "own_department" | "global_default"; departmentId: string | null; departmentName: string | null; canChooseOtherDepartment: boolean };
 
 export const taskAssignmentRepository = {
@@ -43,8 +44,8 @@ export const taskAssignmentRepository = {
     if (!broad && actor.departmentId) {
       departmentsQuery = departmentsQuery.eq("id", actor.departmentId);
     }
-    const [departments, people] = await Promise.all([departmentsQuery, peopleQuery]);
-    if (departments.error || people.error) return { ok: false as const };
+    const [departments, people, allDepartments] = await Promise.all([departmentsQuery, peopleQuery, serverSupabase.from("departments").select("id,name")]);
+    if (departments.error || people.error || allDepartments.error) return { ok: false as const };
     const managerIds = new Set((departments.data ?? []).map((row) => row.manager_id).filter(Boolean));
     const leadershipDepartment = (departments.data ?? []).find((row) => row.code === "leadership");
     const normalizePersonDepartment = (row: (typeof people.data)[number]) => leadershipDepartment && leadershipDepartment.id === (departments.data ?? []).find((department) => department.code === "leadership")?.id && ((row.roles as unknown as { code?: string } | null)?.code === "pho_tong_bien_tap" || (row.job_titles as unknown as { code?: string } | null)?.code === "truong_phong") ? leadershipDepartment.id as string : row.department_id as string | null;
@@ -59,6 +60,12 @@ export const taskAssignmentRepository = {
       ok: true as const,
       departments: normalizedDepartments,
       scope: deriveAssignmentScope(actor, normalizedDepartments) as AssignmentScope,
+      collaboratorCandidates: sortStaffRows(people.data ?? []).filter((row) => !isSystemAdminStaff(row) && (row.roles as unknown as { code?: string } | null)?.code !== "admin").map((row) => ({
+        id: row.id as string,
+        fullName: row.full_name as string,
+        username: row.username as string | null,
+        departmentName: allDepartments.data.find((department) => department.id === row.department_id)?.name ?? "Chưa có phòng",
+      })),
       people: sortStaffRows(people.data ?? []).filter((row) => !isSystemAdminStaff(row) && (actor.roleCode !== "pho_tong_bien_tap" || (row.roles as unknown as { code?: string } | null)?.code !== "tong_bien_tap") && (broad || row.department_id === actor.departmentId || isLeadershipAssignmentReviewer(
         (row.roles as unknown as { code?: string } | null)?.code,
       ))).map((row) => ({
@@ -82,7 +89,7 @@ export const taskAssignmentRepository = {
   }) {
     const broad = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode);
     const peopleQuery = serverSupabase.from("staff_users")
-      .select("id,department_id,job_titles(code),roles(code)").eq("active", true).order("id");
+      .select("id,username,full_name,department_id,job_titles(code),roles(code)").eq("active", true).order("id");
     const [department, people, leadership] = await Promise.all([
       serverSupabase.from("departments").select("id,code,manager_id").eq("id", input.departmentId).eq("active", true).maybeSingle(),
       peopleQuery,
@@ -94,6 +101,7 @@ export const taskAssignmentRepository = {
       actorDepartmentId: actor.departmentId,
       department: department.data ? { id: department.data.id as string, managerId: department.data.manager_id as string | null } : null,
       people: (people.data ?? []).map((row) => ({
+        isSystemAdmin: isSystemAdminStaff(row),
         id: row.id as string,
         departmentId: leadership.data?.id === input.departmentId && (((row.roles as unknown as { code?: string } | null)?.code === "pho_tong_bien_tap") || ((row.job_titles as unknown as { code?: string } | null)?.code === "truong_phong")) ? input.departmentId : row.department_id as string | null,
         roleCode: (row.roles as unknown as { code?: string } | null)?.code ?? null,

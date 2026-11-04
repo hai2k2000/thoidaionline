@@ -77,7 +77,7 @@ const TASK_BASE_FIELDS = [
   "attachment_url",
   "evaluation_criteria",
   "departments(name)",
-  "task_assignees(user_id,assignment_role,status,staff_users(full_name))",
+  "task_assignees(user_id,assignment_role,status,staff_users(full_name,departments!staff_users_department_id_fkey(name)))",
   "created_by_user:staff_users!tasks_created_by_fkey(full_name)",
   "assignment_approver:staff_users!tasks_assignment_approved_by_fkey(full_name)",
   "completion_score:task_completion_scores(requirement_score,collaboration_score,initiative_score,total_score,note)",
@@ -549,6 +549,14 @@ export const taskRepository: TaskRepository = {
       dbQuery = dbQuery
         .or("task_type.eq.assigned,and(task_type.is.null,plan_period.eq.ad_hoc,self_claimable.eq.false)")
         .or(`owner_id.eq.${actor.id},assignee_id.eq.${actor.id}`);
+    } else if (query.scope === "collaborating") {
+      const collaborators = await serverSupabase.from("task_assignees").select("task_id").eq("user_id", actor.id).eq("assignment_role", "assignee");
+      if (collaborators.error) return fail(collaborators.error);
+      const collaboratorTaskIds = (collaborators.data ?? []).map((row) => row.task_id as string);
+      if (collaboratorTaskIds.length === 0) return ok({ items: [], total: 0, page: query.page, pageSize: query.pageSize });
+      dbQuery = dbQuery.in("id", collaboratorTaskIds)
+        .or(`assignee_id.is.null,assignee_id.neq.${actor.id}`)
+        .or(`owner_id.is.null,owner_id.neq.${actor.id}`);
     } else if (query.scope === "watching") {
       const watcher = await serverSupabase
         .from("task_assignees")

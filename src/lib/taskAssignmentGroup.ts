@@ -1,4 +1,4 @@
-export type AssignmentSelectionPerson = { id: string; departmentId: string | null; roleCode?: string | null; canReview: boolean; canReviewOutsideDepartment: boolean };
+export type AssignmentSelectionPerson = { id: string; departmentId: string | null; roleCode?: string | null; isSystemAdmin?: boolean; canReview: boolean; canReviewOutsideDepartment: boolean };
 export type AssignmentSelectionInput = {
   broad: boolean;
   actorRoleCode?: string;
@@ -32,7 +32,8 @@ export function resolveAssignmentSelection(input: AssignmentSelectionInput) {
   if (input.actorRoleCode === "pho_tong_bien_tap" && assignee.roleCode === "tong_bien_tap") return { ok: false as const };
   if (input.groupDepartmentId !== null && input.groupDepartmentId !== input.departmentId) return { ok: false as const };
   if (input.groupDepartmentId === null && input.excludedMemberIds.length) return { ok: false as const };
-  if (input.collaboratorIds.some((id) => !memberIds.has(id))) return { ok: false as const };
+  const collaboratorIdsAllowed = new Set(input.people.filter((person) => person.roleCode !== "admin" && !person.isSystemAdmin).map((person) => person.id));
+  if (input.collaboratorIds.some((id) => !collaboratorIdsAllowed.has(id))) return { ok: false as const };
   if (input.watcherIds.some((id) => !visible.has(id))) return { ok: false as const };
   const excluded = new Set(input.excludedMemberIds);
   if ([...excluded].some((id) => !memberIds.has(id)) || excluded.has(input.assigneeId) || (managerId !== null && excluded.has(managerId))) return { ok: false as const };
