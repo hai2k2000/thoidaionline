@@ -1,0 +1,10 @@
+export type ExcelRow = { row_number: number; values: Record<string, string | number | null> };
+export type ExcelError = { row_number: number; message: string };
+export type ExcelOption = { id: string; name?: string; active: boolean; full_name?: string; username?: string; email?: string | null; department_id?: string | null };
+export const ASSET_SHEET: string;
+export const ASSET_COLUMNS: { key: string; header: string; width: number; help: string }[];
+export const TRACKING_MODES: Record<string, string>;
+export const CONDITIONS: Record<string, string>;
+export function normalizeExcelText(value: unknown): string;
+export function parseAssetSheet(matrix: unknown[][]): { rows: ExcelRow[]; errors: ExcelError[] };
+export function validateAssetRows(input: unknown, options?: { departments?: ExcelOption[]; users?: ExcelOption[]; locations?: ExcelOption[]; existingCodes?: string[] }): { ok: boolean; valid_count: number; errors: ExcelError[]; resolved: Record<string, string | number | null>[] };
