@@ -752,9 +752,14 @@ main section > h3 {
   }
 }
 
-/* Quản lý công việc: one wrapping filter bar with readable control widths. */
-.task-filter-bar > * { flex: 0 1 6.25rem; min-width: 6rem; }
-.task-filter-bar > input[name="q"] { flex: 1 1 9rem; min-width: 8rem; }
-.task-filter-bar > button, .task-filter-bar > a { flex: 0 0 auto; min-width: 0; }
+/* Keep each filter as an explicit flex item so popover triggers cannot stretch the bar. */
+.task-filter-bar > [data-filter-item] { flex: 0 1 6.5rem; min-width: 6.5rem; }
+.task-filter-bar > .task-filter-search { flex: 1 1 9rem; min-width: 8rem; }
+.task-filter-bar > .task-filter-actions { flex: 0 0 auto; min-width: 0; }
 .task-filter-bar select { text-overflow: ellipsis; }
-@media (max-width: 639px) { .task-filter-bar > * { flex: 1 1 100%; } }
+.task-filter-actions { display: flex; gap: 0.5rem; }
+@media (max-width: 639px) {
+  .task-filter-bar > [data-filter-item], .task-filter-bar > .task-filter-search { flex: 1 1 100%; }
+  .task-filter-bar > .task-filter-actions { flex: 1 1 100%; }
+  .task-filter-actions > button, .task-filter-actions > a { flex: 1 1 0%; }
+}

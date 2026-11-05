@@ -118,9 +118,11 @@ function FilterFields({ query, projects = [], departments, personOptions = [], c
   const retainedScope = retained.get("scope");
   retained.delete("scope");
   return <>
-    {retainedScope ? <input type="hidden" name="scope" value={retainedScope} /> : null}
-    {Array.from(retained).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
-    <label className="min-w-0" title="Phạm vi công việc"><span className="sr-only">Phạm vi công việc</span>
+    <div data-filter-item data-filter-hidden className="hidden">
+      {retainedScope ? <input type="hidden" name="scope" value={retainedScope} /> : null}
+      {Array.from(retained).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
+    </div>
+    <label data-filter-item className="min-w-0" title="Phạm vi công việc"><span className="sr-only">Phạm vi công việc</span>
       <select aria-label="Phạm vi công việc" disabled={taskMode} value={taskMode ? "personal" : scopeValue} onChange={(event) => {
         const value = event.target.value;
         if (value.startsWith("approval:")) { navigate({ approvalQueue: value.slice(9) as TaskListQuery["approvalQueue"] }); return; }
@@ -132,22 +134,22 @@ function FilterFields({ query, projects = [], departments, personOptions = [], c
         {!taskMode && basePath === "/tasks" && !JOURNALISM_UI_HIDDEN ? <><option value="journalism:exclude">Công việc thường</option>{canAccessJournalism ? <option value="journalism:only">Công việc nghiệp vụ báo chí</option> : null}</> : null}
       </select>
     </label>
-    <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm công việc…" aria-label="Tìm kiếm công việc" className={control} />
-    {canFilterByPerson ? <PersonFilter compact query={query} basePath={basePath} people={personOptions} /> : null}
-    <select name="projectId" aria-label="Dự án" title={projects.find((project) => project.id === projectId)?.name ?? (projectId === "none" ? "Không thuộc dự án" : "Dự án · Tất cả")} value={projectId} onChange={(event) => setProjectId(event.target.value)} className={control}><option value="">Dự án</option><option value="none" title="Không thuộc dự án">Ngoài DA</option>{projects.map((project) => <option key={project.id} value={project.id} title={`${project.name}${project.status === "closed" ? " (đã đóng)" : ""}`}>{project.id === projectId ? "Đã chọn" : project.name}{project.id !== projectId && project.status === "closed" ? " (đã đóng)" : ""}</option>)}</select>
-    <select name="state" aria-label="Trạng thái" defaultValue={query.statusGroup ?? ""} onChange={(event) => {
+    <div className="task-filter-search"><input name="q" defaultValue={query.search ?? ""} placeholder="Tìm công việc…" aria-label="Tìm kiếm công việc" className={control} /></div>
+    {canFilterByPerson ? <div data-filter-item><PersonFilter compact query={query} basePath={basePath} people={personOptions} /></div> : null}
+    <div data-filter-item><select name="projectId" aria-label="Dự án" title={projects.find((project) => project.id === projectId)?.name ?? (projectId === "none" ? "Không thuộc dự án" : "Dự án · Tất cả")} value={projectId} onChange={(event) => setProjectId(event.target.value)} className={control}><option value="">Dự án</option><option value="none" title="Không thuộc dự án">Ngoài DA</option>{projects.map((project) => <option key={project.id} value={project.id} title={`${project.name}${project.status === "closed" ? " (đã đóng)" : ""}`}>{project.id === projectId ? "Đã chọn" : project.name}{project.id !== projectId && project.status === "closed" ? " (đã đóng)" : ""}</option>)}</select></div>
+    <div data-filter-item><select name="state" aria-label="Trạng thái" defaultValue={query.statusGroup ?? ""} onChange={(event) => {
       const legacyStatus = event.currentTarget.form?.elements.namedItem("status");
       if (legacyStatus instanceof HTMLInputElement) legacyStatus.disabled = true;
       event.currentTarget.title = event.currentTarget.selectedOptions[0].text;
-    }} className={control} title="Trạng thái"><option value="">Trạng thái</option><option value="completed" title="Đã hoàn thành">Đã xong</option><option value="unfinished" title="Chưa hoàn thành">Chưa xong</option><option value="returned">Trả lại</option><option value="cancelled">Đã hủy</option></select>
-    <select name="deadline" aria-label="Thời hạn" title="Thời hạn" defaultValue={query.deadlineState ?? ""} className={control}><option value="">Thời hạn</option><option value="on_time">Đúng hạn</option><option value="due_soon" title="Sắp đến hạn">Sắp hạn</option><option value="overdue">Quá hạn</option><option value="no_deadline" title="Không deadline">Không hạn</option></select>
-    <TaskFilterPopover label="Khoảng ngày" triggerText={dates.from || dates.to ? <span className="grid text-[10px] leading-tight"><span>Từ {dates.from ? dates.from.split("-").reverse().join("/") : "…"}</span><span>– Đến {dates.to ? dates.to.split("-").reverse().join("/") : "…"}</span></span> : undefined} summary={dateText}>
+    }} className={control} title="Trạng thái"><option value="">Trạng thái</option><option value="completed" title="Đã hoàn thành">Đã xong</option><option value="unfinished" title="Chưa hoàn thành">Chưa xong</option><option value="returned">Trả lại</option><option value="cancelled">Đã hủy</option></select></div>
+    <div data-filter-item><select name="deadline" aria-label="Thời hạn" title="Thời hạn" defaultValue={query.deadlineState ?? ""} className={control}><option value="">Thời hạn</option><option value="on_time">Đúng hạn</option><option value="due_soon" title="Sắp đến hạn">Sắp hạn</option><option value="overdue">Quá hạn</option><option value="no_deadline" title="Không deadline">Không hạn</option></select></div>
+    <div data-filter-item><TaskFilterPopover label="Khoảng ngày" triggerText={dates.from || dates.to ? <span className="grid text-[10px] leading-tight"><span>Từ {dates.from ? dates.from.split("-").reverse().join("/") : "…"}</span><span>– Đến {dates.to ? dates.to.split("-").reverse().join("/") : "…"}</span></span> : undefined} summary={dateText}>
       <label className="grid gap-1">Từ ngày<input type="date" aria-label="Từ ngày" value={dates.from} onChange={(event) => setDates({ ...dates, from: event.target.value })} className={control} /></label>
       <label className="grid gap-1">Đến ngày<input type="date" aria-label="Đến ngày" value={dates.to} onChange={(event) => setDates({ ...dates, to: event.target.value })} className={control} /></label>
       <button type="button" onClick={() => setDates({ from: "", to: "" })} className="justify-self-start rounded border px-3 py-2">Xóa</button>
-    </TaskFilterPopover>
-    <select name="sort" aria-label="Sắp xếp" title="Sắp xếp: Hạn hoàn thành gần nhất / Mới giao nhất / Ưu tiên cao nhất" defaultValue={query.sort ?? "deadline"} onChange={(event) => navigate({ sort: event.target.value as TaskListQuery["sort"] })} className={control}><option value="deadline" title="Hạn hoàn thành gần nhất">Gần hạn</option><option value="newest" title="Mới giao nhất">Mới giao</option><option value="priority" title="Ưu tiên cao nhất">Ưu tiên cao</option></select>
-    <TaskFilterPopover label="Lọc thêm" count={extraCount}>
+    </TaskFilterPopover></div>
+    <div data-filter-item><select name="sort" aria-label="Sắp xếp" title="Sắp xếp: Hạn hoàn thành gần nhất / Mới giao nhất / Ưu tiên cao nhất" defaultValue={query.sort ?? "deadline"} onChange={(event) => navigate({ sort: event.target.value as TaskListQuery["sort"] })} className={control}><option value="deadline" title="Hạn hoàn thành gần nhất">Gần hạn</option><option value="newest" title="Mới giao nhất">Mới giao</option><option value="priority" title="Ưu tiên cao nhất">Ưu tiên cao</option></select></div>
+    <div data-filter-item><TaskFilterPopover label="Lọc thêm" count={extraCount}>
       <label className="grid gap-1">Hình thức<select aria-label="Hình thức" value={extra.assignmentSource} onChange={(event) => setExtra({ ...extra, assignmentSource: event.target.value })} className={control}><option value="">Tất cả</option><option value="leadership_assigned">Lãnh đạo giao</option><option value="self_registered">Tự đăng ký</option></select></label>
       {departments.length ? <label className="grid gap-1">Phòng<select aria-label="Phòng" value={extra.department} onChange={(event) => setExtra({ ...extra, department: event.target.value })} className={control}><option value="">Tất cả</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label> : null}
       {showJournalism ? <>
@@ -156,10 +158,9 @@ function FilterFields({ query, projects = [], departments, personOptions = [], c
         <label className="grid gap-1">Dự kiến xuất bản từ<input type="date" value={extra.plannedFrom} onChange={(event) => setExtra({ ...extra, plannedFrom: event.target.value })} className={control} /></label>
         <label className="grid gap-1">Dự kiến xuất bản đến<input type="date" value={extra.plannedTo} onChange={(event) => setExtra({ ...extra, plannedTo: event.target.value })} className={control} /></label>
       </> : null}
-    </TaskFilterPopover>
-    <div className="grid grid-cols-1 gap-2 sm:col-span-2 sm:grid-cols-2 xl:col-span-1"><button className="h-11 rounded-lg bg-slate-900 px-2 text-xs font-semibold text-white">Lọc</button><Link href={basePath === "/duty-schedule" ? "/duty-schedule?scope=personal" : basePath} className="flex h-11 items-center justify-center whitespace-nowrap rounded-lg border px-2 text-xs font-semibold">Đặt lại</Link></div>
-    <input type="hidden" name="from" value={dates.from} /><input type="hidden" name="to" value={dates.to} />
-    {Object.entries(extra).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
+    </TaskFilterPopover></div>
+    <div className="task-filter-actions flex gap-2"><button className="h-11 rounded-lg bg-slate-900 px-2 text-xs font-semibold text-white">Lọc</button><Link href={basePath === "/duty-schedule" ? "/duty-schedule?scope=personal" : basePath} className="flex h-11 items-center justify-center whitespace-nowrap rounded-lg border px-2 text-xs font-semibold">Đặt lại</Link></div>
+    <div data-filter-item data-filter-hidden className="hidden"><input type="hidden" name="from" value={dates.from} /><input type="hidden" name="to" value={dates.to} />{Object.entries(extra).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}</div>
   </>;
 }
 function SummaryItem({ label, value }: { label: string; value: string }) {
