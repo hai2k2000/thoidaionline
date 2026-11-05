@@ -49,15 +49,24 @@ test("Phase 5 routes are thin same-origin task handlers", () => {
   }
 });
 
-test("private attachments use server storage, rollback metadata failures and short signed URLs", () => {
+test("private attachments stream through the server task route", () => {
   const wiring = read("../lib/taskHandlers.ts");
   const factory = read("../lib/taskHandlerFactory.ts");
   const repository = read("../lib/taskRepository.ts");
+  const shell = read("../components/TaskDetailShell.tsx");
   assert.match(wiring, /serverSupabase\.storage\.from\("task-private"\)/);
-  assert.match(wiring, /createSignedUrl\(path, 60\)/);
+  assert.match(wiring, /privateAttachments\.download\(path/);
+  assert.doesNotMatch(wiring, /createSignedUrl/);
+  assert.doesNotMatch(factory, /createSignedUrl/);
   assert.doesNotMatch(wiring, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.doesNotMatch(wiring + factory, /signPrivateAttachment/);
+  assert.match(factory, /deps\.downloadPrivateAttachment\(metadata\.storage_path/);
+  assert.match(factory, /import \{ taskAttachmentHeaders, taskAttachmentRange \} from "\.\/taskAttachmentResponse\.mjs"/);
+  assert.match(factory, /const headers = taskAttachmentHeaders\(metadata\)/);
+  assert.match(factory, /new Response\(data\.stream\(\), \{ status: range \? 206 : 200, headers \}\)/);
   assert.match(factory, /await deps\.removePrivateAttachment\(storagePath\)/);
-  assert.match(repository, /\.eq\("task_id", taskId\)\.eq\("id", attachmentId\)\.maybeSingle\(\)/);
+  assert.match(repository, /\.eq\("task_id", taskId\)\.eq\("id", attachmentId\)\.is\("deleted_at", null\)\.maybeSingle\(\)/);
+  assert.match(shell, /window\.open\(`\/api\/tasks\/\$\{task\.id\}\/attachments\/\$\{id\}`/);
 });
 
 test("Phase 5 migration is additive, audited and creates a private bucket", () => {
