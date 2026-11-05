@@ -45,7 +45,7 @@ test("CTV role is excluded from attendance regardless of title", () => {
   assert.equal(isAttendanceListedStaff({ roleCode: "nhan_vien" }), true);
 });
 
-const apiAllowlist = new Set(["auth/session", "auth/logout", "auth/mobile-logout", "account/profile", "account/password", "account/avatar", "tasks", "tasks/[id]", "tasks/[id]/comments", "tasks/[id]/attachments", "tasks/[id]/attachments/[attachmentId]", "tasks/[id]/progress-reports", "tasks/[id]/submit-completion", "projects", "projects/[id]", "projects/[id]/members", "projects/[id]/tasks", "projects/access", "projects/[id]/library", "projects/[id]/library/download/[itemId]"]);
+const apiAllowlist = new Set(["mobile/apk/latest", "mobile/apk/download", "auth/session", "auth/logout", "auth/mobile-logout", "account/profile", "account/password", "account/avatar", "tasks", "tasks/[id]", "tasks/[id]/comments", "tasks/[id]/attachments", "tasks/[id]/attachments/[attachmentId]", "tasks/[id]/progress-reports", "tasks/[id]/submit-completion", "projects", "projects/[id]", "projects/[id]/members", "projects/[id]/tasks", "projects/access", "projects/[id]/library", "projects/[id]/library/download/[itemId]"]);
 test("every API route outside the explicit allowlist is covered by the central guard", () => {
   const proxy = read("src/proxy.ts");
   assert.match(proxy, /"\/api\/:path\*"/);
@@ -64,7 +64,7 @@ test("all pages outside task, account and project member views are denied", () =
   const pages = readdirSync("src/app", { recursive: true }).map(String).map((p) => p.replaceAll("\\", "/")).filter((p) => p.endsWith("page.tsx"));
   for (const page of pages) {
     const route = "/" + page.replace(/\/?page.tsx$/, "");
-    const allowed = ["/my-tasks", "/account", "/tasks/[id]", "/projects", "/projects/[id]"].includes(route);
+    const allowed = ["/mobile-app", "/my-tasks", "/account", "/tasks/[id]", "/projects", "/projects/[id]"].includes(route);
     assert.equal(isCollaboratorAllowedPath(route.replace(/\[[^\]]+\]/g, id)), allowed, route);
   }
   assert.match(read("src/app/my-tasks/page.tsx"), /TasksPage searchParams=.*basePath="\/my-tasks"/);

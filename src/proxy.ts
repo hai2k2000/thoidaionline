@@ -17,7 +17,9 @@ function nextWithNonce(request: NextRequest) {
     font-src 'self' data:;
     style-src 'self' 'unsafe-inline';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDevelopment ? " 'unsafe-eval'" : ""};
-    connect-src 'self' https:;
+    connect-src 'self' https: blob:;
+    worker-src 'self';
+    manifest-src 'self';
     object-src 'none';
   `.replace(/\s{2,}/g, " ").trim();
   const requestHeaders = new Headers(request.headers);
@@ -35,6 +37,7 @@ function nextWithNonce(request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/manifest.webmanifest" || pathname === "/sw.js" || pathname === "/offline.html" || pathname.startsWith("/icons/")) return nextWithNonce(request);
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 32) return nextWithNonce(request);
 

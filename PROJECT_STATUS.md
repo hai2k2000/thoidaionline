@@ -1,3 +1,28 @@
+# Internal Mobile PWA / WebView / APK — 2026-11-05
+
+Current Phase: implementation delivered locally; validation limitations remain
+Current Task: internal mobile distribution (EDIT-only, no commit/push/network/deploy/migration)
+
+Completed:
+- PWA manifest/icons/offline-only worker, CSP and public asset routing.
+- Authenticated APK metadata/download/page and collaborator access.
+- Flutter WebView shell, signing guard, internal build/runbook and export bridge.
+
+Validation:
+- Focused and existing guard tests: 34 PASS, 0 FAIL (29 mobile/CTV + 5 first-login/cache).
+- TypeScript PASS; production-like build/prerender PASS using offline font fixture.
+- PowerShell script syntax PASS; packaging embedded tests 78 PASS.
+
+Blockers:
+- Full lint: existing database record state-mutation error (1 error, 19 warnings).
+- Standalone packaging: Windows symlink EPERM; artifact verification fails for missing manifest.
+- Flutter SDK absent; analyze/test/build/device acceptance not run.
+- Requested parent report path denied by sandbox; report saved in worktree.
+
+Next:
+- See CODEX_REPORT_mobile_internal.md; complete Flutter device checks and compatible packaging offline/on build machine before release.
+
+---
 # Task 3: Edit Assigned Event Members
 
 Current Phase: implementation complete; full validation blocked

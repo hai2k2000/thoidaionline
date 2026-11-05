@@ -31,7 +31,7 @@ android {
         applicationId = "com.thoidaionline"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = maxOf(23, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -50,15 +50,22 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+// Fail closed for release and aggregate build tasks, while allowing unsigned debug work.
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.project == project && it.name.contains("Release", ignoreCase = true) }) {
+        if (!keystorePropertiesFile.exists()) throw GradleException("Release signing requires android/key.properties")
+        for (key in listOf("storeFile", "storePassword", "keyAlias", "keyPassword")) {
+            if (keystoreProperties.getProperty(key).isNullOrBlank()) throw GradleException("Release signing configuration is incomplete")
+        }
+        if (!file(keystoreProperties.getProperty("storeFile")).isFile) throw GradleException("Release keystore is missing")
+    }
 }

@@ -13,3 +13,9 @@ ios/Flutter/flutter_export_environment.sh
 *.iml
 .idea/
 .vscode/
+
+# Private signing material and internal build artifacts
+android/key.properties
+*.jks
+*.keystore
+dist/
