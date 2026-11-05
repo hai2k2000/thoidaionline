@@ -32,9 +32,11 @@ test("Task list loads active work kinds on the server and keeps filters URL-driv
   assert.match(repository, /\.eq\("is_active", true\)/);
   assert.match(page, /journalismWorkKinds=\{journalismWorkKinds\}/);
   for (const name of ["journalism", "workKind", "publicationStatus", "plannedFrom", "plannedTo"]) {
-    assert.match(shell, new RegExp(`name="${name}"`));
+    assert.ok(shell.includes(name), `retains ${name} in filter form state`);
   }
   assert.match(shell, /journalismFilter === "only"/);
+  assert.match(shell, /Object\.entries\(extra\)/);
+  assert.match(shell, /type="hidden" name=\{name\} value=\{value\}/);
   assert.match(shell, /tasks\.items\.map\(/);
   assert.doesNotMatch(shell, /tasks\.items\.filter\([^\n]*journalism/);
 });

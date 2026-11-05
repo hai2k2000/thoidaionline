@@ -9,7 +9,7 @@ import { calculateParticipantPanelPosition } from "./participantPanelPosition.mj
 export type ParticipantPanel = "collaborator" | "watcher";
 const controlClass = "min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400";
 
-export default function ParticipantSelector({ label, name, people, selected, onChange, empty, panel, openPanel, setOpenPanel, disabled = false }: {
+export default function ParticipantSelector({ label, name, people, selected, onChange, empty, panel, openPanel, setOpenPanel, disabled = false, compact = false }: {
   label: string;
   name: string;
   people: CollaboratorCandidate[];
@@ -20,6 +20,7 @@ export default function ParticipantSelector({ label, name, people, selected, onC
   openPanel: ParticipantPanel | null;
   setOpenPanel: (panel: ParticipantPanel | null) => void;
   disabled?: boolean;
+  compact?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -83,8 +84,8 @@ export default function ParticipantSelector({ label, name, people, selected, onC
 
   return <div ref={rootRef} className="grid min-w-0 self-start items-start gap-1 text-sm font-semibold">
     <span>{label}</span>
-    <button ref={triggerRef} type="button" disabled={disabled} aria-expanded={isOpen} aria-controls={listId} aria-haspopup="listbox" onClick={() => { setSearch(""); setPosition(null); setOpenPanel(isOpen ? null : panel); }} className={`${controlClass} flex min-h-[46px] items-center justify-between gap-2 text-left`}>
-      <span className="min-w-0 truncate">{summary}</span><span aria-hidden="true">▾</span>
+    <button ref={triggerRef} type="button" disabled={disabled} title={summary} aria-label={compact ? `${label}: ${summary}` : undefined} aria-expanded={isOpen} aria-controls={listId} aria-haspopup="listbox" onClick={() => { setSearch(""); setPosition(null); setOpenPanel(isOpen ? null : panel); }} className={`${controlClass} flex min-h-[46px] items-center justify-between gap-2 text-left`}>
+      <span className={compact ? "min-w-0 whitespace-nowrap" : "min-w-0 truncate"}>{compact ? selected.length ? `${selected.length} người` : label : summary}</span><span aria-hidden="true">▾</span>
     </button>
     {isOpen && position ? createPortal(<div ref={panelRef} className="z-50 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-300 bg-white text-sm shadow-lg" style={{ position: "fixed", left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight, transform: position.above ? "translateY(-100%)" : undefined }}>
       <div className="sticky top-0 z-10 bg-white p-2"><input ref={searchRef} type="search" value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder={panel === "collaborator" ? "Tìm tên hoặc tài khoản" : "Tìm theo tên nhân viên"} aria-label={`Tìm ${label.toLocaleLowerCase()}`} className={controlClass} /></div>

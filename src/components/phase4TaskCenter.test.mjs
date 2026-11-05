@@ -22,6 +22,17 @@ test("Phase 4 Task Center is server-filtered and responsive", () => {
   assert.match(shell, /name="deadline"/);
 });
 
+test("Task Center uses one compact filter bar with former tab scopes", () => {
+  const shell = read("../components/TaskCenterShell.tsx");
+  assert.doesNotMatch(shell, /aria-label="Loại công việc"/);
+  assert.match(shell, /value="approval:assignment"/);
+  assert.match(shell, /value="approval:completion"/);
+  assert.match(shell, /Khoảng ngày/);
+  assert.match(shell, /Lọc thêm/);
+  assert.match(shell, /placeholder="Tìm công việc…"/);
+  assert.doesNotMatch(shell, /placeholder="Tìm theo tên công việc"/);
+});
+
 test("personal task UI and same-origin API routes exist", () => {
   const form = read("../components/PersonalTaskForm.tsx");
   const actions = read("../components/PersonalTaskActions.tsx");

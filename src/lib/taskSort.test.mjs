@@ -26,7 +26,7 @@ test('sort selector renders options and keeps filters, resets page, omits defaul
  const shell=readFileSync('src/components/TaskCenterShell.tsx','utf8');
  const body=shell.slice(shell.indexOf('function FilterFields('),shell.indexOf('function SummaryItem('));
  const js=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React}}).outputText;
- const Filter=new Function('React','Link','JOURNALISM_UI_HIDDEN','taskListHref',js+';return FilterFields;')(React,'a',true,taskListHref);
+ const Filter=new Function('React','Link','JOURNALISM_UI_HIDDEN','taskListHref','useState','TaskFilterPopover',js+';return FilterFields;')(React,'a',true,taskListHref,(value)=>[value,()=>{}],({children})=>React.createElement('div',null,children));
  const query=parseTaskListSearchParams(new URLSearchParams('scope=watching&sort=priority&page=4&q=report&state=unfinished&projectId=none'));
  const tree=Filter({query,departments:[],journalismWorkKinds:[],journalismTopics:[],journalismSeries:[],canAccessJournalism:false,basePath:'/my-tasks'});
  const html=renderToStaticMarkup(tree);
