@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { mkdir, readFile, stat, writeFile } from "fs/promises";
 import { NextResponse } from "next/server";
 import path from "path";
@@ -94,7 +95,7 @@ export async function GET(req: Request) {
   return new Response(file, {
     headers: {
       "Content-Type": contentType,
-      "Content-Disposition": `inline; filename="${base}"`,
+      "Content-Disposition": contentDisposition(base, { inline: true }),
       "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
       "X-Content-Type-Options": "nosniff",
     },

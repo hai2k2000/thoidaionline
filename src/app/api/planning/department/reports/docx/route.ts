@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { loadAuthorizedDepartmentPlanReport } from "@/lib/departmentPlanReportService";
 import { departmentPlanDocxFilename, exportDepartmentPlanDocx } from "@/lib/departmentPlanDocxExport";
 
@@ -8,5 +9,5 @@ export async function GET(request: Request) {
   if (!loaded.ok) return loaded.response;
   const buffer = await exportDepartmentPlanDocx(loaded.data.report, loaded.data.departmentName);
   const filename = departmentPlanDocxFilename(loaded.data.report.period, loaded.data.departmentName);
-  return new Response(new Uint8Array(buffer), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": `attachment; filename="${filename}"`, "Cache-Control": "no-store" } });
+  return new Response(new Uint8Array(buffer), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": contentDisposition(filename), "Cache-Control": "no-store" } });
 }

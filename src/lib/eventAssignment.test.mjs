@@ -2,6 +2,54 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { validateEventAssignmentInput } from "./eventAssignmentValidation.ts";
+import * as eventAccess from "./workScheduleEventAccess.ts";
+
+test("event editors require scheduled events and leadership or manager ownership", () => {
+  assert.equal(typeof eventAccess.canEditEventAssignment, "function");
+  const row = { created_by: "manager", event_status: "SCHEDULED" };
+  for (const role_code of ["admin", "tong_bien_tap", "pho_tong_bien_tap"]) {
+    assert.equal(eventAccess.canEditEventAssignment(row, { id: "other", role_code }), true);
+    for (const event_status of ["COMPLETED", "CANCELLED", null]) {
+      assert.equal(eventAccess.canEditEventAssignment({ ...row, event_status }, { id: "other", role_code }), false);
+    }
+  }
+  for (const actor of [{ role_code: "truong_phong" }, { role_code: "nhan_vien", is_department_manager: true }]) {
+    assert.equal(eventAccess.canEditEventAssignment(row, { ...actor, id: "manager" }), true);
+    assert.equal(eventAccess.canEditEventAssignment(row, { ...actor, id: "other" }), false);
+  }
+  assert.equal(eventAccess.canEditEventAssignment(row, { id: "manager", role_code: "phong_vien" }), false);
+  assert.equal(eventAccess.canEditEventAssignment(row, { role_code: "admin" }), false);
+});
+
+test("out-of-list members remain explicit until removed", () => {
+  assert.equal(typeof eventAccess.outOfListEventMembers, "function");
+  const selected = ["active", "inactive", "outside"];
+  const people = [{ id: "active", full_name: "Test A" }];
+  assert.deepEqual(eventAccess.outOfListEventMembers(selected, people), ["inactive", "outside"]);
+  assert.deepEqual(eventAccess.outOfListEventMembers(selected.filter((id) => id !== "inactive"), people), ["outside"]);
+  assert.deepEqual(selected, ["active", "inactive", "outside"]);
+});
+
+test("leadership detail routes edits to the assignment panel and excludes personal actions", () => {
+  const shell = read("../components/WorkSchedulePageShell.tsx");
+  const panel = read("../components/EventAssignmentPanel.tsx");
+  assert.match(shell, /row.event_assignment_kind !== "leadership" && currentUserId && canMutatePersonalPlan/);
+  assert.match(shell, /enableEventAssignment && canEditEventAssignment/);
+  assert.match(shell, /setDetailRows\(null\); void eventPanelRef.current\?\.editEvent\(row.id\)/);
+  assert.match(shell, /ref=\{eventPanelRef\}/);
+  assert.match(panel, /loadedRows.find\(\(row\) => row.id === id\)/);
+  assert.match(panel, /ngoài danh sách/);
+  assert.match(panel, /Sửa \/ thành viên/);
+  assert.match(panel, /response.status === 409/);
+  assert.match(panel, /Sự kiện đã được người khác cập nhật, vui lòng tải lại\./);
+  assert.match(panel, /selected.length < 1 \|\| selected.length > 50/);
+  for (const page of ["page.tsx", "staff/page.tsx", "leadership/page.tsx"]) {
+    const source = read("../app/work-schedule/" + page);
+    assert.match(source, /currentUserId=\{user.id\}/);
+    assert.match(source, /currentUserRole=\{user.role_code\}/);
+    assert.match(source, /isDepartmentManager=\{user.is_department_manager\}/);
+  }
+});
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
@@ -173,7 +221,7 @@ test("assignment opens directly from header and retains grouped searchable staff
   assert.match(panel, /person.departments\?\.name/);
   assert.match(panel, /person.job_titles\?\.name/);
   assert.match(panel, /search.trim/);
-  assert.match(read("./workScheduleRepository.ts"), /departments\(name,code\)/);
+  assert.match(read("./workScheduleRepository.ts"), /departments!staff_users_department_id_fkey\(name,code\)/);
   assert.match(read("../components/TaskAssignShell.tsx"), /work-schedule\/staff\?eventAssignment=1/);
 });
 

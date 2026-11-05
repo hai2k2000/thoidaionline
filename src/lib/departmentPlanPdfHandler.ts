@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import "server-only";
 
 import { renderDepartmentPlanPdf, buildDepartmentPlanPdfModel } from "@/lib/departmentPlanPdf";
@@ -23,7 +24,7 @@ export async function departmentPlanPdfHandler(request: Request): Promise<Respon
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${pdf.filename}"`,
+        "Content-Disposition": contentDisposition(pdf.filename),
         "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
         "Content-Length": String(pdf.bytes.byteLength),
       },

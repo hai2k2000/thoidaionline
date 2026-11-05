@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/serverSession";
 import { canAccessDatabaseRecordForActor, getVisibleDatabaseRecord } from "@/lib/databaseManagement/repository";
@@ -13,6 +14,6 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   let auditStatus: "delivered" | "pending";
   try { auditStatus = await logServerAudit({ actorId: actor.id, module: "database", entityType: "db_records", entityId: id, action: "export" }); } catch { return NextResponse.json({ error: "audit_unavailable" }, { status: 503 }); }
   return new NextResponse(JSON.stringify({ record: detail.record, keywords: detail.keywords, externalLinks: detail.externalLinks }, null, 2), {
-    headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="database-record-${id}.json"`, "Cache-Control": "private, no-store", "X-Audit-Status": auditStatus },
+    headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": contentDisposition(`database-record-${id}.json`), "Cache-Control": "private, no-store", "X-Audit-Status": auditStatus },
   });
 }
