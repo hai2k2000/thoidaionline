@@ -8,6 +8,7 @@ import { loadPrintableTask } from "@/lib/taskPrintAccess";
 import type { AuthorizationActor } from "@/lib/authorization";
 import { canTaskAction } from "@/lib/authorization";
 import AppNav from "@/components/AppNav";
+import InstallAppLink from "@/components/InstallAppLink";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -35,6 +36,7 @@ export default async function TaskPrintPage({ params }: Props) {
   if (!result.ok) redirect("/tasks");
   return <>
     <div className="lg:hidden print:hidden"><AppNav currentPath={`/tasks/${taskId}/print`} userLabel={user.full_name} /></div>
-    <WorkAssignmentPrintSheet task={result.task} />
+    <div className="mb-3 hidden justify-end lg:flex print:hidden"><InstallAppLink /></div>
+      <WorkAssignmentPrintSheet task={result.task} />
   </>;
 }

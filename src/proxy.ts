@@ -37,7 +37,7 @@ function nextWithNonce(request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (pathname === "/manifest.webmanifest" || pathname === "/sw.js" || pathname === "/offline.html" || pathname.startsWith("/icons/")) return nextWithNonce(request);
+  if (pathname === "/manifest.webmanifest" || pathname === "/sw.js" || pathname === "/offline.html" || pathname === "/api/version" || pathname.startsWith("/icons/")) return nextWithNonce(request);
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 32) return nextWithNonce(request);
 

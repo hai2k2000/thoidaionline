@@ -1,3 +1,22 @@
+# Help button and install entry points
+
+Status: IMPLEMENTED; offline targeted validation PASS.
+Scope: mobile Help menu, canonical authenticated /app with legacy redirect, compact install links for all authenticated roles.
+Validation: 48 focused Node tests PASS; TypeScript PASS; full lint has the known database record error and no new errors. Expanded legacy-route coverage retains the unrelated /my-tasks redirect expectation failure.
+Prior auto-update work preserved. No commit, push, network, SSH or deploy. See the Help button section in CODEX_REPORT_mobile_update.md.
+
+---
+
+# Mobile update edit round
+
+Status: IMPLEMENTED; web validation PASS; Flutter toolchain/device validation pending.
+Source: feature/mobile-auto-update at 50596a37f5f5aa3edaadcf63e445818abd390917 plus uncommitted task changes.
+Scope: web release detection/refresh, APK verified update prompt 1.0.3+5, and mobile-app version display.
+Validation: 71 Node tests passed; final changed route/Flutter checks passed; TypeScript and offline webpack build passed. Full lint retains one pre-existing error.
+No commit, push, network, SSH, publication, or deployment. See CODEX_REPORT_mobile_update.md.
+
+---
+
 # Mobile push fix round 1 - 2026-11-05
 
 Current Phase: EDIT-only implementation and requested offline validation complete

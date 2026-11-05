@@ -6,6 +6,8 @@ import { AuthProvider } from "@/lib/auth";
 import ActionFeedbackProvider from "@/components/ActionFeedbackProvider";
 import PushNotificationCard from "@/components/PushNotificationCard";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import VersionRefresh from "@/components/VersionRefresh";
+import { getReleaseBuild } from "@/lib/releaseBuild.mjs";
 
 const vietnamSans = Be_Vietnam_Pro({
   variable: "--font-vietnam-sans",
@@ -44,6 +46,7 @@ export default async function RootLayout({
         className={`${vietnamSans.variable} ${geistMono.variable} antialiased`}
       >
         <ServiceWorkerRegistration />
+        <VersionRefresh build={await getReleaseBuild()} />
         <ActionFeedbackProvider><AuthProvider><PushNotificationCard banner />{children}</AuthProvider></ActionFeedbackProvider>
       </body>
     </html>

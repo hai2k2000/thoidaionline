@@ -3,5 +3,5 @@ export type FirstLoginGateDecision =
   | { type: "allow" }
   | { type: "redirect"; location: string }
   | { type: "reject-api" };
-export function resolvePostLoginPath(_mustChangePassword: boolean) { return "/tasks"; }
+export function resolvePostLoginPath(_mustChangePassword: boolean, next?: string | null) { return next === "/app" || next === "/mobile-app" ? "/app" : "/tasks"; }
 export function getFirstLoginGateDecision(_pathname: string, _mustChangePassword: boolean): FirstLoginGateDecision { return { type: "allow" }; }

@@ -22,10 +22,10 @@ Target: `vps-aylaspa`, private distribution root `/opt/thoidai-work/mobile-dist`
 1. Record source SHA and dirty state, Flutter/JDK versions, APK certificate fingerprint, size/checksum and device acceptance. Obtain approval for this project, APK version and publication operation. Check disk headroom using the canonical disk guard; preserve >=10 GiB after writes. Back up the current latest.json and record the previous APK as rollback; keep backups outside release cleanup.
 2. Transfer the APK and manifest through the documented SSH transfer path to temporary names in the distribution directory. Verify SHA-256 and byte size on the server against the local manifest. Set ownership/permissions so only the operator can publish and the web service can read; the service should not write distribution files. Reject symlinks/traversal filenames. Do not overwrite a published APK.
 3. Rename the validated APK to its final basename first, then atomically rename the new manifest to latest.json on the same filesystem. The web service reads it per request; publication itself needs no service restart or DB migration. Publish only after the web endpoints are separately deployed and verified.
-4. Verify unauthenticated API requests return 401; authenticated employee and cong_tac_vien requests return metadata and an attachment with matching size/SHA-256, private/no-store headers, and correct APK MIME type. Confirm /mobile-app shows version and installation instructions. Verify no public nginx location exposes the distribution directory.
+4. Verify unauthenticated API requests return 401; authenticated employee and cong_tac_vien requests return metadata and an attachment with matching size/SHA-256, private/no-store headers, and correct APK MIME type. Confirm /app shows version and installation instructions. Verify no public nginx location exposes the distribution directory.
 5. Rollback by atomically restoring the backed-up latest.json pointing at the preserved previous APK. Keep current and previous APKs plus approved evidence. Cleanup is a separate owner-approved operation, never automatic.
 
-For users replacing the old native MVP, uninstall the old app first as described on /mobile-app. Subsequent updates require the same release certificate and a greater versionCode.
+For users replacing the old native MVP, uninstall the old app first as described on /app. Subsequent updates require the same release certificate and a greater versionCode.
 
 ## PWA/server checks
 

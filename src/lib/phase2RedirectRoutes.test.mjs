@@ -44,7 +44,7 @@ test("successful login replaces history with Task Center", () => {
     new URL("../app/login/page.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /router\.replace\(resolvePostLoginPath\(res\.mustChangePassword === true\)\)/);
+  assert.match(source, /router\.replace\(resolvePostLoginPath\(res\.mustChangePassword === true, new URLSearchParams\(window\.location\.search\)\.get\("next"\)\)\)/);
   assert.match(source, /import \{ resolvePostLoginPath \} from "@\/lib\/firstLoginPassword"/);
   assert.doesNotMatch(source, /router\.(?:push|replace)\("\/"\)/);
 });

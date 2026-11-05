@@ -11,6 +11,7 @@ export type MobileNavigationItem = {
 export type MobileNavigation = {
   items: MobileNavigationItem[];
   menu: Phase2Navigation;
+  showHelp: boolean;
 };
 
 export function isMobileKeyboardOpen({ baselineHeight, viewportHeight, scale, editableFocused }: {
@@ -53,5 +54,5 @@ export function getMobileNavigation(navigation: Phase2Navigation, roleCode: stri
     ...(attendance ? [{ id: "attendance", href: attendance.href, label: "Chấm công", kind: "attendance" as const }] : []),
     { id: "more", href: "more", label: "Thêm", kind: "more" },
   ];
-  return { items, menu };
+  return { items, menu, showHelp: !collaborator };
 }

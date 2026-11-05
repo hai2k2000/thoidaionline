@@ -85,3 +85,19 @@ test("collaborator project.create alone does not bypass membership", () => {
   const result = getMobileNavigation(getPhase2Navigation({ ...access, roleCode: "cong_tac_vien", canCreateProject: true }), "cong_tac_vien");
   assert.deepEqual(result.items.map((item) => item.href), ["/my-tasks", "more"]);
 });
+
+test("More menu exposes Help for roles that render HelpBot", () => {
+  for (const roleCode of ["admin", "nhan_vien", "tong_bien_tap", "pho_tong_bien_tap", "cong_tac_vien"]) {
+    assert.equal(getMobileNavigation(getPhase2Navigation({ ...access, roleCode }), roleCode).showHelp, roleCode !== "cong_tac_vien");
+  }
+  const source = readFileSync(new URL("./AppNav.tsx", import.meta.url), "utf8");
+  assert.match(source, /Trợ giúp/);
+  assert.match(source, /thoidai:open-help/);
+  assert.match(source, /lg:hidden/);
+});
+
+test("install entry points use the canonical /app route", () => {
+  const source = readFileSync(new URL("./AppNav.tsx", import.meta.url), "utf8");
+  assert.match(source, /href=\"\/app\"/);
+  assert.doesNotMatch(source, /href=\"\/mobile-app\"/);
+});

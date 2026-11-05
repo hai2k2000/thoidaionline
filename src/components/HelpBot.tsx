@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 type Answer = { title: string; text: string; keywords: string[] };
 const answers: Answer[] = [
   {
@@ -187,6 +187,11 @@ export default function HelpBot() {
   ]);
   const end = useRef<HTMLDivElement>(null);
   const suggestions = useMemo(() => answers.slice(0, 6), []);
+  useEffect(() => {
+    const openHelp = () => setOpen(true);
+    window.addEventListener("thoidai:open-help", openHelp);
+    return () => window.removeEventListener("thoidai:open-help", openHelp);
+  }, []);
   const ask = (value = question) => {
     const text = value.trim();
     if (!text) return;
@@ -207,11 +212,11 @@ export default function HelpBot() {
     }, 650);
   };
   return (
-    <div className="fixed bottom-4 right-4 z-[70]">
+    <div style={{ position: "fixed" }} className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[70] lg:inset-x-auto lg:bottom-4 lg:right-4">
       {open ? (
         <section
           aria-label="Trợ lý hướng dẫn sử dụng"
-          className="mb-2 flex h-[min(620px,calc(100vh-6rem))] w-[min(430px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl"
+          className="flex h-[min(620px,calc(100dvh-5rem-env(safe-area-inset-bottom)))] w-full flex-col overflow-hidden rounded-t-2xl border bg-white shadow-2xl lg:mb-2 lg:h-[min(620px,calc(100vh-6rem))] lg:w-[min(430px,calc(100vw-2rem))] lg:rounded-2xl"
         >
           <header className="flex items-center justify-between bg-orange-600 px-4 py-3 text-white">
             <div>
@@ -303,7 +308,7 @@ export default function HelpBot() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Mở trợ lý hướng dẫn"
-        className="ml-auto flex items-center gap-2 rounded-full bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-orange-700"
+        className="ml-auto hidden items-center gap-2 rounded-full bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-orange-700 lg:flex"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.6 8.6 0 0 1-3.4-.7L4 20l1.7-3.6A7.5 7.5 0 1 1 20 11.5Z" /><path d="M8 11h.01M12 11h.01M16 11h.01" /></svg> Trợ giúp
       </button>

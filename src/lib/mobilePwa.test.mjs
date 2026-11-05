@@ -30,6 +30,13 @@ test('navigation is network-first and never stores authenticated HTML', async ()
   w.goOffline(); assert.equal(await w.request('/account'), 'public:/offline.html');
   assert.equal(w.stores.size, 5);
 });
+
+test('canonical install page also stays online-only and outside the PWA cache', async () => {
+  const w = worker(); await w.lifecycle('install');
+  assert.equal(await w.request('/app'), 'private-html');
+  assert.equal(w.stores.has('/app'), false);
+  w.goOffline(); assert.equal(await w.request('/app'), 'public:/offline.html');
+});
 test('API, uploads and mutations are never intercepted, even as navigation', async () => {
   const w = worker(); await w.lifecycle('install'); w.goOffline();
   for (const path of ['/api', '/api/mobile/apk/download', '/api/auth/session', '/uploads/private.pdf']) assert.equal(await w.request(path), undefined);

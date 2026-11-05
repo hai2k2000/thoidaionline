@@ -17,7 +17,7 @@ test("web login does not require first-login password change", () => {
   const login = read("../app/api/auth/login/route.ts");
   const page = read("../app/login/page.tsx");
   assert.match(login, /mustChangePassword/);
-  assert.match(page, /resolvePostLoginPath\(res\.mustChangePassword === true\)/);
+  assert.match(page, /resolvePostLoginPath\(res\.mustChangePassword === true, new URLSearchParams\(window\.location\.search\)\.get\("next"\)\)/);
   const credentials = read("../lib/authenticateCredentials.ts");
   assert.match(credentials, /mustChangePassword: false/);
   assert.doesNotMatch(credentials, /password === DEFAULT_FIRST_LOGIN_PASSWORD && row\.username/);

@@ -12,6 +12,7 @@ import HelpBot from "@/components/HelpBot";
 import { usePathname } from "next/navigation";
 import { getMobileNavigation, isMobileNavigationActive, isMobileKeyboardOpen, isVisibleMobileOverlay } from "@/components/mobileNavigation";
 import { createPortal } from "react-dom";
+import InstallAppLink from "@/components/InstallAppLink";
 
 type AppNavProps = {
   currentPath: string;
@@ -183,7 +184,7 @@ function NavContent({
           >
             <NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span>{labels[item.id]}</span>
           </Link>
-        ))}<Link href="/mobile-app" onClick={onNavigate} aria-current={currentPath === "/mobile-app" ? "page" : undefined} className={linkClass(currentPath === "/mobile-app")}>Ứng dụng di động</Link></div>
+        ))}<Link href="/app" onClick={onNavigate} aria-current={currentPath === "/app" ? "page" : undefined} className={linkClass(currentPath === "/app")}>Ứng dụng di động</Link></div>
         {!mobile || navigation.primary.length > 0 ? <button
           type="button"
           onClick={() => {
@@ -246,7 +247,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   const mobileActive = (href: string) => isMobileNavigationActive(`${mobilePath}?${currentPath.split("?")[1] ?? ""}`, href);
   const activeItem = mobileNavigation.items.find((item) => mobileActive(item.href));
   const pageItem = [...navigation.primary, ...navigation.configuration, ...navigation.account].find((item) => isNavigationActive(currentPath, item.href));
-  const mobileTitle = mobilePath === "/mobile-app" ? "Ứng dụng di động" : activeItem?.label ?? (pageItem ? labels[pageItem.id] : "Thời Đại Work");
+  const mobileTitle = mobilePath === "/app" ? "Ứng dụng di động" : activeItem?.label ?? (pageItem ? labels[pageItem.id] : "Thời Đại Work");
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -328,8 +329,8 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
 
   return (
     <aside data-app-navigation className="w-full lg:w-[252px] lg:shrink-0">
-      <div className="desktop-notifications fixed right-4 top-4 z-[60]">
-        {!isCollaboratorRole(user?.role_code) && <NotificationBell />}
+      <div className="desktop-notifications fixed right-4 top-4 z-[60] hidden items-center gap-2 lg:flex">
+        <InstallAppLink />{!isCollaboratorRole(user?.role_code) && <NotificationBell />}
       </div>
       {!isCollaboratorRole(user?.role_code) && <HelpBot />}
       <div className="mobile-app-bar mb-3 lg:hidden">
@@ -338,7 +339,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
           <p data-testid="mobile-nav-title" className="truncate text-sm font-bold text-slate-900 lg:hidden">{mobileTitle}</p>
           <p className="hidden truncate text-sm font-bold text-slate-900 lg:block">{labels[(navigation.primary.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.configuration.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.account[0])?.id ?? "tasks"]}</p>
         </div>
-        <Link href="/account" aria-label="Tài khoản của tôi" className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 font-bold text-orange-800 lg:hidden">{(user?.full_name ?? userLabel ?? "?").trim().charAt(0).toUpperCase()}</Link>
+        <div className="flex shrink-0 items-center gap-1 lg:hidden"><InstallAppLink mobile />{!isCollaboratorRole(user?.role_code) && <NotificationBell />}<Link href="/account" aria-label="Tài khoản của tôi" className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-orange-100 font-bold text-orange-800">{(user?.full_name ?? userLabel ?? "?").trim().charAt(0).toUpperCase()}</Link></div>
       </div>
       {user && !["/login", "/forgot-password", "/reset-password"].includes(mobilePath) ? <nav aria-label="Điều hướng di động" data-obscured={mobileOpen || mobileObscured} className="mobile-bottom-nav lg:hidden" style={{ position: "fixed" }}>
         {mobileNavigation.items.filter((item) => item.href !== "more").map((item) => <Link key={item.id} href={item.href} aria-current={mobileActive(item.href) ? "page" : undefined} className={`mobile-bottom-item ${mobileActive(item.href) ? "is-active" : ""}`}><MobileIcon kind={item.kind} /><span>{item.label}</span></Link>)}
@@ -386,6 +387,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
             className="mobile-menu-sheet fixed inset-x-0 bottom-0 z-[81] max-h-[88dvh] overflow-y-auto rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden"
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-2"><h2 className="font-bold">Thêm</h2><button type="button" onClick={restoreMenuFocus} className="min-h-11 min-w-11 rounded-lg px-3 font-semibold">Đóng</button></div>
+            {mobileNavigation.showHelp ? <button type="button" onClick={() => { setMobileOpen(false); window.dispatchEvent(new CustomEvent("thoidai:open-help")); }} className="mx-4 mt-3 flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-orange-50"><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.6 8.6 0 0 1-3.4-.7L4 20l1.7-3.6A7.5 7.5 0 1 1 20 11.5Z" /><path d="M8 11h.01M12 11h.01M16 11h.01" /></svg>Trợ giúp</button> : null}
             <NavContent
               currentPath={currentPath}
               navigation={mobileNavigation.menu}
