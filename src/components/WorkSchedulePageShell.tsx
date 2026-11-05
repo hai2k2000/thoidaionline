@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState, useRef, useId } from "react";
 import { createPortal } from "react-dom";
 import { splitCellEvents, summarizeParticipants } from "@/lib/workScheduleEventCards.mjs";
 import AppNav from "@/components/AppNav";
-import EventAssignmentPanel from "@/components/EventAssignmentPanel";
+import { canEditEventAssignment } from "@/lib/workScheduleEventAccess";
+import EventAssignmentPanel, { type EventAssignmentPanelHandle } from "@/components/EventAssignmentPanel";
 import { personalPlanErrorMessage } from "@/lib/personalPlanError";
 import Time24hInput from "@/components/Time24hInput";
 import { canEditCreatorMutation, personalScheduleLifecycleState } from "@/lib/creatorMutationPolicy.mjs";
@@ -114,6 +115,7 @@ export default function WorkSchedulePageShell({
   people,
   currentUserId,
   currentUserRole,
+  isDepartmentManager,
   approvalActorId,
   canReviewPersonalPlans = false,
   userLabel,
@@ -127,6 +129,7 @@ export default function WorkSchedulePageShell({
   people: Person[];
   currentUserId?: string;
   currentUserRole?: string;
+  isDepartmentManager?: boolean;
   approvalActorId?: string;
   canReviewPersonalPlans?: boolean;
   userLabel: string;
@@ -158,6 +161,7 @@ export default function WorkSchedulePageShell({
   const [detailRows, setDetailRows] = useState<Row[] | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const [planType, setPlanType] = useState<"business" | "event">("business");
+  const eventPanelRef = useRef<EventAssignmentPanelHandle>(null);
   const [eventOpen, setEventOpen] = useState(eventAssignmentOpen);
 
   useEffect(() => {
@@ -539,7 +543,7 @@ export default function WorkSchedulePageShell({
               ) : null}
             </div> : null}
           </section> : null}
-          {enableEventAssignment ? <EventAssignmentPanel people={eventPeople ?? people} open={eventOpen} onOpenChange={setEventOpen} onChanged={() => setRetryToken((value) => value + 1)} /> : null}
+          {enableEventAssignment ? <EventAssignmentPanel ref={eventPanelRef} currentUserId={currentUserId} currentUserRole={currentUserRole} isDepartmentManager={isDepartmentManager} people={eventPeople ?? people} open={eventOpen} onOpenChange={setEventOpen} onChanged={() => setRetryToken((value) => value + 1)} /> : null}
 
           {canReviewPersonalPlans && activeTab === "approval" ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm" role="tabpanel">
             <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ duyệt</h2>
@@ -643,7 +647,8 @@ export default function WorkSchedulePageShell({
                                   {row.reviewed_at ? <p>Thời gian duyệt: {new Date(row.reviewed_at).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</p> : null}
                                   {row.approval_status === "REJECTED" && row.review_note ? <p className="text-red-700">Lý do từ chối: {row.review_note}</p> : null}
                                 </div> : null}
-                                {currentUserId && canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setDetailRows(null); setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => { setDetailRows(null); void deletePlan(row.id); }} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Hủy kế hoạch</button></div> : null}
+                                {row.event_assignment_kind === "leadership" && enableEventAssignment && canEditEventAssignment(row, { id: currentUserId, role_code: currentUserRole, is_department_manager: isDepartmentManager }) ? <button type="button" onClick={() => { setDetailRows(null); void eventPanelRef.current?.editEvent(row.id); }} className="mt-2 min-h-11 rounded border border-orange-300 bg-white px-3 py-2 text-sm font-semibold text-orange-700">Sửa sự kiện / thành viên</button> : null}
+                                {row.event_assignment_kind !== "leadership" && currentUserId && canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setDetailRows(null); setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => { setDetailRows(null); void deletePlan(row.id); }} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Hủy kế hoạch</button></div> : null}
                   </article>)}
                 </div>
               </div>

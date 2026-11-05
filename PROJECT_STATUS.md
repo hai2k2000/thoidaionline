@@ -1,3 +1,24 @@
+# Task 3: Edit Assigned Event Members
+
+Current Phase: implementation complete; full validation blocked
+Current Task: expose assigned-event member editing from grid details
+
+Completed:
+- Added permitted event-editor entry from details, visible removable out-of-list members, count validation, and stale revision feedback.
+- Preserved existing event save/list/grid refresh flow; no migration or new database select.
+
+Validation:
+- Required related Node tests: 51/51 PASS.
+- Changed-file ESLint: no errors; one existing unused-variable warning.
+- Diff whitespace check: PASS.
+
+Blockers:
+- TypeScript: missing local mammoth dependency in unrelated OfficePreview.tsx.
+- Build: release lineage requires integration/production, current branch is feature/event-edit-members.
+
+Next:
+- See .codex-report-3.md. Changes intentionally remain uncommitted; task forbids commit/push/network/SSH/Docker.
+
 # Manager In Own Department List
 
 Current Phase: implementation complete; full validation blocked
