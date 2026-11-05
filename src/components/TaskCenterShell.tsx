@@ -10,11 +10,12 @@ import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
+import TaskFilterPopover from "@/components/TaskFilterPopover";
 import AppNav from "@/components/AppNav";
 import PersonalTaskActions from "@/components/PersonalTaskActions";
 import JournalismSummary from "@/components/JournalismSummary";
 import { useAuth } from "@/lib/auth";
-import { countTaskListFilters, taskListHref } from "@/lib/taskFilters.mjs";
+import { taskListHref } from "@/lib/taskFilters.mjs";
 import { journalismLabels, journalismPublicationStatusLabel } from "@/lib/journalismUi.mjs";
 import { classifyTaskDeadline, deadlineLabel as presentDeadlineLabel, deadlineTone } from "@/lib/deadlinePresentation.mjs";
 import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
@@ -61,9 +62,6 @@ const displayTaskStatusLabel = (task: { status: string; approval_required?: bool
 const semanticAssigner = resolveDisplayedAssigner;
 const statusClass = (status: string) => status === "done" ? "bg-emerald-100 text-emerald-800" : status === "rejected" ? "bg-red-100 text-red-800" : status === "cancelled" ? "bg-slate-200 text-slate-600" : "bg-amber-100 text-amber-800";
 
-const tabClass = (active: boolean) => `rounded-full border px-3.5 py-2 text-sm font-semibold transition-colors ${
-  active ? "border-orange-500 bg-orange-500 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:text-orange-800"
-}`;
 
 const deadlineLabel = (task: TaskListResult["items"][number]) => {
   const state = classifyTaskDeadline(task);
@@ -101,71 +99,69 @@ const participantNames = (task: TaskListResult["items"][number], role: "assignee
   task.task_assignees.filter((row) => row.assignment_role === role).map((row) => row.staff_users?.full_name).filter(Boolean).join(", ") || "—";
 
 const assigneeDisplay = (task: TaskListResult["items"][number]) => { const owner = task.task_assignees.find((row) => row.assignment_role === "owner")?.staff_users?.full_name; const assignees = task.task_assignees.filter((row) => row.assignment_role === "assignee").map((row) => row.staff_users?.full_name).filter(Boolean); return <>{owner ? <><strong>{owner}</strong>{assignees.length ? ", " : ""}</> : null}{assignees.join(", ") || (!owner ? "—" : "")}</>; };
-function FilterFields({ query, projects = [], departments, personOptions = [], canFilterByPerson = false, journalismWorkKinds, journalismTopics, journalismSeries, canAccessJournalism, basePath = "/tasks" }: Pick<Props, "query" | "projects" | "departments" | "personOptions" | "canFilterByPerson" | "journalismWorkKinds" | "journalismTopics" | "journalismSeries" | "canAccessJournalism" | "basePath">) {
+function FilterFields({ query, projects = [], departments, personOptions = [], canFilterByPerson = false, journalismWorkKinds, journalismTopics, journalismSeries, canAccessJournalism, canReviewTaskApprovals, canSeeDepartmentCollaborating = false, taskMode = false, basePath = "/tasks" }: Pick<Props, "query" | "projects" | "departments" | "personOptions" | "canFilterByPerson" | "journalismWorkKinds" | "journalismTopics" | "journalismSeries" | "canAccessJournalism" | "canReviewTaskApprovals" | "canSeeDepartmentCollaborating" | "taskMode" | "basePath">) {
+  const [dates, setDates] = useState({ from: query.fromDate ?? "", to: query.toDate ?? "" });
+  const [projectId, setProjectId] = useState(query.projectId ?? "");
+  const [extra, setExtra] = useState({ assignmentSource: query.assignmentSource ?? "", department: query.departmentId ?? "", workKind: query.journalismWorkKindId ?? "", topicId: query.topicId ?? "", seriesId: query.seriesId ?? "", publicationStatus: query.publicationStatus ?? "", plannedFrom: query.plannedPublicationFrom ?? "", plannedTo: query.plannedPublicationTo ?? "" });
   const journalismFilter = query.journalism ?? "exclude";
-  return (
-    <>
-      {basePath === "/duty-schedule" ? <input type="hidden" name="scope" value="personal" /> : query.scope !== "all" ? <input type="hidden" name="scope" value={query.scope} /> : null}
-      {query.category ? <input type="hidden" name="category" value={query.category} /> : null}
-      {query.status ? <input type="hidden" name="status" value={query.status} /> : null}
-      {query.sort && query.sort !== "deadline" ? <input type="hidden" name="sort" value={query.sort} /> : null}
-      <label className="grid gap-1 text-xs font-semibold text-slate-600">Sắp xếp
-        <select aria-label="Sắp xếp" value={query.sort ?? "deadline"} onChange={(event) => {
-          window.location.href = taskListHref(query, { sort: event.target.value as TaskListQuery["sort"], page: 1 }).replace(/^\/tasks/, basePath);
-        }} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal">
-          <option value="deadline">Hạn hoàn thành gần nhất</option>
-          <option value="newest">Mới giao nhất</option>
-          <option value="priority">Ưu tiên cao nhất</option>
-        </select>
-      </label>
-      {canFilterByPerson ? <PersonFilter query={query} basePath={basePath} people={personOptions} /> : null}
-      <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm theo tên công việc" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
-      <select name="projectId" aria-label="Dự án" defaultValue={query.projectId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5"><option value="">Dự án · Tất cả</option><option value="none">Không thuộc dự án</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}{project.status === "closed" ? " (đã đóng)" : ""}</option>)}</select>
-      <select name="state" defaultValue={query.statusGroup ?? ""} onChange={(event) => {
-        // An explicit status choice replaces the legacy route's exact status.
-        const legacyStatus = event.currentTarget.form?.elements.namedItem("status");
-        if (legacyStatus instanceof HTMLInputElement) legacyStatus.disabled = true;
-      }} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
-        <option value="">Trạng thái</option><option value="completed">Đã hoàn thành</option><option value="unfinished">Chưa hoàn thành</option><option value="returned">Trả lại</option><option value="cancelled">Đã hủy</option>
+  const showJournalism = !JOURNALISM_UI_HIDDEN && basePath === "/tasks" && canAccessJournalism && journalismFilter === "only";
+  const extraCount = [extra.assignmentSource, extra.department, ...(showJournalism ? [extra.workKind, extra.topicId, extra.seriesId, extra.publicationStatus, extra.plannedFrom, extra.plannedTo] : [])].filter(Boolean).length;
+  const control = "h-11 w-full min-w-0 appearance-none rounded-lg border px-1 text-xs font-normal";
+  const navigate = (patch: Partial<TaskListQuery>) => { window.location.href = taskListHref(query, { ...patch, page: 1 }).replace(/^\/tasks/, basePath); };
+  const scopeValue = query.approvalQueue ? `approval:${query.approvalQueue}` : query.scope;
+  const dateText = dates.from || dates.to ? `Từ ${dates.from ? dates.from.split("-").reverse().join("/") : "…"} – Đến ${dates.to ? dates.to.split("-").reverse().join("/") : "…"}` : "Khoảng ngày";
+  const retained = new URL(taskListHref(query, { page: 1 }), "http://local").searchParams;
+  // Controls and persistent hidden inputs own these values; retain every other URL parameter.
+  for (const key of ["q", "projectId", "state", "deadline", "sort", "from", "to", ...Object.keys(extra)]) retained.delete(key);
+  if (canFilterByPerson) retained.delete("personId");
+  if (taskMode || basePath === "/duty-schedule") retained.set("scope", "personal");
+  const retainedScope = retained.get("scope");
+  retained.delete("scope");
+  return <>
+    {retainedScope ? <input type="hidden" name="scope" value={retainedScope} /> : null}
+    {Array.from(retained).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
+    <label className="min-w-0" title="Phạm vi công việc"><span className="sr-only">Phạm vi công việc</span>
+      <select aria-label="Phạm vi công việc" disabled={taskMode} value={taskMode ? "personal" : scopeValue} onChange={(event) => {
+        const value = event.target.value;
+        if (value.startsWith("approval:")) { navigate({ approvalQueue: value.slice(9) as TaskListQuery["approvalQueue"] }); return; }
+        if (value.startsWith("journalism:")) { navigate({ journalism: value.slice(11) as TaskListQuery["journalism"] }); return; }
+        navigate({ scope: value as TaskListQuery["scope"], approvalQueue: null, ...(value === "collaborating" || value === "department_collaborating" ? { taskType: null } : {}) });
+      }} className={control} title={query.approvalQueue === "assignment" ? "Chờ duyệt giao việc" : query.approvalQueue === "completion" ? "Chờ duyệt hoàn thành" : "Phạm vi công việc"}>
+        <option value="all" title="Phạm vi công việc: Tất cả">Phạm vi</option><option value="assigned" title="Được giao cho tôi">Được giao</option><option value="personal" title="Nhiệm vụ cá nhân">Cá nhân</option><option value="collaborating" title="Việc phối hợp">Phối hợp</option>{canSeeDepartmentCollaborating ? <option value="department_collaborating" title="Việc phối hợp của phòng tôi">PH phòng</option> : null}<option value="watching">Tôi theo dõi</option><option value="cancelled">Đã hủy</option>
+        {!taskMode && basePath === "/tasks" && canReviewTaskApprovals ? <><option value="approval:assignment" title="Chờ duyệt giao việc">Duyệt giao</option><option value="approval:completion" title="Chờ duyệt hoàn thành">Duyệt xong</option></> : null}
+        {!taskMode && basePath === "/tasks" && !JOURNALISM_UI_HIDDEN ? <><option value="journalism:exclude">Công việc thường</option>{canAccessJournalism ? <option value="journalism:only">Công việc nghiệp vụ báo chí</option> : null}</> : null}
       </select>
-      <select name="assignmentSource" defaultValue={query.assignmentSource ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
-        <option value="">Hình thức · Tất cả</option><option value="leadership_assigned">Lãnh đạo giao</option><option value="self_registered">Tự đăng ký</option>
-      </select>
-      <select name="deadline" defaultValue={query.deadlineState ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
-        <option value="">Thời hạn</option><option value="on_time">Đúng hạn</option><option value="due_soon">Sắp đến hạn</option><option value="overdue">Quá hạn</option><option value="no_deadline">Không deadline</option>
-      </select>
-      <input name="from" type="date" defaultValue={query.fromDate ?? ""} aria-label="Từ ngày" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
-      <input name="to" type="date" defaultValue={query.toDate ?? ""} aria-label="Đến ngày" className="w-full min-w-0 rounded-lg border px-3 py-2.5" />
-      {departments.length ? (
-        <select name="department" defaultValue={query.departmentId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5">
-          <option value="">Phòng</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
-        </select>
-      ) : null}
-      {!JOURNALISM_UI_HIDDEN && basePath === "/tasks" ? <>
-        <input type="hidden" name="journalism" value={journalismFilter} />
-        {canAccessJournalism && journalismFilter === "only" ? <>
-          <label className="grid gap-1 text-xs font-semibold text-slate-600">Loại nghiệp vụ<select name="workKind" defaultValue={query.journalismWorkKindId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal">
-            <option value="">Loại nghiệp vụ · Tất cả</option>
-            {journalismWorkKinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.name}{kind.is_active ? "" : " (Ngừng sử dụng)"}</option>)}
-          </select></label>
-          <label className="grid gap-1 text-xs font-semibold text-slate-600">{journalismLabels.topic}<select name="topicId" defaultValue={query.topicId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal"><option value="">Chủ đề · Tất cả</option>{journalismTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}{topic.is_active ? "" : " (Ngừng sử dụng)"}</option>)}</select></label>
-          <label className="grid gap-1 text-xs font-semibold text-slate-600">{journalismLabels.series}<select name="seriesId" defaultValue={query.seriesId ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal"><option value="">Loạt bài · Tất cả</option>{journalismSeries.map((series) => <option key={series.id} value={series.id}>{series.name}{series.is_active ? "" : " (Ngừng sử dụng)"}</option>)}</select></label>
-          <label className="grid gap-1 text-xs font-semibold text-slate-600">Trạng thái xuất bản<select name="publicationStatus" defaultValue={query.publicationStatus ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 font-normal">
-            <option value="">Trạng thái xuất bản · Tất cả</option>
-            <option value="not_published">{journalismPublicationStatusLabel("not_published")}</option><option value="scheduled">{journalismPublicationStatusLabel("scheduled")}</option><option value="published">{journalismPublicationStatusLabel("published")}</option><option value="withdrawn">{journalismPublicationStatusLabel("withdrawn")}</option>
-          </select></label>
-          <label className="grid gap-1 text-xs font-semibold text-slate-600">Dự kiến xuất bản từ<input name="plannedFrom" type="date" defaultValue={query.plannedPublicationFrom ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 text-sm font-normal" /></label>
-          <label className="grid gap-1 text-xs font-semibold text-slate-600">Dự kiến xuất bản đến<input name="plannedTo" type="date" defaultValue={query.plannedPublicationTo ?? ""} className="w-full min-w-0 rounded-lg border px-3 py-2.5 text-sm font-normal" /></label>
-        </> : null}
+    </label>
+    <input name="q" defaultValue={query.search ?? ""} placeholder="Tìm công việc…" aria-label="Tìm kiếm công việc" className={control} />
+    {canFilterByPerson ? <PersonFilter compact query={query} basePath={basePath} people={personOptions} /> : null}
+    <select name="projectId" aria-label="Dự án" title={projects.find((project) => project.id === projectId)?.name ?? (projectId === "none" ? "Không thuộc dự án" : "Dự án · Tất cả")} value={projectId} onChange={(event) => setProjectId(event.target.value)} className={control}><option value="">Dự án</option><option value="none" title="Không thuộc dự án">Ngoài DA</option>{projects.map((project) => <option key={project.id} value={project.id} title={`${project.name}${project.status === "closed" ? " (đã đóng)" : ""}`}>{project.id === projectId ? "Đã chọn" : project.name}{project.id !== projectId && project.status === "closed" ? " (đã đóng)" : ""}</option>)}</select>
+    <select name="state" aria-label="Trạng thái" defaultValue={query.statusGroup ?? ""} onChange={(event) => {
+      const legacyStatus = event.currentTarget.form?.elements.namedItem("status");
+      if (legacyStatus instanceof HTMLInputElement) legacyStatus.disabled = true;
+      event.currentTarget.title = event.currentTarget.selectedOptions[0].text;
+    }} className={control} title="Trạng thái"><option value="">Trạng thái</option><option value="completed" title="Đã hoàn thành">Đã xong</option><option value="unfinished" title="Chưa hoàn thành">Chưa xong</option><option value="returned">Trả lại</option><option value="cancelled">Đã hủy</option></select>
+    <select name="deadline" aria-label="Thời hạn" title="Thời hạn" defaultValue={query.deadlineState ?? ""} className={control}><option value="">Thời hạn</option><option value="on_time">Đúng hạn</option><option value="due_soon" title="Sắp đến hạn">Sắp hạn</option><option value="overdue">Quá hạn</option><option value="no_deadline" title="Không deadline">Không hạn</option></select>
+    <TaskFilterPopover label="Khoảng ngày" triggerText={dates.from || dates.to ? <span className="grid text-[10px] leading-tight"><span>Từ {dates.from ? dates.from.split("-").reverse().join("/") : "…"}</span><span>– Đến {dates.to ? dates.to.split("-").reverse().join("/") : "…"}</span></span> : undefined} summary={dateText}>
+      <label className="grid gap-1">Từ ngày<input type="date" aria-label="Từ ngày" value={dates.from} onChange={(event) => setDates({ ...dates, from: event.target.value })} className={control} /></label>
+      <label className="grid gap-1">Đến ngày<input type="date" aria-label="Đến ngày" value={dates.to} onChange={(event) => setDates({ ...dates, to: event.target.value })} className={control} /></label>
+      <button type="button" onClick={() => setDates({ from: "", to: "" })} className="justify-self-start rounded border px-3 py-2">Xóa</button>
+    </TaskFilterPopover>
+    <select name="sort" aria-label="Sắp xếp" title="Sắp xếp: Hạn hoàn thành gần nhất / Mới giao nhất / Ưu tiên cao nhất" defaultValue={query.sort ?? "deadline"} onChange={(event) => navigate({ sort: event.target.value as TaskListQuery["sort"] })} className={control}><option value="deadline" title="Hạn hoàn thành gần nhất">Hạn gần nhất</option><option value="newest" title="Mới giao nhất">Mới giao</option><option value="priority" title="Ưu tiên cao nhất">Ưu tiên cao</option></select>
+    <TaskFilterPopover label="Lọc thêm" count={extraCount}>
+      <label className="grid gap-1">Hình thức<select aria-label="Hình thức" value={extra.assignmentSource} onChange={(event) => setExtra({ ...extra, assignmentSource: event.target.value })} className={control}><option value="">Tất cả</option><option value="leadership_assigned">Lãnh đạo giao</option><option value="self_registered">Tự đăng ký</option></select></label>
+      {departments.length ? <label className="grid gap-1">Phòng<select aria-label="Phòng" value={extra.department} onChange={(event) => setExtra({ ...extra, department: event.target.value })} className={control}><option value="">Tất cả</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label> : null}
+      {showJournalism ? <>
+        {([["workKind", "Loại nghiệp vụ", journalismWorkKinds], ["topicId", journalismLabels.topic, journalismTopics], ["seriesId", journalismLabels.series, journalismSeries]] as const).map(([key, label, options]) => <label key={key} className="grid gap-1">{label}<select aria-label={label} value={extra[key]} onChange={(event) => setExtra({ ...extra, [key]: event.target.value })} className={control}><option value="">Tất cả</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}{option.is_active ? "" : " (Ngừng sử dụng)"}</option>)}</select></label>)}
+        <label className="grid gap-1">Trạng thái xuất bản<select value={extra.publicationStatus} onChange={(event) => setExtra({ ...extra, publicationStatus: event.target.value })} className={control}><option value="">Tất cả</option>{["not_published", "scheduled", "published", "withdrawn"].map((status) => <option key={status} value={status}>{journalismPublicationStatusLabel(status)}</option>)}</select></label>
+        <label className="grid gap-1">Dự kiến xuất bản từ<input type="date" value={extra.plannedFrom} onChange={(event) => setExtra({ ...extra, plannedFrom: event.target.value })} className={control} /></label>
+        <label className="grid gap-1">Dự kiến xuất bản đến<input type="date" value={extra.plannedTo} onChange={(event) => setExtra({ ...extra, plannedTo: event.target.value })} className={control} /></label>
       </> : null}
-      <div className="flex items-stretch gap-2 sm:col-span-2 lg:col-span-1">
-        <button className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white">Lọc</button>
-        <Link href={basePath === "/duty-schedule" ? "/duty-schedule?scope=personal" : basePath} className="rounded-lg border px-4 py-2 font-semibold">Đặt lại</Link>
-      </div>
-    </>
-  );
+    </TaskFilterPopover>
+    <div className="grid grid-cols-1 gap-2 sm:col-span-2 sm:grid-cols-2 xl:col-span-1"><button className="h-11 rounded-lg bg-slate-900 px-2 text-xs font-semibold text-white">Lọc</button><Link href={basePath === "/duty-schedule" ? "/duty-schedule?scope=personal" : basePath} className="flex h-11 items-center justify-center whitespace-nowrap rounded-lg border px-2 text-xs font-semibold">Đặt lại</Link></div>
+    <input type="hidden" name="from" value={dates.from} /><input type="hidden" name="to" value={dates.to} />
+    {Object.entries(extra).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
+  </>;
 }
-
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return <div className="rounded-lg bg-white p-2"><dt className="text-xs font-semibold text-slate-500">{label}</dt><dd className="mt-0.5 break-words text-sm">{value}</dd></div>;
 }
@@ -201,7 +197,7 @@ export default function TaskCenterShell(props: Props) {
   const { logout } = useAuth();
   const onLogout = () => { logout(); router.replace("/login"); };
   const totalPages = Math.max(1, Math.ceil(tasks.total / tasks.pageSize));
-  const activeFilters = countTaskListFilters(query);
+
   const listHref = (patch: Partial<TaskListQuery>) => { const href = taskListHref(query, patch).replace(/^\/tasks/, basePath); if (!taskMode) return href; const url = new URL(href, "http://local"); url.searchParams.set("scope", "personal"); return `${url.pathname}?${url.searchParams.toString()}`; };
   useEffect(() => { const close = (event: PointerEvent) => { if (tableRef.current && !tableRef.current.contains(event.target as Node)) setExpandedId(null); }; document.addEventListener("pointerdown", close); return () => document.removeEventListener("pointerdown", close); }, []);
   // Reset selection only when filter values actually change; object identity can
@@ -265,29 +261,11 @@ export default function TaskCenterShell(props: Props) {
           </header>
 
           <>
-      {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : <div className="mt-3 rounded-xl border bg-white p-3"><label className="flex items-center gap-2 text-sm font-semibold">Phạm vi công việc<select value={query.scope ?? "all"} onChange={(e)=>{window.location.href=listHref({scope:e.target.value as TaskListQuery["scope"],...(e.target.value === "collaborating" || e.target.value === "department_collaborating" ? { taskType: null, approvalQueue: null } : {}),page:1});}} className="rounded border px-3 py-2 font-normal"><option value="all">Tất cả</option><option value="assigned">Được giao cho tôi</option><option value="personal">Nhiệm vụ cá nhân</option><option value="collaborating">Việc phối hợp</option>{canSeeDepartmentCollaborating ? <option value="department_collaborating">Việc phối hợp của phòng tôi</option> : null}<option value="watching">Tôi theo dõi</option><option value="cancelled">Đã hủy</option></select></label></div>}
 
-              {!taskMode && basePath === "/tasks" ? <nav aria-label="Loại công việc" className="mt-3 flex flex-wrap gap-2 rounded-xl border bg-white p-3">
-                {!JOURNALISM_UI_HIDDEN ? <>
-                  <Link href={listHref({ journalism: "exclude", page: 1 })} className={tabClass(query.journalism !== "only")}>Công việc thường</Link>
-                  {canAccessJournalism ? <Link href={listHref({ journalism: "only", page: 1 })} className={tabClass(query.journalism === "only")}>Công việc nghiệp vụ báo chí</Link> : null}
-                </> : null}
-      <Link href={listHref({ scope: "collaborating", taskType: null, approvalQueue: null, page: 1 })} className={tabClass(query.scope === "collaborating")}>Việc phối hợp</Link>
-      {canSeeDepartmentCollaborating ? <Link href={listHref({ scope: "department_collaborating", taskType: null, approvalQueue: null, page: 1 })} className={tabClass(query.scope === "department_collaborating")}>Việc phối hợp của phòng tôi</Link> : null}
-                {canReviewTaskApprovals ? <>
-                  <Link href={listHref({ approvalQueue: "assignment", page: 1 })} className={tabClass(query.approvalQueue === "assignment")}>Chờ duyệt giao việc</Link>
-                  <Link href={listHref({ approvalQueue: "completion", page: 1 })} className={tabClass(query.approvalQueue === "completion")}>Chờ duyệt hoàn thành</Link>
-                </> : null}
-              </nav> : null}
-
-              <details className="mt-3 rounded-xl border bg-white p-3 shadow-sm md:hidden">
-                <summary className="cursor-pointer font-semibold">Bộ lọc {activeFilters ? `(${activeFilters})` : ""}</summary>
-                <form action={basePath} className="mt-3 grid gap-3"><FilterFields key={JSON.stringify([query.personId, query.projectId, query.journalism, query.assignmentSource, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} projects={projects} departments={departments} personOptions={personOptions} canFilterByPerson={canFilterByPerson} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} /></form>
-              </details>
-              <form action={basePath} className="mt-3 hidden gap-2.5 rounded-xl border bg-white p-3 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-7">
-                <FilterFields key={JSON.stringify([query.personId, query.projectId, query.journalism, query.assignmentSource, query.journalismWorkKindId, query.publicationStatus, query.plannedPublicationFrom, query.plannedPublicationTo, query.topicId, query.seriesId])} query={query} projects={projects} departments={departments} personOptions={personOptions} canFilterByPerson={canFilterByPerson} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} basePath={basePath} />
+              {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : null}
+              <form id="task-filter-form" action={basePath} className={`mt-3 grid grid-cols-1 items-center gap-2 rounded-xl border bg-white p-3 shadow-sm sm:grid-cols-2 xl:gap-1 ${canFilterByPerson ? "xl:grid-cols-[80px_minmax(104px,1fr)_66px_64px_64px_66px_88px_86px_76px_96px]" : "xl:grid-cols-[80px_minmax(104px,1fr)_64px_64px_66px_88px_86px_76px_96px]"}`}>
+                <FilterFields key={JSON.stringify(query)} query={query} projects={projects} departments={departments} personOptions={personOptions} canFilterByPerson={canFilterByPerson} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} canReviewTaskApprovals={canReviewTaskApprovals} canSeeDepartmentCollaborating={canSeeDepartmentCollaborating} taskMode={taskMode} basePath={basePath} />
               </form>
-
               {bulkPrintEnabled && selectedTaskIds.length ? <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3"><span className="text-sm font-semibold text-orange-900">Đã chọn: {selectedTaskIds.length} công việc</span><button type="button" disabled={bulkBusy} onClick={() => void bulkPrint()} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Xuất phiếu giao việc hàng loạt (ZIP)</button>{adminBulk ? <><button type="button" disabled={bulkBusy} onClick={() => void bulkCancel()} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Huỷ công việc</button><span className="text-xs text-slate-600">Xoá công việc: ADMIN DELETE CONTRACT NOT FOUND</span></> : null}</div> : null}
                 <section className="mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
                 {canReviewTaskApprovals && query.approvalQueue ? <ApprovalQueue queue={query.approvalQueue} data={approvalQueue?.[query.approvalQueue] ?? { items: [], total: 0, page: 1, pageSize: 100 }} onRefresh={() => router.refresh()} /> : null}
