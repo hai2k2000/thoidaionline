@@ -2,6 +2,9 @@ package com.thoidaionline
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -24,6 +27,15 @@ class MainActivity : FlutterActivity() {
                         } else {
                             cameraResult = result
                             requestPermissions(arrayOf(Manifest.permission.CAMERA), cameraRequestCode)
+                        }
+                    }
+                    "canInstallPackages" -> result.success(Build.VERSION.SDK_INT < Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls())
+                    "openInstallSettings" -> {
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+                            result.success(null)
+                        } catch (_: Exception) {
+                            result.error("install_settings_unavailable", "Cannot open install settings", null)
                         }
                     }
                     else -> result.notImplemented()

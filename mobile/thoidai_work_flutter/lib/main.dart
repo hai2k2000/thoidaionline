@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'app_config.dart';
 import 'features/offline_page.dart';
 import 'services/native_push_service.dart';
+import 'services/apk_update_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/branded_loading.dart';
 
@@ -28,19 +29,20 @@ Future<void> main() async {
     } catch (_) { /* File selection remains available if camera permission is denied. */ }
   }
   final info = await PackageInfo.fromPlatform();
-  runApp(ThoiDaiWorkApp(version: info.version));
+  runApp(ThoiDaiWorkApp(version: info.version, versionCode: int.tryParse(info.buildNumber) ?? 0));
 }
 
 class ThoiDaiWorkApp extends StatelessWidget {
-  const ThoiDaiWorkApp({super.key, this.version = '1.0.0'});
+  const ThoiDaiWorkApp({super.key, this.version = '1.0.0', this.versionCode = 0});
   final String version;
+  final int versionCode;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     title: 'Thời Đại Work',
     theme: AppTheme.light(),
-    home: WebShell(version: version),
+    home: WebShell(version: version, versionCode: versionCode),
   );
 }
 
@@ -56,8 +58,9 @@ String safeDownloadName(String? suggestion, Uri uri) {
 }
 
 class WebShell extends StatefulWidget {
-  const WebShell({super.key, required this.version});
+  const WebShell({super.key, required this.version, required this.versionCode});
   final String version;
+  final int versionCode;
   @override
   State<WebShell> createState() => _WebShellState();
 }
@@ -73,12 +76,16 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   bool _backPending = false;
   double? _downloadProgress;
   late final NativePushService _push;
+  late final ApkUpdateService _apkUpdates;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _push = NativePushService(controller: () => _controller, onMessage: _message);
+    _apkUpdates = ApkUpdateService(controller: () => _controller, installedVersionCode: widget.versionCode, onMessage: _message, onProgress: (active, progress) {
+      if (mounted) setState(() { _downloading = active; _downloadProgress = progress; });
+    });
     unawaited(_push.start());
     _refresh = PullToRefreshController(
       settings: PullToRefreshSettings(color: const Color(0xffea580c)),
@@ -96,6 +103,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _push.dispose();
+    _apkUpdates.dispose();
     _connectivity?.cancel();
     _client.close();
     super.dispose();
@@ -103,7 +111,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _push.schedule();
+    if (state == AppLifecycleState.resumed) { _push.schedule(); if (mounted && !_downloading) unawaited(_apkUpdates.check(context)); }
   }
 
   void _message(String text) {
@@ -167,6 +175,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
       );
       final suggestion = exportedName?.value is String ? exportedName!.value as String : suggestedFilename;
       final name = safeDownloadName(suggestion, Uri.parse('https://local/export'));
+      if (name.toLowerCase().endsWith('.apk')) throw const FormatException('Use the verified APK updater');
       file = File('${dir.path}/${DateTime.now().microsecondsSinceEpoch}-$name');
       sink = file.openWrite();
       // Transfer bounded chunks instead of retaining a base64 copy of the entire file.
@@ -207,6 +216,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
     if (download.url.scheme == 'blob') { await _downloadBlob(download.url.toString(), download.suggestedFilename); return; }
     var uri = Uri.parse(download.url.toString());
     if (!isInternalUrl(uri)) { await _external(uri); return; }
+    if (uri.path == '/api/mobile/apk/download') { await _apkUpdates.check(context, manual: true); return; }
     setState(() { _downloading = true; _downloadProgress = null; });
     File? file;
     IOSink? sink;
@@ -239,6 +249,10 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
       final disposition = response.headers['content-disposition'] ?? '';
       final headerName = RegExp(r'filename="?([^";]+)').firstMatch(disposition)?.group(1);
       final name = safeDownloadName(headerName ?? download.suggestedFilename, uri);
+      if (name.toLowerCase().endsWith('.apk') || (response.headers['content-type'] ?? '').contains('android.package-archive')) {
+        await response.stream.listen((_) {}).cancel();
+        throw const FormatException('Use the verified APK updater');
+      }
       file = File('${directory.path}/${DateTime.now().microsecondsSinceEpoch}-$name');
       sink = file.openWrite();
       var received = 0;
@@ -330,7 +344,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
           ''',
         )]),
         initialSettings: InAppWebViewSettings(
-          applicationNameForUserAgent: 'ThoidaiWorkApp/${widget.version}',
+          applicationNameForUserAgent: 'ThoidaiWorkApp/${widget.version}+${widget.versionCode}',
           useShouldOverrideUrlLoading: true,
           useOnDownloadStart: true,
           supportMultipleWindows: true,
@@ -342,6 +356,12 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         pullToRefreshController: _refresh,
         onWebViewCreated: (controller) {
           _controller = controller;
+          controller.addJavaScriptHandler(handlerName: 'tdCheckApkUpdate', callback: (_) async {
+            final current = await controller.getUrl();
+            if (!mounted || _downloading || current == null || !isInternalUrl(Uri.parse(current.toString()))) return false;
+            await _apkUpdates.check(context, manual: true);
+            return true;
+          });
           controller.addJavaScriptHandler(handlerName: 'tdPushLogout', callback: (_) async {
             final current = await controller.getUrl();
             if (current == null || !isInternalUrl(Uri.parse(current.toString()))) return false;
@@ -362,8 +382,8 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
           _push.pageStarted();
           if (mounted) setState(() => _loading = true);
         },
-        onLoadStop: (_, __) { _loadEnded(); _push.pageLoaded(); },
-        onUpdateVisitedHistory: (_, __, ___) => _push.schedule(),
+        onLoadStop: (_, __) { _loadEnded(); _push.pageLoaded(); if (mounted && !_downloading) unawaited(_apkUpdates.check(context)); },
+        onUpdateVisitedHistory: (_, __, ___) { _push.schedule(); if (mounted && !_downloading) unawaited(_apkUpdates.check(context)); },
         onReceivedError: (_, request, __) {
           if (request.isForMainFrame == true) {
             _loadEnded();

@@ -20,7 +20,7 @@ export default function LoginPage() {
       const res = await login(identifier.trim(), password);
       if (!res.ok) return setMessage(`Đăng nhập không thành công: ${res.error}`);
       setMessage("Đăng nhập thành công.");
-      router.replace(resolvePostLoginPath(res.mustChangePassword === true));
+      router.replace(resolvePostLoginPath(res.mustChangePassword === true, new URLSearchParams(window.location.search).get("next")));
     } catch {
       setMessage("Không kết nối được dữ liệu đăng nhập. Vui lòng thử lại.");
     }
@@ -60,6 +60,7 @@ export default function LoginPage() {
           </button>
           <p className="min-h-6 text-sm leading-6 text-slate-600" role="status" aria-live="polite">{message}</p>
         </form>
+        <Link href="/login?next=/app" className="inline-flex min-h-11 items-center text-sm text-slate-600 underline underline-offset-4">Cài ứng dụng</Link>
     </AuthShell>
   );
 }

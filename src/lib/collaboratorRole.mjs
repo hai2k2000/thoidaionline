@@ -2,6 +2,7 @@ export const COLLABORATOR_ROLE_CODE = "cong_tac_vien";
 const UUID = "[0-9a-f-]{36}";
 export function isCollaboratorRole(code) { return String(code ?? "").trim().toLowerCase() === COLLABORATOR_ROLE_CODE; }
 export const COLLABORATOR_API_RULES = [
+  [`/api/version`, ["GET"]],
   [`/api/push/config`, ["GET"]], [`/api/push/subscribe`, ["POST"]], [`/api/push/unsubscribe`, ["POST"]],
   [`/api/mobile/push-token`, ["POST", "DELETE"]],
   [`/api/mobile/apk/latest`, ["GET"]], [`/api/mobile/apk/download`, ["GET"]],
@@ -18,6 +19,6 @@ export const COLLABORATOR_API_RULES = [
 export function isCollaboratorAllowedPath(pathname, method = "GET") {
   const path = String(pathname ?? "/").split("?")[0].replace(/\/$/, "") || "/";
   if (path.startsWith("/api/")) return COLLABORATOR_API_RULES.some(([pattern, methods]) => new RegExp(`^${pattern}$`, "i").test(path) && methods.includes(method));
-  return path === "/mobile-app" || path === "/my-tasks" || path === "/account" || path === "/projects" || new RegExp(`^/tasks/${UUID}$`, "i").test(path) || new RegExp(`^/projects/${UUID}$`, "i").test(path);
+  return path === "/app" || path === "/mobile-app" || path === "/my-tasks" || path === "/account" || path === "/projects" || new RegExp(`^/tasks/${UUID}$`, "i").test(path) || new RegExp(`^/projects/${UUID}$`, "i").test(path);
 }
 export function isCollaboratorAllowedApiPath(pathname, method = "GET") { return String(pathname ?? "").startsWith("/api/") && isCollaboratorAllowedPath(pathname, method); }

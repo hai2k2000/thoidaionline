@@ -47,7 +47,7 @@ test("public PWA assets bypass live actor lookup and private mobile routes remai
   process.env.SESSION_SECRET = "test-only-session-secret-with-32-characters";
   try {
     const { proxy } = load("cong_tac_vien");
-    for (const path of ["/manifest.webmanifest", "/sw.js", "/offline.html", "/icons/icon-192.png", "/mobile-app", "/api/mobile/apk/latest", "/api/mobile/apk/download"]) {
+    for (const path of ["/manifest.webmanifest", "/sw.js", "/offline.html", "/icons/icon-192.png", "/app", "/mobile-app", "/api/mobile/apk/latest", "/api/mobile/apk/download"]) {
       const response = await proxy(new NextRequest(`http://localhost${path}`));
       assert.equal(response.status, 200, path);
       assert.match(response.headers.get("Content-Security-Policy"), /worker-src 'self'/);
@@ -55,6 +55,6 @@ test("public PWA assets bypass live actor lookup and private mobile routes remai
     for (const path of ["/api/mobile/apk/latest", "/api/mobile/apk/download"]) {
       assert.equal((await proxy(new NextRequest(`http://localhost${path}`, { method: "POST" }))).status, 403);
     }
-    for (const path of ["/mobile-app/admin", "/api/mobile/apk/other", "/icons-private"]) assert.notEqual((await proxy(new NextRequest(`http://localhost${path}`))).status, 200);
+    for (const path of ["/app/admin", "/mobile-app/admin", "/api/mobile/apk/other", "/icons-private"]) assert.notEqual((await proxy(new NextRequest(`http://localhost${path}`))).status, 200);
   } finally { if (previous === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = previous; }
 });

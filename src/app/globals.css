@@ -133,8 +133,6 @@ body {
   .mobile-filter-backdrop { inset: 0; z-index: 90; background: rgba(2, 6, 23, 0.5); }
   .mobile-bottom-nav[data-obscured="true"] { visibility: hidden; pointer-events: none; }
   [data-app-navigation] { position: relative; }
-  .desktop-notifications { position: absolute; top: 0.8rem; right: 4.5rem; }
-  .mobile-app-bar > .min-w-0 { padding-right: 2.75rem; }
   .mobile-filter-trigger { margin-block: 0.75rem; }
   body:has(.mobile-bottom-nav) .fixed.bottom-4.right-4 { bottom: calc(5rem + env(safe-area-inset-bottom)); }
   main h1 { font-size: 1.25rem; line-height: 1.3; }

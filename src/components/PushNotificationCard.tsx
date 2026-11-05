@@ -73,6 +73,6 @@ function PushCard({ userId, banner }: { userId: string; banner: boolean }) {
 }
 export default function PushNotificationCard({ banner = false }: { banner?: boolean }) {
   const { user } = useAuth(); const pathname = usePathname();
-  if (!user || user.must_change_password || (banner && ["/account", "/mobile-app", "/login"].includes(pathname ?? ""))) return null;
+  if (!user || user.must_change_password || (banner && ["/account", "/app", "/login"].includes(pathname ?? ""))) return null;
   return <PushCard key={user.id} userId={user.id} banner={banner} />;
 }
