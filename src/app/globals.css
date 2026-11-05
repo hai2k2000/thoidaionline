@@ -751,3 +751,10 @@ main section > h3 {
     padding-top: 0.5rem;
   }
 }
+
+/* Quản lý công việc: one wrapping filter bar with readable control widths. */
+.task-filter-bar > * { flex: 0 1 6.25rem; min-width: 6rem; }
+.task-filter-bar > input[name="q"] { flex: 1 1 9rem; min-width: 8rem; }
+.task-filter-bar > button, .task-filter-bar > a { flex: 0 0 auto; min-width: 0; }
+.task-filter-bar select { text-overflow: ellipsis; }
+@media (max-width: 639px) { .task-filter-bar > * { flex: 1 1 100%; } }
