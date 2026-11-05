@@ -1,9 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
+        android:usesCleartextTraffic="false"
         android:label="Thời Đại Work"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
@@ -25,9 +25,6 @@
             </intent-filter>
         </activity>
 
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher" />
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

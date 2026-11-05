@@ -178,7 +178,7 @@ function NavContent({
           >
             <NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span>{labels[item.id]}</span>
           </Link>
-        ))}</div>
+        ))}<Link href="/mobile-app" onClick={onNavigate} aria-current={currentPath === "/mobile-app" ? "page" : undefined} className={linkClass(currentPath === "/mobile-app")}>Ứng dụng di động</Link></div>
         <button
           type="button"
           onClick={() => {
