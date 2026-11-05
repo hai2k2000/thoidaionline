@@ -212,13 +212,13 @@ export default function HelpBot() {
     }, 650);
   };
   return (
-    <div style={{ position: "fixed" }} className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[70] lg:inset-x-auto lg:bottom-4 lg:right-4">
+    <div style={{ position: "fixed" }} className="mobile-fab-offset fixed inset-x-0 z-[70] lg:inset-x-auto lg:bottom-4 lg:right-4">
       {open ? (
         <section
           aria-label="Trợ lý hướng dẫn sử dụng"
           className="flex h-[min(620px,calc(100dvh-5rem-env(safe-area-inset-bottom)))] w-full flex-col overflow-hidden rounded-t-2xl border bg-white shadow-2xl lg:mb-2 lg:h-[min(620px,calc(100vh-6rem))] lg:w-[min(430px,calc(100vw-2rem))] lg:rounded-2xl"
         >
-          <header className="flex items-center justify-between bg-orange-600 px-4 py-3 text-white">
+          <header className="flex items-center justify-between bg-orange-700 px-4 py-3 text-white">
             <div>
               <p className="font-bold">Trợ lý Thời Đại Work</p>
               <p className="text-xs text-orange-100">
@@ -297,7 +297,7 @@ export default function HelpBot() {
             <button
               disabled={typing}
               type="submit"
-              className="min-h-11 self-end rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="min-h-11 self-end rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
               {typing ? "Đợi…" : "Gửi"}
             </button>
@@ -308,7 +308,7 @@ export default function HelpBot() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Mở trợ lý hướng dẫn"
-        className="ml-auto hidden items-center gap-2 rounded-full bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-orange-700 lg:flex"
+        className="ml-auto hidden items-center gap-2 rounded-full bg-orange-700 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-orange-800 lg:flex"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.6 8.6 0 0 1-3.4-.7L4 20l1.7-3.6A7.5 7.5 0 1 1 20 11.5Z" /><path d="M8 11h.01M12 11h.01M16 11h.01" /></svg> Trợ giúp
       </button>

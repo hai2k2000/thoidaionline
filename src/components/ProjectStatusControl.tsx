@@ -69,7 +69,7 @@ export default function ProjectStatusControl({ project, disabled = false }: { pr
       {error ? <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p> : null}
       <div className="mt-5 flex flex-wrap justify-end gap-2">
         <button ref={cancelRef} type="button" disabled={busy} onClick={dismiss} className={`${button} border-slate-300`}>Hủy</button>
-        <button type="button" disabled={busy || (!reopening && !acknowledged)} onClick={() => void confirm()} className={`${button} ${reopening ? "border-orange-600 bg-orange-600" : "border-rose-600 bg-rose-600"} text-white`}>{busy ? "Đang xử lý…" : label}</button>
+        <button type="button" disabled={busy || (!reopening && !acknowledged)} onClick={() => void confirm()} className={`${button} ${reopening ? "border-orange-600 bg-orange-700" : "border-rose-600 bg-rose-600"} text-white`}>{busy ? "Đang xử lý…" : label}</button>
       </div>
     </dialog>
   </div>;

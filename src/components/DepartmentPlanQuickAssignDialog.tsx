@@ -110,7 +110,7 @@ export default function DepartmentPlanQuickAssignDialog({ item, assignmentPeople
   return <div className="fixed inset-0 z-[95] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4" role="presentation">
     <div role="dialog" aria-modal="true" aria-labelledby="department-plan-quick-assign-title" className="w-full max-w-xl rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
       <header className="flex items-start justify-between gap-4 border-b border-orange-100 bg-orange-50 px-5 py-4 sm:px-6">
-        <div><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-orange-700">Giao việc nhanh</p><h2 id="department-plan-quick-assign-title" className="mt-1 text-xl font-extrabold text-slate-950">{item.title}</h2><p className="mt-1 text-sm text-slate-600">Một Task chuẩn sẽ được tạo và giao cho các người được chọn.</p></div>
+        <div><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-orange-700">Giao việc nhanh</p><h2 id="department-plan-quick-assign-title" className="mt-1 text-xl font-extrabold text-slate-950">{item.title}</h2><p className="mt-1 text-sm text-slate-600">Một công việc sẽ được tạo và giao cho các người được chọn.</p></div>
         <button type="button" onClick={onClose} disabled={busy} aria-label="Đóng" className="rounded-xl p-2 text-2xl leading-none text-slate-500 hover:bg-white">×</button>
       </header>
       <div className="grid gap-4 px-5 py-5 sm:px-6">
@@ -136,7 +136,7 @@ export default function DepartmentPlanQuickAssignDialog({ item, assignmentPeople
         <label className="grid gap-1 text-sm font-bold text-slate-700">Ghi chú<textarea value={note} onChange={(event) => setNote(event.target.value)} disabled={busy} maxLength={2000} rows={3} placeholder="Không bắt buộc" className="rounded-xl border border-slate-300 px-3 py-2 font-normal outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100" /></label>
       </div>
       {error ? <p role="alert" className="mx-5 mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-800 sm:mx-6">{error}</p> : null}
-      <footer className="flex justify-end gap-2 border-t bg-slate-50 px-5 py-4 sm:px-6"><button type="button" onClick={onClose} disabled={busy} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">Hủy</button><button type="button" onClick={() => void submit()} disabled={busy} className="min-h-11 rounded-xl bg-orange-600 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{busy ? "Đang giao…" : "Giao việc"}</button></footer>
+      <footer className="flex justify-end gap-2 border-t bg-slate-50 px-5 py-4 sm:px-6"><button type="button" onClick={onClose} disabled={busy} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">Hủy</button><button type="button" onClick={() => void submit()} disabled={busy} className="min-h-11 rounded-xl bg-orange-700 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{busy ? "Đang giao…" : "Giao việc"}</button></footer>
     </div>
   </div>;
 }

@@ -92,7 +92,7 @@ export default function DocumentCreatePage() {
               <option value="outgoing">Công văn đi</option>
               <option value="common">Tài liệu chung</option>
             </select></label>
-            <button disabled={busy} onClick={onCreate} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{busy ? "Đang xử lý..." : "Thêm tài liệu"}</button>
+            <button disabled={busy} onClick={onCreate} className="min-h-11 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50">{busy ? "Đang xử lý..." : "Thêm tài liệu"}</button>
           </div>
 
           <div className="mt-6 border-t pt-5"><h3 className="text-lg font-semibold">Giao xử lý tài liệu</h3><p className="mt-1 text-sm text-slate-500">Chọn tài liệu và người xử lý để bắt đầu theo dõi tiến độ.</p></div>

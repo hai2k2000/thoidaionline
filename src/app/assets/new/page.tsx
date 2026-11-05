@@ -159,7 +159,7 @@ export default function AssetCreatePage() {
 
             <p className="mt-4 text-sm text-slate-500">Có thể chọn giao cho nhân viên hoặc phòng ban ngay khi thêm tài sản.</p>
             <div className="mt-3">
-              <button disabled={busy} onClick={onCreate} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{busy ? "Đang thêm..." : "Thêm tài sản"}</button>
+              <button disabled={busy} onClick={onCreate} className="min-h-11 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50">{busy ? "Đang thêm..." : "Thêm tài sản"}</button>
             </div>
             <p className="mt-2 text-sm text-slate-600">{message}</p>
           </section>

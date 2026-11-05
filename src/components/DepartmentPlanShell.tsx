@@ -32,7 +32,7 @@ type Props = {
 };
 
 const tabClass = (active: boolean) => `rounded-xl px-4 py-2.5 text-sm font-bold transition ${active
-  ? "bg-orange-600 text-white shadow-sm"
+  ? "bg-orange-700 text-white shadow-sm"
   : "text-slate-600 hover:bg-orange-50 hover:text-orange-800"}`;
 
 export default function DepartmentPlanShell({

@@ -48,7 +48,7 @@ export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit
   if (terminal) return null;
   if (canClaim && !canEdit) return (
     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
-      <button disabled={busy} onClick={() => void claim()} className="rounded bg-orange-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
+      <button disabled={busy} onClick={() => void claim()} className="rounded bg-orange-700 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
         Đăng ký nhận việc
       </button>
       {error ? <span role="alert" className="text-xs text-red-700">{error}</span> : null}

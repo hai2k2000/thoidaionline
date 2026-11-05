@@ -28,7 +28,7 @@ export default async function MobileAppPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="min-w-0 rounded-xl border bg-white p-5 shadow-sm sm:p-6">
           <h2 className="text-xl font-bold">Android</h2><p className="mt-2 text-sm text-slate-600">Cài APK nội bộ, không cần Google Play.</p>
-          {apk ? <><a href="/api/mobile/apk/download" className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-orange-600 px-5 py-3 font-semibold text-white hover:bg-orange-700">Tải APK Android</a>
+          {apk ? <><a href="/api/mobile/apk/download" className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-orange-700 px-5 py-3 font-semibold text-white hover:bg-orange-800">Tải APK Android</a>
             {installedVersion ? <p className="mt-3 rounded-lg bg-orange-50 p-3 text-sm text-orange-900">Đang cài: <strong>{installedVersion.version}{installedVersion.versionCode !== null ? ` (${installedVersion.versionCode})` : ""}</strong> · Bản mới nhất: <strong>{apk.version} ({apk.versionCode})</strong>{isApkOlder(installedVersion, apk) ? " · Tải bản mới để cập nhật." : ""}</p> : null}
             <dl className="mt-4 space-y-2 text-sm">
               <div><dt className="inline font-semibold">Phiên bản: </dt><dd className="inline">{apk.version} ({apk.versionCode})</dd></div>

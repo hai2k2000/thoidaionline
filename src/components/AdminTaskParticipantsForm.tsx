@@ -58,6 +58,6 @@ export default function AdminTaskParticipantsForm({ task, people, reviewers }: P
     </label>
     <label className="text-sm font-semibold">Lý do cập nhật<input name="reason" required maxLength={2000} disabled={busy} className={control}/></label>
     {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
-    <button disabled={busy} className="w-fit rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Đang lưu…" : "Lưu người tham gia"}</button>
+    <button disabled={busy} className="w-fit rounded-lg bg-orange-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Đang lưu…" : "Lưu người tham gia"}</button>
   </form>;
 }

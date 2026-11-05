@@ -23,7 +23,7 @@ function ScoreForm({ item, action }: { item: EvaluationItem; action: "manager" |
     <p className="font-semibold">{action === "manager" ? "Trưởng phòng — bước 1" : "Tổng Biên tập — bước 2 và công bố"}</p>
     <div className="mt-3 grid gap-3">{item.factors.map((factor) => <label key={factor.factor_code} className="grid gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_110px_minmax(0,1fr)] sm:items-center"><span>{factor.label} (0–{factor.max_score})</span><input required type="number" min="0" max={factor.max_score} step="0.01" name={`score-${factor.factor_code}`} className="rounded border px-2 py-1" /><input name={`comment-${factor.factor_code}`} placeholder="Nhận xét/bằng chứng" className="rounded border px-2 py-1" /></label>)}</div>
     {error ? <p role="alert" className="mt-2 text-sm text-red-700">Không thể lưu đánh giá. Kiểm tra điểm và quyền thao tác.</p> : null}
-    <button disabled={busy} className="mt-3 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Đang lưu…" : action === "tbt" ? "Công bố kết quả" : "Gửi đánh giá"}</button>
+    <button disabled={busy} className="mt-3 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Đang lưu…" : action === "tbt" ? "Công bố kết quả" : "Gửi đánh giá"}</button>
   </form>;
 }
 

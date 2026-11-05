@@ -33,7 +33,7 @@ export default function GrantDialog({ item, userName, departmentName, active = t
   <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={onClose}
     className="rounded-xl border px-4 py-2 font-bold">Hủy</button><button type="button"
     disabled={needsConfirmation && confirmation !== "TOAN CO QUAN"} onClick={() => void onSubmit(scope)}
-    className="rounded-xl bg-orange-600 px-4 py-2 font-bold text-white disabled:opacity-50">
+    className="rounded-xl bg-orange-700 px-4 py-2 font-bold text-white disabled:opacity-50">
     Lưu cấp riêng</button></div></Dialog>;
 }
 

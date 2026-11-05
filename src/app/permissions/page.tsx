@@ -115,7 +115,7 @@ export default function PermissionsPage() {
                 <h1 className="mt-1 text-2xl font-bold">Cấu hình quyền</h1>
                 <p className="mt-1 text-sm text-slate-600">{message}</p>
               </div>
-              <button onClick={() => void load()} className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white">Tải lại</button>
+              <button onClick={() => void load()} className="rounded-xl bg-orange-700 px-4 py-2 text-sm font-bold text-white">Tải lại</button>
             </div>
           </header>
 
@@ -147,7 +147,7 @@ export default function PermissionsPage() {
                     <h2 className="text-xl font-bold">{selectedRole?.name ?? "Chưa chọn vai trò"}</h2>
                     <p className="text-sm text-slate-500">{affectedCount} người dùng bị ảnh hưởng trước khi lưu</p>
                   </div>
-                  <button disabled={!selectedRole?.active || pending} onClick={() => void saveRole()} className="rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                  <button disabled={!selectedRole?.active || pending} onClick={() => void saveRole()} className="rounded-xl bg-orange-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
                     Lưu thay đổi
                   </button>
                 </div>

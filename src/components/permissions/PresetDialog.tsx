@@ -54,7 +54,7 @@ export default function PresetDialog({ preset, user, labels, saving, onClose, on
         <button type="button" disabled={Boolean(plan.blocked) || !plan.codesToApply.length || saving}
           onClick={() => void onApply(plan.codesToApply).then((result) => {
             if (result.failed.length) setFailure(result); else onClose();
-          })} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          })} className="rounded-lg bg-orange-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
           {saving ? "Đang áp dụng…" : "Áp dụng gói"}
         </button>
       </div>

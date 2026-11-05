@@ -89,8 +89,8 @@ export default function DutyScheduleViewer({
           card: "rounded-lg border p-2",
           heading: "truncate text-xs font-bold",
           rows: "mt-1 space-y-1",
-          row: "text-[11px] leading-tight",
-          meta: "text-[10px] leading-tight",
+          row: "text-xs leading-tight",
+          meta: "text-xs leading-tight",
         }
       : view === "week"
         ? {
@@ -130,8 +130,8 @@ export default function DutyScheduleViewer({
           <section className="mt-4 rounded-xl border bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
               <div className="mr-2 flex rounded-lg border border-orange-200 bg-white p-1" aria-label="Phạm vi lịch trực">
-                <Link href="/duty-schedule" className={`rounded-md px-3 py-1.5 text-sm font-semibold ${scope === "organization" ? "bg-orange-500 text-white" : "text-slate-600"}`}>Toàn cơ quan</Link>
-                <Link href="/duty-schedule?scope=personal" className={`rounded-md px-3 py-1.5 text-sm font-semibold ${scope === "personal" ? "bg-orange-500 text-white" : "text-slate-600"}`}>Cá nhân</Link>
+                <Link href="/duty-schedule" className={`rounded-md px-3 py-1.5 text-sm font-semibold ${scope === "organization" ? "bg-orange-700 text-white" : "text-slate-600"}`}>Toàn cơ quan</Link>
+                <Link href="/duty-schedule?scope=personal" className={`rounded-md px-3 py-1.5 text-sm font-semibold ${scope === "personal" ? "bg-orange-700 text-white" : "text-slate-600"}`}>Cá nhân</Link>
                 <Link href={"/duty-schedule/summary?view="+view+"&date="+anchor} className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Tổng kết đánh giá</Link>
               </div>
               <button
@@ -217,7 +217,7 @@ export default function DutyScheduleViewer({
                       );
                     })}
                   </div>
-                  {scope === "organization" && user?.role_code === "admin" && items.length ? <p className="mt-2 border-t pt-1 text-right text-[10px] font-bold text-orange-700">Mở đánh giá ngày →</p> : null}
+                  {scope === "organization" && user?.role_code === "admin" && items.length ? <p className="mt-2 border-t pt-1 text-right text-xs font-bold text-orange-700">Mở đánh giá ngày →</p> : null}
                 </article>
               ) : <div key={`empty-${index}`} aria-hidden="true" className={density.card} />)}
               {!dayCards.length ? (
