@@ -99,12 +99,20 @@ declare t public.tasks; recipient uuid;
 begin
   if new.assignment_role not in ('owner','assignee') then return new; end if;
   if TG_OP='UPDATE' and old.user_id=new.user_id and old.assignment_role=new.assignment_role then return new; end if;
-  select * into t from public.tasks where id=new.task_id;
-  recipient := new.user_id;
-  if recipient is null or t.id is null or t.task_type is distinct from 'assigned' then return new; end if;
-  insert into public.notifications(recipient_id,type,title,message,href,task_id,event_key)
-  values(recipient,'assignment','Công việc mới được giao',coalesce(t.title,'Công việc'),'/tasks/'||t.id,t.id,'assignment:'||t.id||':'||recipient||':'||new.assigned_at||':'||new.assignment_role)
-  on conflict (event_key) do nothing;
+  -- Notification work is best-effort and must not roll back the assignment.
+  begin
+    select * into t from public.tasks where id=new.task_id;
+    recipient := new.user_id;
+    if recipient is null or t.id is null or t.task_type is distinct from 'assigned' then return new; end if;
+    -- created_by is the available assignment actor; no request/JWT is required.
+    if recipient is distinct from t.created_by then
+      insert into public.notifications(recipient_id,type,title,message,href,task_id,event_key)
+      values(recipient,'assignment','Công việc mới được giao',coalesce(t.title,'Công việc'),'/tasks/'||t.id,t.id,'assignment:'||t.id||':'||recipient||':'||new.assigned_at||':'||new.assignment_role)
+      on conflict (event_key) do nothing;
+    end if;
+  exception when others then
+    raise warning 'Assignment notification enqueue failed (SQLSTATE %)', SQLSTATE;
+  end;
   return new;
 end
 $function$;

@@ -1,3 +1,25 @@
+# Mobile push fix round 1 - 2026-11-05
+
+Current Phase: EDIT-only implementation and requested offline validation complete
+Current Task: dry-run restore and safe assignment notification trigger
+
+Completed:
+- Added migration-schema creation, positive restore count gates and disposable ACL repair.
+- Isolated enqueue errors as SQLSTATE warnings; added creator self-notification suppression.
+- Added real assignment SQL fixtures with forced failures and job-title manager sync; all writes roll back.
+- Appended Fix round 1 to CODEX_REPORT_mobile_push.md.
+
+Validation:
+- Requested Node tests 49/49; migration tooling tests 24/24; TypeScript and Bash syntax PASS.
+- Full restore/SQL behavior runtime not executed; psql and Docker unavailable on PATH.
+
+Constraints:
+- No network, SSH, deployment, commit or push. Existing untracked artifacts preserved.
+
+Next:
+- Run the disposable rehearsal in the separately authorized database environment.
+
+---
 # Mobile push, camera and detail navigation - 2026-11-05
 
 Current Phase: implementation complete; offline validation and owner handoff

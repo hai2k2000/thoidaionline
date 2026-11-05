@@ -45,12 +45,41 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 [[ "$ready" == 1 ]]
-docker exec -i "$container" pg_restore --exit-on-error --clean --if-exists --no-owner --schema=public --schema=supabase_migrations \
-  -h 127.0.0.1 -U supabase_admin -d postgres < "$PUSH_BACKUP_DUMP" >"$PUSH_EVIDENCE_DIR/restore.log" 2>&1
+docker exec -i "$container" psql -X -q -h 127.0.0.1 -U supabase_admin -d postgres \
+  -v ON_ERROR_STOP=1 -c 'create schema if not exists supabase_migrations;' </dev/null >/dev/null
+docker exec -i "$container" pg_restore --schema=public --schema=supabase_migrations \
+  -h 127.0.0.1 -U supabase_admin -d postgres < "$PUSH_BACKUP_DUMP" >"$PUSH_EVIDENCE_DIR/restore.log" 2>&1 || true
 port=$(docker port "$container" 5432/tcp | sed -n 's/^127.0.0.1:\([0-9]*\)$/\1/p')
 [[ "$port" =~ ^[0-9]+$ ]]
 export PGHOST=127.0.0.1 PGPORT="$port" PGUSER=supabase_admin PGDATABASE=postgres PGPASSWORD="$password"
 psql_safe() { psql -X -v ON_ERROR_STOP=1 "$@"; }
+if ! restore_counts=$(psql_safe -qAt -F'|' -c 'select (select count(*) from public.tasks), (select count(*) from public.staff_users), (select count(*) from public.task_assignees), (select count(*) from supabase_migrations.schema_migrations)' 2>/dev/null) \
+  || ! [[ "$restore_counts" =~ ^[1-9][0-9]*\|[1-9][0-9]*\|[1-9][0-9]*\|[1-9][0-9]*$ ]]; then
+  grep 'ERROR' "$PUSH_EVIDENCE_DIR/restore.log" >&2 || true
+  echo 'PUSH_DRYRUN_ERROR=restore requires nonempty tasks, staff_users, task_assignees and schema_migrations' >&2
+  exit 1
+fi
+printf 'PUSH_RESTORE_COUNTS=%s\n' "$restore_counts"
+
+# Disposable restores may retain image default ACLs instead of C-01 lockdown.
+step=restore_acl
+psql_safe -q >"$PUSH_EVIDENCE_DIR/restore-acl.log" 2>&1 <<'SQL'
+do $acl$
+declare obj regclass; fn regprocedure;
+begin
+  for obj in select oid::regclass from pg_class
+    where relnamespace='public'::regnamespace and relkind in ('r','p')
+      and relname in ('mobile_push_tokens','notifications','push_subscriptions') loop
+    execute format('revoke all on table %s from public,anon,authenticated',obj);
+    execute format('grant all on table %s to service_role',obj);
+  end loop;
+  fn := to_regprocedure('public.claim_push_notifications(text[])');
+  if fn is not null then
+    execute format('revoke all on function %s from public,anon,authenticated',fn);
+    execute format('grant execute on function %s to service_role',fn);
+  end if;
+end $acl$;
+SQL
 migration="$BUNDLE_DIR/supabase/migrations/20261107100000_push_notifications.sql"
 sha256sum "$migration" >"$PUSH_EVIDENCE_DIR/migration.sha256"
 counts() { psql_safe -qAt -c 'select (select count(*) from public.tasks), (select count(*) from public.task_assignees), (select count(*) from public.staff_users)'; }
