@@ -2,6 +2,8 @@ export const COLLABORATOR_ROLE_CODE = "cong_tac_vien";
 const UUID = "[0-9a-f-]{36}";
 export function isCollaboratorRole(code) { return String(code ?? "").trim().toLowerCase() === COLLABORATOR_ROLE_CODE; }
 export const COLLABORATOR_API_RULES = [
+  [`/api/push/config`, ["GET"]], [`/api/push/subscribe`, ["POST"]], [`/api/push/unsubscribe`, ["POST"]],
+  [`/api/mobile/push-token`, ["POST", "DELETE"]],
   [`/api/mobile/apk/latest`, ["GET"]], [`/api/mobile/apk/download`, ["GET"]],
   [`/api/auth/session`, ["GET"]], [`/api/auth/logout`, ["POST"]], [`/api/auth/mobile-logout`, ["POST"]],
   [`/api/account/profile`, ["PATCH"]], [`/api/account/password`, ["PATCH"]], [`/api/account/avatar`, ["POST", "DELETE"]],

@@ -21,7 +21,7 @@ test('precache is limited to offline page and icons, old owned caches are remove
   const w = worker(); await w.lifecycle('install'); await w.lifecycle('activate');
   assert.equal(w.stores.size, 5);
   for (const path of w.stores.keys()) assert.ok(path === '/offline.html' || path.startsWith('/icons/'));
-  assert.deepEqual(w.deleted, ['thoidai-offline-v0', 'thoidai-offline-v1']);
+  assert.deepEqual(w.deleted, ['thoidai-offline-v0', 'thoidai-offline-v1', 'thoidai-offline-v2']);
 });
 test('navigation is network-first and never stores authenticated HTML', async () => {
   const w = worker(); await w.lifecycle('install');

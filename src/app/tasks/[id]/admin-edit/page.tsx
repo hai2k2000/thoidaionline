@@ -6,6 +6,7 @@ import AdminTaskParticipantsForm from "@/components/AdminTaskParticipantsForm";
 import { getSessionUser } from "@/lib/serverSession";
 import { taskRepository } from "@/lib/taskRepository";
 import { adminTaskParticipantOptions } from "@/lib/adminTaskParticipantOptions";
+import AppNav from "@/components/AppNav";
 
 type Props = { params: Promise<{ id: string }> };
 export default async function AdminTaskEditPage({ params }: Props) {
@@ -20,6 +21,7 @@ export default async function AdminTaskEditPage({ params }: Props) {
   const options = task.task_type === "assigned" ? await adminTaskParticipantOptions(task.project_id ?? null, user.id, task.department_id ?? null) : null;
   return <main className="min-h-screen bg-slate-50 px-3 py-5 text-slate-900 sm:px-6">
     <div className="mx-auto max-w-4xl">
+      <div className="lg:hidden print:hidden"><AppNav currentPath={`/tasks/${id}/admin-edit`} userLabel={user.full_name} /></div>
       <Link href={`/tasks/${id}`} className="text-sm font-semibold text-orange-700">← Chi tiết công việc</Link>
       <h1 className="my-4 text-2xl font-bold">CHỈNH SỬA CÔNG VIỆC</h1>
       <div className="grid gap-4">

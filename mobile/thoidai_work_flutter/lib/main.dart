@@ -15,11 +15,18 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'app_config.dart';
 import 'features/offline_page.dart';
+import 'services/native_push_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/branded_loading.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isAndroid) {
+    try {
+      // InAppWebView's capture chooser requires CAMERA permission before opening.
+      await nativeChannel.invokeMethod<bool>('requestCameraPermission');
+    } catch (_) { /* File selection remains available if camera permission is denied. */ }
+  }
   final info = await PackageInfo.fromPlatform();
   runApp(ThoiDaiWorkApp(version: info.version));
 }
@@ -55,7 +62,7 @@ class WebShell extends StatefulWidget {
   State<WebShell> createState() => _WebShellState();
 }
 
-class _WebShellState extends State<WebShell> {
+class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   InAppWebViewController? _controller;
   late final PullToRefreshController _refresh;
   StreamSubscription<List<ConnectivityResult>>? _connectivity;
@@ -65,10 +72,14 @@ class _WebShellState extends State<WebShell> {
   bool _downloading = false;
   bool _backPending = false;
   double? _downloadProgress;
+  late final NativePushService _push;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _push = NativePushService(controller: () => _controller, onMessage: _message);
+    unawaited(_push.start());
     _refresh = PullToRefreshController(
       settings: PullToRefreshSettings(color: const Color(0xffea580c)),
       onRefresh: _retry,
@@ -83,9 +94,16 @@ class _WebShellState extends State<WebShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _push.dispose();
     _connectivity?.cancel();
     _client.close();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _push.schedule();
   }
 
   void _message(String text) {
@@ -320,10 +338,16 @@ class _WebShellState extends State<WebShell> {
           thirdPartyCookiesEnabled: false,
           mixedContentMode: MixedContentMode.MIXED_CONTENT_NEVER_ALLOW,
         ),
-        // The plugin's native file chooser handles input[type=file], accept and multiple.
+        // Native chooser honors capture and uses the configured FileProvider for camera output.
         pullToRefreshController: _refresh,
         onWebViewCreated: (controller) {
           _controller = controller;
+          controller.addJavaScriptHandler(handlerName: 'tdPushLogout', callback: (_) async {
+            final current = await controller.getUrl();
+            if (current == null || !isInternalUrl(Uri.parse(current.toString()))) return false;
+            await _push.logout();
+            return true;
+          });
           controller.addJavaScriptHandler(handlerName: 'tdBlobDownload', callback: (args) async {
             if (_downloading || args.isEmpty || args[0] is! String) return false;
             final uri = Uri.tryParse(args[0] as String);
@@ -334,8 +358,12 @@ class _WebShellState extends State<WebShell> {
             return true;
           });
         },
-        onLoadStart: (_, __) { if (mounted) setState(() => _loading = true); },
-        onLoadStop: (_, __) => _loadEnded(),
+        onLoadStart: (_, __) {
+          _push.pageStarted();
+          if (mounted) setState(() => _loading = true);
+        },
+        onLoadStop: (_, __) { _loadEnded(); _push.pageLoaded(); },
+        onUpdateVisitedHistory: (_, __, ___) => _push.schedule(),
         onReceivedError: (_, request, __) {
           if (request.isForMainFrame == true) {
             _loadEnded();

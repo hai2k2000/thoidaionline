@@ -7,6 +7,8 @@ import { verifyManifest } from "./verify-artifact-manifest.mjs";
 const root = resolve(process.argv[2] || process.cwd());
 // The runtime cache is created on first start; it is intentionally not an uploaded build requirement.
 for (const path of [
+  "scripts/production/push-dispatch-once.mjs", "scripts/production/push-notifications-dryrun.sh", "scripts/production/push-notifications-revert.sql", "scripts/production/push-notifications-post.sql",
+  "src/lib/push/dispatcher.mjs", "src/lib/push/fcm.mjs", "src/lib/push/subscription.mjs", "supabase/tests/push_notifications_behaviour.sql",
   "server.js", ".next/BUILD_ID", ".next/server/app-paths-manifest.json", ".next/static", "public", "start-standalone.mjs", "scripts/production/controlled-deploy-exception.mjs", "scripts/production/produce-rbac-readiness.mjs", "scripts/production/verify-rbac-disposable-restore.sh",
   "scripts/contract-smoke.mjs", "scripts/required-api-contracts.mjs", "scripts/production/browser-path-smoke.mjs", "src/lib/journalismScope.mjs",
   "required-route-manifest.json", "deploy/disk-guard.conf", "RELEASE_BASELINE_COMMIT", "MIGRATION_REFERENCE", ".release-meta", ".artifact-manifest.json", ".artifact-manifest.sha256",
@@ -94,6 +96,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261106180000_event_assignment_all_staff.sql",
   "supabase/migrations/20261106200000_leader_edit_personal_events.sql",
   "supabase/migrations/20261106210000_edit_completed_event_assignment.sql",
+  "supabase/migrations/20261107100000_push_notifications.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ], "artifact migration mismatch");

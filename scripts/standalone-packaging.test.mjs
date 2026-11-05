@@ -207,3 +207,12 @@ test("completed assignment migration ships once after leader personal event migr
     assert.ok(source.indexOf(migration) > source.indexOf("supabase/migrations/20261106200000_leader_edit_personal_events.sql"));
   }
 });
+
+test("push notification migration is packaged once after leader event editing", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const migration = "supabase/migrations/20261107100000_push_notifications.sql";
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf("20261106210000_edit_completed_event_assignment.sql"));
+  }
+});

@@ -19,6 +19,7 @@ function renderLibrary(item){
   '@/lib/projectLibraryFile':policy,'@/lib/projectLibrary':permissions,
   '@/components/ProjectUi':{ProjectIcon:()=>null},
   '@/components/ProjectLibraryPreview':{__esModule:true,default:()=>null},
+  '@/components/CameraCaptureButton':{__esModule:true,default:()=>null},
  };
  const testModule={exports:{}};new Function('require','module','exports',compiled)(name=>deps[name]??require(name),testModule,testModule.exports);
  return renderToStaticMarkup(React.createElement(testModule.exports.default,{projectId:'project',actorId:'actor',member:false,manager:false}));

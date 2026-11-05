@@ -1,4 +1,5 @@
 ﻿import { redirect } from "next/navigation";
+import PushNotificationCard from "@/components/PushNotificationCard";
 import AppNav from "@/components/AppNav";
 import { getSessionUser } from "@/lib/serverSession";
 import { readApkManifest, MOBILE_APK_NOT_FOUND } from "@/lib/mobileApk.mjs";
@@ -18,6 +19,7 @@ export default async function MobileAppPage() {
         <h1 className="mt-2 text-2xl font-bold">Ứng dụng di động</h1>
         <p className="mt-2 text-sm text-slate-600">Sử dụng đầy đủ chức năng của hệ thống trên điện thoại bằng tài khoản công việc của bạn.</p>
       </header>
+      <PushNotificationCard />
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="min-w-0 rounded-xl border bg-white p-5 shadow-sm sm:p-6">
           <h2 className="text-xl font-bold">Android</h2><p className="mt-2 text-sm text-slate-600">Cài APK nội bộ, không cần Google Play.</p>

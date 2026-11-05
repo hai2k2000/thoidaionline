@@ -1,5 +1,6 @@
 "use client";
 
+import { stopBrowserPush } from "@/lib/push/browser";
 import { isCollaboratorRole } from "./collaboratorRole.mjs";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRoleAccessPolicy } from "@/components/appNavState";
@@ -110,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      await stopBrowserPush().catch(() => {});
       await fetch("/api/auth/logout", { method: "POST", cache: "no-store", credentials: "same-origin" });
     } finally {
       localStorage.removeItem(SESSION_KEY);

@@ -1,3 +1,16 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // No Google Services plugin resolution or task when Firebase is unconfigured.
+        if (file("app/google-services.json").isFile) {
+            classpath("com.google.gms:google-services:4.4.4")
+        }
+    }
+}
+
 allprojects {
     repositories {
         google()

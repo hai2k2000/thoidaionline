@@ -6,6 +6,7 @@ import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES } from "@/lib/taskAttachmentPolicy.mjs";
 import type { TaskAttachmentDto } from "@/lib/taskContracts";
+import CameraCaptureButton from "@/components/CameraCaptureButton";
 
 export const TASK_ATTACHMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.docx,.xlsx";
 
@@ -82,6 +83,7 @@ export default function TaskAttachmentUploader({ taskId, disabled = false, onUpl
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-6 w-6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6m-3-3h6"/></svg>
       <input ref={inputRef} aria-label="Chọn tệp đính kèm" data-testid="task-attachment-input" name="file" type="file" multiple accept={TASK_ATTACHMENT_ACCEPT} disabled={disabled || busy} className="sr-only" onChange={(event) => selectFiles(Array.from(event.target.files ?? []))} />
     </label>
+    <CameraCaptureButton disabled={disabled || busy} onCapture={(file) => selectFiles([file])} />
     {progress ? <span role="status" className="text-sm text-slate-600">{progress}</span> : null}
     {errors.length ? <ul role="alert" className="w-full break-words text-sm text-red-700">{errors.map((message, i) => <li key={i}>{message}</li>)}</ul> : null}
   </div>;
