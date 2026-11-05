@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ActionFeedbackProvider from "@/components/ActionFeedbackProvider";
+import PushNotificationCard from "@/components/PushNotificationCard";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 const vietnamSans = Be_Vietnam_Pro({
@@ -43,7 +44,7 @@ export default async function RootLayout({
         className={`${vietnamSans.variable} ${geistMono.variable} antialiased`}
       >
         <ServiceWorkerRegistration />
-        <ActionFeedbackProvider><AuthProvider>{children}</AuthProvider></ActionFeedbackProvider>
+        <ActionFeedbackProvider><AuthProvider><PushNotificationCard banner />{children}</AuthProvider></ActionFeedbackProvider>
       </body>
     </html>
   );

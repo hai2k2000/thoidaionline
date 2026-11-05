@@ -1,13 +1,53 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { getMobileNavigation, isMobileNavigationActive } from "./mobileNavigation.ts";
 import { getPhase2Navigation } from "./phase2Navigation.ts";
+import * as mobileNavigation from "./mobileNavigation.ts";
 
 const access = {
   roleCode: "nhan_vien", canAssignTask: false, canEvaluateStep1: false,
   canEvaluateStep2: false, canManageRubrics: false, canManageUsers: false,
   canManagePermissions: false,
 };
+
+test("standalone authenticated task edit and print pages retain mobile navigation", () => {
+  for (const page of ["admin-edit", "print"]) {
+    const source = readFileSync(new URL(`../app/tasks/[id]/${page}/page.tsx`, import.meta.url), "utf8");
+    assert.match(source, /getSessionUser/);
+    assert.match(source, /className="lg:hidden print:hidden"><AppNav currentPath=/);
+  }
+});
+
+test("focus alone, browser chrome and pinch zoom do not hide mobile navigation", () => {
+  const open = mobileNavigation.isMobileKeyboardOpen;
+  assert.equal(typeof open, "function");
+  assert.equal(open({ baselineHeight: 800, viewportHeight: 800, scale: 1, editableFocused: true }), false);
+  assert.equal(open({ baselineHeight: 800, viewportHeight: 730, scale: 1, editableFocused: true }), false);
+  assert.equal(open({ baselineHeight: 800, viewportHeight: 400, scale: 2, editableFocused: true }), false);
+  assert.equal(open({ baselineHeight: 800, viewportHeight: 480, scale: 1, editableFocused: false }), false);
+  assert.equal(open({ baselineHeight: 800, viewportHeight: 480, scale: 1, editableFocused: true }), true);
+  assert.equal(open({ baselineHeight: 800, viewportHeight: 800, scale: 1, editableFocused: true }), false);
+});
+
+test("only a rendered modal or sheet suppresses the navigation", () => {
+  const visible = mobileNavigation.isVisibleMobileOverlay;
+  assert.equal(typeof visible, "function");
+  const overlay = (changes = {}) => ({
+    closest: () => null,
+    getClientRects: () => [{ width: 360, height: 400 }],
+    parentElement: null,
+    ...changes,
+  });
+  const style = () => ({ display: "block", visibility: "visible", opacity: "1" });
+  assert.equal(visible(overlay(), style), true);
+  assert.equal(visible(overlay({ getClientRects: () => [] }), style), false);
+  assert.equal(visible(overlay({ closest: () => ({ hidden: true }) }), style), false);
+  assert.equal(visible(overlay(), () => ({ ...style(), visibility: "hidden" })), false);
+  assert.equal(visible(overlay(), () => ({ ...style(), opacity: "0" })), false);
+  const hiddenParent = {};
+  assert.equal(visible(overlay({ parentElement: hiddenParent }), node => node === hiddenParent ? { ...style(), display: "none" } : style()), false);
+});
 
 test("mobile navigation keeps the five most useful links for an administrator", () => {
   const nav = getPhase2Navigation({ ...access, roleCode: "admin" });

@@ -1,15 +1,17 @@
 name: thoidai_work_flutter
 description: Mobile app Flutter cho he thong Thoi Dai Work.
 publish_to: "none"
-version: 1.0.1+3
+version: 1.0.2+4
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
+  sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_inappwebview: ^6.1.5
+  firebase_core: ^4.9.0
+  firebase_messaging: ^16.2.2
   connectivity_plus: ^6.1.5
   http: ^1.6.0
   open_filex: ^4.7.0

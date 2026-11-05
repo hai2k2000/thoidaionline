@@ -1,4 +1,6 @@
 "use client";
+import CameraCaptureButton from "@/components/CameraCaptureButton";
+
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -165,6 +167,8 @@ export default function HrProfileDetailPage() {
             <div className="md:col-span-2">
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tệp hợp đồng lao động</label>
               <input className="min-h-11 rounded-lg border px-3 py-2" type="file" onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)} />
+              <CameraCaptureButton disabled={saving || isReadOnly()} onCapture={setProfileFile} />
+              {profileFile ? <p className="mt-1 break-all text-xs text-slate-600">{profileFile.name}</p> : null}
               <div className="mt-2 text-sm">
                 <b>Tệp hiện tại:</b>{" "}
                 {profile?.profile_file_url ? (

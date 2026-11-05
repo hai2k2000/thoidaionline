@@ -16,6 +16,7 @@ ios/Flutter/flutter_export_environment.sh
 
 # Private signing material and internal build artifacts
 android/key.properties
+android/app/google-services.json
 *.jks
 *.keystore
 dist/

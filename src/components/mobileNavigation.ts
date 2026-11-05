@@ -13,6 +13,23 @@ export type MobileNavigation = {
   menu: Phase2Navigation;
 };
 
+export function isMobileKeyboardOpen({ baselineHeight, viewportHeight, scale, editableFocused }: {
+  baselineHeight: number; viewportHeight: number; scale: number; editableFocused: boolean;
+}): boolean {
+  // Focus survives keyboard dismissal; browser chrome and pinch zoom also resize the viewport.
+  return editableFocused && Math.abs(scale - 1) < 0.05
+    && baselineHeight - viewportHeight > Math.max(150, baselineHeight * 0.2);
+}
+
+export function isVisibleMobileOverlay(element: Element, getStyle: (node: Element) => CSSStyleDeclaration): boolean {
+  if (element.closest('[hidden], [inert], [aria-hidden="true"], dialog:not([open])') || !element.getClientRects().length) return false;
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const style = getStyle(node);
+    if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" || style.opacity === "0") return false;
+  }
+  return true;
+}
+
 export function isMobileNavigationActive(currentPath: string, href: string): boolean {
   const [pathname, query = ""] = currentPath.split("?");
   const personal = new URLSearchParams(query).get("type") === "personal";

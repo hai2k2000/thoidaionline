@@ -18,6 +18,7 @@ function load(fetch = async () => Response.json({ attachment: { id: 'a' } })) {
     if (name.endsWith('ActionFeedbackProvider')) return { useActionFeedback: () => ({ notify: (...v) => notices.push(v) }) };
     if (name.endsWith('taskAttachmentPolicy.mjs')) return { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES };
     if (name.endsWith('actionFeedback')) return { errorMessage: (e, fallback) => e?.message || fallback, responseErrorMessage: async (_, fallback) => fallback };
+    if (name.endsWith('CameraCaptureButton')) return { default: 'CameraCaptureButton' };
     throw new Error(name);
   } };
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL('./TaskAttachmentUploader.tsx', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, context);
@@ -25,6 +26,24 @@ function load(fetch = async () => Response.json({ attachment: { id: 'a' } })) {
 }
 function nodes(node) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(nodes); return [node, ...nodes(node.props?.children)]; }
 const input = ui => nodes(ui).find(n => n.type === 'input');
+const camera = ui => nodes(ui).find(n => n.type === 'CameraCaptureButton');
+
+test('captured photos use the existing upload, size validation and permission guard', async () => {
+  const calls = [];
+  const ui = load(async (url, init) => { calls.push({ url, file: init.body.get('file') }); return Response.json({ attachment: { id: 'photo' } }); });
+  await camera(ui.render()).props.onCapture(new File(['photo'], 'camera.jpg', { type: 'image/jpeg' }));
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, '/api/tasks/task/attachments');
+  assert.equal(calls[0].file.name, 'camera.jpg');
+  assert.equal(ui.refreshes, 1);
+  await camera(ui.render()).props.onCapture({ name: 'large.jpg', type: 'image/jpeg', size: TASK_ATTACHMENT_MAX_BYTES + 1 });
+  assert.equal(calls.length, 1);
+  assert.ok(ui.notices.some(([kind, text]) => kind === 'error' && text.includes('10 MB')));
+  const disabled = camera(ui.render({ disabled: true }));
+  assert.equal(disabled.props.disabled, true);
+  await disabled.props.onCapture(new File(['photo'], 'denied.jpg', { type: 'image/jpeg' }));
+  assert.equal(calls.length, 1);
+});
 test('precheck matches server MIME fallback and size boundaries', () => {
   const { validateTaskAttachment } = load();
   for (const type of ['', 'application/octet-stream', 'application/pdf']) assert.equal(validateTaskAttachment(new File(['x'], 'report.pdf', { type })), null);

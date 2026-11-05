@@ -1,3 +1,29 @@
+# Mobile push, camera and detail navigation - 2026-11-05
+
+Current Phase: implementation complete; offline validation and owner handoff
+Current Task: owner-approved mobile fixes (EDIT-only)
+
+Completed:
+- Kept mobile navigation visible on authenticated detail, admin-edit and print routes except visible dialogs/sheets and keyboard use; preserved sticky action offsets.
+- Added camera capture inputs across image-capable attachment flows and Flutter WebView camera permission/FileProvider support; Flutter version is 1.0.2+4.
+- Added service-only Web Push/FCM queue, assignment notifications for owners/assignees/collaborators, dispatcher/API/SW/UI, Flutter token registration, migration packaging and disposable dry-run tooling.
+- Wrote `CODEX_REPORT_mobile_push.md` with configuration, Firebase owner actions, validation and risks.
+
+Validation:
+- Final navigation/print/packaging regression selection: 53/53 PASS; combined requested/new selection: 126/127 PASS with one unchanged CRLF-sensitive pre-existing collaborator test failure.
+- TypeScript PASS; migration tests 24/24 PASS; targeted changed-file lint PASS.
+- Full lint retains one known pre-existing error and 19 warnings.
+- Offline webpack build with placeholder env/font fixture and `PUSH_DISPATCH_ENABLED=1` completed successfully; `npm run build` remains blocked by the existing feature-branch lineage guard.
+
+Constraints:
+- No network, commit, push, SSH, production migration or deployment.
+- Preserve existing package.json/package-lock.json web-push installation.
+
+Risks / Follow Up:
+- Live PostgreSQL rehearsal, real push delivery, Flutter pub get/analyze/APK build and device acceptance remain for the separately authorized build/release environment.
+- Inspect any out-of-band production notifications schema before applying the migration.
+
+---
 # Mobile UI polish — 2026-11-05
 
 Current Phase: implementation complete; validation recorded in `CODEX_REPORT_mobile_ui.md`

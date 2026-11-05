@@ -7,6 +7,7 @@ import { canUseJournalism } from "@/lib/journalismScope.mjs";
 import { loadPrintableTask } from "@/lib/taskPrintAccess";
 import type { AuthorizationActor } from "@/lib/authorization";
 import { canTaskAction } from "@/lib/authorization";
+import AppNav from "@/components/AppNav";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -32,5 +33,8 @@ export default async function TaskPrintPage({ params }: Props) {
     canView: (viewer, access) => canTaskAction(viewer, access, "view"),
   });
   if (!result.ok) redirect("/tasks");
-  return <WorkAssignmentPrintSheet task={result.task} />;
+  return <>
+    <div className="lg:hidden print:hidden"><AppNav currentPath={`/tasks/${taskId}/print`} userLabel={user.full_name} /></div>
+    <WorkAssignmentPrintSheet task={result.task} />
+  </>;
 }

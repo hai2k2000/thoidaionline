@@ -92,6 +92,12 @@ await cp(join(root, "scripts", "verify-standalone-artifact.mjs"), join(output, "
 await cp(join(root, "scripts", "artifact-manifest.mjs"), join(output, "artifact-manifest.mjs"));
 await cp(join(root, "scripts", "verify-artifact-manifest.mjs"), join(output, "verify-artifact-manifest.mjs"));
 const authenticatedSmokeFiles = [
+  "scripts/production/push-dispatch-once.mjs",
+  "scripts/production/push-notifications-dryrun.sh",
+  "scripts/production/push-notifications-revert.sql", "scripts/production/push-notifications-post.sql",
+  "supabase/tests/push_notifications_behaviour.sql",
+  "src/lib/push/dispatcher.mjs", "src/lib/push/fcm.mjs", "src/lib/push/subscription.mjs",
+
   "scripts/contract-smoke.mjs",
   "scripts/required-api-contracts.mjs",
   "scripts/production/browser-path-smoke.mjs",
@@ -191,6 +197,7 @@ const migrationReference = [
   "supabase/migrations/20261106180000_event_assignment_all_staff.sql",
   "supabase/migrations/20261106200000_leader_edit_personal_events.sql",
   "supabase/migrations/20261106210000_edit_completed_event_assignment.sql",
+  "supabase/migrations/20261107100000_push_notifications.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];

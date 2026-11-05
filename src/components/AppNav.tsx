@@ -10,7 +10,7 @@ import { canUseJournalism } from "@/lib/journalismScope.mjs";
 import NotificationBell from "@/components/NotificationBell";
 import HelpBot from "@/components/HelpBot";
 import { usePathname } from "next/navigation";
-import { getMobileNavigation, isMobileNavigationActive } from "@/components/mobileNavigation";
+import { getMobileNavigation, isMobileNavigationActive, isMobileKeyboardOpen, isVisibleMobileOverlay } from "@/components/mobileNavigation";
 import { createPortal } from "react-dom";
 
 type AppNavProps = {
@@ -203,6 +203,7 @@ function NavContent({
 export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileObscured, setMobileObscured] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
   const { user, hasPermission, logout } = useAuth();
@@ -246,6 +247,49 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
   const activeItem = mobileNavigation.items.find((item) => mobileActive(item.href));
   const pageItem = [...navigation.primary, ...navigation.configuration, ...navigation.account].find((item) => isNavigationActive(currentPath, item.href));
   const mobileTitle = mobilePath === "/mobile-app" ? "Ứng dụng di động" : activeItem?.label ?? (pageItem ? labels[pageItem.id] : "Thời Đại Work");
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    let baselineHeight = window.innerHeight;
+    let width = window.innerWidth;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      if (width !== window.innerWidth) {
+        width = window.innerWidth;
+        baselineHeight = window.innerHeight;
+      }
+      const focused = document.activeElement;
+      const editableFocused = focused instanceof HTMLElement && (focused.isContentEditable
+        || focused.matches('textarea:not([readonly]):not([disabled]), input:not([readonly]):not([disabled]):is(:not([type]), [type="text"], [type="search"], [type="email"], [type="url"], [type="tel"], [type="password"], [type="number"])'));
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      if (!editableFocused || viewportHeight > baselineHeight) baselineHeight = Math.max(window.innerHeight, viewportHeight);
+      const keyboardOpen = isMobileKeyboardOpen({ baselineHeight, viewportHeight, scale: viewport?.scale ?? 1, editableFocused });
+      const overlayOpen = Array.from(document.querySelectorAll('[aria-modal="true"], dialog[open], .mobile-dialog-overlay, .mobile-filter-panel[data-open="true"]'))
+        .some((element) => isVisibleMobileOverlay(element, (node) => window.getComputedStyle(node)));
+      setMobileObscured(keyboardOpen || overlayOpen);
+    };
+    const schedule = () => { if (!frame) frame = window.requestAnimationFrame(update); };
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "style", "hidden", "inert", "open", "aria-modal", "aria-hidden", "data-open", "data-state"] });
+    document.addEventListener("focusin", schedule);
+    document.addEventListener("focusout", schedule);
+    document.addEventListener("transitionend", schedule);
+    document.addEventListener("animationend", schedule);
+    window.addEventListener("resize", schedule);
+    viewport?.addEventListener("resize", schedule);
+    schedule();
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("focusin", schedule);
+      document.removeEventListener("focusout", schedule);
+      document.removeEventListener("transitionend", schedule);
+      document.removeEventListener("animationend", schedule);
+      window.removeEventListener("resize", schedule);
+      viewport?.removeEventListener("resize", schedule);
+    };
+  }, []);
 
   const restoreMenuFocus = useCallback(() => {
     setMobileOpen(false);
@@ -296,7 +340,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
         </div>
         <Link href="/account" aria-label="Tài khoản của tôi" className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 font-bold text-orange-800 lg:hidden">{(user?.full_name ?? userLabel ?? "?").trim().charAt(0).toUpperCase()}</Link>
       </div>
-      {user && !["/login", "/forgot-password", "/reset-password"].includes(mobilePath) ? <nav aria-label="Điều hướng di động" className="mobile-bottom-nav lg:hidden" style={{ position: "fixed" }}>
+      {user && !["/login", "/forgot-password", "/reset-password"].includes(mobilePath) ? <nav aria-label="Điều hướng di động" data-obscured={mobileOpen || mobileObscured} className="mobile-bottom-nav lg:hidden" style={{ position: "fixed" }}>
         {mobileNavigation.items.filter((item) => item.href !== "more").map((item) => <Link key={item.id} href={item.href} aria-current={mobileActive(item.href) ? "page" : undefined} className={`mobile-bottom-item ${mobileActive(item.href) ? "is-active" : ""}`}><MobileIcon kind={item.kind} /><span>{item.label}</span></Link>)}
       <button
         data-testid="mobile-nav-trigger"
