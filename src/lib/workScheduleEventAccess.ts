@@ -5,7 +5,7 @@ export function canEditEventAssignment(
   row: { created_by?: string | null; event_status?: string | null },
   actor: { id?: string; role_code?: string; is_department_manager?: boolean },
 ) {
-  if (!actor.id || row.event_status !== "SCHEDULED") return false;
+  if (!actor.id || !["SCHEDULED", "COMPLETED"].includes(row.event_status ?? "")) return false;
   if (GLOBAL_EVENT_ASSIGNMENT_ROLES.some((role) => role === actor.role_code)) return true;
   return actor.role_code !== "pho_truong_phong"
     && (actor.role_code === "truong_phong" || actor.is_department_manager === true)

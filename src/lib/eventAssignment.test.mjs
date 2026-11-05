@@ -4,14 +4,13 @@ import test from "node:test";
 import { validateEventAssignmentInput } from "./eventAssignmentValidation.ts";
 import * as eventAccess from "./workScheduleEventAccess.ts";
 
-test("event editors require scheduled events and leadership or manager ownership", () => {
+test("event editors allow scheduled and completed events, but not cancelled events", () => {
   assert.equal(typeof eventAccess.canEditEventAssignment, "function");
   const row = { created_by: "manager", event_status: "SCHEDULED" };
   for (const role_code of ["admin", "tong_bien_tap", "pho_tong_bien_tap"]) {
     assert.equal(eventAccess.canEditEventAssignment(row, { id: "other", role_code }), true);
-    for (const event_status of ["COMPLETED", "CANCELLED", null]) {
-      assert.equal(eventAccess.canEditEventAssignment({ ...row, event_status }, { id: "other", role_code }), false);
-    }
+    assert.equal(eventAccess.canEditEventAssignment({ ...row, event_status: "COMPLETED" }, { id: "other", role_code }), true);
+    for (const event_status of ["CANCELLED", null]) assert.equal(eventAccess.canEditEventAssignment({ ...row, event_status }, { id: "other", role_code }), false);
   }
   for (const actor of [{ role_code: "truong_phong" }, { role_code: "nhan_vien", is_department_manager: true }]) {
     assert.equal(eventAccess.canEditEventAssignment(row, { ...actor, id: "manager" }), true);
@@ -19,6 +18,8 @@ test("event editors require scheduled events and leadership or manager ownership
   }
   assert.equal(eventAccess.canEditEventAssignment(row, { id: "manager", role_code: "phong_vien" }), false);
   assert.equal(eventAccess.canEditEventAssignment(row, { role_code: "admin" }), false);
+  assert.equal(eventAccess.canEditEventAssignment({ ...row, event_status: "COMPLETED" }, { id: "manager", role_code: "truong_phong" }), true);
+  assert.equal(eventAccess.canEditEventAssignment({ ...row, event_status: "CANCELLED" }, { id: "manager", role_code: "truong_phong" }), false);
 });
 
 test("out-of-list members remain explicit until removed", () => {
@@ -39,7 +40,9 @@ test("leadership detail routes edits to the assignment panel and excludes person
   assert.match(shell, /ref=\{eventPanelRef\}/);
   assert.match(panel, /loadedRows.find\(\(row\) => row.id === id\)/);
   assert.match(panel, /ngoài danh sách/);
-  assert.match(panel, /Sửa \/ thành viên/);
+  assert.match(panel, /Sửa sự kiện \/ thành viên/);
+  assert.ok(panel.indexOf("canEditEventAssignment(row, actor) ? <button") < panel.indexOf('row.event_status === "SCHEDULED" ? <>'));
+  assert.match(panel, /Sự kiện đã hủy/);
   assert.match(panel, /response.status === 409/);
   assert.match(panel, /Sự kiện đã được người khác cập nhật, vui lòng tải lại\./);
   assert.match(panel, /selected.length < 1 \|\| selected.length > 50/);
@@ -229,4 +232,14 @@ test("dry-run restores a verified disposable backup and asserts body plus restri
   const script = read("../../scripts/production/event-assignment-all-staff-dryrun.sh");
   for (const text of ["*-daily", "sha256sum", "pg_restore", "disk_guard_require", "safe-apply-migration.sh", "20261106180000", "phong_vien", "has_function_privilege('service_role'", "has_function_privilege('anon'", "has_function_privilege('authenticated'", "acl.grantee=0"]) assert.ok(script.includes(text), text);
   assert.doesNotMatch(script, /systemctl|docker system prune/);
+});
+
+test("completed-event migration and dry-run are wired into packaging", () => {
+  const migration = read("../../supabase/migrations/20261106210000_edit_completed_event_assignment.sql");
+  const dryrun = read("../../scripts/production/edit-completed-event-assignment-dryrun.sh");
+  assert.match(migration, /create or replace function public\.api_update_event_assignment/);
+  assert.match(migration, /v_old\.event_status not in \('SCHEDULED', 'COMPLETED'\)/);
+  assert.doesNotMatch(migration, /api_create_event_assignment/);
+  for (const text of ["*-daily", "sha256sum", "pg_restore", "disk_guard_require", "safe-apply-migration.sh", "20261106210000", "edit_completed_event_assignment_behaviour.sql", "THOIDAI_EDIT_COMPLETED_EVENT_DRYRUN_APPROVED", "has_function_privilege('service_role'"]) assert.ok(dryrun.includes(text), text);
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) assert.match(read("../../" + file), /20261106210000_edit_completed_event_assignment\.sql/);
 });
