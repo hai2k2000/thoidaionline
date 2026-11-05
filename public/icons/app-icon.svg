@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d71920"/><stop offset="1" stop-color="#ea580c"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="url(#brand)"/>
+  <g fill="#fff">
+    <path d="M218 320h278v96h-87v288H305V416h-87z"/>
+    <path fill-rule="evenodd" d="M530 320h112c116 0 182 69 182 192s-66 192-182 192H530V555h-32v-86h32zm100 96v192h14c52 0 80-32 80-96s-28-96-80-96z"/>
+  </g>
+</svg>

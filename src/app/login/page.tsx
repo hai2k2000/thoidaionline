@@ -32,7 +32,7 @@ export default function LoginPage() {
       description="Sử dụng tên đăng nhập, thư điện tử hoặc số điện thoại đã đăng ký."
       footer={<Link className="inline-flex min-h-11 items-center text-sm font-semibold text-orange-700 underline decoration-orange-300 underline-offset-4 hover:text-orange-900" href="/forgot-password">Quên mật khẩu?</Link>}
     >
-        <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="flex flex-col gap-5">
+        <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="flex flex-col gap-3 lg:gap-5">
           <label htmlFor="identifier" className="grid gap-2 text-sm font-semibold text-slate-800">Tên đăng nhập, thư điện tử hoặc số điện thoại
           <input
             id="identifier"

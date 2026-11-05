@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import MobileFilters from "@/components/MobileFilters";
 import AppNav from "@/components/AppNav";
 import { sortStaffRows } from "@/lib/staffOrdering";
 import {
@@ -449,6 +450,7 @@ export default function UsersPage() {
             </section>
           ) : null}
           <section className="mt-4 rounded-xl border bg-white p-4">
+<MobileFilters>
             <div className="mb-3 grid gap-2 md:grid-cols-3">
               <select
                 className="rounded border px-3 py-2"
@@ -487,6 +489,7 @@ export default function UsersPage() {
                 Xóa bộ lọc
               </button>
             </div>
+</MobileFilters>
             <p className="mb-2 text-sm text-slate-600">{message}</p>
             <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách nhân viên, cuộn ngang để xem thêm">
               <table className="data-table min-w-[980px] text-left text-sm">

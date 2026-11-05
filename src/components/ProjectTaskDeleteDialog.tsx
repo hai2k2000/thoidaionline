@@ -11,7 +11,7 @@ export default function ProjectTaskDeleteDialog({ tasks, busy, error, onCancel, 
   const titleId = useId(); const descriptionId = useId();
   const [trigger] = useState(() => typeof document === "undefined" ? null : document.activeElement as HTMLElement | null);
   useEffect(() => { dialog.current?.showModal(); cancel.current?.focus(); return () => { trigger?.focus(); }; }, [trigger]);
-  return <dialog ref={dialog} aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} aria-busy={busy} onCancel={event => { event.preventDefault(); if (!busy) onCancel(); }} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-xl backdrop:bg-slate-900/50 sm:p-6">
+  return <dialog ref={dialog} aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} aria-busy={busy} onCancel={event => { event.preventDefault(); if (!busy) onCancel(); }} className="mobile-native-sheet fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-xl backdrop:bg-slate-900/50 sm:p-6">
     <h2 id={titleId} className="text-lg font-bold">Xóa vĩnh viễn {tasks.length} công việc?</h2>
     <p id={descriptionId} className="mt-3 text-sm leading-6">Thao tác này xóa vĩnh viễn công việc, trao đổi, tiến độ và tệp đính kèm. Không thể khôi phục.</p>
     <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">{tasks.slice(0, 10).map(task => <li key={task.id} className="break-words">{task.title}</li>)}{tasks.length > 10 ? <li>và {tasks.length - 10} việc khác</li> : null}</ul>

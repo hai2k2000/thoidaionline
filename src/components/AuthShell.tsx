@@ -10,16 +10,17 @@ type AuthShellProps = {
 
 export default function AuthShell({ title, description, children, footer }: AuthShellProps) {
   return (
-    <main className="relative flex min-h-dvh items-center bg-[#f7f7f8] px-4 py-8 text-slate-950 sm:px-6 lg:px-8">
+    <main className="auth-shell relative flex min-h-dvh items-center bg-[#f7f7f8] px-4 py-4 text-slate-950 sm:px-6 lg:px-8 lg:py-8">
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-orange-600" />
       <section className="mx-auto grid w-full max-w-5xl overflow-hidden border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.10)] lg:grid-cols-[0.88fr_1.12fr]">
-        <header className="relative flex flex-col justify-between overflow-hidden border-b border-slate-200 bg-white p-6 text-slate-950 sm:p-8 lg:min-h-[560px] lg:border-b-0 lg:border-r">
+        <header className="relative flex flex-col justify-between overflow-hidden border-b border-slate-200 bg-white p-4 text-slate-950 lg:min-h-[560px] lg:border-b-0 lg:border-r lg:p-8">
           <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-orange-600" />
-          <div>
-            <Image src="/thoidai-logo.png" alt="Báo Thời Đại" width={205} height={54} priority className="h-auto w-44 sm:w-52" />
-            <p className="mt-8 max-w-xs text-sm leading-6 text-slate-600">Hệ thống quản lý công việc nội bộ Báo Thời Đại.</p>
+          <div className="flex items-center gap-3 lg:block">
+            <Image src="/thoidai-logo.png" alt="Báo Thời Đại" width={205} height={54} priority className="h-auto w-20 lg:w-52" />
+            <p className="whitespace-nowrap text-base font-bold lg:hidden">Thời Đại Work</p>
+            <p className="mt-8 hidden max-w-xs text-sm leading-6 text-slate-600 lg:block">Hệ thống quản lý công việc nội bộ Báo Thời Đại.</p>
           </div>
-          <div className="mt-16 flex-1 border-y border-slate-200 py-6">
+          <div className="mt-16 hidden flex-1 border-y border-slate-200 py-6 lg:block">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-700">Các công cụ chính</p>
             <div className="mt-5 grid gap-5">
               <div className="flex items-start gap-3">
@@ -36,16 +37,16 @@ export default function AuthShell({ title, description, children, footer }: Auth
               </div>
             </div>
           </div>
-          <p className="mt-12 border-t border-slate-200 pt-5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Thời Đại Work</p>
+          <p className="mt-12 hidden border-t border-slate-200 pt-5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 lg:block">Thời Đại Work</p>
         </header>
 
-        <div className="flex flex-col justify-center p-5 sm:p-10 lg:p-14">
+        <div className="flex flex-col justify-center p-4 lg:p-14">
           <div className="max-w-md">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-700">Tài khoản</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
-            <div className="mt-8">{children}</div>
-            {footer ? <div className="mt-6 border-t border-slate-200 pt-5">{footer}</div> : null}
+            <h1 className="mt-2 text-xl font-bold tracking-tight text-slate-950 lg:text-4xl">{title}</h1>
+            <p className="mt-2 text-sm leading-5 text-slate-600 lg:mt-3 lg:leading-6">{description}</p>
+            <div className="mt-4 lg:mt-8">{children}</div>
+            {footer ? <div className="mt-2 border-t border-slate-200 pt-2 lg:mt-6 lg:pt-5">{footer}</div> : null}
           </div>
         </div>
       </section>

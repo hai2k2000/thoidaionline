@@ -1,4 +1,5 @@
 "use client";
+import MobileFilters from "@/components/MobileFilters";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { DEFAULT_PROJECT_LIST_FILTERS, filterAndSortProjects, type ProjectListFilters } from "@/lib/projectListFilters.mjs";
@@ -21,6 +22,7 @@ export default function ProjectsGrid({ projects, canReadAll = false }: { project
   const control = "min-h-11 min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 font-normal focus:outline-none focus:ring-2 focus:ring-orange-400";
   const select = (key: keyof ProjectListFilters, label: string, options: [string, string][]) => <label className="grid min-w-0 gap-1.5 text-sm font-semibold">{label}<select value={filters[key]} onChange={event => setFilters({ ...filters, [key]: event.target.value })} className={control}>{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>;
   return <>
+    <MobileFilters>
     <div className="mb-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
       <label className="grid min-w-0 gap-1.5 text-sm font-semibold sm:col-span-2">Tìm dự án<input type="search" value={filters.q} onChange={event => setFilters({ ...filters, q: event.target.value })} placeholder="Tên hoặc mã dự án" className={control} /></label>
       {select("status", "Trạng thái", [["", "Tất cả"], ["active", "Đang hoạt động"], ["closed", "Đã đóng"]])}
@@ -31,6 +33,7 @@ export default function ProjectsGrid({ projects, canReadAll = false }: { project
       {select("sort", "Sắp xếp", [["updated_desc", "Mới cập nhật"], ["name_asc", "Tên A–Z"], ["code_asc", "Mã dự án"], ["in_progress_desc", "Nhiều việc đang làm nhất"]])}
       <button type="button" onClick={() => setFilters({ ...DEFAULT_PROJECT_LIST_FILTERS })} className={`${control} text-sm font-semibold text-orange-700`}>Xóa bộ lọc</button>
     </div>
+    </MobileFilters>
     <p role="status" className="mb-3 text-sm text-slate-500">Hiển thị {visible.length}/{projects.length} dự án</p>
     <div className="grid gap-4 md:grid-cols-2">
       {visible.map(({ project, leads, memberCount, taskCounts }) => <Link key={project.id} href={`/projects/${project.id}`} className="group min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">
