@@ -13,12 +13,12 @@ begin
   values('Fixture Creator','zz_creator_'||suffix,'test-only',(select id from public.roles where code='nhan_vien'),dept_a) returning id into creator_id;
   insert into public.staff_users(full_name,username,password,role_id,department_id)
   values('Fixture Editor','zz_editor_'||suffix,'test-only',(select id from public.roles where code='tong_bien_tap'),dept_b) returning id into tbt_id;
-  insert into public.staff_users(full_name,username,password,role_id,department_id)
-  values('Fixture Head A','zz_head_a_'||suffix,'test-only',(select id from public.roles where code='nhan_vien'),dept_a) returning id into head_id;
-  insert into public.staff_users(full_name,username,password,role_id,department_id)
-  values('Fixture Head B','zz_head_b_'||suffix,'test-only',(select id from public.roles where code='nhan_vien'),dept_b) returning id into other_head;
-  update public.departments set manager_id=head_id where id=dept_a;
-  update public.departments set manager_id=other_head where id=dept_b;
+  insert into public.staff_users(full_name,username,password,role_id,department_id,job_title_id)
+  values('Fixture Head A','zz_head_a_'||suffix,'test-only',(select id from public.roles where code='nhan_vien'),dept_a,(select id from public.job_titles where lower(code)='truong_phong' and active=true limit 1)) returning id into head_id;
+  insert into public.staff_users(full_name,username,password,role_id,department_id,job_title_id)
+  values('Fixture Head B','zz_head_b_'||suffix,'test-only',(select id from public.roles where code='nhan_vien'),dept_b,(select id from public.job_titles where lower(code)='truong_phong' and active=true limit 1)) returning id into other_head;
+  -- departments.manager_id is synced from the truong_phong job title by trigger.
+  if (select manager_id from public.departments where id=dept_a) is distinct from head_id then raise exception 'Fixture manager sync failed'; end if;
   insert into public.staff_users(full_name,username,password,role_id,department_id)
   values('Fixture Member','zz_member_'||suffix,'test-only',(select id from public.roles where code='nhan_vien'),dept_a) returning id into member_id;
   insert into public.staff_users(full_name,username,password,role_id,department_id)

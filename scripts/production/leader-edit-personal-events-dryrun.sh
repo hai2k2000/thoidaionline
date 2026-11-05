@@ -129,7 +129,7 @@ SQL
   [[ "$before" == "$after" ]]
   [[ "$(psql -X -v ON_ERROR_STOP=1 -qAt -f "$post")" == pass ]]
   step=behaviour
-  psql -X -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/supabase/tests/leader_edit_personal_events_behaviour.sql" >"$work/behaviour.log" 2>&1
+  psql -X -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/supabase/tests/leader_edit_personal_events_behaviour.sql" >"$work/behaviour.log" 2>&1 || { tail -20 "$work/behaviour.log" >&2; return 1; }
   echo LEADER_EDIT_PERSONAL_EVENTS_BEHAVIOUR=PASS
   step=complete
   echo LEADER_EDIT_PERSONAL_EVENTS_DRYRUN_CHECKS=PASS >"$evidence/result.txt"
