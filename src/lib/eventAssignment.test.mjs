@@ -33,7 +33,7 @@ test("out-of-list members remain explicit until removed", () => {
 test("leadership detail routes edits to the assignment panel and excludes personal actions", () => {
   const shell = read("../components/WorkSchedulePageShell.tsx");
   const panel = read("../components/EventAssignmentPanel.tsx");
-  assert.match(shell, /row.event_assignment_kind !== "leadership" && currentUserId && canMutatePersonalPlan/);
+  assert.match(shell, /row.event_assignment_kind !== "leadership" && currentUserId && \(canMutatePersonalPlan/);
   assert.match(shell, /enableEventAssignment && canEditEventAssignment/);
   assert.match(shell, /setDetailRows\(null\); void eventPanelRef.current\?\.editEvent\(row.id\)/);
   assert.match(shell, /ref=\{eventPanelRef\}/);

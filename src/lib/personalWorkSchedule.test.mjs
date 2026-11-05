@@ -97,7 +97,7 @@ test("schedule time inputs use an explicit 24-hour HH:mm format", () => {
 test("personal event payload keeps a same-day range and sends the selected times", () => {
   const shell = read("../components/WorkSchedulePageShell.tsx");
   const route = read("../app/api/work-schedule/personal/route.ts");
-  assert.match(shell, /endDate: planType === "event" \? workDate : form\.get\("endDate"\)/);
+  assert.match(shell, /endDate: planType === "event" && !editingRow \? workDate : form\.get\("endDate"\)/);
   assert.match(shell, /startTime: form\.get\("startTime"\)/);
   assert.match(shell, /endTime: form\.get\("endTime"\)/);
   assert.match(route, /validateLocalPlanInterval/);

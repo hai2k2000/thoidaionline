@@ -35,6 +35,19 @@ const eventFields = [
 ].join(",");
 
 export const workScheduleRepository = {
+  async personalPlanActor(actorId: string) {
+    const [person, managed] = await Promise.all([
+      this.person(actorId),
+      serverSupabase.from("departments").select("id").eq("manager_id", actorId).limit(1),
+    ]);
+    if (!person.ok) throw new Error("Cannot load personal plan actor.");
+    if (managed.error) throw new Error("Cannot load personal plan manager.");
+    const staff = person.person as unknown as { job_titles?: { code?: string } | null } | null;
+    return {
+      job_title_code: staff?.job_titles?.code ?? null,
+      is_department_manager: Boolean(managed.data?.length),
+    };
+  },
   async allPeople() {
     const { data, error } = await serverSupabase.from("staff_users")
       .select("id,username,full_name,active,list_order,department_id,departments!staff_users_department_id_fkey(name,code),roles(code,level),job_titles(code,name,display_order)")
@@ -154,7 +167,7 @@ export const workScheduleRepository = {
   },
 
   async list(from: string, to: string, participantId?: string) {
-    let query = serverSupabase.from("work_schedules").select("id,work_date,end_date,plan_type,start_time,end_time,title,location,notes,participant_ids,created_by,creator:staff_users!work_schedules_created_by_fkey(full_name)")
+    let query = serverSupabase.from("work_schedules").select(fields)
       .lte("work_date", to).gte("end_date", from);
     if (participantId) query = query.contains("participant_ids", [participantId]);
     const { data, error } = await query.order("work_date").order("start_time");
