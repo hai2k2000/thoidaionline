@@ -22,6 +22,8 @@ test('FCM reuses OAuth token and classifies UNREGISTERED from v1 response', asyn
   for (let i = 0; i < 2; i++) await assert.rejects(send({ token: 'device' }, { title: 'Title', body: 'Body', url: '/tasks/t1', tag: 'n1' }), { code: 'UNREGISTERED' });
   assert.equal(calls.filter(([url]) => url.includes('oauth2')).length, 1);
   assert.equal(JSON.parse(calls[1][1].body).message.data.url, '/tasks/t1');
+  assert.equal(JSON.parse(calls[1][1].body).message.android.priority, 'HIGH');
+  assert.equal(JSON.parse(calls[1][1].body).message.android.notification.channel_id, 'thoidai_tasks');
 });
 
 test('concurrent FCM sends share one in-flight OAuth request', async () => {

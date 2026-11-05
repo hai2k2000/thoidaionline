@@ -5,6 +5,21 @@ import vm from 'node:vm';
 
 const root = 'mobile/thoidai_work_flutter/';
 const bridgePath = `${root}lib/services/push_bridge.dart`;
+
+test('native push configures a high importance channel before requesting a token', () => {
+  const service = readFileSync(`${root}lib/services/native_push_service.dart`, 'utf8');
+  const native = readFileSync(`${root}android/app/src/main/kotlin/online/thoidai/thoidai_work_flutter/MainActivity.kt`, 'utf8');
+  const manifest = readFileSync(`${root}android/app/src/main/AndroidManifest.xml`, 'utf8');
+  assert.ok(service.indexOf("'createNotificationChannel'") >= 0);
+  assert.ok(service.indexOf("'createNotificationChannel'") < service.indexOf('messaging.getToken()'));
+  assert.match(native, /NotificationManager\.IMPORTANCE_HIGH/);
+  assert.match(native, /thoidai_tasks/);
+  assert.match(native, /enableVibration\(true\)/);
+  assert.match(native, /setSound\(/);
+  assert.match(manifest, /com\.google\.firebase\.messaging\.default_notification_channel_id/);
+  assert.match(service, /showTaskNotification/);
+  assert.match(native, /setContentIntent/);
+});
 function fixture({ user = 'user-a', origin = 'https://thoidai.online', failDelete = false, postGate, onPost, postStatus = 200 } = {}) {
   assert.ok(existsSync(bridgePath), 'the authenticated native push bridge must exist');
   const source = readFileSync(bridgePath, 'utf8');

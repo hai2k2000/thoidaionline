@@ -43,6 +43,11 @@ class NativePushService {
   Future<void> start() async {
     if (!Platform.isAndroid) return;
     try {
+      await nativeChannel.invokeMethod<bool>('createNotificationChannel');
+      nativeChannel.setMethodCallHandler((call) async {
+        if (call.method == 'notificationOpened') _queueNotificationUrl(call.arguments);
+      });
+      _queueNotificationUrl(await nativeChannel.invokeMethod<String>('initialNotificationUrl'));
       if (await nativeChannel.invokeMethod<bool>('firebaseConfigured') != true) return;
       await Firebase.initializeApp();
       if (_disposed) return;
@@ -61,7 +66,7 @@ class NativePushService {
         final notification = message.notification;
         final text = [notification?.title, notification?.body]
             .whereType<String>().where((text) => text.isNotEmpty).join('\n');
-        if (text.isNotEmpty) onMessage(text);
+        if (text.isNotEmpty) unawaited(_showForeground(message, text));
       }));
       _subscriptions.add(FirebaseMessaging.onMessageOpenedApp.listen(_openMessage));
       final initial = await messaging.getInitialMessage();
@@ -150,8 +155,26 @@ class NativePushService {
   }
 
   void _openMessage(RemoteMessage message) {
-    _pendingUrl = trustedPushUrl(message.data['url']);
+    _queueNotificationUrl(message.data['url']);
+  }
+
+  void _queueNotificationUrl(Object? value) {
+    final url = trustedPushUrl(value);
+    if (url == null || !(RegExp(r'^/(tasks|projects)/[A-Za-z0-9_-]+$').hasMatch(url.path) || url.path == '/my-tasks')) return;
+    _pendingUrl = url.replace(query: '', fragment: '');
     schedule();
+  }
+
+  Future<void> _showForeground(RemoteMessage message, String text) async {
+    try {
+      final shown = await nativeChannel.invokeMethod<bool>('showTaskNotification', {
+        'title': message.notification?.title ?? 'Thông báo mới',
+        'body': message.notification?.body ?? text,
+        'url': trustedPushUrl(message.data['url'])?.toString() ?? '/my-tasks',
+        'tag': message.data['tag'] ?? message.messageId ?? 'task',
+      });
+      if (shown != true && !_disposed) onMessage(text);
+    } catch (_) { if (!_disposed) onMessage(text); }
   }
 
   Future<void> _navigatePending() async {
@@ -163,6 +186,7 @@ class NativePushService {
 
   void dispose() {
     _disposed = true;
+    nativeChannel.setMethodCallHandler(null);
     _debounce?.cancel();
     _poll?.cancel();
     for (final subscription in _subscriptions) { unawaited(subscription.cancel()); }

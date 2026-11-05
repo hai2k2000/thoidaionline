@@ -19,7 +19,7 @@ function worker() {
 
 test('precache is limited to offline page and icons, old owned caches are removed', async () => {
   const w = worker(); await w.lifecycle('install'); await w.lifecycle('activate');
-  assert.equal(w.stores.size, 5);
+  assert.equal(w.stores.size, 6);
   for (const path of w.stores.keys()) assert.ok(path === '/offline.html' || path.startsWith('/icons/'));
   assert.deepEqual(w.deleted, ['thoidai-offline-v0', 'thoidai-offline-v1', 'thoidai-offline-v2']);
 });
@@ -28,7 +28,7 @@ test('navigation is network-first and never stores authenticated HTML', async ()
   assert.equal(await w.request('/account'), 'private-html');
   assert.equal(w.stores.has('/account'), false);
   w.goOffline(); assert.equal(await w.request('/account'), 'public:/offline.html');
-  assert.equal(w.stores.size, 5);
+  assert.equal(w.stores.size, 6);
 });
 
 test('canonical install page also stays online-only and outside the PWA cache', async () => {

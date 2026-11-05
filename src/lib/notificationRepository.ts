@@ -24,6 +24,7 @@ type TaskRow = {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  entered_by: string | null;
   owner_id: string | null;
   assignee_id: string | null;
   reviewer_id: string | null;
@@ -52,19 +53,19 @@ const formatDate = (value: string) => new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short",
 }).format(new Date(`${value}T12:00:00+07:00`));
 
-const taskSelect = "id,project_id,title,status,due_date,created_at,updated_at,created_by,owner_id,assignee_id,reviewer_id";
+const taskSelect = "id,project_id,title,status,due_date,created_at,updated_at,created_by,entered_by,owner_id,assignee_id,reviewer_id";
 const assignmentCutoff = () => new Date(Date.now() - 30 * 86400000).toISOString();
 const chunks = <T,>(items: T[], size = 40) => Array.from({ length: Math.ceil(items.length / size) }, (_, index) => items.slice(index * size, (index + 1) * size));
 
 export const notificationRepository = {
   async list(userId: string): Promise<{ ok: true; items: NotificationItem[] } | { ok: false }> {
     const participantResult = await serverSupabase.from("task_assignees")
-      .select("task_id,assignment_role,assigned_at")
+      .select("task_id,assignment_role,assigned_at,assigned_by")
       .eq("user_id", userId).order("assigned_at", { ascending: false }).limit(500);
     if (participantResult.error) return { ok: false };
 
     const participantRows = (participantResult.data ?? []) as Array<{
-      task_id: string; assignment_role: string; assigned_at: string;
+      task_id: string; assignment_role: string; assigned_at: string; assigned_by: string | null;
     }>;
     const participantIds = [...new Set(participantRows.map((row) => row.task_id))];
     const directPromise = serverSupabase.from("tasks").select(taskSelect)
@@ -141,7 +142,8 @@ export const notificationRepository = {
       const participant = participantByTask.get(task.id);
       const directlyAssigned = task.assignee_id === userId || task.owner_id === userId;
       const assignedAt = participant?.assigned_at ?? task.created_at;
-      if ((directlyAssigned || (participant && participant.assignment_role !== "watcher")) && assignedAt >= assignmentCutoff()) {
+      const assignmentActor = participant?.assigned_by ?? task.entered_by ?? task.created_by;
+      if ((directlyAssigned || (participant && participant.assignment_role !== "watcher")) && assignmentActor !== userId && assignedAt >= assignmentCutoff()) {
         items.push({
           key: `assignment:${task.id}:${userId}`,
           kind: "assignment",

@@ -1,7 +1,7 @@
 name: thoidai_work_flutter
 description: Mobile app Flutter cho he thong Thoi Dai Work.
 publish_to: "none"
-version: 1.0.3+5
+version: 1.0.4+6
 
 environment:
   sdk: ">=3.6.0 <4.0.0"

@@ -1,8 +1,8 @@
 /* Only public offline assets enter Cache Storage. Private data always uses the network. */
 const CACHE_PREFIX = "thoidai-offline-";
-const CACHE_NAME = `${CACHE_PREFIX}v4`;
+const CACHE_NAME = `${CACHE_PREFIX}v5`;
 const OFFLINE_URL = "/offline.html";
-const ASSETS = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png"];
+const ASSETS = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png", "/icons/badge-96.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -33,10 +33,11 @@ function notificationUrl(value) {
 self.addEventListener('push', event => {
   let payload = {};
   try { payload = event.data?.json() || {}; } catch { /* Show a safe generic notification. */ }
-  event.waitUntil(self.registration.showNotification('Thời Đại Work', {
+  event.waitUntil(self.registration.showNotification(typeof payload.title === 'string' && payload.title.trim() ? payload.title.slice(0, 160) : 'Th\u00f4ng b\u00e1o m\u1edbi', {
     body: typeof payload.body === 'string' ? payload.body.slice(0, 500) : 'Bạn có thông báo mới.',
-    icon: '/icons/icon-192.png', badge: '/icons/icon-192.png',
+    icon: '/icons/icon-192.png', badge: '/icons/badge-96.png',
     tag: typeof payload.tag === 'string' ? payload.tag : undefined,
+    renotify: false, requireInteraction: false, timestamp: Date.now(), vibrate: [200, 100, 200],
     data: { url: notificationUrl(payload.url) },
   }));
 });

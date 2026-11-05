@@ -19,6 +19,8 @@ await sharp(svg).resize(192, 192).png().toFile(path.join(web, "icon-192.png"));
 await sharp(svg).resize(512, 512).png().toFile(path.join(web, "icon-512.png"));
 await sharp(svg).resize(512, 512).png().toFile(path.join(web, "icon-maskable-512.png"));
 await sharp(svg).resize(180, 180).flatten({ background: "#ffffff" }).png().toFile(path.join(web, "apple-touch-icon.png"));
+const badge = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="160 250 720 520">${monogram}</svg>`);
+await sharp(badge).resize(96, 96, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(path.join(web, "badge-96.png"));
 await sharp(svg).resize(1024, 1024).png().toFile(path.join(flutter, "app-icon.png"));
 await sharp(foreground).resize(1024, 1024).png().toFile(path.join(flutter, "app-icon-foreground.png"));
 console.log("Generated web and Flutter app icons.");
