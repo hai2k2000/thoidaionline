@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { listEmployeeProfiles, type EmployeeProfile } from "@/lib/services";
+import MobileFilters from "@/components/MobileFilters";
 import AppNav from "@/components/AppNav";
 import { sortStaffRows } from "@/lib/staffOrdering";
 
@@ -130,6 +131,7 @@ export default function HrProfilesPage() {
 
           <section className="rounded-xl border bg-white p-4">
             <h2 className="mb-2 text-lg font-semibold">Lọc nhân sự</h2>
+<MobileFilters>
             <div className="grid gap-2 md:grid-cols-3">
               <input
                 className="rounded border px-3 py-2"
@@ -155,6 +157,7 @@ export default function HrProfilesPage() {
                 Xóa lọc
               </button>
             </div>
+</MobileFilters>
             <p className="mt-2 text-sm text-slate-600">{message}</p>
           </section>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import MobileFilters from "@/components/MobileFilters";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { listDocuments, type OfficialDocument } from "@/lib/services";
@@ -58,9 +59,9 @@ export default function CommonDocumentsPage() {
           </div>
 
         <section className="rounded-xl border bg-white p-4">
-          <div className="mb-3">
+          <MobileFilters><div className="mb-3">
             <input className="w-full rounded border px-3 py-2 md:w-96" placeholder="Tìm theo mã/tiêu đề/trạng thái" value={q} onChange={(e) => setQ(e.target.value)} />
-          </div>
+          </div></MobileFilters>
           <p className="mb-2 text-sm text-slate-600">{message}</p>
 
           <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách tài liệu chung, cuộn ngang để xem thêm">

@@ -4,6 +4,7 @@ import { ASSET_COLUMNS, ASSET_SHEET, TRACKING_MODES, CONDITIONS, parseAssetSheet
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import MobileFilters from "@/components/MobileFilters";
 import AppNav from "@/components/AppNav";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { useAuth } from "@/lib/auth";
@@ -306,7 +307,7 @@ export default function AssetsPage() {
             {hasPermission("asset.manage") ? <><button type="button" disabled={excelBusy || !loaded || !excelOptionsLoaded} onClick={() => void downloadExcel(true)} className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold disabled:opacity-50">Tải file mẫu</button><button type="button" disabled={excelBusy} onClick={() => { setImportRows([]); setImportErrors([]); setValidCount(0); setValidated(false); const input = importDialog.current?.querySelector("input"); if (input) input.value = ""; importDialog.current?.showModal(); }} className="min-h-11 rounded-lg bg-orange-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Nhập từ Excel</button></> : null}
           </div>
           {excelNotice ? <p role="status" className="mb-4 rounded-lg bg-orange-50 p-3 text-sm text-orange-900">{excelNotice}</p> : null}
-          <dialog ref={importDialog} aria-labelledby="excel-import-title" onCancel={event => { if (excelBusy) event.preventDefault(); }} className="fixed inset-0 m-auto max-h-[85vh] w-[min(640px,94vw)] overflow-y-auto rounded-2xl p-6 shadow-xl backdrop:bg-black/40">
+          <dialog ref={importDialog} aria-labelledby="excel-import-title" onCancel={event => { if (excelBusy) event.preventDefault(); }} className="mobile-native-sheet fixed inset-0 m-auto max-h-[85vh] w-[min(640px,94vw)] overflow-y-auto rounded-2xl p-6 shadow-xl backdrop:bg-black/40">
             <h2 id="excel-import-title" className="text-lg font-bold">Nhập tài sản từ Excel</h2>
             <p className="mt-2 text-sm text-slate-600">Chọn file .xlsx theo mẫu, tối đa 1000 dòng. Kiểm tra dữ liệu trước khi nhập.</p>
             <input key={importRows.length ? "selected" : "empty"} aria-label="Chọn file Excel" type="file" accept=".xlsx" disabled={excelBusy} onChange={event => void uploadExcel(event.target.files?.[0])} className="my-4 w-full rounded-lg border p-3" />
@@ -315,6 +316,7 @@ export default function AssetsPage() {
             <div className="mt-4 flex justify-end gap-3"><button type="button" disabled={excelBusy} onClick={() => importDialog.current?.close()} className="min-h-11 rounded-lg border px-4">Đóng</button><button type="button" disabled={excelBusy || !validated || importErrors.length > 0 || !validCount} onClick={() => void commitExcel()} className="min-h-11 rounded-lg bg-orange-600 px-4 font-semibold text-white disabled:opacity-50">Nhập {validCount} tài sản</button></div>
           </dialog>
 
+<MobileFilters>
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3"><div><p className="text-sm font-bold tracking-tight text-slate-900">Bộ lọc danh sách</p><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Thu hẹp danh sách theo tài sản, đơn vị, người sử dụng và tình trạng.</p></div><button type="button" onClick={clearFilters} aria-label="Xóa tất cả bộ lọc" className={`min-h-9 rounded-lg px-2.5 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-orange-300 ${hasActiveFilters ? "text-orange-700 hover:bg-orange-50 hover:text-orange-900" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"}`}>Xóa lọc</button></div>
             <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 items-start">
@@ -334,6 +336,7 @@ export default function AssetsPage() {
             {message ? <p role={loaded ? "alert" : "status"} className={`mt-3 text-sm ${loaded ? "text-rose-700" : "text-slate-600"}`}>{message}</p> : null}
           </section>
 
+</MobileFilters>
           <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-800">{filteredRows.length === summary.total ? `${summary.total} tài sản` : `Hiển thị ${filteredRows.length} / ${summary.total} tài sản`}</p>

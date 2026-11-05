@@ -1,3 +1,20 @@
+# Mobile UI polish — 2026-11-05
+
+Current Phase: implementation complete; validation recorded in `CODEX_REPORT_mobile_ui.md`
+Current Task: mobile web/PWA/WebView UI polish and app icon refresh (EDIT-only)
+
+Completed:
+- Compact login layout, permission-aware mobile bottom navigation, More sheet, mobile filter/dialog primitives, responsive table/card treatment, and mobile icon generation/configuration.
+
+Validation:
+- TypeScript PASS; focused mobile/navigation/PWA/collaborator/project/attendance tests 39 PASS.
+- Webpack CI-placeholder build PASS; default Turbopack build is blocked by offline Google Font fetch.
+
+Blockers:
+- Existing lint error at `src/app/database/records/[id]/page.tsx:41`.
+- Full repository test command has unrelated pre-existing migration/Flutter-artifact failures.
+
+---
 # Internal Mobile PWA / WebView / APK — 2026-11-05
 
 Current Phase: implementation delivered locally; validation limitations remain

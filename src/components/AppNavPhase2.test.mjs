@@ -82,7 +82,7 @@ test("mobile shell keeps primary controls touch-friendly and context-rich", () =
   assert.match(navSource, /min-h-\[48px\]/);
   assert.match(navSource, /data-testid="mobile-nav-title"/);
   assert.match(navSource, /aria-label="Mở menu chức năng"/);
-  assert.match(navSource, /max-w-\[calc\(100vw-24px\)\]/);
+  assert.match(navSource, /mobile-menu-sheet/);
   assert.match(navSource, /pb-\[env\(safe-area-inset-bottom\)\]/);
 });
 

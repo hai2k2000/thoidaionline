@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import TaskFilterPopover from "@/components/TaskFilterPopover";
+import MobileFilters from "@/components/MobileFilters";
 import AppNav from "@/components/AppNav";
 import PersonalTaskActions from "@/components/PersonalTaskActions";
 import JournalismSummary from "@/components/JournalismSummary";
@@ -250,7 +251,7 @@ export default function TaskCenterShell(props: Props) {
   return (
     <div className="mobile-page-shell min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 lg:flex-row lg:gap-4">
-        <AppNav currentPath={basePath === "/tasks" && query.journalism === "only" ? "/tasks?journalism=only" : basePath} userLabel={userLabel} onLogout={onLogout} />
+        <AppNav currentPath={basePath === "/tasks" && query.journalism === "only" ? "/tasks?journalism=only" : basePath === "/tasks" && query.taskType === "personal" ? "/tasks?type=personal" : basePath} userLabel={userLabel} onLogout={onLogout} />
         <main className="min-w-0 flex-1">
           <header className="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
@@ -264,11 +265,13 @@ export default function TaskCenterShell(props: Props) {
           <>
 
               {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : null}
+              <MobileFilters>
               <form id="task-filter-form" action={basePath} className="task-filter-bar mt-3 flex flex-wrap items-center gap-1.5 rounded-xl border bg-white p-2 shadow-sm">
                 <FilterFields key={JSON.stringify(query)} query={query} projects={projects} departments={departments} personOptions={personOptions} canFilterByPerson={canFilterByPerson} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} canReviewTaskApprovals={canReviewTaskApprovals} canSeeDepartmentCollaborating={canSeeDepartmentCollaborating} taskMode={taskMode} basePath={basePath} />
               </form>
+              </MobileFilters>
               {bulkPrintEnabled && selectedTaskIds.length ? <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3"><span className="text-sm font-semibold text-orange-900">Đã chọn: {selectedTaskIds.length} công việc</span><button type="button" disabled={bulkBusy} onClick={() => void bulkPrint()} className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Xuất phiếu giao việc hàng loạt (ZIP)</button>{adminBulk ? <><button type="button" disabled={bulkBusy} onClick={() => void bulkCancel()} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Huỷ công việc</button><span className="text-xs text-slate-600">Xoá công việc: ADMIN DELETE CONTRACT NOT FOUND</span></> : null}</div> : null}
-                <section className="mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
+                <section className="mobile-task-list mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
                 {canReviewTaskApprovals && query.approvalQueue ? <ApprovalQueue queue={query.approvalQueue} data={approvalQueue?.[query.approvalQueue] ?? { items: [], total: 0, page: 1, pageSize: 100 }} onRefresh={() => router.refresh()} /> : null}
                 {!taskMode ? <div className="mb-3 flex flex-wrap items-center gap-2 border-b pb-3"><span className="text-sm font-semibold text-slate-600">Xem công việc theo:</span>{([['day','Ngày'],['week','Tuần'],['month','Tháng']] as const).map(([period, label]) => <Link key={period} href={listHref(periodRange(period))} className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-800">{label}</Link>)}</div> : null}
                 {listError ? <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-800">Không thể tải danh sách công việc.</p> : null}

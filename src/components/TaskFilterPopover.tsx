@@ -48,7 +48,7 @@ export default function TaskFilterPopover({ label, summary, triggerText, count =
     <button ref={trigger} type="button" aria-label={summary && summary !== label ? `${label}: ${summary}` : label} title={summary || label} aria-expanded={open} aria-controls={open ? id : undefined} aria-haspopup="dialog" onClick={() => open ? setPosition(null) : place()} className="flex h-11 w-full min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-1 text-xs">
       {triggerText ?? label}{count > 0 ? <span className="rounded-full bg-orange-500 px-1.5 text-white" aria-label={`${count} bộ lọc đang chọn`}>{count}</span> : null}<span aria-hidden="true">▾</span>
     </button>
-    {position ? createPortal(<div ref={panel} id={id} role="dialog" aria-label={label} className="z-50 grid gap-3 overflow-y-auto rounded-xl border bg-white p-4 text-sm shadow-xl" style={{ position: "fixed", left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight, transform: position.above ? "translateY(-100%)" : undefined }}>
+    {position ? createPortal(<div data-filter-popover ref={panel} id={id} role="dialog" aria-label={label} className="z-50 grid gap-3 overflow-y-auto rounded-xl border bg-white p-4 text-sm shadow-xl" style={{ position: "fixed", left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight, transform: position.above ? "translateY(-100%)" : undefined }}>
       {summary ? <p className="text-xs text-slate-600">{summary}</p> : null}
       {children}
       <button type="button" className="justify-self-end rounded border px-3 py-2" onClick={() => { setPosition(null); trigger.current?.focus(); }}>Đóng</button>

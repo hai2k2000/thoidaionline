@@ -9,6 +9,9 @@ import { useAuth } from "@/lib/auth";
 import { canUseJournalism } from "@/lib/journalismScope.mjs";
 import NotificationBell from "@/components/NotificationBell";
 import HelpBot from "@/components/HelpBot";
+import { usePathname } from "next/navigation";
+import { getMobileNavigation, isMobileNavigationActive } from "@/components/mobileNavigation";
+import { createPortal } from "react-dom";
 
 type AppNavProps = {
   currentPath: string;
@@ -77,6 +80,7 @@ function NavContent({
   onLogout,
   userLabel,
   avatarUrl,
+  mobile = false,
 }: {
   currentPath: string;
   navigation: Phase2Navigation;
@@ -84,6 +88,7 @@ function NavContent({
   onLogout: () => void;
   userLabel?: string;
   avatarUrl?: string | null;
+  mobile?: boolean;
 }) {
   const configurationActive = navigation.configuration.some((item) =>
     isNavigationActive(currentPath, item.href));
@@ -103,7 +108,7 @@ function NavContent({
         <p className="mt-1.5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Quản trị công việc nội bộ</p>
       </div>
 
-      <div className="mt-4 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
+      {navigation.primary.length > 0 ? <div className="mt-4 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
       <div className="mb-2.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-orange-100 to-amber-50 px-2.5 py-2 ring-1 ring-orange-200"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-orange-900">Công việc</p></div><span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200">{navigation.primary.length}</span></div>
       <nav aria-label="Menu chính" className="space-y-1">
             {navigation.primary.filter((item) => !["work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"].includes(item.id)).map((item) => (
@@ -120,7 +125,7 @@ function NavContent({
               )
             ))}
       </nav>
-      </div>
+      </div> : null}
 
       {navigation.journalism.length > 0 ? (
         <details open={journalismOpen || journalismActive} onToggle={(event) => setJournalismOpen(event.currentTarget.open)} className="group mt-3 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
@@ -179,7 +184,7 @@ function NavContent({
             <NavIcon id={item.id} active={isNavigationActive(currentPath, item.href)} /><span>{labels[item.id]}</span>
           </Link>
         ))}<Link href="/mobile-app" onClick={onNavigate} aria-current={currentPath === "/mobile-app" ? "page" : undefined} className={linkClass(currentPath === "/mobile-app")}>Ứng dụng di động</Link></div>
-        <button
+        {!mobile || navigation.primary.length > 0 ? <button
           type="button"
           onClick={() => {
             onNavigate();
@@ -188,7 +193,7 @@ function NavContent({
           className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white/90 px-3 py-2.5 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-100 hover:text-orange-900"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg> Đăng xuất
-        </button>
+        </button> : null}
         </details>
       </div>
     </div>
@@ -196,6 +201,7 @@ function NavContent({
 }
 
 export default function AppNav({ currentPath, userLabel }: AppNavProps) {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
@@ -234,6 +240,12 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     canViewDatabase: true,
     rbacPermissionScopes: user?.rbacPermissionScopes,
   });
+  const mobileNavigation = getMobileNavigation(navigation, user?.role_code ?? "");
+  const mobilePath = pathname ?? currentPath.split("?")[0];
+  const mobileActive = (href: string) => isMobileNavigationActive(`${mobilePath}?${currentPath.split("?")[1] ?? ""}`, href);
+  const activeItem = mobileNavigation.items.find((item) => mobileActive(item.href));
+  const pageItem = [...navigation.primary, ...navigation.configuration, ...navigation.account].find((item) => isNavigationActive(currentPath, item.href));
+  const mobileTitle = mobilePath === "/mobile-app" ? "Ứng dụng di động" : activeItem?.label ?? (pageItem ? labels[pageItem.id] : "Thời Đại Work");
 
   const restoreMenuFocus = useCallback(() => {
     setMobileOpen(false);
@@ -242,11 +254,10 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
 
   useEffect(() => {
     if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const panel = mobilePanelRef.current;
-    const focusable = panel?.querySelectorAll<HTMLElement>(
-      'a[href],button:not([disabled]),summary',
-    );
-    focusable?.[0]?.focus();
+    panel?.querySelector<HTMLElement>('button')?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -254,7 +265,8 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
         restoreMenuFocus();
         return;
       }
-      if (event.key !== "Tab" || !focusable?.length) return;
+      const focusable = Array.from(panel?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),summary') ?? []).filter((node) => node.getClientRects().length);
+      if (event.key !== "Tab" || !focusable.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -267,21 +279,25 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
     };
 
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; };
   }, [mobileOpen, restoreMenuFocus]);
 
   return (
-    <aside className="w-full lg:w-[252px] lg:shrink-0">
-      <div className="fixed right-4 top-4 z-[60]">
+    <aside data-app-navigation className="w-full lg:w-[252px] lg:shrink-0">
+      <div className="desktop-notifications fixed right-4 top-4 z-[60]">
         {!isCollaboratorRole(user?.role_code) && <NotificationBell />}
       </div>
       {!isCollaboratorRole(user?.role_code) && <HelpBot />}
       <div className="mobile-app-bar mb-3 lg:hidden">
         <div className="min-w-0">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-orange-700">Thời Đại Work</p>
-          <p data-testid="mobile-nav-title" className="truncate text-sm font-bold text-slate-900">{labels[(navigation.primary.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.configuration.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.account[0])?.id ?? "tasks"]}</p>
+          <p data-testid="mobile-nav-title" className="truncate text-sm font-bold text-slate-900 lg:hidden">{mobileTitle}</p>
+          <p className="hidden truncate text-sm font-bold text-slate-900 lg:block">{labels[(navigation.primary.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.configuration.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.account[0])?.id ?? "tasks"]}</p>
         </div>
+        <Link href="/account" aria-label="Tài khoản của tôi" className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 font-bold text-orange-800 lg:hidden">{(user?.full_name ?? userLabel ?? "?").trim().charAt(0).toUpperCase()}</Link>
       </div>
+      {user && !["/login", "/forgot-password", "/reset-password"].includes(mobilePath) ? <nav aria-label="Điều hướng di động" className="mobile-bottom-nav lg:hidden" style={{ position: "fixed" }}>
+        {mobileNavigation.items.filter((item) => item.href !== "more").map((item) => <Link key={item.id} href={item.href} aria-current={mobileActive(item.href) ? "page" : undefined} className={`mobile-bottom-item ${mobileActive(item.href) ? "is-active" : ""}`}><MobileIcon kind={item.kind} /><span>{item.label}</span></Link>)}
       <button
         data-testid="mobile-nav-trigger"
         ref={menuButtonRef}
@@ -290,10 +306,11 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
         aria-expanded={mobileOpen}
         aria-controls="phase2-mobile-navigation"
         onClick={() => setMobileOpen(true)}
-        className="mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-orange-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800 shadow-sm transition active:scale-[0.99] lg:hidden"
+        className={`mobile-bottom-item min-h-[48px] ${mobileOpen || !activeItem ? "is-active" : ""}`}
       >
-        <span>Menu chức năng</span><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-orange-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <MobileIcon kind="more" /><span>Thêm</span>
       </button>
+      </nav> : null}
 
       <div className="hidden max-h-[calc(100vh-1.5rem)] min-h-[640px] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)] lg:sticky lg:top-3 lg:block">
         <NavContent
@@ -306,13 +323,14 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
         />
       </div>
 
-      {mobileOpen ? (
+      {mobileOpen ? createPortal((
         <>
           <button
             type="button"
             aria-label="Đóng menu"
             onClick={restoreMenuFocus}
-            className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden"
+            style={{ position: "fixed" }}
+            className="fixed inset-0 z-[80] bg-slate-950/40 lg:hidden"
           />
           <div
             id="phase2-mobile-navigation"
@@ -320,11 +338,14 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu chính"
-            className="fixed inset-y-0 left-0 z-50 w-[min(320px,calc(100vw-24px))] max-w-[calc(100vw-24px)] overflow-y-auto border-r border-orange-100 bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden"
+            style={{ position: "fixed" }}
+            className="mobile-menu-sheet fixed inset-x-0 bottom-0 z-[81] max-h-[88dvh] overflow-y-auto rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden"
           >
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-2"><h2 className="font-bold">Thêm</h2><button type="button" onClick={restoreMenuFocus} className="min-h-11 min-w-11 rounded-lg px-3 font-semibold">Đóng</button></div>
             <NavContent
               currentPath={currentPath}
-              navigation={navigation}
+              navigation={mobileNavigation.menu}
+              mobile
               onNavigate={restoreMenuFocus}
               onLogout={performLogout}
               userLabel={userLabel}
@@ -332,8 +353,12 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
             />
           </div>
         </>
-      ) : null}
+      ), document.body) : null}
     </aside>
   );
+}
+
+function MobileIcon({ kind }: { kind: string }) {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{kind === "home" ? <><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7" /></> : kind === "projects" ? <path d="M3 7V5a2 2 0 0 1 2-2h5l3 4h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" /> : kind === "attendance" ? <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4M17 3v4M3 10h18m-13 5 3 3 5-5" /></> : kind === "more" ? <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></> : <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="m8 9 2 2 5-5M8 16h8" /></>}</svg>;
 }
 
