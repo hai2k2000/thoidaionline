@@ -5,7 +5,7 @@ import { calculateParticipantPanelPosition } from "./participantPanelPosition.mj
 
 test("participant panel positions below and constrains height", () => {
   const result = calculateParticipantPanelPosition({ left: 40, top: 100, bottom: 140, width: 260, height: 40 }, { viewportWidth: 1024, viewportHeight: 800 });
-  assert.deepEqual(result, { left: 40, top: 144, width: 260, maxHeight: 320, above: false });
+  assert.deepEqual(result, { left: 40, top: 144, width: 280, maxHeight: 320, above: false });
 });
 
 test("participant panel flips above when space below is insufficient", () => {
@@ -36,4 +36,11 @@ test("portal stays out of flow and handles both inside targets, focus and scroll
     assert.match(form, /grid items-start gap-3 lg:grid-cols-2/);
     assert.doesNotMatch(form, /function ParticipantSelector/);
   }
+});
+
+test("participant panel is never narrower than 280px for compact triggers", () => {
+  const result = calculateParticipantPanelPosition({ left: 600, top: 40, bottom: 80, width: 64, height: 40 }, { viewportWidth: 1280, viewportHeight: 800 });
+  assert.equal(result.width, 280);
+  const narrow = calculateParticipantPanelPosition({ left: 10, top: 40, bottom: 80, width: 64, height: 40 }, { viewportWidth: 240, viewportHeight: 800 });
+  assert.equal(narrow.width, 224);
 });

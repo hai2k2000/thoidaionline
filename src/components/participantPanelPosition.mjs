@@ -6,7 +6,7 @@ export function calculateParticipantPanelPosition(rect, { viewportWidth, viewpor
   const below = Math.max(0, viewportHeight - rect.bottom - gap - margin);
   const aboveSpace = Math.max(0, rect.top - gap - margin);
   const above = below < limit && aboveSpace > below;
-  const width = Math.min(rect.width, Math.max(0, viewportWidth - margin * 2));
+  const width = Math.min(Math.max(rect.width, 280), Math.max(0, viewportWidth - margin * 2));
   return {
     left: Math.max(margin, Math.min(rect.left, viewportWidth - margin - width)),
     top: above ? rect.top - gap : rect.bottom + gap,
