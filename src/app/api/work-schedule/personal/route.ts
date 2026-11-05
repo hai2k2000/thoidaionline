@@ -26,7 +26,8 @@ function parsedInput(body: Record<string, unknown>): WorkScheduleInput | null {
   }
   const participantIds = Array.isArray(body.participantIds) && body.participantIds.every((id) => typeof id === "string")
     ? body.participantIds as string[] : [];
-  if (participantIds.length > 50) return null;
+  if ((typeof body.id === "string" && participantIds.length < 1) || participantIds.length > 50
+    || new Set(participantIds).size !== participantIds.length) return null;
   return {
     id: typeof body.id === "string" ? body.id : undefined,
     workDate,
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
     : typeof body.workflowRevision === "number" && Number.isSafeInteger(body.workflowRevision)
       ? body.workflowRevision : null;
   if (input.id !== undefined && expectedRevision === null) return apiError("invalid_request", 400);
-  input.participantIds = [guard.actor.id];
+  if (!input.id) input.participantIds = [guard.actor.id];
   const result = await workScheduleRepository.savePersonal(guard.actor.id, input, expectedRevision);
   return result.ok ? apiJson({ row: result.row }) : rpcFailure(result.error);
 }

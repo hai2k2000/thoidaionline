@@ -9,10 +9,15 @@ import EventAssignmentPanel, { type EventAssignmentPanelHandle } from "@/compone
 import { personalPlanErrorMessage } from "@/lib/personalPlanError";
 import Time24hInput from "@/components/Time24hInput";
 import { canEditCreatorMutation, personalScheduleLifecycleState } from "@/lib/creatorMutationPolicy.mjs";
+import { canLeaderEditPersonalPlan } from "@/lib/leaderEditPersonalPlan.mjs";
+import PersonalPlanParticipants from "@/components/PersonalPlanParticipants";
+import { eventAssignmentPeople } from "@/lib/workScheduleEventAccess";
 
 type Person = {
   id: string;
   full_name: string;
+  active?: boolean;
+  username?: string | null;
   department_id?: string | null;
   roles?: { code?: string } | null;
   job_titles?: { code?: string; name?: string } | null;
@@ -38,7 +43,8 @@ type Row = {
   reviewed_at: string | null;
   review_note: string | null;
   workflow_revision: number;
-  creator?: { full_name?: string } | null;
+  creator?: { full_name?: string; department_id?: string | null } | null;
+  creator_department_id?: string | null;
   event_assignment_kind?: "leadership" | null;
   event_type?: string | null;
   event_status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | null;
@@ -115,6 +121,10 @@ export default function WorkSchedulePageShell({
   people,
   currentUserId,
   currentUserRole,
+  currentUserJobTitleCode,
+  currentUserDepartmentId,
+  personalPlanDepartmentManager,
+  personalPlanPeople,
   isDepartmentManager,
   approvalActorId,
   canReviewPersonalPlans = false,
@@ -129,6 +139,10 @@ export default function WorkSchedulePageShell({
   people: Person[];
   currentUserId?: string;
   currentUserRole?: string;
+  currentUserJobTitleCode?: string | null;
+  currentUserDepartmentId?: string | null;
+  personalPlanDepartmentManager?: boolean;
+  personalPlanPeople?: Person[];
   isDepartmentManager?: boolean;
   approvalActorId?: string;
   canReviewPersonalPlans?: boolean;
@@ -158,11 +172,26 @@ export default function WorkSchedulePageShell({
   const [createBusy, setCreateBusy] = useState(false);
   const [createMessage, setCreateMessage] = useState("");
   const [editingRow, setEditingRow] = useState<Row | null>(null);
+  const [planParticipantIds, setPlanParticipantIds] = useState<string[]>([]);
   const [detailRows, setDetailRows] = useState<Row[] | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
-  const [planType, setPlanType] = useState<"business" | "event">("business");
+  const [planType, setPlanType] = useState<"work" | "business" | "event">("business");
   const eventPanelRef = useRef<EventAssignmentPanelHandle>(null);
   const [eventOpen, setEventOpen] = useState(eventAssignmentOpen);
+  const leaderActor = { id: currentUserId, role_code: currentUserRole, job_title_code: currentUserJobTitleCode, department_id: currentUserDepartmentId, is_department_manager: personalPlanDepartmentManager };
+  const editParticipants = Boolean(editingRow && (editingRow.created_by !== currentUserId || editingRow.participant_ids.length > 1));
+  const scopedParticipants = eventAssignmentPeople(personalPlanPeople ?? people, { role_code: currentUserRole ?? "", department_id: currentUserDepartmentId });
+  const participantOptions = editingRow && !canLeaderEditPersonalPlan(editingRow, leaderActor)
+    ? (personalPlanPeople ?? people).filter((person) => editingRow.participant_ids.includes(person.id))
+    : scopedParticipants;
+  const startEditingPlan = (row: Row) => {
+    setDetailRows(null);
+    setPlanType(row.plan_type);
+    setEditingRow(row);
+    setPlanParticipantIds([...row.participant_ids]);
+    setCreateMessage("");
+    setCreateOpen(true);
+  };
 
   useEffect(() => {
     if (!detailRows) return;
@@ -287,32 +316,42 @@ export default function WorkSchedulePageShell({
   const clearAll = () => setSelected([]);
   const createPlan = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (editingRow && (planParticipantIds.length < 1 || planParticipantIds.length > 50)) {
+      setCreateMessage("Vui lòng chọn từ 1 đến 50 thành viên.");
+      return;
+    }
     const formElement = event.currentTarget;
     setCreateBusy(true);
     setCreateMessage("");
     const form = new FormData(formElement);
     const workDate = String(form.get("workDate") ?? "");
-    const personalMode = scheduleScope === "self";
+    const personalMode = editingRow ? editingRow.schedule_scope !== "organization" : scheduleScope === "self";
     const payload = {
       planType,
       workDate,
-      endDate: planType === "event" ? workDate : form.get("endDate"),
+      endDate: planType === "event" && !editingRow ? workDate : form.get("endDate"),
       startTime: form.get("startTime"),
       endTime: form.get("endTime"),
       title: form.get("title"),
       location: form.get("location"),
       notes: form.get("notes"),
-      participantIds: personalMode ? [currentUserId] : selected,
+      participantIds: planParticipantIds,
       ...(editingRow ? { id: editingRow.id, ...(personalMode ? { workflowRevision: editingRow.workflow_revision } : {}) } : {}),
     };
+    if (!editingRow) payload.participantIds = personalMode ? [currentUserId!] : selected;
     try {
       const endpoint = personalMode ? "/api/work-schedule/personal" : "/api/work-schedule";
       const response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       if (!response.ok) {
+        if (response.status === 403) throw new Error("Bạn không có quyền sửa kế hoạch này.");
+        if (response.status === 409) {
+          setRetryToken((value) => value + 1);
+          throw new Error("Kế hoạch đã được người khác cập nhật, vui lòng tải lại và mở lại kế hoạch.");
+        }
         const body = await response.json().catch(() => null) as { error?: { code?: unknown } } | null;
         throw new Error(personalPlanErrorMessage(body?.error?.code));
       }
-      setCreateMessage(personalMode ? "Đã gửi kế hoạch chờ phê duyệt." : "Đã lưu lịch công tác.");
+      setCreateMessage(editingRow ? "Đã cập nhật kế hoạch." : personalMode ? "Đã gửi kế hoạch chờ phê duyệt." : "Đã lưu lịch công tác.");
       formElement.reset();
       setEditingRow(null);
       setTimeout(() => setCreateOpen(false), 500);
@@ -325,12 +364,12 @@ export default function WorkSchedulePageShell({
       setCreateBusy(false);
     }
   };
-  const deletePlan = async (id: string) => {
+  const deletePlan = async (row: Row) => {
     if (!window.confirm("Xóa kế hoạch này?")) return;
-    const endpoint = scheduleScope === "self" ? "/api/work-schedule/personal" : "/api/work-schedule";
-    const revision = rows.find((row) => row.id === id)?.workflow_revision;
+    const endpoint = row.schedule_scope === "personal" ? "/api/work-schedule/personal" : "/api/work-schedule";
+    const revision = row.workflow_revision;
     if (!Number.isSafeInteger(revision)) return;
-    const response = await fetch(`${endpoint}?id=${encodeURIComponent(id)}&workflowRevision=${encodeURIComponent(String(revision))}`, { method: "DELETE" });
+    const response = await fetch(`${endpoint}?id=${encodeURIComponent(row.id)}&workflowRevision=${encodeURIComponent(String(revision))}`, { method: "DELETE" });
     if (response.ok) setRetryToken((value) => value + 1);
   };
   const reviewPlan = async (row: Row, action: "approve" | "reject") => {
@@ -648,26 +687,27 @@ export default function WorkSchedulePageShell({
                                   {row.approval_status === "REJECTED" && row.review_note ? <p className="text-red-700">Lý do từ chối: {row.review_note}</p> : null}
                                 </div> : null}
                                 {row.event_assignment_kind === "leadership" && enableEventAssignment && canEditEventAssignment(row, { id: currentUserId, role_code: currentUserRole, is_department_manager: isDepartmentManager }) ? <button type="button" onClick={() => { setDetailRows(null); void eventPanelRef.current?.editEvent(row.id); }} className="mt-2 min-h-11 rounded border border-orange-300 bg-white px-3 py-2 text-sm font-semibold text-orange-700">Sửa sự kiện / thành viên</button> : null}
-                                {row.event_assignment_kind !== "leadership" && currentUserId && canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => { setDetailRows(null); setPlanType(row.plan_type === "event" ? "event" : "business"); setEditingRow(row); setCreateMessage(""); setCreateOpen(true); }} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">Sửa kế hoạch</button><button type="button" onClick={() => { setDetailRows(null); void deletePlan(row.id); }} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Hủy kế hoạch</button></div> : null}
+                                {row.event_assignment_kind !== "leadership" && currentUserId && (canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") || canLeaderEditPersonalPlan(row, leaderActor)) ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => startEditingPlan(row)} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">{row.created_by !== currentUserId && canLeaderEditPersonalPlan(row, leaderActor) ? "Sửa sự kiện / thành viên" : "Sửa kế hoạch"}</button>{canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <button type="button" onClick={() => { setDetailRows(null); void deletePlan(row); }} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Hủy kế hoạch</button> : null}</div> : null}
                   </article>)}
                 </div>
               </div>
             </div>, document.body,
           ) : null}
           {activeTab === "personal" && createOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="create-plan-title" onClick={(event) => { if (event.target === event.currentTarget) { setEditingRow(null); setCreateOpen(false); } }}>
-            <form key={editingRow?.id ?? "new"} onSubmit={createPlan} className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
+            <form key={editingRow?.id ?? "new"} onSubmit={createPlan} className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
               <div className="flex items-center justify-between"><h2 id="create-plan-title" className="text-lg font-semibold">{editingRow ? "Sửa kế hoạch cá nhân" : "Tạo kế hoạch cá nhân"}</h2><button type="button" onClick={() => { setEditingRow(null); setCreateOpen(false); }} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Đóng">×</button></div>
-              <p className="mt-1 text-sm text-slate-600">Kế hoạch mới và kế hoạch đã duyệt sau khi sửa sẽ chuyển sang Chờ phê duyệt. Kế hoạch chờ duyệt chưa có hiệu lực.</p>
+              <p className="mt-1 text-sm text-slate-600">{editingRow && canLeaderEditPersonalPlan(editingRow, leaderActor) ? "Lãnh đạo có thể sửa nội dung và thành viên; trạng thái phê duyệt được giữ nguyên." : "Kế hoạch mới cần được phê duyệt. Kế hoạch chờ duyệt chưa có hiệu lực."}</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <label className="text-sm font-medium">Loại kế hoạch<select name="planType" value={planType} onChange={(event) => setPlanType(event.target.value as "business" | "event")} className="mt-1 min-h-11 w-full rounded border px-3 py-2"><option value="business">Đi công tác</option><option value="event">Sự kiện</option></select></label>
                 <label className="text-sm font-medium">Tiêu đề<input name="title" required maxLength={500} defaultValue={editingRow?.title ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
                 <label className="text-sm font-medium">{planType === "event" ? "Ngày sự kiện" : "Từ ngày"}<input name="workDate" type="date" required defaultValue={editingRow?.work_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                {planType === "business" ? <label className="text-sm font-medium">Đến ngày<input name="endDate" type="date" required defaultValue={editingRow?.end_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label> : null}
-                <label className="text-sm font-medium">Từ giờ<Time24hInput name="startTime" required={scheduleScope === "self" || planType === "event"} defaultValue={editingRow?.start_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
-                <label className="text-sm font-medium">Đến giờ<Time24hInput name="endTime" required={scheduleScope === "self" || planType === "event"} defaultValue={editingRow?.end_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
+                {planType !== "event" || editingRow ? <label className="text-sm font-medium">Đến ngày<input name="endDate" type="date" required defaultValue={editingRow?.end_date ?? iso(new Date())} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label> : null}
+                <label className="text-sm font-medium">Từ giờ<Time24hInput name="startTime" required={Boolean(editingRow) || scheduleScope === "self" || planType === "event"} defaultValue={editingRow?.start_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
+                <label className="text-sm font-medium">Đến giờ<Time24hInput name="endTime" required={Boolean(editingRow) || scheduleScope === "self" || planType === "event"} defaultValue={editingRow?.end_time?.slice(0, 5) ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
               </div>
               <label className="mt-3 block text-sm font-medium">Địa điểm<input name="location" maxLength={500} defaultValue={editingRow?.location ?? ""} className="mt-1 min-h-11 w-full rounded border px-3 py-2" /></label>
               <label className="mt-3 block text-sm font-medium">Ghi chú<textarea name="notes" maxLength={2000} defaultValue={editingRow?.notes ?? ""} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
+              {editingRow && editParticipants ? <PersonalPlanParticipants people={participantOptions} selected={planParticipantIds} onChange={setPlanParticipantIds} disabled={createBusy} /> : null}
               {createMessage ? <p role="status" className="mt-2 text-sm text-slate-700">{createMessage}</p> : null}
               <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => { setEditingRow(null); setCreateOpen(false); }} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={createBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{createBusy ? "Đang lưu..." : editingRow ? "Cập nhật kế hoạch" : "Lưu kế hoạch"}</button></div>
             </form>
