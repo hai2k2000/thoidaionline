@@ -198,3 +198,12 @@ test('all-staff event migration ships after manager deputy migration in both lis
     assert.ok(source.indexOf(migration) > source.indexOf('supabase/migrations/20261106150000_manager_deputy_watch_projects.sql'));
   }
 });
+
+test("completed assignment migration ships once after leader personal event migration", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const migration = "supabase/migrations/20261106210000_edit_completed_event_assignment.sql";
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf("supabase/migrations/20261106200000_leader_edit_personal_events.sql"));
+  }
+});

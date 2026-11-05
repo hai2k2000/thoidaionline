@@ -159,12 +159,13 @@ export default function EventAssignmentPanel({ people, open, onOpenChange, onCha
             <p className="text-slate-600">Nhân sự: {row.participant_ids.map((id) => people.find((person) => person.id === id)?.full_name ?? id).join(", ")}</p>
             <span className="inline-flex rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold text-orange-800">Được phân công</span>
             <div className="mt-2 flex flex-wrap gap-2">
-              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold">{row.event_status}</span>
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold">{row.event_status === "COMPLETED" ? "Hoàn thành" : row.event_status === "CANCELLED" ? "Đã hủy" : "Đã lên lịch"}</span>
+              {canEditEventAssignment(row, actor) ? <button type="button" onClick={() => startEditing(row)} className="rounded border px-2 py-1 text-xs font-semibold">Sửa sự kiện / thành viên</button> : null}
               {row.event_status === "SCHEDULED" ? <>
-                {canEditEventAssignment(row, actor) ? <button type="button" onClick={() => startEditing(row)} className="rounded border px-2 py-1 text-xs font-semibold">Sửa / thành viên</button> : null}
                 <button type="button" onClick={() => void setStatus(row, "complete")} className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Hoàn tất</button>
                 <button type="button" onClick={() => void setStatus(row, "cancel")} className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white">Hủy</button>
               </> : null}
+              {row.event_status === "CANCELLED" ? <span className="text-xs text-slate-500">Sự kiện đã hủy — không thể sửa.</span> : null}
             </div>
           </article>
         ))}
