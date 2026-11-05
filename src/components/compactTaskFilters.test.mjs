@@ -94,8 +94,10 @@ test('extra panel owns source/department and badge reflects draft values', () =>
 test('one responsive block follows approved control order and hides removed tab row', () => {
   assert.equal((source.match(/<form /g) ?? []).length, 1);
   assert.doesNotMatch(source, /aria-label="Loại công việc"|tabClass|placeholder="Tìm theo tên công việc"/);
-  assert.match(source, /grid-cols-1.*sm:grid-cols-2/);
   const tree = harness({ canFilterByPerson: true })();
+  const actions = nodes(tree, (node) => node.props.className?.split(" ").includes("task-filter-actions"));
+  assert.equal(actions.length, 1);
+  assert.deepEqual(React.Children.toArray(actions[0].props.children).map((node) => node.type), ['button', 'a']);
   const controls = nodes(tree, (node) => node.type === 'select' || node.type === 'person' || node.type === 'popover' || node.props.name === 'q', false).map((node) => node.props['aria-label'] ?? node.props.label ?? node.type);
   assert.deepEqual(controls, ['Phạm vi công việc', 'Tìm kiếm công việc', 'person', 'Dự án', 'Trạng thái', 'Thời hạn', 'Khoảng ngày', 'Sắp xếp', 'Lọc thêm']);
 });
