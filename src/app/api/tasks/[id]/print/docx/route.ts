@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { exportTaskPrintDocx, taskPrintDocxFilename } from "@/lib/taskPrintDocxExport";
 import { asUuid } from "@/lib/serverApi";
 import { getSessionUser } from "@/lib/serverSession";
@@ -23,5 +24,5 @@ export async function GET(_request: Request, { params }: Props) {
   if (!result.ok) return new Response("Not found", { status: 404 });
   const model = buildWorkAssignmentPrintModel(result.task);
   const buffer = await exportTaskPrintDocx(model);
-  return new Response(new Uint8Array(buffer), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": `attachment; filename="${taskPrintDocxFilename(model.title)}"`, "Cache-Control": "no-store" } });
+  return new Response(new Uint8Array(buffer), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": contentDisposition(taskPrintDocxFilename(model.title)), "Cache-Control": "no-store" } });
 }

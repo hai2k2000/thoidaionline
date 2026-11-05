@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { apiError, requireReadActor } from "@/lib/serverApi";
 import {
   createDepartmentPlanExcelTemplate,
@@ -14,7 +15,7 @@ export async function GET() {
     return new Response(new Uint8Array(workbook), {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME}"`,
+        "Content-Disposition": contentDisposition(DEPARTMENT_PLAN_EXCEL_TEMPLATE_FILENAME),
         "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
         Pragma: "no-cache",
         Expires: "0",

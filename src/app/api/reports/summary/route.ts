@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { getSessionUser } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 
@@ -41,7 +42,7 @@ export async function GET() {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename=thoidai-summary-${today}.csv`,
+      "Content-Disposition": contentDisposition(`thoidai-summary-${today}.csv`),
     },
   });
 }
