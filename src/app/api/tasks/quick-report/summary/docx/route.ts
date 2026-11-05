@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { loadPersonalQuickReportSummary } from "@/lib/quickReportPersonalSummaryService";
 import { MAX_PERSONAL_QUICK_REPORT_ROWS } from "@/lib/quickReportPersonalSummary";
 import { exportPersonalQuickReportDocx, personalQuickReportDocxFilename } from "@/lib/quickReportPersonalSummaryDocx";
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     status: 200,
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": `attachment; filename="${personalQuickReportDocxFilename(result.data.actor.full_name, { from: result.data.from, to: result.data.to })}"`,
+      "Content-Disposition": contentDisposition(personalQuickReportDocxFilename(result.data.actor.full_name, { from: result.data.from, to: result.data.to })),
       "Cache-Control": "no-store",
     },
   });

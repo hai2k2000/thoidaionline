@@ -1,3 +1,4 @@
+import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { apiError } from "@/lib/serverApi";
 import { loadPersonalWeeklyReport } from "@/lib/personalWeeklyReportService";
 import { exportPersonalWeeklyReportDocx, personalWeeklyReportDocxFilename } from "@/lib/personalWeeklyReportDocx";
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
     status: 200,
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": `attachment; filename="${personalWeeklyReportDocxFilename(employeeName, result.data.period.current)}"`,
+      "Content-Disposition": contentDisposition(personalWeeklyReportDocxFilename(employeeName, result.data.period.current)),
       "Cache-Control": "private, no-store",
     },
   });
