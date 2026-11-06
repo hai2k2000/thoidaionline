@@ -19,7 +19,7 @@ export default function JobTitlesPage() {
   const { notify } = useActionFeedback();
   const [rows, setRows] = useState<JobTitle[]>([]);
   const [form, setForm] = useState<Form>(blank);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<JobTitleStatusFilter>("active");
   const visibleRows = rows.filter((row) => statusFilter === "all" || row.active === (statusFilter === "active"));

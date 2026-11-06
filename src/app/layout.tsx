@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ActionFeedbackProvider from "@/components/ActionFeedbackProvider";
+import { ConfirmDialogProvider } from "@/components/ConfirmDialog";
 import PushNotificationCard from "@/components/PushNotificationCard";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import VersionRefresh from "@/components/VersionRefresh";
@@ -47,7 +48,7 @@ export default async function RootLayout({
       >
         <ServiceWorkerRegistration />
         <VersionRefresh build={await getReleaseBuild()} />
-        <ActionFeedbackProvider><AuthProvider><PushNotificationCard banner />{children}</AuthProvider></ActionFeedbackProvider>
+        <ActionFeedbackProvider><ConfirmDialogProvider><AuthProvider><PushNotificationCard banner />{children}</AuthProvider></ConfirmDialogProvider></ActionFeedbackProvider>
       </body>
     </html>
   );

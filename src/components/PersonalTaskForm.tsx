@@ -75,7 +75,7 @@ export default function PersonalTaskForm({ initialTask }: Props) {
     <form onSubmit={submit} className="space-y-3 rounded-xl border bg-white p-4 shadow-sm">
       <div>
         <label htmlFor="title" className="text-sm font-semibold">Tên nhiệm vụ</label>
-        <input id="title" name="title" required maxLength={500} defaultValue={initialTask?.title} className="mt-1 w-full rounded-lg border px-3 py-2" />
+        <input id="title" name="title" required aria-required="true" autoComplete="off" maxLength={500} defaultValue={initialTask?.title} className="mt-1 w-full rounded-lg border px-3 py-2" />
       </div>
       {!editing ? <div className="grid gap-3 sm:grid-cols-2">
         <div><label htmlFor="recurrenceFrequency" className="text-sm font-semibold">Lặp lại</label><select id="recurrenceFrequency" name="recurrenceFrequency" value={recurrenceFrequency} onChange={(event) => setRecurrenceFrequency(event.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2"><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select></div>
@@ -83,22 +83,22 @@ export default function PersonalTaskForm({ initialTask }: Props) {
       </div> : null}
       <div>
         <label htmlFor="description" className="text-sm font-semibold">Nội dung</label>
-        <textarea id="description" name="description" required maxLength={10000} defaultValue={initialTask?.description ?? ""} className="mt-1 min-h-32 w-full rounded-lg border px-3 py-2" />
+        <textarea id="description" name="description" required aria-required="true" maxLength={10000} defaultValue={initialTask?.description ?? ""} className="mt-1 min-h-32 w-full rounded-lg border px-3 py-2" />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor="startDate" className="text-sm font-semibold">Ngày bắt đầu</label>
-          <input id="startDate" name="startDate" type="date" required defaultValue={initialTask?.startDate} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          <input id="startDate" name="startDate" type="date" required aria-required="true" autoComplete="off" defaultValue={initialTask?.startDate} className="mt-1 w-full rounded-lg border px-3 py-2" />
         </div>
         <div>
           <label htmlFor="dueDate" className="text-sm font-semibold">Hạn hoàn thành</label>
-          <input id="dueDate" name="dueDate" type="date" required defaultValue={initialTask?.dueDate} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          <input id="dueDate" name="dueDate" type="date" required aria-required="true" autoComplete="off" defaultValue={initialTask?.dueDate} className="mt-1 w-full rounded-lg border px-3 py-2" />
         </div>
       </div>
       {editing ? (
         <div>
           <label htmlFor="deadlineReason" className="text-sm font-semibold">Lý do đổi hạn hoàn thành</label>
-          <input id="deadlineReason" name="deadlineReason" maxLength={2000} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          <input id="deadlineReason" name="deadlineReason" inputMode="text" autoComplete="off" maxLength={2000} className="mt-1 w-full rounded-lg border px-3 py-2" />
           <p className="mt-1 text-xs text-slate-500">Bắt buộc nếu hạn hoàn thành thay đổi.</p>
         </div>
       ) : null}
@@ -107,7 +107,7 @@ export default function PersonalTaskForm({ initialTask }: Props) {
         <textarea id="evaluationCriteria" name="evaluationCriteria" maxLength={10000} defaultValue={initialTask?.evaluationCriteria ?? ""} className="mt-1 min-h-24 w-full rounded-lg border px-3 py-2" />
       </div>
       {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
-      <div className="flex gap-2">
+      <div className="mobile-form-actions">
         <button disabled={busy} className="rounded-lg bg-orange-700 px-4 py-2 font-semibold text-white disabled:opacity-50">
           {busy ? "Đang lưu…" : editing ? "Lưu thay đổi" : "Tạo nhiệm vụ"}
         </button>

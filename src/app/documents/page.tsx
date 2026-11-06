@@ -26,7 +26,7 @@ export default function DocumentsPage() {
   const { loading: authLoading, user, logout, canAccessModule } = useAuth();
 
   const [rows, setRows] = useState<OfficialDocument[]>([]);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
   const [q, setQ] = useState("");
 
   const loadData = async () => {

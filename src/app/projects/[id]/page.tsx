@@ -14,5 +14,5 @@ export default async function ProjectDetailPage({params}:{params:Promise<{id:str
  const lead=user.role_code === "admin" || members.data.some(member=>member.user_id===user.id && member.role==="lead" && member.staff_users?.active);
  const options=lead ? await projectRepository.options() : null;
  if(options && !options.ok) throw new Error("Không tải được nhân sự.");
- return <Suspense fallback={<p className="p-6">Đang tải dự án...</p>}><ProjectDetailShell project={project.data} members={members.data} tasks={tasks.data} actorId={user.id} actorRole={user.role_code} options={options?.ok ? options.data : null} /></Suspense>;
+ return <Suspense fallback={<p className="p-6">Đang tải dự án…</p>}><ProjectDetailShell project={project.data} members={members.data} tasks={tasks.data} actorId={user.id} actorRole={user.role_code} options={options?.ok ? options.data : null} /></Suspense>;
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import ApprovalPermissionsCard from "./ApprovalPermissionsCard";
 import OtherPermissionsSection from "./OtherPermissionsSection";
 import CategoryGrantsSection from "./CategoryGrantsSection";
@@ -19,6 +20,7 @@ type Props = {
     onBack: () => void;
 };
 export default function UserPermissionDetail({ user, currentUserId, onChanged, onToast, genericModules = [], scopeOptions = {}, onBack }: Props) {
+    const requestConfirmation = useConfirm();
     const { items, departments, departmentViewGrants, setDepartmentViewGrants, categoryGrants, setCategoryGrants, loading, error, setError, load } = usePermissionUserDetail(user.id);
     const [pending, setPending] = useState<string[]>([]);
     const [history, setHistory] = useState(false);
@@ -108,8 +110,8 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setHistory(true)} className="rounded-lg border px-3 py-2 text-sm font-semibold">Lịch sử thay đổi</button>
-          <button type="button" disabled={self || !user.active || (user.override_count ?? 0) === 0} onClick={() => {
-            const confirmed = window.confirm(`Xóa toàn bộ ${user.override_count ?? 0} quyền cấp/chặn riêng của ${user.full_name}? Hiệu lực ngay.`);
+          <button type="button" disabled={self || !user.active || (user.override_count ?? 0) === 0} onClick={async () => {
+            const confirmed = await requestConfirmation({ title: `Xóa toàn bộ ${user.override_count ?? 0} quyền cấp/chặn riêng của ${user.full_name}? Hiệu lực ngay.`, tone: "danger" });
             if (confirmed)
                 void write({ action: "restore_user_inheritance", userId: user.id }).catch((reason) => setError(reason.message));
         }} className="rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-50">
@@ -117,7 +119,7 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
           </button>
         </div>
       </header>
-      {loading ? <p>Đang tải quyền…</p> : <>
+      {loading ? <p>Đang tải… quyền…</p> : <>
         <ApprovalPermissionsCard items={items} active={user.active} self={self} userName={user.full_name} pending={pending} onSet={onApprovalSet} onGrant={setGrantItem} onRevoke={setRevokeItem}/>
         <OtherPermissionsSection user={user} modules={genericModules} active={user.active} self={self}
           scopeOptions={scopeOptions} pending={pending} onSet={setOther}

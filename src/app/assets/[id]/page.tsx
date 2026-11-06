@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { type Asset, type AssetAssignment, type AssetConditionStatus } from "@/lib/services";
 import { errorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 import AssetServiceHistory from "@/components/AssetServiceHistory";
 import { planManagingRoomChange } from "@/lib/assetManagingRoom.mjs";
 
@@ -38,9 +39,10 @@ export default function AssetDetailPage() {
   const router = useRouter();
   const { loading: authLoading, user, logout, hasPermission } = useAuth();
   const { notify } = useActionFeedback();
+  const requestConfirmation = useConfirm();
   const canManage = hasPermission("asset.manage");
   const [asset, setAsset] = useState<Asset | null>(null);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
   const [saving, setSaving] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -70,7 +72,7 @@ export default function AssetDetailPage() {
     const warning = currentAssignment?.assignee_id
       ? "Người đang sử dụng sẽ bị gỡ khỏi tài sản và tài sản sẽ trở thành tài sản dùng chung của phòng mới. Bạn có muốn tiếp tục?"
       : "Tài sản sẽ trở thành tài sản dùng chung của phòng mới. Bạn có muốn tiếp tục?";
-    if (!window.confirm(warning)) return;
+    if (!await requestConfirmation({ title: warning, tone: "danger" })) return;
     setLifecycleBusy(true);
     try {
       const response = await fetch("/api/assets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: plan.action, asset_id: asset.id, department_id: managingRoomId, assignee_id: null }) });
@@ -108,11 +110,11 @@ export default function AssetDetailPage() {
     if (!asset?.id || lifecycleBusy || !canManage) return;
     if (action === "assign" && currentAssignment) return;
     if (action === "transfer" && !currentAssignment) return;
-    if (action === "assign" && !window.confirm("Cấp phát tài sản cho phòng/người sử dụng mới?")) return;
-    if (action === "transfer" && !window.confirm("Chuyển giao tài sản sang phòng/người sử dụng mới?")) return;
-    if (action === "return" && !window.confirm("Thu hồi tài sản khỏi người/phòng đang sử dụng?\n\nSau khi thu hồi, tài sản sẽ trở về trạng thái chưa phân công và tự động chuyển về Kho.")) return;
-    if (action === "reclaim_unrepairable" && !window.confirm("Xác nhận tài sản hỏng không thể sửa?\n\nTài sản sẽ được thu hồi và chuyển vào Kho chờ xử lý.")) return;
-    if (action === "liquidate" && !window.confirm("Xác nhận thanh lý tài sản này?\n\nTài sản sẽ được đánh dấu đã thanh lý và không còn vị trí lưu trữ.")) return;
+    if (action === "assign" && !await requestConfirmation({ title: "Cấp phát tài sản cho phòng/người sử dụng mới?", tone: "danger" })) return;
+    if (action === "transfer" && !await requestConfirmation({ title: "Chuyển giao tài sản sang phòng/người sử dụng mới?", tone: "danger" })) return;
+    if (action === "return" && !await requestConfirmation({ title: "Thu hồi tài sản khỏi người/phòng đang sử dụng?\n\nSau khi thu hồi, tài sản sẽ trở về trạng thái chưa phân công và tự động chuyển về Kho.", tone: "danger" })) return;
+    if (action === "reclaim_unrepairable" && !await requestConfirmation({ title: "Xác nhận tài sản hỏng không thể sửa?\n\nTài sản sẽ được thu hồi và chuyển vào Kho chờ xử lý.", tone: "danger" })) return;
+    if (action === "liquidate" && !await requestConfirmation({ title: "Xác nhận thanh lý tài sản này?\n\nTài sản sẽ được đánh dấu đã thanh lý và không còn vị trí lưu trữ.", tone: "danger" })) return;
     setLifecycleBusy(true);
     try {
       const response = await fetch("/api/assets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, asset_id: asset.id, department_id: action === "assign" || action === "transfer" ? departmentId : null, assignee_id: action === "assign" || action === "transfer" ? assigneeId || null : null }) });

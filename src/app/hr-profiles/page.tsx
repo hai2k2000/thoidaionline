@@ -41,7 +41,7 @@ export default function HrProfilesPage() {
 
   const [rows, setRows] = useState<EmployeeProfile[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
 
   const [qName, setQName] = useState("");
   const [qDepartment, setQDepartment] = useState("");

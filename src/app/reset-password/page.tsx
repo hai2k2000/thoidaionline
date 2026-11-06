@@ -34,5 +34,5 @@ function ResetPasswordForm() {
 }
 
 export default function ResetPasswordPage() {
-  return <Suspense fallback={<main className="min-h-screen bg-slate-50 p-8">Đang tải...</main>}><ResetPasswordForm /></Suspense>;
+  return <Suspense fallback={<main className="min-h-screen bg-slate-50 p-8">Đang tải…</main>}><ResetPasswordForm /></Suspense>;
 }

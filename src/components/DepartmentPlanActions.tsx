@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useRef, useState } from "react";
 import type { DepartmentPlanItemRow, DepartmentPlanRow } from "@/lib/departmentPlanRepository";
 import type { DepartmentPlanPeriod } from "@/lib/departmentPlanPeriod";
@@ -33,6 +34,7 @@ export default function DepartmentPlanActions({ departmentId, period, plan, item
   const [importingExistingPlan, setImportingExistingPlan] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [duplicateDecisions, setDuplicateDecisions] = useState<Record<string, "merge" | "separate" | "skip" | null>>({});
+  const requestConfirmation = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const actionLockRef = useRef(false);
   const openExisting = (target: DepartmentPlanRow) => {
@@ -111,7 +113,7 @@ export default function DepartmentPlanActions({ departmentId, period, plan, item
     finally { actionLockRef.current = false; setBusy(false); }
   };
   const close = async () => {
-    if (!plan || actionLockRef.current || !window.confirm("Chốt kỳ này và lưu snapshot kết quả?")) return;
+    if (!plan || actionLockRef.current || !await requestConfirmation({ title: "Chốt kỳ này và lưu snapshot kết quả?", tone: "danger" })) return;
     actionLockRef.current = true;
     setBusy(true);
     try {

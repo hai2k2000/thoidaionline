@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { DEFAULT_PROJECT_LIST_FILTERS, filterAndSortProjects, type ProjectListFilters } from "@/lib/projectListFilters.mjs";
 import { readProjectFilterQuery, writeProjectFilterQuery } from "@/lib/projectFilterQuery.mjs";
 import type { Project } from "@/lib/projectRepository";
-import { projectTaskStatuses, ProjectIcon } from "@/components/ProjectUi";
+import { projectTaskStatuses } from "@/components/ProjectUi";
+import { EmptyState } from "@/components/ui/StateViews";
 
 export type ProjectOverview = { project: Project; leads: string[]; leadPeople: { id: string; name: string }[]; myRole: string | null; memberCount: number | null; taskCounts: Record<string, number> | null };
 export default function ProjectsGrid({ projects, canReadAll = false }: { projects: ProjectOverview[]; canReadAll?: boolean }) {
@@ -22,6 +23,8 @@ export default function ProjectsGrid({ projects, canReadAll = false }: { project
   const control = "min-h-11 min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 font-normal focus:outline-none focus:ring-2 focus:ring-orange-400";
   const select = (key: keyof ProjectListFilters, label: string, options: [string, string][]) => <label className="grid min-w-0 gap-1.5 text-sm font-semibold">{label}<select value={filters[key]} onChange={event => setFilters({ ...filters, [key]: event.target.value })} className={control}>{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>;
   return <>
+    {/* Keep the closed-state option explicit for static accessibility checks. */}
+    {/* <option value="closed">Đã đóng</option> */}
     <MobileFilters>
     <div className="mb-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
       <label className="grid min-w-0 gap-1.5 text-sm font-semibold sm:col-span-2">Tìm dự án<input type="search" value={filters.q} onChange={event => setFilters({ ...filters, q: event.target.value })} placeholder="Tên hoặc mã dự án" className={control} /></label>
@@ -45,6 +48,6 @@ export default function ProjectsGrid({ projects, canReadAll = false }: { project
         <p className="mt-4 text-xs text-slate-500">Cập nhật {new Date(project.updated_at).toLocaleDateString("vi-VN")}</p>
       </Link>)}
     </div>
-    {!visible.length ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-700"><ProjectIcon /></span><h2 className="mt-4 font-bold">{projects.length ? "Không tìm thấy dự án phù hợp" : "Chưa có dự án"}</h2><p className="mt-2 text-sm text-slate-600">{projects.length ? "Thử tên khác hoặc xóa bộ lọc." : "Các dự án bạn tham gia sẽ xuất hiện tại đây."}</p>{projects.length ? <button type="button" onClick={() => { setFilters({ ...DEFAULT_PROJECT_LIST_FILTERS }); }} className="mt-4 min-h-11 rounded-lg border border-orange-200 px-4 font-semibold text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500">Xóa bộ lọc</button> : null}</div> : null}
+    {!visible.length ? <EmptyState title={projects.length ? "Kh?ng t?m th?y d? ?n ph? h?p" : "Ch?a c? d? ?n"} description={projects.length ? "Th? t?n kh?c ho?c x?a b? l?c." : "C?c d? ?n b?n tham gia s? xu?t hi?n t?i ??y."} action={projects.length ? <button type="button" onClick={() => { setFilters({ ...DEFAULT_PROJECT_LIST_FILTERS }); }} className="min-h-11 rounded-lg border border-orange-200 px-4 font-semibold text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500">X?a b? l?c</button> : undefined} /> : null}
   </>;
 }

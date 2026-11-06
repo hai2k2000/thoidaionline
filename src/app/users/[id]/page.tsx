@@ -35,7 +35,7 @@ export default function UserDetailPage() {
 
   const [user, setUser] = useState<UserDetail | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [message, setMessage] = useState("Đang tải thông tin user...");
+  const [message, setMessage] = useState("Đang tải thông tin người dùng…");
 
   const loadData = async () => {
     if (!userId) return;
@@ -81,7 +81,7 @@ export default function UserDetailPage() {
             <Link href="/users" className="inline-flex min-h-10 items-center rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800 transition hover:bg-orange-100">← Danh sách tài khoản</Link>
             <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
               <div><p className="text-xs font-semibold uppercase tracking-wide text-orange-600">Quản lý nhân viên</p><h1 className="mt-1 text-2xl font-bold tracking-tight">Chi tiết tài khoản</h1></div>
-              <span role="status" className={`table-status ${user?.active ? "table-status-success" : "table-status-neutral"}`}>{user ? (user.active ? "Đang hoạt động" : "Đã khóa") : "Đang tải"}</span>
+              <span role="status" className={`table-status ${user?.active ? "table-status-success" : "table-status-neutral"}`}>{user ? (user.active ? "Đang hoạt động" : "Đã khóa") : "Đang tải…"}</span>
             </div>
             <p className="mt-3 text-sm text-slate-600" aria-live="polite">{message}</p>
           </header>

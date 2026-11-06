@@ -1,5 +1,8 @@
 "use client";
 
+import { useConfirm } from "@/components/ConfirmDialog";
+import { useActionFeedback } from "@/components/ActionFeedbackProvider";
+import { EmptyState, ErrorState } from "@/components/ui/StateViews";
 import { parseTaskRequirements } from "@/lib/taskRequirements";
 
 import { JOURNALISM_UI_HIDDEN } from "@/lib/journalismUiHidden.mjs";
@@ -169,6 +172,7 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
 }
 
 function ApprovalQueue({ queue, data, onRefresh }: { queue: "assignment" | "completion"; data: TaskListResult; onRefresh: () => void }) {
+  const { notify } = useActionFeedback();
   const [busy, setBusy] = useState<string | null>(null);
   const rows = data.items;
   const act = async (taskId: string, action: "approve" | "reject" | "return") => {
@@ -180,7 +184,7 @@ function ApprovalQueue({ queue, data, onRefresh }: { queue: "assignment" | "comp
       ? await fetch("/api/tasks/claim/review", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ taskId, decision: action === "approve" ? "approve" : "reject", reason }) })
       : await fetch(`/api/tasks/${taskId}/review-completion`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ decision: action === "approve" ? "approve" : "return", reason }) });
     setBusy(null);
-    if (!response.ok) { window.alert("Không thể cập nhật phê duyệt."); return; }
+    if (!response.ok) { notify("error", "Không thể cập nhật phê duyệt."); return; }
     onRefresh();
   };
   return <div className="space-y-3">
@@ -190,6 +194,8 @@ function ApprovalQueue({ queue, data, onRefresh }: { queue: "assignment" | "comp
 }
 
 export default function TaskCenterShell(props: Props) {
+  const requestConfirmation = useConfirm();
+  const { notify } = useActionFeedback();
   const { canAccessJournalism, canClaimTasks, canReviewTaskApprovals, canSeeDepartmentCollaborating = false, canQuickReport, approvalQueue, currentUserId, currentUserRole, projects = [], departments, personOptions = [], canFilterByPerson = false, journalismWorkKinds, journalismTopics, journalismSeries, listError, query, tasks, userLabel, basePath = "/tasks", heading = "QUẢN LÝ CÔNG VIỆC", taskMode = false } = props;
   const router = useRouter();
   const tableRef = useRef<HTMLDivElement>(null);
@@ -220,7 +226,7 @@ export default function TaskCenterShell(props: Props) {
     try {
       const ids = [...new Set(selectedTaskIds)].filter(Boolean);
       const response = await fetch(`/api/tasks/bulk-print/docx?ids=${encodeURIComponent(ids.join(","))}`, { cache: "no-store" });
-      if (!response.ok) { window.alert("Không thể xuất các phiếu đã chọn."); return; }
+      if (!response.ok) { notify("error", "Không thể xuất các phiếu đã chọn."); return; }
       const blob = await response.blob();
       const link = document.createElement("a");
       const downloadUrl = URL.createObjectURL(blob);
@@ -235,14 +241,14 @@ export default function TaskCenterShell(props: Props) {
     const blockedTasks = selectedTasks.filter((task) => task.legacy_read_only || !canCancelCreatorMutation({ actorId: currentUserId, createdBy: task.created_by, isAdmin: true, state: taskLifecycleState(task) }));
     const validCount = selectedTasks.length - blockedTasks.length;
     const blockedLines = blockedTasks.map((task) => `✕ ${task.title} — ${task.status === "cancelled" ? "đã huỷ" : task.legacy_read_only ? "dữ liệu cũ chỉ đọc" : "không hợp lệ theo trạng thái hiện tại"}`).join("\n");
-    if (!validCount || !window.confirm(`Bạn đang huỷ ${selectedTasks.length} công việc.\n\nCó thể huỷ: ${validCount}\nKhông thể huỷ: ${blockedTasks.length}${blockedLines ? `\n\n${blockedLines}` : ""}\n\nXác nhận huỷ ${validCount} công việc?`)) return;
+    if (!validCount || !await requestConfirmation({ title: `Bạn đang huỷ ${selectedTasks.length} công việc.\n\nCó thể huỷ: ${validCount}\nKhông thể huỷ: ${blockedTasks.length}${blockedLines ? `\n\n${blockedLines}` : ""}\n\nXác nhận huỷ ${validCount} công việc?`, tone: "danger" })) return;
     setBulkBusy(true);
     try {
       const response = await fetch("/api/tasks/bulk-cancel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task_ids: selectedTaskIds }) });
       const data = await response.json().catch(() => null) as { results?: Array<{ ok: boolean }> } | null;
-      if (!response.ok) { window.alert("Không thể huỷ hàng loạt công việc."); return; }
+      if (!response.ok) { notify("error", "Không thể huỷ hàng loạt công việc."); return; }
       const successCount = data?.results?.filter((result) => result.ok).length ?? 0;
-      window.alert(`Đã huỷ ${successCount}/${selectedTaskIds.length} công việc.`);
+      notify("success", `Đã huỷ ${successCount}/${selectedTaskIds.length} công việc.`);
       setSelectedTaskIds([]);
       router.refresh();
     } finally { setBulkBusy(false); }
@@ -274,8 +280,8 @@ export default function TaskCenterShell(props: Props) {
                 <section className="mobile-task-list mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
                 {canReviewTaskApprovals && query.approvalQueue ? <ApprovalQueue queue={query.approvalQueue} data={approvalQueue?.[query.approvalQueue] ?? { items: [], total: 0, page: 1, pageSize: 100 }} onRefresh={() => router.refresh()} /> : null}
                 {!taskMode ? <div className="mb-3 flex flex-wrap items-center gap-2 border-b pb-3"><span className="text-sm font-semibold text-slate-600">Xem công việc theo:</span>{([['day','Ngày'],['week','Tuần'],['month','Tháng']] as const).map(([period, label]) => <Link key={period} href={listHref(periodRange(period))} className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-800">{label}</Link>)}</div> : null}
-                {listError ? <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-800">Không thể tải danh sách công việc.</p> : null}
-                {!listError && tasks.items.length === 0 ? <p className="p-6 text-center text-slate-600">Không có công việc phù hợp.</p> : null}
+                {listError ? <ErrorState message="Không thể tải danh sách công việc." /> : null}
+                {!listError && tasks.items.length === 0 ? <EmptyState title="Không có công việc phù hợp." /> : null}
                 {tasks.items.length ? (
                   <>
                     <div ref={tableRef} className="hidden overflow-x-auto lg:block">

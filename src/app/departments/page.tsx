@@ -20,7 +20,7 @@ export default function DepartmentsPage() {
   const [deps, setDeps] = useState<Department[]>([]);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
   const [statusFilter, setStatusFilter] = useState<DepartmentStatusFilter>("active");
   const visibleDepartments = deps.filter((department) => statusFilter === "all" || department.active === (statusFilter === "active"));
 

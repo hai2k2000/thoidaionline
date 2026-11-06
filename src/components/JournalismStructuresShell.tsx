@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ConfirmDialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -56,12 +57,13 @@ function StructureForm({ kind, scope, departments, topics, initial, onDone }: {
 function StructureCard({ kind, row, scope, departments, topics, onRefresh }: { kind: "topic" | "series"; row: JournalismStructureTopic | JournalismStructureSeries; scope: "all" | "department"; departments: JournalismStructureDepartment[]; topics: JournalismStructureTopic[]; onRefresh: () => void }) {
   const router = useRouter();
   const { notify } = useActionFeedback();
+  const requestConfirmation = useConfirm();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const series = kind === "series";
   const topicName = series && "topic_id" in row ? topics.find((topic) => topic.id === row.topic_id)?.name : null;
   const archive = async () => {
-    if (!window.confirm(`Lưu trữ ${series ? "loạt bài" : "chủ đề"} này? Các liên kết hiện có vẫn được giữ để xem lịch sử.`)) return;
+    if (!await requestConfirmation({ title: `Lưu trữ ${series ? "loạt bài" : "chủ đề"} này? Các liên kết hiện có vẫn được giữ để xem lịch sử.`, tone: "danger" })) return;
     setBusy(true);
     try { const response = await fetch(`/api/journalism/${series ? "series" : "topics"}/${row.id}/archive`, { method: "POST" }); if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể lưu trữ.")); notify("success", "Đã lưu trữ."); onRefresh(); } catch (error) { notify("error", errorMessage(error, "Không thể lưu trữ.")); } finally { setBusy(false); }
   };

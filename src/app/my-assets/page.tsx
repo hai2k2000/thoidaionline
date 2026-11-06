@@ -12,7 +12,7 @@ export default function MyAssetsPage() {
   const { loading, user, logout } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [requests, setRequests] = useState<AssetStatusChangeRequest[]>([]);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
   const [selected, setSelected] = useState<Asset | null>(null);
   const [status, setStatus] = useState<"maintenance" | "broken">("maintenance");
   const [reason, setReason] = useState("");

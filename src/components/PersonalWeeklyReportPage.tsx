@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { businessDateFromTimestamp, formatDateOnlyVN } from "@/lib/businessDate.mjs";
 import AppNav from "@/components/AppNav";
@@ -23,6 +24,7 @@ const dateTimeLabel = (value: string) => { const date = new Date(value); return 
 const statusLabel = (value: unknown) => ({ done: "Hoàn thành", in_progress: "Đang thực hiện", blocked: "Có vướng mắc", cancelled: "Đã hủy", new: "Mới" }[String(value)] ?? String(value ?? "Chưa cập nhật"));
 
 export default function PersonalWeeklyReportPage({ initial }: { initial: Initial }) {
+  const requestConfirmation = useConfirm();
   const { logout } = useAuth();
   const savedDraft = initial.report?.status === "DRAFT" ? initial.report.draft_payload : null;
   const draftCurrentRows = savedDraft && Object.prototype.hasOwnProperty.call(savedDraft, "currentRows") && Array.isArray(savedDraft.currentRows) ? savedDraft.currentRows : initial.currentRows ?? [];
@@ -119,7 +121,7 @@ export default function PersonalWeeklyReportPage({ initial }: { initial: Initial
     finally { setAddWorkBusy(false); }
   };
   const saveDraft = async () => { setBusy(true); setMessage(""); try { const response = await fetch("/api/reports/weekly", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload()) }); if (!response.ok) throw new Error("Không thể lưu bản nháp."); setMessage("Đã lưu bản nháp."); } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể lưu bản nháp."); } finally { setBusy(false); } };
-  const completeReport = async () => { if (!window.confirm("Bạn có chắc muốn hoàn thành báo cáo? Sau khi hoàn thành, báo cáo sẽ được lưu trong lịch sử; nếu cần chỉnh sửa, bạn có thể mở lại trong thời hạn cho phép.")) return; setBusy(true); setMessage(""); try { const response = await fetch("/api/reports/weekly/complete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload()) }); if (!response.ok) throw new Error("Không thể hoàn thành báo cáo."); window.location.reload(); } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể hoàn thành báo cáo."); } finally { setBusy(false); } };
+  const completeReport = async () => { if (!await requestConfirmation({ title: "Bạn có chắc muốn hoàn thành báo cáo? Sau khi hoàn thành, báo cáo sẽ được lưu trong lịch sử; nếu cần chỉnh sửa, bạn có thể mở lại trong thời hạn cho phép.", tone: "danger" })) return; setBusy(true); setMessage(""); try { const response = await fetch("/api/reports/weekly/complete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload()) }); if (!response.ok) throw new Error("Không thể hoàn thành báo cáo."); window.location.reload(); } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể hoàn thành báo cáo."); } finally { setBusy(false); } };
   useEffect(() => {
     if (!reopenOpen) return;
     const dialog = reopenDialogRef.current;

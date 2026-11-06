@@ -70,7 +70,7 @@ export default function UsersPage() {
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [deps, setDeps] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
   const [filterDepId, setFilterDepId] = useState("");
   const [filterStatus, setFilterStatus] = useState<
     "all" | "active" | "disabled"
@@ -178,7 +178,7 @@ export default function UsersPage() {
   };
 
   const openUser = async (u: User) => {
-    setMessage("Đang tải thông tin mới nhất...");
+    setMessage("Đang tải thông tin mới nhất…");
     try {
       const payload = await fetchAll();
       applyPayload(payload);

@@ -83,7 +83,7 @@ export default function NotificationBell() {
     <div className="absolute right-0 mt-2 w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
       <div className="flex items-center justify-between border-b px-4 py-3"><div><p className="font-bold text-slate-900">Thông báo</p><p className="text-xs text-slate-500">{unreadCount} chưa đọc</p></div>{unreadCount ? <button type="button" onClick={() => void mark(unreadKeys)} className="text-xs font-semibold text-orange-700 hover:underline">Đánh dấu tất cả đã đọc</button> : null}</div>
       <div className="max-h-[420px] overflow-y-auto">
-        {loading ? <p className="p-6 text-center text-sm text-slate-500">Đang tải thông báo…</p> : null}
+        {loading ? <p className="p-6 text-center text-sm text-slate-500">Đang tải… thông báo…</p> : null}
         {!loading && !items.length ? <p className="p-6 text-center text-sm text-slate-500">Chưa có thông báo.</p> : null}
         {items.map((item) => <Link key={item.key} href={item.href} onClick={() => item.unread && void mark([item.key])} className={`block border-b px-4 py-3 transition hover:bg-orange-50 ${item.unread ? "bg-orange-50/60" : "bg-white"}`}>
           <div className="flex gap-3"><span className={`mt-1 size-2.5 shrink-0 rounded-full ${kindClass[item.kind]}`} /><div className="min-w-0"><p className={`text-sm ${item.unread ? "font-bold text-slate-900" : "font-semibold text-slate-700"}`}>{item.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{item.message}</p><p className="mt-1 text-xs text-slate-400">{timeText(item.createdAt)}</p></div></div>

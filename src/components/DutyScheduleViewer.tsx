@@ -174,7 +174,7 @@ export default function DutyScheduleViewer({
                 ))}
               </div>
             </div>
-            {loading ? <p className="mt-3 rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">Đang tải lịch trực…</p> : null}
+            {loading ? <p className="mt-3 rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">Đang tải… lịch trực…</p> : null}
             {!loading && loadError ? <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Không tải được lịch trực. Vui lòng thử lại hoặc kiểm tra kết nối máy chủ.</p> : null}
             {!loading && !loadError ? <div className={`mt-3 grid w-full gap-2 ${density.grid}`}>
               {dayCards.map(([date, items], index) => date ? (

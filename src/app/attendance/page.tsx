@@ -12,6 +12,8 @@ import { canEditCreatorMutation, leaveLifecycleState } from "@/lib/creatorMutati
 import AttendanceMonthGrid from "@/components/attendance/AttendanceMonthGrid";
 import AttendanceAnomalyReview from "@/components/attendance/AttendanceAnomalyReview";
 import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { LoadingState } from "@/components/ui/StateViews";
 
 type AttendanceRow = {
   id: string;
@@ -118,6 +120,7 @@ function AttendancePageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { loading: authLoading, user, logout, canAccessModule } = useAuth();
+  const requestConfirmation = useConfirm();
 
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
@@ -133,7 +136,7 @@ function AttendancePageContent() {
   const [recentOffset, setRecentOffset] = useState(0);
   const [recentRows, setRecentRows] = useState<AttendanceRow[]>([]);
   const [recentLoading, setRecentLoading] = useState(false);
-  const [message, setMessage] = useState("Đang tải dữ liệu chấm công...");
+  const [message, setMessage] = useState("Đang tải dữ liệu chấm công…");
   const [syncRequests, setSyncRequests] = useState<SyncRequest[]>([]);
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
@@ -254,7 +257,7 @@ function AttendancePageContent() {
     if (isOrganizationView && effectiveDepartmentFilter) filterQuery.set("departmentId", effectiveDepartmentFilter);
     if (isOrganizationView && effectiveStatusFilter) filterQuery.set("status", effectiveStatusFilter);
     const filterSuffix = filterQuery.toString() ? `&${filterQuery.toString()}` : "";
-    setMessage("Đang tải dữ liệu chấm công...");
+    setMessage("Đang tải dữ liệu chấm công…");
     const response = await fetch(`/api/attendance?date=${encodeURIComponent(selectedDate)}&period=${period}&scope=${scope}&recent=${recentMode ? "1" : "0"}&offset=${effectiveRecentOffset}&limit=10${filterSuffix}`, {
       cache: "no-store",
     });
@@ -422,7 +425,7 @@ function AttendancePageContent() {
   };
 
   const cancelLeave = async (request: LeaveRequest) => {
-    if (!window.confirm("Hủy đơn nghỉ / công tác này?")) return;
+    if (!await requestConfirmation({ title: "Hủy đơn nghỉ / công tác này?", tone: "danger" })) return;
     setLeaveBusy(true);
     try {
       const response = await fetch("/api/leave-requests", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: request.id, action: "cancel" }) });
@@ -652,7 +655,7 @@ function AttendancePageContent() {
               </div>
             </div>
           </div>
-          <p className="mt-2 text-sm text-slate-600">{message}</p>
+          {message.startsWith("?ang t?i") ? <LoadingState label={message} /> : <p className="mt-2 text-sm text-slate-600">{message}</p>}
           {isOrganizationView ? <MobileFilters label="Bộ lọc nhân sự"><div className="mt-3 grid gap-2 rounded-lg border bg-slate-50 p-3 sm:grid-cols-4">
             <label className="text-sm font-semibold">Phòng ban<select value={departmentFilter} onChange={(event) => changeDepartmentFilter(event.target.value)} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả phòng ban</option>{filterOptions.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label className="text-sm font-semibold">Nhân viên<input list="attendance-staff-options" value={staffQuery} onChange={(event) => { const query = event.target.value; setStaffQuery(query); const match = filterOptions.staff.find((item) => item.full_name === query && (!departmentFilter || item.department_id === departmentFilter)); if (match || query === "") { const nextStaff = match?.id ?? ""; setStaffFilter(nextStaff); updateQuery({ staffId: nextStaff }); refreshAfterFilterChange({ staffFilter: nextStaff }); } }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal" placeholder="Tìm nhân viên" /><datalist id="attendance-staff-options">{filterOptions.staff.filter((item) => !departmentFilter || item.department_id === departmentFilter).map((item) => <option key={item.id} value={item.full_name} />)}</datalist></label>
@@ -699,7 +702,7 @@ function AttendancePageContent() {
           </div></>}
           <div className="mt-3 flex justify-center">
             {period === "day" ? <button type="button" onClick={() => void loadOlderAttendance()} disabled={recentLoading} className="min-h-11 rounded border px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-              {recentLoading ? "Đang tải..." : "Tải thêm 10 ngày cũ hơn"}
+              {recentLoading ? "Đang tải…" : "Tải thêm 10 ngày cũ hơn"}
             </button> : null}
           </div>
         </section>
@@ -787,7 +790,7 @@ function AttendancePageContent() {
 }
 
 export default function AttendancePage() {
-  return <Suspense fallback={<main className="min-h-screen bg-slate-50 p-6 text-slate-600">Đang tải chấm công...</main>}><AttendancePageContent /></Suspense>;
+  return <Suspense fallback={<main className="min-h-screen bg-slate-50 p-6 text-slate-600">Đang tải chấm công…</main>}><AttendancePageContent /></Suspense>;
 }
 
 
