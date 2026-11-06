@@ -31,7 +31,7 @@ export default function HrProfileDetailPage() {
 
   const [staff, setStaff] = useState<Staff | null>(null);
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
   const [saving, setSaving] = useState(false);
   const [profileFile, setProfileFile] = useState<File | null>(null);
 

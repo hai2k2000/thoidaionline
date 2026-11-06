@@ -49,7 +49,7 @@ export default function TaskStatusTablePage({
   const router = useRouter();
   const { loading: authLoading, user, logout, hasPermission, canViewAllWorkHr } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [message, setMessage] = useState("Đang tải dữ liệu...");
+  const [message, setMessage] = useState("Đang tải dữ liệu…");
 
   const loadData = async () => {
     const { data, error } = await supabase

@@ -12,6 +12,7 @@ import { filterAssetList, isAssetInWarehouse, isAssetUnassigned, presentAssetCus
 import { presentAssetCondition } from "@/lib/assetStatusPresentation";
 import { listAssets, type Asset } from "@/lib/services";
 import { ASSET_LIST_VIEW_STORAGE_KEY, defaultAssetListViewState, parseAssetListViewState, serializeAssetListViewState } from "@/lib/assetListViewState.mjs";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/StateViews";
 
 type AssetRow = Asset & {
   assigned_department_name?: string | null;
@@ -69,7 +70,7 @@ export default function AssetsPage() {
   const [excelOptionsLoaded, setExcelOptionsLoaded] = useState(false);
   const importDialog = useRef<HTMLDialogElement>(null);
   const [rows, setRows] = useState<AssetRow[]>([]);
-  const [message, setMessage] = useState("Đang tải danh sách tài sản...");
+  const [message, setMessage] = useState("Đang tải danh sách tài sản…");
   const [loaded, setLoaded] = useState(false);
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [locations, setLocations] = useState<LocationOption[]>([]);
@@ -333,7 +334,7 @@ export default function AssetsPage() {
               <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-slate-700"><span>Tình trạng</span><select className="min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200" value={qCondition} onChange={(event) => setQCondition(event.target.value)}><option value="">Tất cả tình trạng</option><option value="normal">Bình thường</option><option value="needs_maintenance">Cần bảo trì</option><option value="under_service">Đang sửa chữa</option><option value="broken">Hỏng</option></select></label>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3" aria-label="Bộ lọc nhanh"><span className="mr-1 text-xs font-bold uppercase tracking-wide text-slate-400">Lọc nhanh</span>{quickFilters.map((filter) => <button key={filter.value} type="button" aria-pressed={quickFilter === filter.value} onClick={() => setQuickFilter(filter.value)} className={`min-h-9 rounded-full border px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-orange-300 ${quickFilter === filter.value ? "border-orange-300 bg-orange-50 text-orange-900" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}>{filter.label}</button>)}</div>
-            {message ? <p role={loaded ? "alert" : "status"} className={`mt-3 text-sm ${loaded ? "text-rose-700" : "text-slate-600"}`}>{message}</p> : null}
+            {message ? loaded ? <ErrorState message={message} /> : <LoadingState label={message} /> : null}
           </section>
 
 </MobileFilters>
@@ -393,7 +394,7 @@ export default function AssetsPage() {
                   <dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vị trí</dt><dd className={`mt-1 font-medium ${row.location_id ? "text-slate-800" : "text-slate-500"}`}>{locationLabel(row)}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người sử dụng</dt><dd className={`mt-1 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-600"}`}>{owner.person}</dd></div>{row.note ? <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú</dt><dd className="mt-1 line-clamp-2 leading-5 text-slate-600" title={row.note}>{row.note}</dd></div> : null}</dl>
                 </Link>;
               })}
-              {loaded && !message && filteredRows.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Không có tài sản phù hợp bộ lọc.</p> : null}
+              {loaded && !message && filteredRows.length === 0 ? <EmptyState title="Kh?ng c? t?i s?n ph? h?p b? l?c." /> : null}
             </div>
           </section>
         </div>

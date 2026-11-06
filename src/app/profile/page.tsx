@@ -70,7 +70,7 @@ export default function ProfilePage() {
   const [tasksAssignedToMe, setTasksAssignedToMe] = useState<TaskRow[]>([]);
   const [tasksAssignedByMe, setTasksAssignedByMe] = useState<TaskRow[]>([]);
   const [myAssets, setMyAssets] = useState<AssetAssignRow[]>([]);
-  const [message, setMessage] = useState("Đang tải trang cá nhân...");
+  const [message, setMessage] = useState("Đang tải trang cá nhân…");
 
   const loadAll = async () => {
     if (!user?.id) return;

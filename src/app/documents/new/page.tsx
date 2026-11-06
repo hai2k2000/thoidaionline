@@ -18,7 +18,7 @@ export default function DocumentCreatePage() {
 
   const [rows, setRows] = useState<OfficialDocument[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
 
   const [docCode, setDocCode] = useState("");
   const [title, setTitle] = useState("");

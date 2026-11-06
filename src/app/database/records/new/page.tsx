@@ -15,7 +15,7 @@ export default function DatabaseRecordNewPage() {
   const router = useRouter();
   const { loading, user, logout, hasPermission } = useAuth();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [message, setMessage] = useState("Đang tải biểu mẫu...");
+  const [message, setMessage] = useState("Đang tải biểu mẫu…");
   useEffect(() => {
     if (loading) return;
     if (!user) { router.push("/login"); return; }
@@ -26,6 +26,6 @@ export default function DatabaseRecordNewPage() {
       setCatalog(payload); setMessage("");
     }).catch((error) => setMessage(error.message));
   }, [loading, user, hasPermission, router]);
-  if (loading || !user) return <main className="grid min-h-screen place-items-center bg-slate-50">Đang tải...</main>;
+  if (loading || !user) return <main className="grid min-h-screen place-items-center bg-slate-50">Đang tải…</main>;
   return <main className="min-h-screen bg-slate-50 p-3 text-slate-900 sm:p-6"><div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[260px_1fr] lg:gap-4"><div className="mb-4 lg:mb-0"><AppNav currentPath="/database/records/new" userLabel={`${user.full_name} (${user.role_name})`} onLogout={logout} /></div><div><header className="mb-4"><p className="text-xs font-bold uppercase text-orange-700">Cơ sở dữ liệu</p><h1 className="mt-1 text-2xl font-bold">Nhập hồ sơ mới</h1><p className="mt-1 text-sm text-slate-600">Mã hồ sơ được tự động tạo khi lưu.</p></header><section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">{catalog ? <DatabaseRecordForm mode="create" catalog={catalog} /> : <p className="text-sm text-slate-600">{message}</p>}</section></div></div></main>;
 }

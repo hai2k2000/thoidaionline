@@ -224,6 +224,26 @@ body {
   min-width: 0;
 }
 
+.mobile-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+@media (max-width: 639px) {
+  .mobile-form-actions {
+    position: sticky;
+    bottom: calc(-1rem - env(safe-area-inset-bottom));
+    z-index: 10;
+    margin-inline: -1rem;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    border-top: 1px solid var(--border);
+  }
+  .mobile-form-actions > button { flex: 1 1 0%; min-height: 2.75rem; }
+  /* Stay above the fixed bottom navigation instead of sliding under it. */
+  body:has(.mobile-bottom-nav) .mobile-form-actions { bottom: calc(4.5rem + env(safe-area-inset-bottom)); padding-bottom: 0.75rem; }
+}
+
 button, a, summary {
   touch-action: manipulation;
 }

@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Props = { taskId: string; taskType: "assigned" | "personal" | null; isAdmin: boolean; canEdit: boolean; canComplete: boolean; canClaim: boolean; terminal: boolean };
 
 export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit, canComplete, canClaim, terminal }: Props) {
   const router = useRouter();
   const { notify } = useActionFeedback();
+  const requestConfirmation = useConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,6 +20,7 @@ export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit
     setBusy(true);
     setError("");
     const cancelPath = taskType === "personal" ? "cancel" : "cancel-assigned";
+
     try { const response = await fetch(`/api/tasks/${taskId}/${action === "cancel" ? cancelPath : action}`, {
       method: "POST",
       headers: reason ? { "Content-Type": "application/json" } : undefined,
@@ -55,6 +58,7 @@ export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit
     </div>
   );
   if (!canEdit && !canComplete) return null;
+
   const editHref = isAdmin
     ? `/tasks/${taskId}/admin-edit`
     : taskType === "assigned"
@@ -70,8 +74,8 @@ export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit
       </button> : null}
       {canEdit ? <button
         disabled={busy}
-        onClick={() => {
-          if (!window.confirm("Bạn có chắc muốn hủy công việc này?")) return;
+        onClick={async () => {
+          if (!await requestConfirmation({ title: "Bạn có chắc muốn hủy công việc này?", tone: "danger" })) return;
           const reason = window.prompt("Lý do hủy công việc");
           if (reason?.trim()) void mutate("cancel", reason.trim());
         }}

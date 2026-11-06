@@ -7,7 +7,7 @@ import { listPendingAssetStatusRequests, reviewAssetStatusRequest, type AssetSta
 import { presentAssetStatus, presentAssetCondition } from "@/lib/assetStatusPresentation";
 
 export default function AssetStatusRequestsPage() {
-  const router = useRouter(); const { loading, user, logout, hasPermission } = useAuth(); const [requests, setRequests] = useState<AssetStatusChangeRequest[]>([]); const [message, setMessage] = useState("Đang tải...");
+  const router = useRouter(); const { loading, user, logout, hasPermission } = useAuth(); const [requests, setRequests] = useState<AssetStatusChangeRequest[]>([]); const [message, setMessage] = useState("Đang tải…");
   const load = useCallback(async () => { const result = await listPendingAssetStatusRequests(); if (!result.ok) return setMessage(result.error); setRequests(result.data.requests ?? []); setMessage(""); }, []);
   useEffect(() => { if (loading) return; if (!user) return void router.push("/login"); if (!hasPermission("asset.manage")) return void router.push("/assets"); const timer = setTimeout(() => void load(), 0); return () => clearTimeout(timer); }, [loading, user, router, hasPermission, load]);
   const [rejecting, setRejecting] = useState<AssetStatusChangeRequest | null>(null); const [reviewNote, setReviewNote] = useState("");

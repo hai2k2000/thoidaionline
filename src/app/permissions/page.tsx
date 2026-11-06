@@ -27,7 +27,7 @@ export default function PermissionsPage() {
     const [roleDraft, setRoleDraft] = useState<Record<string, Scope[]>>({});
     const [pending, setPending] = useState(false);
     const [permissionSearch, setPermissionSearch] = useState("");
-    const [message, setMessage] = useState("Đang tải ma trận phân quyền...");
+    const [message, setMessage] = useState("Đang tải ma trận phân quyền…");
     const load = useCallback(async (silent = false) => {
         const response = await fetch("/api/permissions", { cache: "no-store", credentials: "same-origin" });
         const next = await response.json().catch(() => ({})) as Payload;

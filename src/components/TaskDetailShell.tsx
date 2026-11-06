@@ -15,6 +15,7 @@ import { deadlineLabel, classifyTaskDeadline, deadlineTone } from "@/lib/deadlin
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { getEnteredByDisplay, getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 import JournalismDetailSection from "@/components/JournalismDetailSection";
 import JournalismMetadataEditor from "@/components/JournalismMetadataEditor";
 import JournalismPublicationControls from "@/components/JournalismPublicationControls";
@@ -62,6 +63,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
   const router = useRouter();
   const { logout, user } = useAuth();
   const { notify } = useActionFeedback();
+  const requestConfirmation = useConfirm();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [reportedOn, setReportedOn] = useState(today());
@@ -161,7 +163,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
                 {!projectTask && !personal && capabilities.review && task.status === "pending_review" ? <><button disabled={busy} onClick={() => document.getElementById("task-scoring-form")?.scrollIntoView({ behavior: "smooth" })} className="shrink-0 whitespace-nowrap rounded bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white">Chấm điểm</button><button disabled={busy} onClick={returnWithDeadline} className="shrink-0 whitespace-nowrap rounded bg-amber-600 px-2 py-1.5 text-xs font-semibold text-white">Trả lại</button></> : null}
                 {!personal && capabilities.review && task.self_claimable && task.status === "waiting" ? <><button disabled={busy} onClick={() => reviewClaim("approve")} className="shrink-0 whitespace-nowrap rounded bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white">Duyệt nhận việc</button><button disabled={busy} onClick={() => reviewClaim("reject")} className="shrink-0 whitespace-nowrap rounded bg-amber-600 px-2 py-1.5 text-xs font-semibold text-white">Trả lại</button></> : null}
                 {personal && capabilities.personalEdit ? <Link href={`/tasks/personal/${task.id}/edit`} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Sửa</Link> : null}
-                {((personal && capabilities.personalCancel && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status))) || (!personal && capabilities.assignedCancel && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)))) ? <button disabled={busy} onClick={() => { if (window.confirm("Bạn có chắc muốn hủy công việc này?")) void reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy công việc"); }} className="shrink-0 whitespace-nowrap rounded bg-red-700 px-2 py-1.5 text-xs text-white">Hủy công việc</button> : null}
+                {((personal && capabilities.personalCancel && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status))) || (!personal && capabilities.assignedCancel && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)))) ? <button disabled={busy} onClick={async () => { if (await requestConfirmation({ title: "Bạn có chắc muốn hủy công việc này?", tone: "danger" })) void reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy công việc"); }} className="shrink-0 whitespace-nowrap rounded bg-red-700 px-2 py-1.5 text-xs text-white">Hủy công việc</button> : null}
                 {!personal && (capabilities.assignedDeadline ?? capabilities.update) && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)) ? <button disabled={busy} onClick={async () => { const dueDate = window.prompt("Ngày kết thúc mới (YYYY-MM-DD):", task.due_date ?? ""); if (dueDate) await reasonAction(`/api/tasks/${task.id}/deadline-assigned`, "Đổi ngày", { dueDate }); }} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</button> : null}
               </> : null}
             </div>

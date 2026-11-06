@@ -56,7 +56,7 @@ export default function DocumentDetailPage() {
 
   const [doc, setDoc] = useState<OfficialDocument | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [message, setMessage] = useState("Đang tải...");
+  const [message, setMessage] = useState("Đang tải…");
 
   useEffect(() => {
     if (authLoading) return;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { DepartmentPlanItemRow, DepartmentPlanRow } from "@/lib/departmentPlanRepository";
@@ -83,7 +84,9 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
   const [message, setMessage] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [assignmentId, setAssignmentId] = useState<string | null>(null);
+  const requestConfirmation = useConfirm();
   const savingKeys = useRef(new Set<string>());
+  const bypassNavigationGuard = useRef(false);
   const hasDrafts = useMemo(() => rows.some((row) => row.dirty), [rows]);
 
   useEffect(() => {
@@ -98,14 +101,14 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
 
   useEffect(() => {
     const guardPeriodNavigation = (event: MouseEvent) => {
+      if (bypassNavigationGuard.current) { bypassNavigationGuard.current = false; return; }
       if (!hasDrafts) return;
       const target = event.target instanceof Element ? event.target.closest("a") : null;
       const href = target?.getAttribute("href") ?? "";
       if (!href.startsWith("/planning/department?")) return;
-      if (!window.confirm("Bạn có nội dung chưa lưu. Rời kỳ này sẽ hủy các dòng chưa lưu, tiếp tục?")) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
+      event.preventDefault();
+      event.stopPropagation();
+      void requestConfirmation({ title: "Bạn có nội dung chưa lưu. Rời kỳ này sẽ hủy các dòng chưa lưu, tiếp tục?", tone: "danger" }).then((ok) => { if (ok && target instanceof HTMLElement) { bypassNavigationGuard.current = true; target.click(); } });
     };
     document.addEventListener("click", guardPeriodNavigation, true);
     return () => document.removeEventListener("click", guardPeriodNavigation, true);
@@ -169,7 +172,7 @@ export default function DepartmentPlanGrid({ departmentId, period, employees, in
 
   const remove = async (row: Draft) => {
     if (!row.id) { setRows((current) => current.filter((candidate) => candidate.key !== row.key)); return; }
-    if (!window.confirm("Xóa mục kế hoạch này?")) return;
+    if (!await requestConfirmation({ title: "Xóa mục kế hoạch này?", tone: "danger" })) return;
     const response = await fetch(`/api/planning/department/items/${row.id}`, { method: "DELETE" });
     if (!response.ok) { update(row.key, { error: "Không thể xóa mục kế hoạch." }); return; }
     setRows((current) => current.filter((candidate) => candidate.key !== row.key));

@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useEffect, useMemo, useState, useRef, useId } from "react";
 import { createPortal } from "react-dom";
 import { splitCellEvents, summarizeParticipants } from "@/lib/workScheduleEventCards.mjs";
@@ -14,6 +15,7 @@ import PersonalPlanParticipants from "@/components/PersonalPlanParticipants";
 import { eventAssignmentPeople } from "@/lib/workScheduleEventAccess";
 import MobileFilters from "@/components/MobileFilters";
 import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
+import { LoadingState, ErrorState } from "@/components/ui/StateViews";
 
 type Person = {
   id: string;
@@ -166,6 +168,7 @@ export default function WorkSchedulePageShell({
   const [approvalRows, setApprovalRows] = useState<Row[]>([]);
   const [activeTab, setActiveTab] = useState<"personal" | "approval">("personal");
   const [loading, setLoading] = useState(true);
+  const requestConfirmation = useConfirm();
   const [loadError, setLoadError] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
   const [month, setMonth] = useState(anchor.slice(0, 7));
@@ -367,7 +370,7 @@ export default function WorkSchedulePageShell({
     }
   };
   const deletePlan = async (row: Row) => {
-    if (!window.confirm("Xóa kế hoạch này?")) return;
+    if (!await requestConfirmation({ title: "Xóa kế hoạch này?", tone: "danger" })) return;
     const endpoint = row.schedule_scope === "personal" ? "/api/work-schedule/personal" : "/api/work-schedule";
     const revision = row.workflow_revision;
     if (!Number.isSafeInteger(revision)) return;
@@ -604,8 +607,8 @@ export default function WorkSchedulePageShell({
             </div> : <p className="mt-3 rounded-lg border border-dashed border-amber-300 bg-white p-4 text-sm text-slate-600">Không có kế hoạch chờ duyệt.</p>}
           </section> : null}
 
-          {activeTab === "personal" && loading ? <p className="mt-3 rounded-xl border bg-white p-5 text-sm text-slate-600 shadow-sm">Đang tải lịch công tác...</p> : null}
-          {activeTab === "personal" && !loading && loadError ? <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><span>Không tải được lịch công tác. Dữ liệu cũ được giữ nguyên để tránh hiển thị nhầm là lịch trống.</span><button type="button" onClick={() => setRetryToken((value) => value + 1)} className="rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold">Thử lại</button></div> : null}
+          {activeTab === "personal" && loading ? <LoadingState label="Đang tải lịch công tác…" /> : null}
+          {activeTab === "personal" && !loading && loadError ? <ErrorState message="Không tải được lịch công tác. Dữ liệu cũ được giữ nguyên để tránh hiển thị nhầm là lịch trống." onRetry={() => setRetryToken((value) => value + 1)} /> : null}
           {activeTab === "personal" && !loadError ? <>
             <div className="mt-3 md:hidden print:hidden"><MobileCardList ariaLabel="Lịch làm việc trên điện thoại">
               {range.days.flatMap((date) => {
