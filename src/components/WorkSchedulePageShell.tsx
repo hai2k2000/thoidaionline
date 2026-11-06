@@ -12,6 +12,8 @@ import { canEditCreatorMutation, personalScheduleLifecycleState } from "@/lib/cr
 import { canLeaderEditPersonalPlan } from "@/lib/leaderEditPersonalPlan.mjs";
 import PersonalPlanParticipants from "@/components/PersonalPlanParticipants";
 import { eventAssignmentPeople } from "@/lib/workScheduleEventAccess";
+import MobileFilters from "@/components/MobileFilters";
+import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
 
 type Person = {
   id: string;
@@ -403,7 +405,7 @@ export default function WorkSchedulePageShell({
           </div> : null}
 
           {activeTab === "personal" ? <section className="mt-3 rounded-xl border bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-end gap-4">
+            <MobileFilters><div className="flex flex-wrap items-end gap-4">
               {period === "day" ? (
                 <label className="text-sm font-semibold">
                   Ngày
@@ -475,7 +477,7 @@ export default function WorkSchedulePageShell({
               >
                 Hôm nay
               </button>
-            </div>
+            </div></MobileFilters>
 
             {viewAll || currentUserId ? <div className="mt-5 border-t pt-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -501,11 +503,11 @@ export default function WorkSchedulePageShell({
                   >
                     {viewAll ? "Kế hoạch của tôi" : "Kế hoạch toàn cơ quan"}
                   </button>
-                  {viewAll ? <button type="button" onClick={() => setPeopleOpen((current) => !current)} aria-expanded={peopleOpen} aria-controls="work-schedule-people-panel" className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">{peopleOpen ? "Ẩn bộ lọc" : "Lọc nhân sự"}</button> : null}
+                  {viewAll ? <button type="button" onClick={() => setPeopleOpen((current) => !current)} aria-expanded={peopleOpen} aria-controls="work-schedule-people-panel" className="hidden min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 lg:inline-flex">{peopleOpen ? "Ẩn bộ lọc" : "Lọc nhân sự"}</button> : null}
                 </div>
               </div>
 
-              {peopleOpen ? (
+              {viewAll ? (<div className={peopleOpen ? "" : "lg:hidden"}><MobileFilters label="Lọc nhân sự">
                 <div
                   id="work-schedule-people-panel"
                   className="mt-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3"
@@ -579,7 +581,7 @@ export default function WorkSchedulePageShell({
                     )}
                   </div>
                 </div>
-              ) : null}
+              </MobileFilters></div>) : null}
             </div> : null}
           </section> : null}
           {enableEventAssignment ? <EventAssignmentPanel ref={eventPanelRef} currentUserId={currentUserId} currentUserRole={currentUserRole} isDepartmentManager={isDepartmentManager} people={eventPeople ?? people} open={eventOpen} onOpenChange={setEventOpen} onChanged={() => setRetryToken((value) => value + 1)} /> : null}
@@ -604,7 +606,16 @@ export default function WorkSchedulePageShell({
 
           {activeTab === "personal" && loading ? <p className="mt-3 rounded-xl border bg-white p-5 text-sm text-slate-600 shadow-sm">Đang tải lịch công tác...</p> : null}
           {activeTab === "personal" && !loading && loadError ? <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><span>Không tải được lịch công tác. Dữ liệu cũ được giữ nguyên để tránh hiển thị nhầm là lịch trống.</span><button type="button" onClick={() => setRetryToken((value) => value + 1)} className="rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold">Thử lại</button></div> : null}
-          {activeTab === "personal" && !loadError ? <section className="table-scroll mt-3 rounded-xl border bg-white shadow-sm">
+          {activeTab === "personal" && !loadError ? <>
+            <div className="mt-3 md:hidden print:hidden"><MobileCardList ariaLabel="Lịch làm việc trên điện thoại">
+              {range.days.flatMap((date) => {
+                const day = iso(date);
+                const dayRows = rows.filter((row) => row.work_date <= day && row.end_date >= day && (viewAll ? row.participant_ids.some((id) => displayedPeople.some((person) => person.id === id)) : row.participant_ids.some((id) => displayedPeople.some((person) => person.id === id))));
+                dayRows.sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+                return dayRows.length ? [<li key={`${day}-heading`} className="sticky top-0 z-10 bg-surface-muted px-3 py-2 text-sm font-bold text-brand-ink"><h2>{date.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit" })}</h2></li>, ...dayRows.map((row) => <MobileCard key={`${day}-${row.id}`} title={row.title} status={<MobileCardBadge tone={row.approval_status === "REJECTED" ? "danger" : row.approval_status === "PENDING_APPROVAL" ? "warning" : "success"}>{row.event_assignment_kind === "leadership" ? "Được phân công" : approvalLabel(row.approval_status)}</MobileCardBadge>} meta={[{ label: "Thời gian", value: eventTime(row) }, { label: "Địa điểm", value: row.location || "Chưa có" }, { label: "Người tham gia", value: names(row.participant_ids) || "Chưa có" }, { label: "Ghi chú", value: row.notes || "-" }]} footer={<button type="button" className="min-h-11 rounded-[var(--radius-control)] border border-brand px-3 py-2 text-sm font-semibold text-brand-ink" onClick={() => setDetailRows([row])}>Xem chi tiết</button>} />)] : [];
+              })}
+            </MobileCardList></div>
+            <section className="table-scroll mt-3 hidden rounded-xl border bg-white shadow-sm md:block print:block">
             <table className="work-schedule-table data-table w-full min-w-[1290px] border-collapse text-sm">
               <colgroup>
                 <col className="w-14" />
@@ -658,7 +669,7 @@ export default function WorkSchedulePageShell({
                   ))}
               </tbody>
             </table>
-          </section> : null}
+          </section></> : null}
           {detailRows ? createPortal(
             <div style={{ position: "fixed", inset: 0, zIndex: 60 }} className="flex items-center justify-center bg-slate-950/40 p-4"
               onClick={(event) => { if (event.target === event.currentTarget) setDetailRows(null); }}>

@@ -58,6 +58,7 @@ next-env.d.ts
 scripts/dev/task-filter-bar-snapshot.html
 scripts/dev/mobile-ui-wave-a-snapshot.html
 scripts/dev/mobile-ui-wave-a.css
+scripts/dev/mobile-ui-wave-b-snapshot.html
 
 # Internal APK release output
 /dist/

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import MobileFilters from "@/components/MobileFilters";
+import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
 import AppNav from "@/components/AppNav";
 import { sortStaffRows } from "@/lib/staffOrdering";
 import {
@@ -491,7 +492,10 @@ export default function UsersPage() {
             </div>
 </MobileFilters>
             <p className="mb-2 text-sm text-slate-600">{message}</p>
-            <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách nhân viên, cuộn ngang để xem thêm">
+            <MobileCardList empty="Không có nhân viên phù hợp bộ lọc." ariaLabel="Danh sách nhân viên trên điện thoại">
+              {filteredUsers.map((u) => <MobileCard key={u.id} title={<button type="button" className="min-h-11 text-left font-semibold text-brand-ink underline-offset-2 hover:underline" onClick={() => void openUser(u)}>{u.full_name}</button>} status={<MobileCardBadge tone={u.active ? "success" : "neutral"}>{u.active ? "Đang hoạt động" : "Đã khóa"}</MobileCardBadge>} meta={[{ label: "Tên đăng nhập", value: u.username ?? "-" }, { label: "Phòng ban", value: labelWithCode(deps.find((d) => d.id === u.department_id) ?? { name: "-" }) ?? "-" }, { label: "Chức vụ", value: u.job_titles?.name ?? "-" }, { label: "Vai trò", value: u.roles?.name ?? "-" }]} footer={isAdmin ? <button type="button" disabled={savingUser || u.id === user?.id} onClick={() => void toggleUserActive(u)} className="min-h-11 rounded-[var(--radius-control)] border border-border px-3 py-2 text-sm font-semibold text-text">{u.active ? "Khóa" : "Mở khóa"}</button> : null} />)}
+            </MobileCardList>
+            <div className="table-scroll hidden rounded-lg border border-slate-200 md:block" tabIndex={0} aria-label="Danh sách nhân viên, cuộn ngang để xem thêm">
               <table className="data-table min-w-[980px] text-left text-sm">
                 <thead>
                   <tr>
@@ -534,7 +538,7 @@ export default function UsersPage() {
                         colSpan={isAdmin ? 7 : 6}
                         className="px-2 py-6 text-center text-slate-500"
                       >
-                        Không có user phù hợp bộ lọc.
+                        Không có nhân viên phù hợp bộ lọc.
                       </td>
                     </tr>
                   ) : null}
