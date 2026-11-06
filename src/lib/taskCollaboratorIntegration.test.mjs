@@ -58,6 +58,28 @@ test("collaboration filter round trips with project filter and leaves default al
   assert.equal(parseTaskListSearchParams(new URLSearchParams()).scope, "all");
 });
 
+test("bell excludes the current assignment actor while preserving another recipient", async () => {
+  const now = new Date().toISOString();
+  let assignedBy = 'recipient';
+  const db = { from(table) { const filters = []; const q = new Proxy({}, { get(_target, method) {
+    if (method === 'then') return done => {
+      let data = [];
+      if (table === 'task_assignees') data = [{ task_id: 'task', assignment_role: 'assignee', assigned_at: now, assigned_by: assignedBy }];
+      if (table === 'tasks' && filters.some(([op]) => op === 'in')) data = [{ id: 'task', title: 'Task', created_by: 'creator', entered_by: 'creator', created_at: now, updated_at: now, status: 'new', due_date: null }];
+      done({ data, error: null });
+    };
+    return (...args) => { filters.push([method, ...args]); return q; };
+  } }); return q; } };
+  const { notificationRepository } = await loadModule('src/lib/notificationRepository.ts', db);
+  const own = await notificationRepository.list('recipient');
+  assert.equal(own.ok, true);
+  assert.equal(own.items.some(item => item.kind === 'assignment'), false);
+  assignedBy = 'creator';
+  const other = await notificationRepository.list('recipient');
+  assert.equal(other.ok, true);
+  assert.equal(other.items.filter(item => item.kind === 'assignment').length, 1);
+});
+
 test("picker wiring uses all-staff candidates, keeps watchers scoped and projects member-only", () => {
   const form = readFileSync('src/components/CanonicalAssignmentForm.tsx', 'utf8');
   assert.match(form, /const collaboratorPeople = projectMode \? people : collaboratorCandidates \?\? scopedPeople/);

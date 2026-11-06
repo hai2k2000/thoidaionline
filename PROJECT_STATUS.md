@@ -1,3 +1,14 @@
+# Push notifications v2 - 2026-11-06
+
+Status: IMPLEMENTED in EDIT mode; offline web validation complete; PostgreSQL and Flutter/device execution pending.
+Source: feature/push-v2 at cea16cb plus scoped uncommitted changes.
+Scope: 250ms dispatcher kick, high Web Push/FCM priority, native foreground channel, delivery history, clearer content, actor exclusion, comment/status/primary-manager collaboration events, monochrome badge/SW v5, version 1.0.4+6.
+Validation: main Node selection 101/102, extra collaborators 17/18; both failures confirmed unchanged baseline tests. Migration tooling 24/24, TypeScript and offline webpack build PASS. Final full lint retains one baseline error and 18 warnings, no new errors.
+PostgreSQL restore/behaviour and Flutter analyze/test/build were not run because the toolchains are unavailable. See CODEX_REPORT_push_v2.md for recipients, limitations and device checks.
+No commit, push, network, SSH or deploy.
+
+---
+
 # Help button and install entry points
 
 Status: IMPLEMENTED; offline targeted validation PASS.

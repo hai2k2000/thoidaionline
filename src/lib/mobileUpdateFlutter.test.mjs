@@ -39,5 +39,5 @@ test('APK updater requests permission and opens package-specific Android setting
   assert.match(kotlin, /canRequestPackageInstalls/);
   assert.match(kotlin, /ACTION_MANAGE_UNKNOWN_APP_SOURCES/);
   assert.match(kotlin, /package:\$packageName/);
-  assert.match(read('mobile/thoidai_work_flutter/pubspec.yaml'), /^version: 1.0.3\+5$/m);
+  assert.match(read('mobile/thoidai_work_flutter/pubspec.yaml'), /^version: 1.0.4\+6$/m);
 });

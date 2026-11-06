@@ -216,3 +216,12 @@ test("push notification migration is packaged once after leader event editing", 
     assert.ok(source.indexOf(migration) > source.indexOf("20261106210000_edit_completed_event_assignment.sql"));
   }
 });
+
+ test("push v2 migration follows v1 exactly once in both artifact references", () => {
+   for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+     const source = readFileSync(file, "utf8");
+     const migration = "supabase/migrations/20261107120000_push_notifications_v2.sql";
+     assert.equal(source.split(migration).length - 1, 1);
+     assert.ok(source.indexOf(migration) > source.indexOf("20261107100000_push_notifications.sql"));
+   }
+ });

@@ -26,7 +26,7 @@ export function createFcmSender(account, { fetchImpl = fetch, now = () => Math.f
   }
   return async (subscription, payload) => {
     const token = await accessToken();
-    const response = await fetchImpl(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(account.project_id)}/messages:send`, { method: 'POST', signal: AbortSignal.timeout(10000), redirect: 'error', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ message: { token: subscription.endpoint, notification: { title: payload.title, body: payload.body }, data: { url: payload.url, tag: payload.tag }, android: { ttl: '86400s', notification: { tag: payload.tag } } } }) });
+    const response = await fetchImpl(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(account.project_id)}/messages:send`, { method: 'POST', signal: AbortSignal.timeout(10000), redirect: 'error', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ message: { token: subscription.endpoint, notification: { title: payload.title, body: payload.body }, data: { url: payload.url, tag: payload.tag }, android: { priority: 'HIGH', ttl: '86400s', notification: { tag: payload.tag, channel_id: 'thoidai_tasks' } } } }) });
     if (response.ok) return;
     if (response.status === 401) cached = null;
     const data = await response.json().catch(() => null); const code = data?.error?.details?.find?.(item => item?.errorCode)?.errorCode;
