@@ -136,7 +136,7 @@ export default function UserPermissionDetail({ user, currentUserId, onChanged, o
           <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Xem tài liệu của phòng</h3>
             <p className="text-xs text-slate-500">Chỉ áp dụng cho hồ sơ đã duyệt hoặc lưu trữ.</p></div>
             <button type="button" onClick={() => void saveDepartmentGrants()}
-              className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Lưu</button></div>
+              className="rounded-lg bg-orange-700 px-3 py-2 text-sm font-semibold text-white">Lưu</button></div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">{departments.map((department) => <label key={department.id}
             className="flex items-center gap-2 text-sm"><input type="checkbox" checked={departmentViewGrants.includes(department.id)}
               onChange={() => setDepartmentViewGrants((current) => current.includes(department.id)

@@ -29,7 +29,7 @@ export default async function EditPersonalTaskPage({ params }: Props) {
   return (
     <main className="min-h-screen bg-slate-50 px-3 py-5 text-slate-900 sm:px-6">
       <div className="mx-auto max-w-3xl">
-        <Link href="/tasks?scope=personal" className="text-sm font-semibold text-orange-700">← Task Center</Link>
+        <Link href="/tasks?scope=personal" className="text-sm font-semibold text-orange-700">← Quản lý công việc</Link>
         <h1 className="my-4 text-2xl font-bold">Sửa nhiệm vụ cá nhân</h1>
         <PersonalTaskForm initialTask={{
           id: detail.data.id,

@@ -49,7 +49,7 @@ export default function PasswordInput({
         aria-pressed={visible}
         aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
         onClick={() => setVisible((current) => !current)}
-        className="absolute inset-y-0 right-0 min-w-11 rounded px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+        className="absolute inset-y-0 right-0 min-h-11 min-w-11 rounded px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
       >
         {visible ? "Ẩn" : "Hiện"}
       </button>

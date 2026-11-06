@@ -184,7 +184,7 @@ export default function HrProfileDetailPage() {
 
           {!isReadOnly() ? (
           <div className="mt-4">
-            <button onClick={save} disabled={saving} className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="min-h-11 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50">
               {saving ? "Đang lưu..." : "Lưu cập nhật"}
             </button>
           </div>

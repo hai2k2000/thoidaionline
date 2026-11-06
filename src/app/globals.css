@@ -3,20 +3,55 @@
 :root {
   --background: #fffbf5;
   --foreground: #3a2b31;
-  --brand-red: #f97316;
-  --brand-red-dark: #ea580c;
+  --brand: #c2410c;
+  --brand-strong: #9a3412;
+  --brand-ink: #9a3412;
+  --brand-red: var(--brand);
+  --brand-red-dark: var(--brand-strong);
+  --surface: #ffffff;
+  --surface-muted: #fff7ed;
+  --border: #fed7aa;
+  --text: #3a2b31;
+  --text-muted: #64748b;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+  --warning: #a16207;
+  --warning-soft: #fefce8;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --info: #0369a1;
+  --info-soft: #f0f9ff;
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-sheet: 1.5rem;
   --table-header-surface: #fff7ed;
   --table-header-surface-strong: #ffedd5;
   --table-border: #fed7aa;
-  --brand: #f97316;
-  --brand-strong: #ea580c;
-  --brand-ink: #9a3412;
   --mobile-gutter: 0.875rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-sheet: 1.5rem;
   --font-sans: var(--font-vietnam-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -57,6 +92,7 @@ body {
   backdrop-filter: blur(14px);
 }
 
+/* A readable 12px label and 44px target also apply to the More button. */
 .mobile-bottom-item {
   display: flex;
   flex-direction: column;
@@ -65,10 +101,11 @@ body {
   justify-content: center;
   gap: 0.15rem;
   border-radius: 0.75rem;
-  color: #64748b;
-  font-size: 0.68rem;
+  min-width: 2.75rem;
+  color: #475569;
+  font-size: 0.75rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.2;
   text-align: center;
   transition: color 0.18s ease, background-color 0.18s ease;
 }
@@ -103,10 +140,17 @@ body {
 }
 
 @media (max-width: 1023px) {
+  /* Keep app-bar controls comfortable to tap without changing desktop sizing. */
+  .mobile-app-bar :where(button, a, summary) {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+  /* Reserve space for the fixed mobile navigation and safe-area inset. */
   body:has(.mobile-bottom-nav) {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
   .auth-shell { padding-bottom: 1rem; }
+  /* Filters become a scrollable bottom sheet while desktop keeps its inline bar. */
   .mobile-filter-trigger { display: flex; }
   .mobile-filter-panel:not([data-open="true"]) { display: none; }
   .mobile-filter-panel[data-open="true"] {
@@ -129,13 +173,18 @@ body {
   .mobile-filter-body .task-filter-bar,
   .mobile-filter-body > div { border: 0; padding: 0; box-shadow: none; }
   .mobile-filter-footer { display: block; border-top: 1px solid #e2e8f0; padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom)); }
-  .mobile-filter-footer button { width: 100%; min-height: 2.75rem; border-radius: 0.75rem; background: #ea580c; color: #fff; font-weight: 800; }
+  /* Keep the filter action readable against white at WCAG AA contrast. */
+  .mobile-filter-footer button { width: 100%; min-height: 2.75rem; border-radius: 0.75rem; background: #c2410c; color: #fff; font-weight: 800; }
+  .mobile-filter-footer button:hover { background: #9a3412; }
   .mobile-filter-backdrop { inset: 0; z-index: 90; background: rgba(2, 6, 23, 0.5); }
+  /* Keep navigation behind visible dialogs and above normal page content. */
   .mobile-bottom-nav[data-obscured="true"] { visibility: hidden; pointer-events: none; }
   [data-app-navigation] { position: relative; }
   .mobile-filter-trigger { margin-block: 0.75rem; }
-  body:has(.mobile-bottom-nav) .fixed.bottom-4.right-4 { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+  /* Lift the explicitly marked floating action above the bottom navigation. */
+  .mobile-fab-offset { bottom: calc(5rem + env(safe-area-inset-bottom)); }
   main h1 { font-size: 1.25rem; line-height: 1.3; }
+  /* Tables scroll horizontally, keeping their identity column visible. */
   :is(.table-scroll, .mobile-table-scroll) { max-width: 100%; min-width: 0; overflow-x: auto; }
   :is(.table-scroll, .mobile-table-scroll) table th:first-child,
   :is(.table-scroll, .mobile-table-scroll) table td:first-child { position: sticky; left: 0; z-index: 1; background: #fff; box-shadow: 1px 0 0 #e2e8f0; }
@@ -144,7 +193,9 @@ body {
   .mobile-filter-body .task-filter-bar > [data-filter-item],
   .mobile-filter-body .task-filter-bar > .task-filter-search { flex: 1 1 100%; min-width: 0; }
   body:has([data-app-navigation]) .min-h-screen { padding-inline: 0.75rem; }
-  body:has([data-app-navigation]) main :where(section, article, header, label, dl, dd, .flex, .grid) { min-width: 0; overflow-wrap: anywhere; }
+  /* Let Vietnamese words wrap at natural boundaries while allowing flex/grid shrink. */
+  body:has([data-app-navigation]) main :where(section, article, header, label, dl, dd, .flex, .grid) { min-width: 0; overflow-wrap: break-word; }
+  /* Compact panel padding and bounded inputs avoid squeezing phone content. */
   body:has([data-app-navigation]) main > :where(section, header).p-5 { padding: 1rem; }
   body:has([data-app-navigation]) main :where(section, article).p-5 { padding: 1rem; }
   body:has([data-app-navigation]) main :where(input, select, textarea):not([type="checkbox"]):not([type="radio"]) { max-width: 100%; min-width: 0; min-height: 2.75rem; }
@@ -154,11 +205,13 @@ body {
 }
 
 @media (min-width: 1024px) {
+  /* Desktop uses the existing sidebar and inline filters. */
   .mobile-bottom-nav { display: none; }
   .mobile-filters, .mobile-filter-panel, .mobile-filter-body { display: contents; }
 }
 
 @media (max-width: 639px) {
+  /* Phone dialogs become sheets with reachable, sticky actions above the safe area. */
   .mobile-dialog-overlay { position: fixed; align-items: end; justify-items: center; padding: 0; z-index: 100; }
   .mobile-dialog-overlay > :is(div, section, form) { width: 100%; max-width: 100%; max-height: 90dvh; overflow-y: auto; border-radius: 1.5rem 1.5rem 0 0; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
   .mobile-dialog-overlay > :is(div, section, form) > :is(div, footer):last-child:has(> button),
@@ -176,9 +229,12 @@ button, a, summary {
 }
 
 @media (max-width: 1023px) {
+  /* Clip accidental page overflow; attendance keeps its intentional table scrolling. */
   main { overflow-x: clip; }
+  /* 16px form text prevents iOS focus zoom. */
   main :where(input, select, textarea) { font-size: 16px; }
-  main :where(button, a, summary) { min-height: 2.75rem; }
+  /* Only standalone controls need the 44px target; prose links keep line-height sizing. */
+  main :where(button, summary, a[class*="rounded"], a[role="button"]) { min-height: 2.75rem; }
   .attendance-page-main { overflow-x: visible; }
 }
 
@@ -186,7 +242,10 @@ button,
 select,
 input,
 textarea {
-  transition: all 0.18s ease;
+  /* Avoid animating control dimensions when responsive layouts change. */
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 0.18s;
+  transition-timing-function: ease;
 }
 
 select,

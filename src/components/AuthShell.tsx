@@ -42,7 +42,6 @@ export default function AuthShell({ title, description, children, footer }: Auth
 
         <div className="flex flex-col justify-center p-4 lg:p-14">
           <div className="max-w-md">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-700">Tài khoản</p>
             <h1 className="mt-2 text-xl font-bold tracking-tight text-slate-950 lg:text-4xl">{title}</h1>
             <p className="mt-2 text-sm leading-5 text-slate-600 lg:mt-3 lg:leading-6">{description}</p>
             <div className="mt-4 lg:mt-8">{children}</div>

@@ -23,7 +23,7 @@ test("print sheet uses the redesigned A4 assignment layout", () => {
     "PHIẾU GIAO VIỆC", "Tạp chí Thời Đại", "Thông tin giao việc", "Ngày giao", "Hạn hoàn thành",
     "Người giao việc", "Người nhận việc", "Người phối hợp", "Nội dung công việc", "Tên công việc",
     "Mô tả", "Yêu cầu", "Ghi chú", "NGƯỜI GIAO VIỆC", "NGƯỜI NHẬN VIỆC", "NGƯỜI PHỐI HỢP",
-    "In phiếu", "Save / Export PDF", "Lưu DOCX",
+    "In phiếu", "Lưu / Xuất PDF", "Lưu DOCX",
   ]) assert.match(`${sheet}\n${actions}`, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
   assert.match(sheet, /\/api\/tasks\/\$\{task\.id\}\/print\/docx/);
   for (const removed of ["BÁO THỜI ĐẠI", "Mã công việc", "Loại công việc", "Mức độ ưu tiên", "Người xem", "Phiếu được in từ"]) {

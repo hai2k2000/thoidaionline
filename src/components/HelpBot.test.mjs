@@ -9,7 +9,8 @@ test("Help launcher is desktop-only and the mobile sheet clears the safe-area na
   assert.match(source, /addEventListener\("thoidai:open-help"/);
   assert.match(source, /removeEventListener\("thoidai:open-help"/);
   assert.match(source, /inset-x-0/);
-  assert.match(source, /5rem\+env\(safe-area-inset-bottom\)/);
+  assert.match(source, /mobile-fab-offset/);
+  assert.match(read("../app/globals.css"), /\.mobile-fab-offset\s*\{\s*bottom: calc\(5rem \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(source, /style=\{\{ position: "fixed" \}\}/);
   assert.match(source, /aria-label="Đóng trợ lý"/);
 });

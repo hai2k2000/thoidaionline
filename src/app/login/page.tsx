@@ -13,7 +13,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("Dùng username, email hoặc số điện thoại.");
+  const [message, setMessage] = useState("");
 
   const submit = async () => {
     try {
@@ -33,13 +33,13 @@ export default function LoginPage() {
       footer={<Link className="inline-flex min-h-11 items-center text-sm font-semibold text-orange-700 underline decoration-orange-300 underline-offset-4 hover:text-orange-900" href="/forgot-password">Quên mật khẩu?</Link>}
     >
         <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="flex flex-col gap-3 lg:gap-5">
-          <label htmlFor="identifier" className="grid gap-2 text-sm font-semibold text-slate-800">Tên đăng nhập, thư điện tử hoặc số điện thoại
+          <label htmlFor="identifier" className="grid gap-2 text-sm font-semibold text-slate-800">Tài khoản
           <input
             id="identifier"
             name="identifier"
             autoComplete="username"
             className="min-h-12 w-full rounded-none border border-slate-300 px-3 py-3 text-base font-normal"
-            placeholder="Nhập thông tin tài khoản"
+            placeholder="Tên đăng nhập, email hoặc SĐT"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
           />
@@ -55,7 +55,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
           </label>
-          <button type="submit" className="min-h-12 w-full rounded-none bg-orange-600 px-4 py-3 text-base font-semibold text-white hover:bg-orange-700">
+          <button type="submit" className="min-h-12 w-full rounded-none bg-orange-700 px-4 py-3 text-base font-semibold text-white hover:bg-orange-800">
             Đăng nhập
           </button>
           <p className="min-h-6 text-sm leading-6 text-slate-600" role="status" aria-live="polite">{message}</p>

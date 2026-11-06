@@ -50,6 +50,6 @@ export default function AdminTaskEditForm({ task }: { task: TaskDetailDto }) {
     </fieldset>
     <label className="text-sm font-semibold sm:col-span-2">Lý do chỉnh sửa<input name="reason" required maxLength={2000} placeholder="Bắt buộc để lưu lịch sử thay đổi" className={control}/></label>
     {error ? <p role="alert" className="text-sm text-red-700 sm:col-span-2">{error}</p>:null}
-    <div className="flex gap-2 sm:col-span-2"><button disabled={busy} className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy?"Đang lưu…":"Lưu thay đổi"}</button><button type="button" onClick={()=>router.back()} className="rounded-lg border px-4 py-2 font-semibold">Hủy</button></div>
+    <div className="flex gap-2 sm:col-span-2"><button disabled={busy} className="rounded-lg bg-orange-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy?"Đang lưu…":"Lưu thay đổi"}</button><button type="button" onClick={()=>router.back()} className="rounded-lg border px-4 py-2 font-semibold">Hủy</button></div>
   </form>;
 }

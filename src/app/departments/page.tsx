@@ -97,7 +97,7 @@ export default function DepartmentsPage() {
           <div className="grid gap-2 md:grid-cols-3">
             <input className="rounded border px-3 py-2" placeholder="Mã phòng ban (vd: content)" value={code} onChange={(e) => setCode(e.target.value)} />
             <input className="rounded border px-3 py-2" placeholder="Tên phòng ban" value={name} onChange={(e) => setName(e.target.value)} />
-            <button disabled={busy} onClick={createDepartment} className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50">{busy ? "Đang lưu..." : "Tạo phòng ban"}</button>
+            <button disabled={busy} onClick={createDepartment} className="rounded bg-orange-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-800 disabled:opacity-50">{busy ? "Đang lưu..." : "Tạo phòng ban"}</button>
           </div>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
         </section>

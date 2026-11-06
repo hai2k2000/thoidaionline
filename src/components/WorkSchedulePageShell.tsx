@@ -109,7 +109,7 @@ function EventCard({ row, participantNames, onOpen }: { row: Row; participantNam
       aria-label={`${eventTime(row)} ${row.title}`} className="mb-1 block w-full max-h-24 overflow-hidden rounded-lg border-l-4 border-orange-500 bg-orange-50 p-2 text-left text-xs text-orange-950 shadow-sm transition hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500">
       <span className="block font-bold">{eventTime(row)}</span>
       <span className="line-clamp-2 break-words font-semibold [overflow-wrap:anywhere]">{planTypeLabel(row)}: {row.title}</span>
-      <span className={`mt-1 block max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ${row.approval_status === "REJECTED" ? "bg-red-100 text-red-700" : row.approval_status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>{row.event_assignment_kind === "leadership" ? "Được phân công" : approvalLabel(row.approval_status)}</span>
+      <span className={`mt-1 block max-w-full truncate rounded-full px-2 py-0.5 text-xs font-semibold ${row.approval_status === "REJECTED" ? "bg-red-100 text-red-700" : row.approval_status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>{row.event_assignment_kind === "leadership" ? "Được phân công" : approvalLabel(row.approval_status)}</span>
     </button>
     {tooltip ? createPortal(<div id={tooltipId} role="tooltip" style={{ position: "fixed", top: tooltip.top, left: tooltip.left, width: "min(320px, calc(100vw - 24px))", maxHeight: "min(200px, calc(100dvh - 24px))", zIndex: 70 }} className="pointer-events-none overflow-hidden rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-800 shadow-xl [overflow-wrap:anywhere]">
       <p className="font-semibold">{eventTime(row)}</p><p className="line-clamp-4 break-words font-semibold">{row.title}</p><p className="mt-1 line-clamp-2 break-words">{row.location || "Chưa có địa điểm"}</p><p className="mt-1 line-clamp-3">Người tham gia: {summary.names.join(", ") || "Chưa có"}{summary.remaining ? ` và ${summary.remaining} người khác` : ""}</p>
@@ -394,7 +394,7 @@ export default function WorkSchedulePageShell({
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">{title}</h1>
             <p className="text-sm text-slate-600">{description}</p>
-            {enableEventAssignment ? <button type="button" onClick={() => setEventOpen(true)} className="mt-3 rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</button> : null}
+            {enableEventAssignment ? <button type="button" onClick={() => setEventOpen(true)} className="mt-3 rounded-lg bg-orange-700 px-3 py-2 text-sm font-semibold text-white">Phân công sự kiện</button> : null}
           </header>
 
           {canReviewPersonalPlans ? <div className="mt-3 flex gap-2 border-b border-slate-200" role="tablist" aria-label="Kế hoạch cá nhân">
@@ -471,7 +471,7 @@ export default function WorkSchedulePageShell({
                   setAnchor(iso(new Date()));
                   setPeriod("day");
                 }}
-                className="min-h-11 rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                className="min-h-11 rounded-lg bg-orange-700 px-4 py-2 font-semibold text-white hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
               >
                 Hôm nay
               </button>
@@ -493,7 +493,7 @@ export default function WorkSchedulePageShell({
                   <p className="mt-1 text-xs text-slate-500">{viewAll ? "Hiển thị kế hoạch của nhân sự đang hoạt động." : "Chỉ hiển thị kế hoạch có liên quan đến bạn."}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" onClick={() => { setPlanType("business"); setCreateMessage(""); setCreateOpen(true); }} className="min-h-10 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-700">Tạo kế hoạch</button>
+                  <button type="button" onClick={() => { setPlanType("business"); setCreateMessage(""); setCreateOpen(true); }} className="min-h-10 rounded-lg bg-orange-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-800">Tạo kế hoạch</button>
                   <button
                     type="button"
                     onClick={() => { setViewAll((current) => !current); setPeopleOpen(false); }}
@@ -677,9 +677,9 @@ export default function WorkSchedulePageShell({
                     <p>Địa điểm: {row.location || "Chưa có"}</p>
                     {row.notes ? <p className="whitespace-pre-wrap">Ghi chú: {row.notes}</p> : null}
                     <p>Người tham gia: {names(row.participant_ids) || "Chưa có"}</p>
-                                {row.event_assignment_kind === "leadership" ? <div className="mt-1 space-y-1"><span className="inline-flex rounded-full bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-800">Được phân công</span>{row.event_assignments?.[0]?.assigner?.full_name ? <p>Người phân công: {row.event_assignments[0].assigner.full_name}</p> : null}{row.event_status ? <p>Trạng thái: {row.event_status === "COMPLETED" ? "Hoàn thành" : row.event_status === "CANCELLED" ? "Đã hủy" : "Đã lên lịch"}</p> : null}</div> : null}
+                                {row.event_assignment_kind === "leadership" ? <div className="mt-1 space-y-1"><span className="inline-flex rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold text-orange-800">Được phân công</span>{row.event_assignments?.[0]?.assigner?.full_name ? <p>Người phân công: {row.event_assignments[0].assigner.full_name}</p> : null}{row.event_status ? <p>Trạng thái: {row.event_status === "COMPLETED" ? "Hoàn thành" : row.event_status === "CANCELLED" ? "Đã hủy" : "Đã lên lịch"}</p> : null}</div> : null}
                                 {!viewAll ? <div className="mt-2 space-y-1">
-                                  <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${row.approval_status === "REJECTED" ? "bg-red-100 text-red-700" : row.approval_status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>{approvalLabel(row.approval_status)}</span>
+                                  <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${row.approval_status === "REJECTED" ? "bg-red-100 text-red-700" : row.approval_status === "PENDING_APPROVAL" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>{approvalLabel(row.approval_status)}</span>
                                   {row.approval_status === "PENDING_APPROVAL" ? <p className="text-amber-800">Kế hoạch chưa có hiệu lực cho đến khi được duyệt.</p> : null}
                                   {row.approver?.full_name ? <p>Người duyệt dự kiến: {row.approver.full_name}</p> : null}
                                   {row.reviewer?.full_name ? <p>Người duyệt: {row.reviewer.full_name}</p> : null}
@@ -688,7 +688,7 @@ export default function WorkSchedulePageShell({
                                 </div> : null}
                                 {row.event_assignment_kind === "leadership" && enableEventAssignment && canEditEventAssignment(row, { id: currentUserId, role_code: currentUserRole, is_department_manager: isDepartmentManager }) ? <button type="button" onClick={() => { setDetailRows(null); void eventPanelRef.current?.editEvent(row.id); }} className="mt-2 min-h-11 rounded border border-orange-300 bg-white px-3 py-2 text-sm font-semibold text-orange-700">Sửa sự kiện / thành viên</button> : null}
                                 {row.event_assignment_kind === "leadership" && row.event_status === "CANCELLED" ? <p className="text-xs text-slate-500">Sự kiện đã hủy — không thể sửa.</p> : null}
-                                {row.event_assignment_kind !== "leadership" && currentUserId && (canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") || canLeaderEditPersonalPlan(row, leaderActor)) ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => startEditingPlan(row)} className="rounded border border-orange-300 bg-white px-2 py-1 text-[11px] font-semibold text-orange-700">{row.created_by !== currentUserId && canLeaderEditPersonalPlan(row, leaderActor) ? "Sửa sự kiện / thành viên" : "Sửa kế hoạch"}</button>{canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <button type="button" onClick={() => { setDetailRows(null); void deletePlan(row); }} className="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-semibold text-red-700">Hủy kế hoạch</button> : null}</div> : null}
+                                {row.event_assignment_kind !== "leadership" && currentUserId && (canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") || canLeaderEditPersonalPlan(row, leaderActor)) ? <div className="mt-2 flex gap-2"><button type="button" onClick={() => startEditingPlan(row)} className="rounded border border-orange-300 bg-white px-2 py-1 text-xs font-semibold text-orange-700">{row.created_by !== currentUserId && canLeaderEditPersonalPlan(row, leaderActor) ? "Sửa sự kiện / thành viên" : "Sửa kế hoạch"}</button>{canMutatePersonalPlan(row, currentUserId, currentUserRole === "admin") ? <button type="button" onClick={() => { setDetailRows(null); void deletePlan(row); }} className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-semibold text-red-700">Hủy kế hoạch</button> : null}</div> : null}
                   </article>)}
                 </div>
               </div>
@@ -710,7 +710,7 @@ export default function WorkSchedulePageShell({
               <label className="mt-3 block text-sm font-medium">Ghi chú<textarea name="notes" maxLength={2000} defaultValue={editingRow?.notes ?? ""} className="mt-1 min-h-20 w-full rounded border px-3 py-2" /></label>
               {editingRow && editParticipants ? <PersonalPlanParticipants people={participantOptions} selected={planParticipantIds} onChange={setPlanParticipantIds} disabled={createBusy} /> : null}
               {createMessage ? <p role="status" className="mt-2 text-sm text-slate-700">{createMessage}</p> : null}
-              <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => { setEditingRow(null); setCreateOpen(false); }} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={createBusy} className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{createBusy ? "Đang lưu..." : editingRow ? "Cập nhật kế hoạch" : "Lưu kế hoạch"}</button></div>
+              <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => { setEditingRow(null); setCreateOpen(false); }} className="rounded border px-4 py-2 text-sm font-semibold">Hủy</button><button disabled={createBusy} className="rounded bg-orange-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{createBusy ? "Đang lưu..." : editingRow ? "Cập nhật kế hoạch" : "Lưu kế hoạch"}</button></div>
             </form>
           </div> : null}
         </main>

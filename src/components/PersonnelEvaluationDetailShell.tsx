@@ -67,7 +67,7 @@ function ScoreForm({ detail }: { detail: PersonnelEvaluationDetail }) {
         ))}
       </div>
       {failed ? <p role="alert" className="mt-2 text-sm text-red-700">Không thể gửi đánh giá. Trạng thái hoặc quyền đã thay đổi.</p> : null}
-      <button disabled={busy} className="mt-3 rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-60">
+      <button disabled={busy} className="mt-3 rounded-lg bg-orange-700 px-4 py-2 font-semibold text-white disabled:opacity-60">
         {busy ? "Đang gửi…" : action === "manager" ? "Gửi đánh giá" : "Gửi đánh giá"}
       </button>
     </form>

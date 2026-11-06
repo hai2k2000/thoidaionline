@@ -338,7 +338,7 @@ export default function UsersPage() {
       });
       if (!response.ok)
         throw new Error(
-          await responseErrorMessage(response, "Không thể tạo user."),
+          await responseErrorMessage(response, "Không thể tạo tài khoản."),
         );
       setNewUser({
         full_name: "",
@@ -347,11 +347,11 @@ export default function UsersPage() {
         job_title_id: "",
         department_id: "",
       });
-      notify("success", "Đã tạo user.");
-      await loadAll("✅ Đã tạo user.");
+      notify("success", "Đã tạo tài khoản.");
+      await loadAll("✅ Đã tạo tài khoản.");
       router.refresh();
     } catch (error) {
-      notify("error", errorMessage(error, "Không thể tạo user."));
+      notify("error", errorMessage(error, "Không thể tạo tài khoản."));
     } finally {
       setCreatingUser(false);
     }
@@ -375,7 +375,7 @@ export default function UsersPage() {
           <h1 className="mb-4 text-2xl font-bold">Quản lý nhân viên</h1>
           {isAdmin ? (
             <section className="rounded-xl border bg-white p-4">
-              <h2 className="mb-2 font-semibold">Tạo user</h2>
+              <h2 className="mb-2 font-semibold">Tạo tài khoản</h2>
               <div className="grid gap-2 md:grid-cols-5">
                 <input
                   className="rounded border px-3 py-2"
@@ -443,9 +443,9 @@ export default function UsersPage() {
               <button
                 disabled={creatingUser}
                 onClick={createUser}
-                className="mt-3 rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white"
+                className="mt-3 rounded bg-orange-700 px-4 py-2 text-sm font-semibold text-white"
               >
-                {creatingUser ? "Đang tạo..." : "Tạo user"}
+                {creatingUser ? "Đang tạo..." : "Tạo tài khoản"}
               </button>
             </section>
           ) : null}
@@ -710,7 +710,7 @@ export default function UsersPage() {
                         type="button"
                         disabled={resetState === "submitting" || savingUser}
                         onClick={saveUser}
-                        className="rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded bg-orange-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {savingUser ? "Đang lưu..." : "Lưu thay đổi"}
                       </button>
@@ -751,7 +751,7 @@ export default function UsersPage() {
                         <button
                           type="button"
                           onClick={() => void submitPasswordReset()}
-                          className="rounded bg-orange-500 px-3 py-2 text-sm font-semibold text-white"
+                          className="rounded bg-orange-700 px-3 py-2 text-sm font-semibold text-white"
                         >
                           Gửi liên kết
                         </button>
