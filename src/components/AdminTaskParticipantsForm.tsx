@@ -18,7 +18,7 @@ export default function AdminTaskParticipantsForm({ task, people, reviewers }: P
   const [reviewer, setReviewer] = useState(task.reviewer_id ?? "");
   const [open, setOpen] = useState<ParticipantPanel | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); const [stale, setStale] = useState(false);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true); setError("");
@@ -26,9 +26,9 @@ export default function AdminTaskParticipantsForm({ task, people, reviewers }: P
     try {
       const response = await fetch(`/api/tasks/${task.id}/admin-participants`, {
         method: "PATCH", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ assigneeId: assignee, collaboratorIds: collaborators, watcherIds: watchers, reviewerId: reviewer || null, reason: String(form.get("reason") ?? "") }),
+        body: JSON.stringify({ assigneeId: assignee, collaboratorIds: collaborators, watcherIds: watchers, reviewerId: reviewer || null, reason: String(form.get("reason") ?? ""), expectedUpdatedAt: task.updated_at }),
       });
-      if (!response.ok) throw new Error(await responseErrorMessage(response, "Không thể cập nhật người tham gia."));
+      if (!response.ok) { const payload = await response.clone().json().catch(() => null); if (payload?.error?.code === "task_changed") setStale(true); throw new Error(await responseErrorMessage(response, "Không thể cập nhật người tham gia.")); }
       notify("success", "Đã cập nhật người tham gia."); router.refresh();
     } catch (cause) {
       const message = errorMessage(cause, "Không thể cập nhật người tham gia.");
@@ -58,6 +58,7 @@ export default function AdminTaskParticipantsForm({ task, people, reviewers }: P
     </label>
     <label className="text-sm font-semibold">Lý do cập nhật<input name="reason" required maxLength={2000} disabled={busy} className={control}/></label>
     {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
+    {stale ? <button type="button" onClick={() => router.refresh()} className="w-fit rounded-lg border border-orange-300 px-4 py-2 font-semibold text-orange-800">Tải lại</button> : null}
     <button disabled={busy} className="w-fit rounded-lg bg-orange-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Đang lưu…" : "Lưu người tham gia"}</button>
   </form>;
 }

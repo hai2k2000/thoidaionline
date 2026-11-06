@@ -60,5 +60,10 @@ export async function requireMutationActor(): Promise<ActorGuard> {
 
 export function rpcFailure(error: RpcError): Response {
   const mapped = mapRpcError(error);
-  return apiError(mapped.code, mapped.status);
+  if (mapped.code === "task_changed") {
+    return apiJson({ error: { code: mapped.code, currentStatus: error.detail ?? error.details ?? null } }, mapped.status);
+  }
+  return mapped.field
+    ? apiJson({ error: { code: mapped.code, field: mapped.field } }, mapped.status)
+    : apiError(mapped.code, mapped.status);
 }
