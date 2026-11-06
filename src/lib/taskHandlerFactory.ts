@@ -488,10 +488,21 @@ export function createTaskApplication(deps: Dependencies) {
       const priority = ["low", "normal", "high", "urgent"].find((value) => value === body.priority);
       const status = ["new", "in_progress", "blocked", "waiting", "pending_review", "done", "rejected", "cancelled"].find((value) => value === body.status);
       const evaluationCriteria = typeof body.evaluationCriteria === "string" ? body.evaluationCriteria : null;
-      if (evaluationCriteria !== null && evaluationCriteria.length > 10000) return deps.error("invalid_request", 400);
       const reason = cleanText(body.reason, 2000);
-      if (!title || !description || !startDate || (hasDueDate && !dueDate) || (dueDate && startDate > dueDate) || !priority || !status || !reason || (hasDueTime && (!dueTime || !dueDate))) return deps.error("invalid_request", 400);
-      const result = await deps.repository.adminEditTask(actor.id, taskId, { title, description, startDate, dueDate, dueTime, priority, status, evaluationCriteria, reason });
+      const expectedUpdatedAt = typeof body.expectedUpdatedAt === "string" && !Number.isNaN(Date.parse(body.expectedUpdatedAt)) ? body.expectedUpdatedAt : null;
+      const invalid = (field: string) => deps.json({ error: { code: "invalid_request", field } }, 400);
+      if (body.expectedUpdatedAt !== undefined && expectedUpdatedAt === null) return invalid("expectedUpdatedAt");
+      if (evaluationCriteria !== null && evaluationCriteria.length > 10000) return invalid("requirements");
+      if (!title) return invalid("title");
+      if (!description) return invalid("description");
+      if (!startDate) return invalid("startDate");
+      if (hasDueDate && !dueDate) return invalid("dueDate");
+      if (dueDate && startDate > dueDate) return invalid("dueDate");
+      if (!priority) return invalid("priority");
+      if (!status) return invalid("status");
+      if (!reason) return invalid("reason");
+      if (hasDueTime && (!dueTime || !dueDate)) return invalid("dueTime");
+      const result = await deps.repository.adminEditTask(actor.id, taskId, { title, description, startDate, dueDate, dueTime, priority, status, statusUnchanged: body.statusUnchanged === true, expectedUpdatedAt: expectedUpdatedAt ?? undefined, evaluationCriteria, reason });
       return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
     },
 
@@ -507,11 +518,14 @@ export function createTaskApplication(deps: Dependencies) {
       const watcherIds = batchIds(body.watcherIds, deps.asUuid);
       const reviewerId = body.reviewerId == null || body.reviewerId === "" ? null : deps.asUuid(body.reviewerId);
       const reason = cleanText(body.reason, 2000);
+      const expectedUpdatedAt = typeof body.expectedUpdatedAt === "string" && !Number.isNaN(Date.parse(body.expectedUpdatedAt)) ? body.expectedUpdatedAt : null;
+      const invalid = (field: string) => deps.json({ error: { code: "invalid_request", field } }, 400);
+      if (body.expectedUpdatedAt !== undefined && expectedUpdatedAt === null) return invalid("expectedUpdatedAt");
       if (!assigneeId || !collaboratorIds || !watcherIds || !reason
         || (body.reviewerId != null && body.reviewerId !== "" && !reviewerId)
         || collaboratorIds.includes(assigneeId) || watcherIds.includes(assigneeId)
-        || watcherIds.some(id => collaboratorIds.includes(id))) return deps.error("invalid_request", 400);
-      const result = await deps.repository.adminSetTaskParticipants(actor.id, taskId, { assigneeId, collaboratorIds, watcherIds, reviewerId, reason });
+        || watcherIds.some(id => collaboratorIds.includes(id))) return invalid("participants");
+      const result = await deps.repository.adminSetTaskParticipants(actor.id, taskId, { assigneeId, collaboratorIds, watcherIds, reviewerId, expectedUpdatedAt: expectedUpdatedAt ?? undefined, reason });
       return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
     },
 

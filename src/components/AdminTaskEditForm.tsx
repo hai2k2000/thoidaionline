@@ -11,7 +11,7 @@ import { MAX_TASK_REQUIREMENTS, parseTaskRequirements, serializeAdminRequirement
 
 export default function AdminTaskEditForm({ task }: { task: TaskDetailDto }) {
   const router = useRouter(); const { notify } = useActionFeedback();
-  const [busy,setBusy] = useState(false); const [error,setError] = useState("");
+  const [busy,setBusy] = useState(false); const [error,setError] = useState(""); const [stale,setStale] = useState(false);
   const [criteria, setCriteria] = useState(() => parseTaskRequirements(task.evaluation_criteria));
   const moveRequirement = (index: number, delta: number) => {
     const requirements = [...criteria];
@@ -21,11 +21,13 @@ export default function AdminTaskEditForm({ task }: { task: TaskDetailDto }) {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setBusy(true); setError("");
     const form = new FormData(event.currentTarget);
-    const body = Object.fromEntries(["title","description","startDate","dueDate","dueTime","priority","status","evaluationCriteria","reason"].map((key) => [key,String(form.get(key) ?? "")]));
+    const selectedStatus = String(form.get("status") ?? "");
+    const body = Object.fromEntries(["title","description","startDate","dueDate","dueTime","priority","evaluationCriteria","reason"].map((key) => [key,String(form.get(key) ?? "")]));
+    Object.assign(body, { status: selectedStatus, statusUnchanged: selectedStatus === task.status, expectedUpdatedAt: task.updated_at });
     try {
       body.evaluationCriteria = serializeAdminRequirements(criteria);
       const response = await fetch(`/api/tasks/${task.id}/admin-edit`, { method:"PATCH", headers:{"content-type":"application/json"}, body:JSON.stringify(body) });
-      if (!response.ok) throw new Error(await responseErrorMessage(response,"Không thể cập nhật công việc."));
+      if (!response.ok) { const payload = await response.clone().json().catch(() => null); if (payload?.error?.code === "task_changed") setStale(true); throw new Error(await responseErrorMessage(response,"Không thể cập nhật công việc.")); }
       notify("success","Đã cập nhật công việc và ghi lịch sử quản trị."); router.push(`/tasks/${task.id}`); router.refresh();
     } catch (cause) { const text=errorMessage(cause,"Không thể cập nhật công việc."); setError(text); notify("error",text); }
     finally { setBusy(false); }
@@ -50,6 +52,7 @@ export default function AdminTaskEditForm({ task }: { task: TaskDetailDto }) {
     </fieldset>
     <label className="text-sm font-semibold sm:col-span-2">Lý do chỉnh sửa<input name="reason" required maxLength={2000} placeholder="Bắt buộc để lưu lịch sử thay đổi" className={control}/></label>
     {error ? <p role="alert" className="text-sm text-red-700 sm:col-span-2">{error}</p>:null}
+    {stale ? <button type="button" onClick={() => router.refresh()} className="w-fit rounded-lg border border-orange-300 px-4 py-2 font-semibold text-orange-800 sm:col-span-2">Tải lại</button> : null}
     <div className="flex gap-2 sm:col-span-2"><button disabled={busy} className="rounded-lg bg-orange-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy?"Đang lưu…":"Lưu thay đổi"}</button><button type="button" onClick={()=>router.back()} className="rounded-lg border px-4 py-2 font-semibold">Hủy</button></div>
   </form>;
 }

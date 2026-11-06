@@ -11,6 +11,7 @@ export type ApiErrorCode =
   | "reviewer_invalid"
   | "not_found"
   | "conflict"
+  | "task_changed"
   | "publication_state_conflict"
   | "planned_publication_required"
   | "publication_plan_locked"

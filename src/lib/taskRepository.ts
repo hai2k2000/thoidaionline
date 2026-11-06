@@ -44,6 +44,7 @@ const TASK_BASE_FIELDS = [
   "title",
   "priority",
   "created_at",
+  "updated_at",
   "status",
   "approval_required",
   "workflow_type",
@@ -1013,11 +1014,12 @@ export const taskRepository: TaskRepository = {
     p_due_date: input.dueDate, p_due_time: input.dueTime,
     p_priority: input.priority, p_status: input.status,
     p_evaluation_criteria: input.evaluationCriteria, p_reason: input.reason,
+    ...(input.expectedUpdatedAt ? { p_expected_updated_at: input.expectedUpdatedAt, p_status_unchanged: input.statusUnchanged ?? false } : {}),
   }),
   adminSetTaskParticipants: (actorId, taskId, input) => mutation("api_admin_set_task_participants", {
     p_actor_id: actorId, p_task_id: taskId, p_assignee_id: input.assigneeId,
     p_collaborator_ids: input.collaboratorIds, p_watcher_ids: input.watcherIds,
-    p_reviewer_id: input.reviewerId, p_reason: input.reason,
+    p_reviewer_id: input.reviewerId, p_reason: input.reason, ...(input.expectedUpdatedAt ? { p_expected_updated_at: input.expectedUpdatedAt } : {}),
   }),
 
   submitStructuredProgress: (actorId, taskId, input) => mutation(

@@ -32,7 +32,7 @@ export function errorMessage(error: unknown, fallback: string) {
 
 export async function responseErrorMessage(response: Response, fallback: string) {
   const payload = await response.json().catch(() => null) as {
-    error?: string | { code?: string; message?: string };
+    error?: string | { code?: string; message?: string; field?: string };
     message?: string;
   } | null;
   const error = typeof payload?.error === "string"
@@ -53,5 +53,13 @@ export async function responseErrorMessage(response: Response, fallback: string)
     not_found: "Không tìm thấy dữ liệu.",
     unauthenticated: "Phiên đăng nhập đã hết hạn.",
   };
+  if (payload?.error && typeof payload.error === "object" && payload.error.code === "task_changed") {
+    const labels: Record<string, string> = { new: "Mới", in_progress: "Đang làm", blocked: "Có vướng mắc", waiting: "Chờ duyệt nhận việc", pending_review: "Chờ duyệt", done: "Hoàn thành", rejected: "Trả lại", cancelled: "Đã hủy" };
+    return `Công việc vừa được cập nhật (trạng thái hiện tại: ${labels[(payload.error as { currentStatus?: string }).currentStatus ?? ""] ?? "không xác định"}). Tải lại trang để sửa tiếp.`;
+  }
+  if (payload?.error && typeof payload.error === "object" && payload.error.field) {
+    const fields: Record<string, string> = { title: "Tiêu đề không hợp lệ.", description: "Nội dung không hợp lệ.", startDate: "Ngày bắt đầu không hợp lệ.", start_date: "Ngày bắt đầu không hợp lệ.", dueDate: "Ngày hạn không hợp lệ.", due_date: "Ngày hạn không hợp lệ.", dueTime: "Giờ hạn không hợp lệ.", due_time: "Giờ hạn không hợp lệ.", priority: "Mức độ không hợp lệ.", status: "Trạng thái không hợp lệ.", reason: "Lý do không hợp lệ.", participants: "Người tham gia không hợp lệ.", requirements: "Yêu cầu công việc không hợp lệ.", expectedUpdatedAt: "Phiên sửa đã hết hạn.", task: "Công việc không hợp lệ.", reviewer: "Người duyệt không hợp lệ." };
+    return fields[payload.error.field] || fallback;
+  }
   return error ? labels[error] || error : payload?.message || fallback;
 }

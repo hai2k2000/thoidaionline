@@ -85,13 +85,15 @@ const makeHarness = ({
   shadowTaskAction = null,
   taskRbacEnabled = false,
   taskRbacBaseAllowed = undefined,
+  rpcFailure = () => apiError("operation_failed", 500),
+  adminEditError = null,
 } = {}) => {
   const calls = [];
   const shadowCalls = [];
   const participantResolutionCalls = [];
   const result = (data) => Promise.resolve({ ok: true, data });
   const repository = {
-    adminEditTask: (...args) => { calls.push(["adminEditTask", ...args]); return result({}); },
+    adminEditTask: (...args) => { calls.push(["adminEditTask", ...args]); return adminEditError ? Promise.resolve({ ok: false, error: adminEditError }) : result({}); },
     adminSetTaskParticipants: (...args) => { calls.push(["adminSetTaskParticipants", ...args]); return result({}); },
     list: (actor, query) => {
       calls.push(["list", actor.id, query]);
@@ -124,7 +126,7 @@ const makeHarness = ({
       : { ok: false, response: apiError("invalid_origin", 403) },
     json: apiJson,
     error: apiError,
-    rpcFailure: () => apiError("operation_failed", 500),
+    rpcFailure,
     asUuid: (value) => typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value)
       ? value
       : null,
@@ -150,7 +152,7 @@ const makeHarness = ({
   return { app, calls, shadowCalls, participantResolutionCalls };
 };
 
-const adminBody = { title: "Task", description: "Content", startDate: "2026-11-04", dueDate: null, dueTime: null, priority: "normal", status: "in_progress", reason: "Correction" };
+const adminBody = { title: "Task", description: "Content", startDate: "2026-11-04", dueDate: null, dueTime: null, priority: "normal", status: "in_progress", reason: "Correction", expectedUpdatedAt: "2026-11-04T00:00:00.000Z" };
 const adminRequest = body => new Request("https://example.test/api/tasks/admin-edit", { method: "PATCH", body: JSON.stringify(body) });
 test("admin edit accepts no deadline and rejects time without date", async () => {
   const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }) });
@@ -163,11 +165,29 @@ test("admin edit accepts no deadline and rejects time without date", async () =>
 });
 test("admin participant edit validates UUIDs, reason and disjoint roles", async () => {
   const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }) });
-  const body = { assigneeId: taskId, collaboratorIds: [], watcherIds: [], reviewerId: null, reason: "Correction" };
+  const body = { assigneeId: taskId, collaboratorIds: [], watcherIds: [], reviewerId: null, reason: "Correction", expectedUpdatedAt: "2026-11-04T00:00:00.000Z" };
   assert.equal((await h.app.adminSetTaskParticipants(adminRequest(body), taskId)).status, 200);
   for (const change of [{ assigneeId: "bad" }, { collaboratorIds: [taskId] }, { collaboratorIds: [employeeId], watcherIds: [employeeId] }, { watcherIds: ["bad"] }, { reviewerId: "bad" }, { reason: " " }]) {
     assert.equal((await h.app.adminSetTaskParticipants(adminRequest({ ...body, ...change }), taskId)).status, 400);
   }
+});
+test("admin handlers preserve expected timestamp and status intent", async () => {
+  const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }) });
+  const response = await h.app.adminEditTask(adminRequest({ ...adminBody, statusUnchanged: true }), taskId);
+  assert.equal(response.status, 200);
+  assert.equal(h.calls[0][3].expectedUpdatedAt, adminBody.expectedUpdatedAt);
+  assert.equal(h.calls[0][3].statusUnchanged, true);
+});
+test("admin edit returns a stale-task conflict and field-specific validation", async () => {
+  const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }), adminEditError: { code: "40001" } , rpcFailure: () => apiJson({ error: { code: "task_changed", currentStatus: "done" } }, 409) });
+  const stale = await h.app.adminEditTask(adminRequest(adminBody), taskId);
+  assert.equal(stale.status, 409);
+  const invalid = await h.app.adminEditTask(adminRequest({ ...adminBody, dueTime: "17:00" }), taskId);
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).error.field, "dueTime");
+  const invalidTimestamp = await h.app.adminEditTask(adminRequest({ ...adminBody, expectedUpdatedAt: "yesterday" }), taskId);
+  assert.equal(invalidTimestamp.status, 400);
+  assert.equal((await invalidTimestamp.json()).error.field, "expectedUpdatedAt");
 });
 test("non-admin cannot edit admin content or participants", async () => {
   const h = makeHarness();

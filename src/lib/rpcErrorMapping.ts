@@ -3,15 +3,39 @@ import type { ApiErrorCode } from "./apiResponse";
 export type RpcError = {
   code?: string | null;
   details?: string | null;
+  detail?: string | null;
   message?: string | null;
+  hint?: string | null;
 };
 
 export type RpcErrorMapping = {
   code: ApiErrorCode;
   status: number;
+  field?: string;
 };
 
 export function mapRpcError(error: RpcError): RpcErrorMapping {
+  if (error.hint?.startsWith("admin_edit.task_changed") || error.message === "Task changed while editing.") {
+    return { code: "task_changed", status: 409 };
+  }
+  if (error.hint?.startsWith("admin_edit.")) {
+    const field = error.hint.slice("admin_edit.".length).replace(/^status_requires_.+$/, "status");
+    return { code: "invalid_request", status: 400, field };
+  }
+  if (error.message === "Người duyệt không hợp lệ.") return { code: "reviewer_invalid", status: 400, field: "reviewer" };
+  if (error.message === "Reviewer must be an active project lead or admin.") return { code: "reviewer_invalid", status: 400, field: "reviewer" };
+  if (error.message === "Only the creator may mutate an unapproved task.") return { code: "forbidden", status: 403, field: "task" };
+  if (error.message === "Cancelled task cannot be mutated.") return { code: "forbidden", status: 403, field: "status" };
+  if (error.message === "Admin participant edit forbidden.") return { code: "forbidden", status: 403, field: "participants" };
+  if (error.message === "Only assigned tasks support participant edits.") return { code: "invalid_request", status: 400, field: "participants" };
+  if (error.message === "Invalid participant roles." || error.message === "Inactive participant." || error.message === "Project participant or reviewer is invalid.") {
+    return { code: "invalid_request", status: 400, field: "participants" };
+  }
+  if (error.message === "mutation policy unavailable" || error.message === "Task creator identity unavailable." || error.message === "Task lifecycle state unavailable." || error.message === "Invalid task actor.") {
+    return { code: "forbidden", status: 403, field: "task" };
+  }
+  if (error.message === "Use report/review for completion transitions.") return { code: "invalid_request", status: 400, field: "status" };
+  if (error.message === "Invalid task priority.") return { code: "invalid_request", status: 400, field: "priority" };
   if (error.code === "42501" && error.message === "Người duyệt phải là Trưởng hoặc Phó phòng.") {
     return { code: "reviewer_leadership_required", status: 403 };
   }

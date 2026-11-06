@@ -27,7 +27,7 @@ test("missing assignee manager produces actionable Vietnamese feedback", async (
   const mapped = mapRpcError({ code: "22023", message: "Assignee department requires an active primary manager." });
   assert.deepEqual(mapped, { code: "assignee_department_manager_required", status: 400 });
   assert.equal(await responseErrorMessage(apiError(mapped.code, mapped.status), "fallback"), "Phòng của người nhận việc chưa có trưởng phòng");
-  assert.deepEqual(mapRpcError({ code: "22023", message: "Invalid participant roles." }), { code: "invalid_request", status: 400 });
+  assert.deepEqual(mapRpcError({ code: "22023", message: "Invalid participant roles." }), { code: "invalid_request", status: 400, field: "participants" });
 });
 
 test("serialization failures map to HTTP 409 across Supabase error shapes", () => {
@@ -44,6 +44,12 @@ test("serialization failures map to HTTP 409 across Supabase error shapes", () =
 test("self-verification and validation keep their existing status codes", () => {
   assert.deepEqual(mapRpcError({ code: "42501" }), { code: "forbidden", status: 403 });
   assert.deepEqual(mapRpcError({ code: "22023" }), { code: "invalid_request", status: 400 });
+});
+
+test("admin task mutation failures identify the affected field", () => {
+  assert.deepEqual(mapRpcError({ code: "22023", message: "Invalid participant roles." }), { code: "invalid_request", status: 400, field: "participants" });
+  assert.deepEqual(mapRpcError({ code: "42501", message: "Cancelled task cannot be mutated." }), { code: "forbidden", status: 403, field: "status" });
+  assert.deepEqual(mapRpcError({ code: "22023", message: "Use report/review for completion transitions." }), { code: "invalid_request", status: 400, field: "status" });
 });
 
 test("unexpected database failures remain HTTP 500", () => {
