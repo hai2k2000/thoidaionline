@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
+import { classifyTaskDeadline, deadlineLabel } from "@/lib/deadlinePresentation.mjs";
 
 type Task = {
   project_id?: string | null;
@@ -101,7 +103,10 @@ export default function TaskStatusTablePage({
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-700">Tổng: {rows.length} công việc</div>
             </div>
-            <div className="overflow-x-auto rounded-lg border border-blue-100">
+            <MobileCardList empty="Không có công việc." ariaLabel="Danh sách công việc trên điện thoại">
+              {rows.map((t) => <MobileCard key={t.id} href={`/tasks/${t.id}`} title={t.title} status={<MobileCardBadge tone={t.status === "done" ? "success" : t.status === "rejected" ? "danger" : t.status === "pending_review" ? "warning" : "info"}>{t.project_id && t.status === "pending_review" ? "Chờ duyệt" : statusLabel[t.status]}</MobileCardBadge>} meta={[{ label: "Người phụ trách", value: t.task_assignees?.map((a) => a.staff_users?.full_name).filter(Boolean).join(", ") || "-" }, { label: "Đến hạn", value: t.due_date ? new Date(t.due_date).toLocaleDateString("vi-VN") : "-" }, { label: "Tình trạng hạn", value: deadlineLabel(classifyTaskDeadline(t)) ?? "-" }, { label: "Phòng", value: t.departments?.name ?? "-" }]} />)}
+            </MobileCardList>
+            <div className="hidden overflow-x-auto rounded-lg border border-blue-100 md:block">
               <table className="table-soft-red min-w-full text-left text-sm">
                 <thead className="text-xs uppercase">
                   <tr>
