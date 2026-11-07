@@ -383,6 +383,7 @@ export interface TaskRepository {
     query: TaskListQuery,
   ): Promise<RepositoryResult<TaskListResult>>;
   access(taskId: string): Promise<RepositoryResult<TaskAccessSnapshot | null>>;
+  accessMany(taskIds: string[]): Promise<RepositoryResult<TaskAccessSnapshot[]>>;
   detail(taskId: string, actor?: AuthorizationActor): Promise<RepositoryResult<TaskDetailDto | null>>;
   listApprovalQueue(actor: AuthorizationActor, queue: "assignment" | "completion"): Promise<RepositoryResult<TaskListResult>>;
   create(
