@@ -30,3 +30,9 @@ test("AppNav renders the notification bell with unread and read controls", () =>
   assert.match(bell, /Đánh dấu tất cả đã đọc/);
   assert.match(bell, /setInterval\(load, 60000\)/);
 });
+
+test("notification deadline branch avoids runtime ISO now and sort has key tiebreak", () => {
+  const source = read("./notificationRepository.ts");
+  assert.doesNotMatch(source, /deadline[\s\S]{0,500}new Date\(\)\.toISOString\(\)/);
+  assert.match(source, /a\.key\.localeCompare\(b\.key\)/);
+});

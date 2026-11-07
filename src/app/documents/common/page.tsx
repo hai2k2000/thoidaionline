@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MobileFilters from "@/components/MobileFilters";
+import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import { listDocuments, type OfficialDocument } from "@/lib/services";
@@ -64,7 +65,7 @@ export default function CommonDocumentsPage() {
           </div></MobileFilters>
           <p className="mb-2 text-sm text-slate-600">{message}</p>
 
-          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách tài liệu chung, cuộn ngang để xem thêm">
+          <div className="table-scroll hidden rounded-lg border border-slate-200 md:block" tabIndex={0} aria-label="Danh sách tài liệu chung, cuộn ngang để xem thêm">
           <table className="table-soft-red data-table min-w-[760px] text-left text-sm">
             <thead>
               <tr>
@@ -89,6 +90,9 @@ export default function CommonDocumentsPage() {
             </tbody>
           </table>
           </div>
+          <MobileCardList ariaLabel="Danh sách tài liệu chung">
+            {filteredRows.map((r) => <MobileCard key={r.id ?? r.doc_code} href={r.id ? `/documents/${r.id}` : undefined} title={r.title ?? "-"} status={<MobileCardBadge tone={r.status === "done" ? "success" : r.status === "in_progress" ? "warning" : "neutral"}>{docStatusLabel[r.status ?? "new"] ?? (r.status ?? "Mới")}</MobileCardBadge>} meta={[{ label: "Mã", value: r.doc_code ?? "-" }, { label: "Loại", value: "Tài liệu chung" }]} />)}
+          </MobileCardList>
         </section>
         </div>
       </div>

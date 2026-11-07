@@ -20,14 +20,14 @@ export function MobileCardBadge({ tone = "neutral", children }: { tone?: MobileC
 export function MobileCard({
   title,
   status,
-  meta = [],
+  meta = [], maxMeta = 4,
   footer,
   href,
   children,
 }: {
   title: ReactNode;
   status?: ReactNode;
-  meta?: MobileCardMeta[];
+  meta?: MobileCardMeta[]; maxMeta?: number;
   footer?: ReactNode;
   href?: string;
   children?: ReactNode;
@@ -37,7 +37,7 @@ export function MobileCard({
       <h3 className="min-w-0 break-words text-base font-semibold text-brand-ink">{title}</h3>
       {status ? <div className="max-w-full">{status}</div> : null}
     </div>
-    {meta.length ? <dl className="mt-3 grid gap-2">{meta.slice(0, 4).map((item) => <div key={item.label} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3"><dt className="text-xs text-text-muted">{item.label}</dt><dd className="min-w-0 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{item.value}</dd></div>)}</dl> : null}
+    {meta.length ? <dl className="mt-3 grid gap-2">{meta.slice(0, maxMeta).map((item) => <div key={item.label} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3"><dt className="text-xs text-text-muted">{item.label}</dt><dd className="min-w-0 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{item.value}</dd></div>)}</dl> : null}
     {children}
     {footer && !href ? <footer className="mt-3 flex flex-wrap gap-2">{footer}</footer> : null}
   </>;

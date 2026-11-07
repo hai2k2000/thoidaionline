@@ -12,7 +12,7 @@ import { canEditCreatorMutation, leaveLifecycleState } from "@/lib/creatorMutati
 import AttendanceMonthGrid from "@/components/attendance/AttendanceMonthGrid";
 import AttendanceAnomalyReview from "@/components/attendance/AttendanceAnomalyReview";
 import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
-import { useConfirm } from "@/components/ConfirmDialog";
+import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
 import { LoadingState } from "@/components/ui/StateViews";
 
 type AttendanceRow = {
@@ -121,6 +121,7 @@ function AttendancePageContent() {
   const searchParams = useSearchParams();
   const { loading: authLoading, user, logout, canAccessModule } = useAuth();
   const requestConfirmation = useConfirm();
+  const promptDialog = usePromptDialog();
 
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [monthlyRows, setMonthlyRows] = useState<AttendanceRow[]>([]);
@@ -413,7 +414,7 @@ function AttendancePageContent() {
   };
 
   const reviewLateException = async (row: AttendanceRow, decision: "approved" | "rejected") => {
-    const note = decision === "rejected" ? window.prompt("Nhập lý do từ chối:", "")?.trim() ?? "" : "";
+    const note = decision === "rejected" ? (await promptDialog({ title: "Nhập lý do từ chối", label: "Lý do", required: true, multiline: true }) ?? "").trim() : "";
     if (decision === "rejected" && note.length < 3) return;
     setLateExceptionBusy(true);
     try {
@@ -438,7 +439,7 @@ function AttendancePageContent() {
   };
 
   const reviewLeave = async (request: LeaveRequest, action: "approve" | "reject") => {
-    const note = action === "reject" ? window.prompt("Nhập lý do từ chối:", "")?.trim() ?? "" : "";
+    const note = action === "reject" ? (await promptDialog({ title: "Nhập lý do từ chối", label: "Lý do", required: true, multiline: true }) ?? "").trim() : "";
     if (action === "reject" && note.length < 3) return;
     setLeaveBusy(true);
     try {

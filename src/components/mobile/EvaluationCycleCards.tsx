@@ -1,0 +1,7 @@
+import Link from "next/link";
+import { MobileCard, MobileCardBadge, MobileCardList } from "@/components/mobile/MobileCardList";
+import type { PerformanceCycleHistory } from "@/lib/evaluationRepository";
+
+export function EvaluationCycleCards({ rows, labels }: { rows: PerformanceCycleHistory[]; labels: Record<string, string> }) {
+  return <MobileCardList ariaLabel="Danh sách kỳ đánh giá" empty="Không có kỳ phù hợp bộ lọc.">{rows.map((cycle) => <MobileCard key={cycle.id} title={<Link href={`/configuration/evaluation-cycles/${cycle.id}`} className="font-semibold text-orange-700 underline">{cycle.code}</Link>} status={<MobileCardBadge tone={cycle.status === "open" ? "success" : cycle.status === "closed" ? "neutral" : "warning"}>{labels[cycle.status] ?? cycle.status}</MobileCardBadge>} meta={[{ label: "Tên kỳ", value: cycle.name }, { label: "Loại", value: cycle.cycle_type === "weekly" ? "Tuần" : "Tháng" }, { label: "Khoảng ngày", value: `${cycle.start_date} – ${cycle.end_date}` }, { label: "Tổng hồ sơ", value: cycle.total_reviews }]}>{[ ["Bộ tiêu chí", cycle.rubric_versions], ["Chờ Trưởng phòng", cycle.awaiting_manager_count], ["Chờ Tổng Biên tập", cycle.awaiting_tbt_count], ["Đã công bố", cycle.published_count] ].map(([label, value]) => <p key={String(label)} className="text-sm text-text-muted">{label}: <span className="font-semibold text-text">{value}</span></p>)}</MobileCard>)}</MobileCardList>;
+}

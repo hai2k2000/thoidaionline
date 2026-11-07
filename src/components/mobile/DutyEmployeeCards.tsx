@@ -1,0 +1,7 @@
+import { MobileCard, MobileCardList } from "@/components/mobile/MobileCardList";
+
+type Review = { result: string; on_time: boolean; reviewed_at: string; evidence_name: string | null };
+type DetailRow = { id: string; due_date: string; duty_position: string; departments: { name: string } | null; duty_task_reviews: Review[] | Review | null };
+export function DutyEmployeeCards({ rows, canViewEvidence, labels }: { rows: DetailRow[]; canViewEvidence: boolean; labels: Record<string, string> }) {
+  return <MobileCardList ariaLabel="Chi tiết đánh giá ca trực" empty="Chưa có ca trực.">{rows.map((row) => { const review = Array.isArray(row.duty_task_reviews) ? row.duty_task_reviews[0] : row.duty_task_reviews; return <MobileCard key={row.id} title={`${row.due_date.split("-").reverse().join("/")} - ${row.duty_position}`} maxMeta={6} meta={[{ label: "Phòng", value: row.departments?.name ?? "-" }, { label: "Kết quả", value: review ? labels[review.result] ?? review.result : "Chưa đánh giá" }, { label: "Thời hạn", value: review ? (review.on_time ? "Đúng hạn" : "Quá hạn") : "-" }, { label: "Ngày chấm", value: review ? new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(review.reviewed_at)) : "-" }, { label: "Minh chứng", value: review?.evidence_name ? (canViewEvidence ? <a href={`/api/tasks/duty/review?taskId=${row.id}`} target="_blank" rel="noreferrer" className="font-semibold text-orange-700 underline">Xem minh chứng</a> : "Chỉ người trực được xem") : "-" }]} />; })}</MobileCardList>;
+}

@@ -30,6 +30,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const sessionExpired = useRef(false);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const redirectToLogin = () => {
     if (typeof window !== "undefined" && window.location.pathname !== "/login") {
       window.location.replace("/login?reason=session_expired");
@@ -74,18 +75,20 @@ export default function NotificationBell() {
     }).catch(() => null);
   };
 
+  useEffect(() => { const onPointerDown = (event: PointerEvent) => { if (detailsRef.current?.open && !detailsRef.current.contains(event.target as Node)) detailsRef.current.open = false; }; const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape" && detailsRef.current?.open) { detailsRef.current.open = false; detailsRef.current.querySelector("summary")?.focus(); } }; document.addEventListener("pointerdown", onPointerDown); document.addEventListener("keydown", onKeyDown); return () => { document.removeEventListener("pointerdown", onPointerDown); document.removeEventListener("keydown", onKeyDown); }; }, []);
+
   const unreadKeys = items.filter((item) => item.unread).map((item) => item.key);
-  return <details className="group relative z-30 text-left">
+  return <details ref={detailsRef} className="group relative z-[80] text-left">
     <summary aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ""}`} className="relative grid size-10 cursor-pointer list-none place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-orange-300 hover:text-orange-700 [&::-webkit-details-marker]:hidden">
       <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
       {unreadCount ? <span className="absolute -right-1.5 -top-1.5 min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-xs font-bold leading-4 text-white">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
     </summary>
-    <div className="absolute right-0 mt-2 w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+    <div className="fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top))] z-[90] max-h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] w-auto overflow-y-auto lg:absolute lg:inset-x-auto lg:right-0 lg:top-auto lg:mt-2 lg:max-h-none lg:w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
       <div className="flex items-center justify-between border-b px-4 py-3"><div><p className="font-bold text-slate-900">Thông báo</p><p className="text-xs text-slate-500">{unreadCount} chưa đọc</p></div>{unreadCount ? <button type="button" onClick={() => void mark(unreadKeys)} className="text-xs font-semibold text-orange-700 hover:underline">Đánh dấu tất cả đã đọc</button> : null}</div>
       <div className="max-h-[420px] overflow-y-auto">
         {loading ? <p className="p-6 text-center text-sm text-slate-500">Đang tải… thông báo…</p> : null}
         {!loading && !items.length ? <p className="p-6 text-center text-sm text-slate-500">Chưa có thông báo.</p> : null}
-        {items.map((item) => <Link key={item.key} href={item.href} onClick={() => item.unread && void mark([item.key])} className={`block border-b px-4 py-3 transition hover:bg-orange-50 ${item.unread ? "bg-orange-50/60" : "bg-white"}`}>
+        {items.map((item) => <Link key={item.key} href={item.href} onClick={() => { if (item.unread) void mark([item.key]); detailsRef.current && (detailsRef.current.open = false); }} className={`block border-b px-4 py-3 transition hover:bg-orange-50 ${item.unread ? "bg-orange-50/60" : "bg-white"}`}>
           <div className="flex gap-3"><span className={`mt-1 size-2.5 shrink-0 rounded-full ${kindClass[item.kind]}`} /><div className="min-w-0"><p className={`text-sm ${item.unread ? "font-bold text-slate-900" : "font-semibold text-slate-700"}`}>{item.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{item.message}</p><p className="mt-1 text-xs text-slate-400">{timeText(item.createdAt)}</p></div></div>
         </Link>)}
       </div>

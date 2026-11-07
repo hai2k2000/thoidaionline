@@ -171,7 +171,7 @@ export default function EventAssignmentPanel({ people, open, onOpenChange, onCha
         ))}
       </div>
       </details>
-      {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true">
+      {open ? <div className="mobile-dialog-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true">
         <form key={editing?.id ?? "new"} onSubmit={submit} className="max-h-[calc(100dvh-2rem)] overflow-y-auto w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
           {message ? <p role="status" className="text-sm text-slate-700">{message}</p> : null}
           <h3 className="text-lg font-semibold">{editing ? "Sửa sự kiện" : "Phân công sự kiện"}</h3>

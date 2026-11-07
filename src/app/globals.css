@@ -194,7 +194,9 @@ body {
   .mobile-filter-body .task-filter-bar > .task-filter-search { flex: 1 1 100%; min-width: 0; }
   body:has([data-app-navigation]) .min-h-screen { padding-inline: 0.75rem; }
   /* Let Vietnamese words wrap at natural boundaries while allowing flex/grid shrink. */
-  body:has([data-app-navigation]) main :where(section, article, header, label, dl, dd, .flex, .grid) { min-width: 0; overflow-wrap: break-word; }
+  body:has([data-app-navigation]) main :where(section, article, header, label, dl, dd, .flex, .grid):not(.mobile-app-bar, .mobile-app-bar *) { min-width: 0; overflow-wrap: break-word; }
+  body:has([data-app-navigation]) main input[type="checkbox"], body:has([data-app-navigation]) main input[type="radio"] { width: 22px; height: 22px; }
+  body:has([data-app-navigation]) main label:has(> input[type="checkbox"]), body:has([data-app-navigation]) main label:has(> input[type="radio"]) { min-height: 2.75rem; align-items: center; }
   /* Compact panel padding and bounded inputs avoid squeezing phone content. */
   body:has([data-app-navigation]) main > :where(section, header).p-5 { padding: 1rem; }
   body:has([data-app-navigation]) main :where(section, article).p-5 { padding: 1rem; }

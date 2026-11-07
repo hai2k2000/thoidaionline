@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { listEmployeeProfiles, type EmployeeProfile } from "@/lib/services";
 import MobileFilters from "@/components/MobileFilters";
+import MobileCardList, { MobileCard } from "@/components/mobile/MobileCardList";
 import AppNav from "@/components/AppNav";
 import { sortStaffRows } from "@/lib/staffOrdering";
 
@@ -162,7 +163,7 @@ export default function HrProfilesPage() {
           </section>
 
           <section className="mt-4 rounded-xl border bg-white p-4">
-            <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách hồ sơ nhân sự, cuộn ngang để xem thêm">
+            <div className="table-scroll hidden rounded-lg border border-slate-200 md:block" tabIndex={0} aria-label="Danh sách hồ sơ nhân sự, cuộn ngang để xem thêm">
             <table className="data-table min-w-[960px] text-left text-sm">
               <thead className="bg-slate-50">
                 <tr>
@@ -198,6 +199,9 @@ export default function HrProfilesPage() {
               </tbody>
             </table>
             </div>
+            <MobileCardList ariaLabel="Danh sách hồ sơ nhân sự">
+              {mergedRows.map(({ user: su, profile }) => <MobileCard key={su.id} href={`/hr-profiles/${su.id}`} title={su.full_name} meta={[{ label: "Chức vụ", value: su.job_title_name ?? "-" }, { label: "Phòng ban", value: su.department_name ?? "-" }, { label: "Năm sinh", value: profile?.date_of_birth ? new Date(profile.date_of_birth).getFullYear() : "-" }, { label: "SĐT", value: profile?.emergency_contact_phone ?? "-" }]}>{profile?.address ? <p className="mt-3 text-sm text-text-muted">{profile.address}</p> : null}</MobileCard>)}
+            </MobileCardList>
           </section>
         </div>
       </div>

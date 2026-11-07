@@ -1,0 +1,6 @@
+import { MobileCard, MobileCardBadge, MobileCardList } from "@/components/mobile/MobileCardList";
+
+type AttendanceFinding = { type: string; severity: "high" | "medium" | "low"; staffIds: string[]; staff: string[]; date: string; message: string };
+export function AttendanceAnomalyCards({ findings, labels, severityLabels, onSelect }: { findings: AttendanceFinding[]; labels: Record<string, string>; severityLabels: Record<string, string>; onSelect: (staffId: string, date: string) => void }) {
+  return <MobileCardList ariaLabel="Danh sách bất thường chấm công" empty="Không phát hiện bất thường.">{findings.map((item, index) => <MobileCard key={`${item.type}-${item.date}-${index}`} title={<button type="button" onClick={() => onSelect(item.staffIds[0], item.date)} className="text-left text-orange-700 underline">{item.staff.join(", ")}</button>} status={<MobileCardBadge tone={item.severity === "high" ? "danger" : item.severity === "medium" ? "warning" : "neutral"}>{severityLabels[item.severity]}</MobileCardBadge>} maxMeta={4} meta={[{ label: "Loại", value: labels[item.type] ?? item.type }, { label: "Ngày", value: item.date }, { label: "Chi tiết", value: item.message }]} />)}</MobileCardList>;
+}

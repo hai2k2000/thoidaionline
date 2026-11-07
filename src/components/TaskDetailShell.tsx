@@ -15,7 +15,7 @@ import { deadlineLabel, classifyTaskDeadline, deadlineTone } from "@/lib/deadlin
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { getEnteredByDisplay, getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
-import { useConfirm } from "@/components/ConfirmDialog";
+import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
 import JournalismDetailSection from "@/components/JournalismDetailSection";
 import JournalismMetadataEditor from "@/components/JournalismMetadataEditor";
 import JournalismPublicationControls from "@/components/JournalismPublicationControls";
@@ -64,6 +64,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
   const { logout, user } = useAuth();
   const { notify } = useActionFeedback();
   const requestConfirmation = useConfirm();
+  const promptDialog = usePromptDialog();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [reportedOn, setReportedOn] = useState(today());
@@ -91,7 +92,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
   });
   const reasonAction = async (path: string, label: string, extra: object = {}) => {
-    const reason = window.prompt(`Lý do ${label.toLowerCase()}:`);
+     const reason = await promptDialog({ title: `Lý do ${label.toLowerCase()}`, label: "Lý do", required: true, multiline: true });
     if (!reason?.trim()) return setMessage("Vui lòng nhập lý do."), undefined;
     await jsonPost(path, { ...extra, reason });
   };
@@ -100,18 +101,18 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
     await jsonPost(`/api/tasks/${task.id}/review-completion`, { requirementResults: requirementResults.map((achieved, index) => ({ index, achieved })), requirementScore, collaborationScore, initiativeScore, note: scoreNote });
   };
   const returnWithDeadline = async () => {
-    const reason = window.prompt("Lý do trả lại:");
+    const reason = await promptDialog({ title: "Lý do trả lại", label: "Lý do", required: true, multiline: true });
     if (!reason?.trim()) return setMessage("Vui lòng nhập lý do."), undefined;
     const response = await jsonPost(`/api/tasks/${task.id}/review-completion`, { decision: "return", reason });
     if (response && capabilities.update) {
-      const dueDate = window.prompt("Hạn mới cho bản sửa (YYYY-MM-DD, có thể bỏ trống):", task.due_date ?? "");
+      const dueDate = await promptDialog({ title: "Hạn mới cho bản sửa", message: "Có thể bỏ trống", label: "Hạn mới", defaultValue: task.due_date ?? "", type: "date" });
       if (dueDate) await jsonPost(`/api/tasks/${task.id}/deadline-assigned`, { dueDate, reason: "Điều chỉnh hạn sau khi trả lại" });
     }
   };
   const reviewClaim = async (decision: "approve" | "reject") => {
     let reason: string | null = null;
     if (decision === "reject") {
-      reason = window.prompt("Lý do trả lại yêu cầu nhận việc:");
+      reason = await promptDialog({ title: "Lý do trả lại yêu cầu nhận việc", label: "Lý do", required: true, multiline: true });
       if (!reason?.trim()) { setMessage("Vui lòng nhập lý do."); return; }
     }
     await jsonPost("/api/tasks/claim/review", { taskId: task.id, decision, reason });
@@ -164,7 +165,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
                 {!personal && capabilities.review && task.self_claimable && task.status === "waiting" ? <><button disabled={busy} onClick={() => reviewClaim("approve")} className="shrink-0 whitespace-nowrap rounded bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white">Duyệt nhận việc</button><button disabled={busy} onClick={() => reviewClaim("reject")} className="shrink-0 whitespace-nowrap rounded bg-amber-600 px-2 py-1.5 text-xs font-semibold text-white">Trả lại</button></> : null}
                 {personal && capabilities.personalEdit ? <Link href={`/tasks/personal/${task.id}/edit`} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Sửa</Link> : null}
                 {((personal && capabilities.personalCancel && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status))) || (!personal && capabilities.assignedCancel && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)))) ? <button disabled={busy} onClick={async () => { if (await requestConfirmation({ title: "Bạn có chắc muốn hủy công việc này?", tone: "danger" })) void reasonAction(`/api/tasks/${task.id}/${personal ? "cancel" : "cancel-assigned"}`, "Hủy công việc"); }} className="shrink-0 whitespace-nowrap rounded bg-red-700 px-2 py-1.5 text-xs text-white">Hủy công việc</button> : null}
-                {!personal && (capabilities.assignedDeadline ?? capabilities.update) && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)) ? <button disabled={busy} onClick={async () => { const dueDate = window.prompt("Ngày kết thúc mới (YYYY-MM-DD):", task.due_date ?? ""); if (dueDate) await reasonAction(`/api/tasks/${task.id}/deadline-assigned`, "Đổi ngày", { dueDate }); }} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</button> : null}
+                 {!personal && (capabilities.assignedDeadline ?? capabilities.update) && (capabilities.adminEdit || !["done", "cancelled"].includes(task.status)) ? <button disabled={busy} onClick={async () => { const dueDate = await promptDialog({ title: "Ngày kết thúc mới", message: "YYYY-MM-DD", label: "Ngày kết thúc", defaultValue: task.due_date ?? "", type: "date", required: true }); if (dueDate) await reasonAction(`/api/tasks/${task.id}/deadline-assigned`, "Đổi ngày", { dueDate }); }} className="shrink-0 whitespace-nowrap rounded border px-2 py-1.5 text-xs">Đổi ngày</button> : null}
               </> : null}
             </div>
           </div>

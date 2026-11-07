@@ -9,6 +9,7 @@ import type { PersonnelEvaluationDetail, PersonnelEvaluationTask, RubricFactor }
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import TaskDetailModal from "@/components/TaskDetailModal";
+import { EvaluationTaskCards, EvaluationScoreCards } from "@/components/mobile/PersonnelEvaluationCards";
 
 const reviewLabels: Record<string, string> = {
   self_draft: "Chờ Trưởng phòng chấm bước 1",
@@ -108,7 +109,7 @@ function Detail({ detail }: { detail: PersonnelEvaluationDetail }) {
             <option value="">Mọi trạng thái</option><option value="completed">Hoàn thành</option><option value="unfinished">Chưa hoàn thành</option>
           </select>
         </div>
-      <div className="mt-2 max-h-[360px] overflow-auto">
+      <EvaluationTaskCards tasks={visibleTasks} completionLabels={completionLabels} deadlineLabels={deadlineLabels} onSelect={setSelectedTask} /><div className="mt-2 max-h-[360px] overflow-auto hidden md:block">
         <table className="w-full min-w-[780px] border-collapse text-sm">
           <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Tên công việc</th><th className="p-2">Người phụ trách</th><th className="p-2">Trạng thái hoàn thành</th><th className="p-2">Thời hạn</th></tr></thead>
           <tbody>{visibleTasks.map((task, index) => <tr key={task.id} className="border-b"><td className="p-2">{index + 1}</td><td className="p-2 font-semibold"><button type="button" onClick={() => setSelectedTask(task)} className="text-left text-orange-700 underline">{task.title}</button></td><td className="p-2">{task.assignee_name ?? "—"}</td><td className="p-2">{completionLabels[task.completion_status] ?? task.completion_status}</td><td className="p-2">{deadlineLabels[task.deadline_outcome] ?? task.deadline_outcome}</td></tr>)}</tbody>
@@ -123,7 +124,7 @@ function Detail({ detail }: { detail: PersonnelEvaluationDetail }) {
       <div>
         <h3 className="font-bold">Bảng chấm điểm cá nhân</h3>
         <p className="mt-1 text-sm text-slate-600">{detail.reviewStatus ? reviewLabels[detail.reviewStatus] ?? detail.reviewStatus : "Chưa có hồ sơ đánh giá trong kỳ."}</p>
-        <div className="mt-3 overflow-x-auto">
+        <EvaluationScoreCards factors={detail.factors} scores={detail.scores} score={score} /><div className="mt-3 overflow-x-auto hidden md:block">
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead><tr className="border-b text-left text-slate-600"><th className="p-2">Tiêu chí</th><th className="p-2">Tối đa</th><th className="p-2">Nhân viên</th><th className="p-2">Trưởng phòng</th><th className="p-2">Tổng Biên tập</th></tr></thead>
             <tbody>{detail.factors.map((factor) => <tr key={factor.factor_code} className="border-b"><td className="p-2 font-semibold">{factor.label}</td><td className="p-2">{factor.max_score}</td><td className="p-2">{score(factor.factor_code, "self")?.score ?? "—"}</td><td className="p-2">{score(factor.factor_code, "manager")?.score ?? "—"}</td><td className="p-2">{score(factor.factor_code, "tbt")?.score ?? "—"}</td></tr>)}</tbody>

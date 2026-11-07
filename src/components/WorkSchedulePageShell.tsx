@@ -1,6 +1,6 @@
 "use client";
 
-import { useConfirm } from "@/components/ConfirmDialog";
+import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
 import { useEffect, useMemo, useState, useRef, useId } from "react";
 import { createPortal } from "react-dom";
 import { splitCellEvents, summarizeParticipants } from "@/lib/workScheduleEventCards.mjs";
@@ -169,6 +169,7 @@ export default function WorkSchedulePageShell({
   const [activeTab, setActiveTab] = useState<"personal" | "approval">("personal");
   const [loading, setLoading] = useState(true);
   const requestConfirmation = useConfirm();
+  const promptDialog = usePromptDialog();
   const [loadError, setLoadError] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
   const [month, setMonth] = useState(anchor.slice(0, 7));
@@ -378,7 +379,7 @@ export default function WorkSchedulePageShell({
     if (response.ok) setRetryToken((value) => value + 1);
   };
   const reviewPlan = async (row: Row, action: "approve" | "reject") => {
-    const note = action === "reject" ? window.prompt("Lý do từ chối (bắt buộc):", "")?.trim() ?? "" : "";
+    const note = action === "reject" ? (await promptDialog({ title: "Lý do từ chối", label: "Lý do", required: true, multiline: true }) ?? "").trim() : "";
     if (action === "reject" && note.length < 3) return;
     const response = await fetch("/api/work-schedule/personal", {
       method: "PATCH",
@@ -390,7 +391,7 @@ export default function WorkSchedulePageShell({
 
   return (
     <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900">
-      <div className="mx-auto flex max-w-[1600px] gap-4">
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 lg:flex-row lg:gap-4">
         <AppNav currentPath="/work-schedule" userLabel={userLabel} onLogout={() => {}} />
         <main className="min-w-0 flex-1">
           <header className="rounded-xl border bg-white p-4 shadow-sm sm:p-5">

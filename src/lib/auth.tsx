@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await fetch("/api/auth/session", { cache: "no-store" }).catch(() => null);
     if (response?.status === 401) {
       setUser(null);
-      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      if (typeof window !== "undefined" && !["/login", "/forgot-password", "/reset-password"].includes(window.location.pathname)) {
         window.location.replace("/login?reason=session_expired");
       }
       return;
