@@ -10,5 +10,6 @@ export function supportedScopesForPermission(code) {
   if (code === "record.approve") return ["department", "all"];
   if (code === "task.assign") return ["department", "all"];
   if (code === "asset.view") return ["assigned", "department", "all"];
+  if (["announcement.manage", "library.manage"].includes(code)) return ["all"];
   return allScopes;
 }

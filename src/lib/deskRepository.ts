@@ -24,7 +24,7 @@ export type DeskData = {
   approvals: Result<{ items: DeskApprovalItem[]; total: number; showQueueLink: boolean }> | null;
   schedule: Result<{ duty: DeskScheduleItem[]; personal: DeskScheduleItem[]; leadership: DeskScheduleItem[] | null }>;
   shortcuts: Result<Array<{ id: string; label: string; href: string }>>;
-  announcements: Result<Array<{ id: string; title: string; important: boolean; created_at: string }>>;
+  announcements: Result<Array<{ id: string; title: string; important: boolean; created_at: string; department: string | null }>>;
   library: Result<Array<{ id: string; kind: string; title: string; url: string | null; created_at: string }>>;
 };
 
@@ -109,7 +109,7 @@ export async function loadScheduleBlock(user: ServerAuthUser, today: string): Pr
   return ok({ duty: dutyItems, personal: (personal.rows ?? []).filter(isDeskScheduleVisible).map(line), leadership: leadership ? (leadership.rows as unknown as Row[]).filter(isDeskScheduleVisible).map(line) : null });
 }
 
-export async function loadAnnouncementsBlock(): Promise<DeskData["announcements"]> { const result = await announcementRepository.listActive(3); return result.error ? failed() : ok((result.data ?? []).map((row) => ({ id: String(row.id), title: String(row.title ?? ""), important: Boolean(row.important), created_at: String(row.created_at) }))); }
+export async function loadAnnouncementsBlock(user: ServerAuthUser): Promise<DeskData["announcements"]> { const access = await announcementRepository.accessFor(user); const result = await announcementRepository.listActive(3, access); return result.error ? failed() : ok((result.data ?? []).map((row) => ({ id: String(row.id), title: String(row.title ?? ""), important: Boolean(row.important), created_at: String(row.created_at), department: Array.isArray(row.department) ? row.department[0]?.name ?? null : row.department?.name ?? null }))); }
 export async function loadLibraryBlock(): Promise<DeskData["library"]> { const result = await sharedLibraryRepository.listRecent(3); return result.error ? failed() : ok((result.data ?? []).map((row) => ({ id: String(row.id), kind: String(row.kind), title: String(row.title ?? ""), url: row.url ? String(row.url) : null, created_at: String(row.created_at) }))); }
 
 export async function loadShortcutsBlock(user: ServerAuthUser): Promise<Result<Array<{ id: string; label: string; href: string }>>> {
@@ -119,7 +119,7 @@ export async function loadShortcutsBlock(user: ServerAuthUser): Promise<Result<A
 
 export async function loadDeskData(user: ServerAuthUser): Promise<DeskData> {
   const today = vietnamToday();
-  const results = await Promise.allSettled([loadTodayBlock(user, today), loadApprovalsBlock(user, today), loadScheduleBlock(user, today), loadShortcutsBlock(user), loadAnnouncementsBlock(), loadLibraryBlock()]);
+  const results = await Promise.allSettled([loadTodayBlock(user, today), loadApprovalsBlock(user, today), loadScheduleBlock(user, today), loadShortcutsBlock(user), loadAnnouncementsBlock(user), loadLibraryBlock()]);
   const value = <T,>(index: number): T => { const result = results[index]; return result.status === "fulfilled" ? result.value as T : failed() as T; };
   return { today: value<DeskData["today"]>(0), approvals: value<DeskData["approvals"]>(1), schedule: value<DeskData["schedule"]>(2), shortcuts: value<DeskData["shortcuts"]>(3), announcements: value<DeskData["announcements"]>(4), library: value<DeskData["library"]>(5) };
 }

@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { APPROVAL_PERMISSION_CODES, groupPermissions } from "./approvalPermissionView.mjs";
+import { announcementCopy } from "./announcementLibraryCopy.mjs";
 import { RBAC_PERMISSION_CODES } from "./rbac/permissionCatalog.ts";
 
 const permissions = RBAC_PERMISSION_CODES.map((code) => ({ code, name: code }));
 
 test("groups preserve the requested order and labels", () => {
   assert.deepEqual(groupPermissions(permissions).map((group) => group.label), [
-    "Dự án", "Giao việc", "Dữ liệu (CSDL)", "Tài sản", "Chấm công & nghỉ phép",
+    "Dự án", "Giao việc", "Dữ liệu (CSDL)", "Tài sản", announcementCopy.permissionGroup, "Chấm công & nghỉ phép",
     "Lịch & kế hoạch", "Báo chí", "Nhân sự & quản trị", "Phê duyệt đơn và kế hoạch",
   ]);
 });
