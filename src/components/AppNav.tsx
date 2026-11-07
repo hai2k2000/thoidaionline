@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { getMobileNavigation, isMobileNavigationActive, isMobileKeyboardOpen, isVisibleMobileOverlay } from "@/components/mobileNavigation";
 import { createPortal } from "react-dom";
 import InstallAppLink from "@/components/InstallAppLink";
+import { ReleaseVersionLabel } from "@/components/ReleaseVersion";
 
 type AppNavProps = {
   currentPath: string;
@@ -107,6 +108,7 @@ function NavContent({
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 via-white to-amber-50 px-3 py-3.5 text-center ring-1 ring-orange-100 before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-orange-500 before:via-red-500 before:to-amber-400">
         <span className="mx-auto flex h-12 w-36 items-center justify-center overflow-hidden px-1"><Image src="/thoidai-logo.png" alt="Logo Thời Đại" width={144} height={48} priority className="h-auto w-full object-contain" /></span>
         <p className="mt-1.5 whitespace-nowrap text-xs font-bold uppercase tracking-[0.08em] text-slate-500">Quản trị công việc nội bộ</p>
+        <ReleaseVersionLabel className="mt-1 block truncate text-xs text-slate-600" />
       </div>
 
       {navigation.primary.length > 0 ? <div className="mt-4 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
@@ -336,6 +338,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
       <div className="mobile-app-bar mb-3 lg:hidden">
         <div className="min-w-0">
           <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-orange-700">Thời Đại Work</p>
+          <ReleaseVersionLabel className="block max-w-full truncate text-xs text-slate-600" />
           <p data-testid="mobile-nav-title" className="truncate text-sm font-bold text-slate-900 lg:hidden">{mobileTitle}</p>
           <p className="hidden truncate text-sm font-bold text-slate-900 lg:block">{labels[(navigation.primary.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.configuration.find((item) => isNavigationActive(currentPath, item.href)) ?? navigation.account[0])?.id ?? "tasks"]}</p>
         </div>

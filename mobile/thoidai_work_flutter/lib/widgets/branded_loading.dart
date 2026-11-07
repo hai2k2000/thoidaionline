@@ -22,7 +22,7 @@ class BrandedLoading extends StatelessWidget {
               return Transform.scale(scale: value, child: child);
             },
             onEnd: () {},
-            child: Image.asset('assets/app-icon.png', height: 82),
+            child: Image.asset('assets/thoidai-logo.png', width: 240),
           ),
           const SizedBox(height: 18),
           const SizedBox(

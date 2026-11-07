@@ -8,7 +8,8 @@ import { ConfirmDialogProvider } from "@/components/ConfirmDialog";
 import PushNotificationCard from "@/components/PushNotificationCard";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import VersionRefresh from "@/components/VersionRefresh";
-import { getReleaseBuild } from "@/lib/releaseBuild.mjs";
+import { getReleaseBuild, getReleaseLabel } from "@/lib/releaseBuild.mjs";
+import { ReleaseVersionProvider } from "@/components/ReleaseVersion";
 
 const vietnamSans = Be_Vietnam_Pro({
   variable: "--font-vietnam-sans",
@@ -48,7 +49,7 @@ export default async function RootLayout({
       >
         <ServiceWorkerRegistration />
         <VersionRefresh build={await getReleaseBuild()} />
-        <ActionFeedbackProvider><ConfirmDialogProvider><AuthProvider><PushNotificationCard banner />{children}</AuthProvider></ConfirmDialogProvider></ActionFeedbackProvider>
+        <ReleaseVersionProvider label={await getReleaseLabel()}><ActionFeedbackProvider><ConfirmDialogProvider><AuthProvider><PushNotificationCard banner />{children}</AuthProvider></ConfirmDialogProvider></ActionFeedbackProvider></ReleaseVersionProvider>
       </body>
     </html>
   );
