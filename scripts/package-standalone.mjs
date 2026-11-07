@@ -97,7 +97,7 @@ const authenticatedSmokeFiles = [
   "scripts/production/push-notifications-v2-dryrun.sh",
   "scripts/production/push-notifications-v2-post.sql", "scripts/production/push-notifications-v2-revert.sql",
   "supabase/tests/push_notifications_v2_behaviour.sql",
-  "scripts/production/push-notifications-revert.sql", "scripts/production/push-notifications-post.sql",
+  "scripts/production/push-notifications-revert.sql", "scripts/production/attendance-view-all-leaders-revert.sql", "scripts/production/push-notifications-post.sql",
   "supabase/tests/push_notifications_behaviour.sql",
   "src/lib/push/dispatcher.mjs", "src/lib/push/fcm.mjs", "src/lib/push/subscription.mjs",
 
@@ -207,6 +207,7 @@ const migrationReference = [
   "supabase/migrations/20261108090100_announcements_shared_library_seed.sql",
   "supabase/migrations/20261108100000_announcement_department_scope.sql",
   "supabase/migrations/20261108100100_announcement_permission_label.sql",
+  "supabase/migrations/20261108110000_attendance_view_all_leaders.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];

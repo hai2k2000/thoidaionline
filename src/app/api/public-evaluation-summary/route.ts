@@ -1,12 +1,14 @@
 import { requireReadActor, apiError, apiJson } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { sortStaffRows } from "@/lib/staffOrdering";
+import { resolveAttendanceAccess } from "@/lib/attendanceAccess";
+import { taskHandlers } from "@/lib/taskHandlers";
+import { buildEvaluationRows, type EvaluationTask, type EvaluationAttendance } from "@/lib/publicEvaluationSummary";
 
 type CycleRow = { id: string; start_date: string; end_date: string };
 type RoleRelation = { code?: string; level?: number } | Array<{ code?: string; level?: number }> | null;
-type StaffRow = { id: string; username?: string | null; full_name: string; roles?: RoleRelation; job_titles?: { code?: string; display_order?: number } | null; departments?: { code?: string | null; name?: string } | null };
-type TaskRow = { id: string; title: string; status: string; due_date?: string | null; assignee_id?: string | null; completion_score?: Array<{ total_score?: number | null }> | { total_score?: number | null } | null };
-type AttendanceRow = { user_id?: string | null; status?: string | null };
+type StaffRow = { id: string; username?: string | null; full_name: string; department_id?: string | null; roles?: RoleRelation; job_titles?: { code?: string; display_order?: number } | null; departments?: { code?: string | null; name?: string } | null };
+
 
 export async function GET(request: Request) {
   const g = await requireReadActor(); if (!g.ok) return g.response;
@@ -22,23 +24,21 @@ export async function GET(request: Request) {
   let taskQuery = serverSupabase.from("tasks").select("id,title,status,due_date,due_time,assignee_id,completion_score:task_completion_scores(total_score)").is("project_id", null).eq("task_category", "regular").neq("status", "cancelled");
   if (from && to) taskQuery = taskQuery.gte("due_date", from).lte("due_date", to);
   let attendanceQuery = serverSupabase.from("attendance_logs").select("user_id,work_date,status");
+  let orgScope: "all" | "department" | null = null;
+  try { const resolvedScope = (await resolveAttendanceAccess(g.actor)).orgScope; orgScope = resolvedScope === "all" || resolvedScope === "department" ? resolvedScope : null; } catch { orgScope = null; }
+  if (orgScope === null) attendanceQuery = attendanceQuery.eq("user_id", g.actor.id);
   if (from && to) attendanceQuery = attendanceQuery.gte("work_date", from).lte("work_date", to);
   const [{ data: people, error: pe }, { data: tasks, error: te }, { data: attendance, error: ae }] = await Promise.all([
-    serverSupabase.from("staff_users").select("id,username,full_name,roles(code,level),job_titles(code,display_order),departments!staff_users_department_id_fkey(name)").eq("active", true).order("full_name"), taskQuery,
+    serverSupabase.from("staff_users").select("id,username,full_name,roles(code,level),job_titles(code,display_order),departments!staff_users_department_id_fkey(name),department_id").eq("active", true).order("full_name"), taskQuery,
     attendanceQuery,
   ]);
   // Attendance is an optional HR module; keep the evaluation summary usable
   // while its table/migration is unavailable.
   if (pe || te) return apiError("operation_failed", 500);
-  const rows = sortStaffRows((people as StaffRow[] | null ?? []).filter((p) => !((p.username ?? "").toLowerCase() === "admin") && !["tong_bien_tap", "tbt_read_only"].includes((Array.isArray(p.roles) ? p.roles[0]?.code : p.roles?.code) ?? ""))).map((p) => {
-    const own = (tasks as TaskRow[] | null ?? []).filter((t) => t.assignee_id === p.id); const done = own.filter((t) => t.status === "done");
-    const returned = own.filter((t) => t.status === "rejected"); const inProgress = own.filter((t) => ["in_progress", "blocked"].includes(t.status)); const waiting = own.filter((t) => t.status === "pending_review");
-    const overdue = own.filter((t) => t.status !== "done" && t.due_date && t.due_date < new Date().toISOString().slice(0, 10));
-    const scores = own.map((t) => Array.isArray(t.completion_score) ? t.completion_score[0]?.total_score : null).filter((v): v is number => v != null);
-    const employeeAttendance = ae ? [] : (attendance as AttendanceRow[] | null ?? []).filter((log) => log.user_id === p.id);
-    const attended = employeeAttendance.filter((log) => ["present", "late"].includes((log.status ?? "").toLowerCase())).length;
-    const attendanceRate = employeeAttendance.length ? Math.round(attended * 1000 / employeeAttendance.length) / 10 : null;
-    return { id: p.id, name: p.full_name, department: p.departments?.name ?? "—", total: own.length, done: done.length, returned: returned.length, inProgress: inProgress.length, waiting: waiting.length, overdue: overdue.length, attendanceRate, score: scores.length ? scores.reduce((a: number, b: number) => a + b, 0) : null, tasks: own.map((t) => ({ id: t.id, title: t.title, status: t.status, dueDate: t.due_date, score: Array.isArray(t.completion_score) ? t.completion_score[0]?.total_score : null })) };
-  });
+  const viewable = await taskHandlers.viewableTaskIds(g.actor, ((tasks as EvaluationTask[] | null ?? []).map((task) => task.id)));
+  if (!viewable.ok) return apiError("operation_failed", 500);
+  const viewer = { id: g.actor.id, departmentId: g.actor.department_id ?? null, orgScope };
+  const evaluationPeople = sortStaffRows((people as StaffRow[] | null ?? []).filter((p) => !((p.username ?? "").toLowerCase() === "admin") && !["tong_bien_tap", "tbt_read_only"].includes((Array.isArray(p.roles) ? p.roles[0]?.code : p.roles?.code) ?? ""))).map((p) => ({ id: p.id, full_name: p.full_name, department_id: p.department_id ?? null, department_name: p.departments?.name ?? "â€”" }));
+  const rows = buildEvaluationRows({ people: evaluationPeople, tasks: (tasks as EvaluationTask[] | null ?? []).map((task) => ({ ...task, due_date: task.due_date ?? null, assignee_id: task.assignee_id ?? null })), attendance: (attendance as EvaluationAttendance[] | null ?? []).map((log) => ({ user_id: log.user_id ?? null, status: log.status ?? null })), attendanceAvailable: !ae, viewableTaskIds: viewable.ids, viewer, today: new Date().toISOString().slice(0, 10) });
   return apiJson({ period, cycle: cycleId, cycles: cycles ?? [], rows });
 }

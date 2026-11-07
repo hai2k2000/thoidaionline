@@ -68,6 +68,16 @@ const shadowTaskAction = async (
   }
 };
 
+const toRbacTaskResource = (task: Parameters<typeof canTaskAction>[1]) => ({
+  kind: "task" as const, id: task.id, projectId: task.projectId,
+  projectMemberIds: task.projectMembers?.map((member) => member.userId),
+  projectLeadIds: task.projectMembers?.filter((member) => member.role === "lead").map((member) => member.userId),
+  projectDeputyIds: task.projectMembers?.filter((member) => member.role === "deputy").map((member) => member.userId),
+  departmentId: task.departmentId, createdBy: task.createdBy, ownerId: task.ownerId,
+  assigneeId: task.assigneeId, reviewerId: task.reviewerId,
+  participantIds: task.participants.map((participant) => participant.userId),
+});
+
 export const taskHandlers = createTaskApplication({
   repository: taskRepository,
   readActor: requireReadActor,
@@ -82,22 +92,14 @@ export const taskHandlers = createTaskApplication({
   canTaskAction,
   shadowTaskAction,
   taskRbacEnabled: isTaskRbacV2Enabled(),
+  taskRbacBaseChecker: async (user, action) => {
+    const rbacActor = await loadRbacActor(user);
+    const permission = taskBasePermission(action, user.role_code);
+    return (task) => can(rbacActor, permission, toRbacTaskResource(task));
+  },
   taskRbacBaseAllowed: async (user, action, task) => {
     const rbacActor = await loadRbacActor(user);
-    const resource = task ? {
-      kind: "task" as const,
-      id: task.id,
-      projectId: task.projectId,
-      projectMemberIds: task.projectMembers?.map((member) => member.userId),
-      projectLeadIds: task.projectMembers?.filter(member => member.role === "lead").map(member => member.userId),
-      projectDeputyIds: task.projectMembers?.filter(member => member.role === "deputy").map(member => member.userId),
-      departmentId: task.departmentId,
-      createdBy: task.createdBy,
-      ownerId: task.ownerId,
-      assigneeId: task.assigneeId,
-      reviewerId: task.reviewerId,
-      participantIds: task.participants.map((participant) => participant.userId),
-    } : undefined;
+    const resource = task ? toRbacTaskResource(task) : undefined;
     return can(rbacActor, taskBasePermission(action, user.role_code), resource);
   },
   normalizeLegacyEvaluationInput,

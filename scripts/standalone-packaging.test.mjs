@@ -234,3 +234,12 @@ test("admin project task edit migration follows push v2 exactly once", () => {
     assert.ok(source.indexOf(migration) > source.indexOf("20261107120000_push_notifications_v2.sql"));
   }
 });
+
+test("attendance leader migration follows announcement permission label exactly once", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const migration = "supabase/migrations/20261108110000_attendance_view_all_leaders.sql";
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf("20261108100100_announcement_permission_label.sql"));
+  }
+});

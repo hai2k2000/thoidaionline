@@ -94,6 +94,8 @@ const journalismListFields = (
   `journalism:journalism_task_details${inner ? "!inner" : ""}(publication_status,planned_publication_at,published_at,work_kind:journalism_work_kinds(id,code,name,is_active)${topicInner ? ",topic_filter:editorial_topic_tasks!inner(topic_id)" : ""}${seriesInner ? ",series_filter:editorial_series_items!inner(series_id)" : ""})`,
 ].join(",");
 
+const TASK_ACCESS_FIELDS = "id,project_id,projects!tasks_project_id_fkey(project_members(user_id,role,staff_users!project_members_user_id_fkey(active))),department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id),self_claimable,task_type,status,approval_required,task_status_events(from_status,to_status),task_assignees(user_id,assignment_role),department_plan_items!department_plan_items_linked_task_id_fkey(id,department_plan_id)";
+
 const TASK_LIST_FIELDS = journalismListFields();
 // Keep a minimal relation embedded so PostgREST can exclude Journalism rows
 // for actors outside the approved Journalism scope.
@@ -724,16 +726,27 @@ export const taskRepository: TaskRepository = {
   async access(taskId) {
     const { data, error } = await serverSupabase
       .from("tasks")
-      .select(
-        "id,project_id,projects!tasks_project_id_fkey(project_members(user_id,role,staff_users!project_members_user_id_fkey(active))),department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id)," +
-        "self_claimable,task_type,status,approval_required,task_status_events(from_status,to_status),task_assignees(user_id,assignment_role),department_plan_items!department_plan_items_linked_task_id_fkey(id,department_plan_id)",
-      )
+      .select(TASK_ACCESS_FIELDS)
       .eq("id", taskId)
       .maybeSingle();
     if (error) return fail(error);
     return ok(data ? toAccess(data as unknown as TaskAccessRow) : null);
   },
 
+  async accessMany(taskIds) {
+    const ids = [...new Set(taskIds)];
+    if (!ids.length) return ok([]);
+    const snapshots: TaskAccessSnapshot[] = [];
+    for (let index = 0; index < ids.length; index += 100) {
+      const { data, error } = await serverSupabase
+        .from("tasks")
+        .select(TASK_ACCESS_FIELDS)
+        .in("id", ids.slice(index, index + 100));
+      if (error) return fail(error);
+      snapshots.push(...((data ?? []) as unknown as TaskAccessRow[]).map(toAccess));
+    }
+    return ok(snapshots);
+  },
   async listApprovalQueue(actor, queue) {
     const global = ["admin", "tong_bien_tap", "pho_tong_bien_tap"].includes(actor.roleCode);
     if (!global && (!actor.isDepartmentManager || !actor.departmentId)) {
