@@ -1,0 +1,10 @@
+export declare function fillCopy(template: string, values?: Record<string, string | number>): string;
+export declare const deskCopy: Readonly<{ weekdays: readonly string[] } & Record<string, unknown>>;
+export declare function vietnamToday(now?: Date): string;
+export declare function deskGreeting(fullName: string, now?: Date): string;
+export declare function deskDateLabel(now?: Date): string;
+export declare function buildDeskTodayItems(rows: readonly Record<string, unknown>[], now?: Date): { items: Array<{ id: string; title: string; href: string; state: string; label: string }>; overdueCount: number; todayCount: number };
+export declare function mergeDeskApprovalItems<T extends { id: string }>(lists: readonly (readonly T[])[]): T[];
+export declare function selectDeskNotifications<T extends { kind: string; createdAt: string }>(items: readonly T[], limit?: number): T[];
+export declare function isDeskScheduleVisible(row: Record<string, unknown>): boolean;
+export declare function pickDeskShortcuts(navigation: { primary?: readonly { id: string; href: string }[] }): Array<{ id: string; href: string; label: string }>;

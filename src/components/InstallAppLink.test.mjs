@@ -64,7 +64,7 @@ test("shell includes compact install links outside role restrictions", () => {
 test("login preserves only the supported install destination", () => {
   assert.equal(resolvePostLoginPath(false, "/app"), "/app");
   assert.equal(resolvePostLoginPath(false, "/mobile-app"), "/app");
-  for (const next of [null, "https://evil.test", "//evil.test", "/app/other"]) assert.equal(resolvePostLoginPath(false, next), "/tasks");
+  for (const next of [null, "https://evil.test", "//evil.test", "/app/other"]) assert.equal(resolvePostLoginPath(false, next), "/");
   const login = readFileSync(new URL("../app/login/page.tsx", import.meta.url), "utf8");
   assert.match(login, /href="\/login\?next=\/app"/);
   assert.match(login, /Cài ứng dụng/);
