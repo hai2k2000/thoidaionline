@@ -10,6 +10,13 @@ test("release version is wired through layout and navigation", async () => {
   assert.ok(layout.includes("ReleaseVersionProvider"));
   assert.ok(nav.includes("ReleaseVersionLabel"));
   assert.ok(releaseBuild.includes("releaseLabel"));
+  assert.ok(releaseBuild.includes("THOIDAI_APP_VERSION"));
+  assert.ok(!releaseBuild.includes("created_at"));
+  assert.ok(!releaseBuild.includes("Intl.DateTimeFormat"));
+  const nextConfig = await readFile(new URL("../../next.config.ts", import.meta.url), "utf8");
+  const packageJson = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
+  assert.ok(nextConfig.includes("THOIDAI_APP_VERSION"));
+  assert.match(packageJson.version, /^\d+\.\d+\.\d+$/);
 });
 
 test("my tasks defaults to mine without a task type", async () => {
