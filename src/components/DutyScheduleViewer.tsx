@@ -219,7 +219,7 @@ export default function DutyScheduleViewer({
                   </div>
                   {scope === "organization" && user?.role_code === "admin" && items.length ? <p className="mt-2 border-t pt-1 text-right text-xs font-bold text-orange-700">Mở đánh giá ngày →</p> : null}
                 </article>
-              ) : <div key={`empty-${index}`} aria-hidden="true" className={density.card} />)}
+              ) : <div key={`empty-${index}`} aria-hidden="true" className={`hidden md:block ${density.card}`} />)}
               {!dayCards.length ? (
                 <p className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
                   Không có lịch trực trong khoảng thời gian này.

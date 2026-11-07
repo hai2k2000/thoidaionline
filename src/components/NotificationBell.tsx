@@ -83,7 +83,7 @@ export default function NotificationBell() {
       <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
       {unreadCount ? <span className="absolute -right-1.5 -top-1.5 min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-xs font-bold leading-4 text-white">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
     </summary>
-    <div className="fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top))] z-[90] max-h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] w-auto overflow-y-auto lg:absolute lg:inset-x-auto lg:right-0 lg:top-auto lg:mt-2 lg:max-h-none lg:w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+    <div className="fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top))] z-[90] max-h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] w-auto overflow-y-auto lg:absolute lg:inset-x-auto lg:right-0 lg:top-auto lg:mt-2 lg:max-h-none lg:w-[min(360px,calc(100vw-32px))] max-lg:overflow-y-auto lg:overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
       <div className="flex items-center justify-between border-b px-4 py-3"><div><p className="font-bold text-slate-900">Thông báo</p><p className="text-xs text-slate-500">{unreadCount} chưa đọc</p></div>{unreadCount ? <button type="button" onClick={() => void mark(unreadKeys)} className="text-xs font-semibold text-orange-700 hover:underline">Đánh dấu tất cả đã đọc</button> : null}</div>
       <div className="max-h-[420px] overflow-y-auto">
         {loading ? <p className="p-6 text-center text-sm text-slate-500">Đang tải… thông báo…</p> : null}
