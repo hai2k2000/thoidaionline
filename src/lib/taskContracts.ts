@@ -243,7 +243,7 @@ export type TaskListQuery = {
   sort: "deadline" | "newest" | "priority";
   projectId?: string | null;
   search: string | null;
-  scope: "all" | "assigned" | "collaborating" | "department_collaborating" | "personal" | "watching" | "cancelled";
+  scope: "all" | "assigned" | "collaborating" | "department_collaborating" | "personal" | "mine" | "watching" | "cancelled";
   taskType: CanonicalTaskType | null;
   category?: "duty" | null;
   status: CanonicalTaskStatus | null;

@@ -568,6 +568,8 @@ export const taskRepository: TaskRepository = {
       dbQuery = dbQuery.eq("owner_id", actor.id).or(
         "task_type.eq.personal,and(task_type.is.null,plan_period.in.(daily,weekly,monthly))",
       );
+    } else if (query.scope === "mine") {
+      dbQuery = dbQuery.or("owner_id.eq." + actor.id + ",assignee_id.eq." + actor.id);
     } else if (query.scope === "assigned") {
       dbQuery = dbQuery
         .or("task_type.eq.assigned,and(task_type.is.null,plan_period.eq.ad_hoc,self_claimable.eq.false)")

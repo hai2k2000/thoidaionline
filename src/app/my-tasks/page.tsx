@@ -14,5 +14,6 @@ export default async function LegacyRedirectPage({
   if (["collaborating", "department_collaborating"].includes(String((await searchParams).scope))) return <TasksPage searchParams={searchParams} basePath="/my-tasks" />;
   if (user && isCollaboratorRole(user.role_code)) return <TasksPage searchParams={searchParams} basePath="/my-tasks" />;
   const params = await searchParams;
-  return <TasksPage searchParams={Promise.resolve({ ...params, type: params.type ?? "personal" })} basePath="/my-tasks" />;
+  const hasExplicitTypeOrScope = params.type !== undefined || params.scope !== undefined;
+  return <TasksPage searchParams={Promise.resolve(hasExplicitTypeOrScope ? params : { ...params, scope: "mine" })} basePath="/my-tasks" />;
 }
