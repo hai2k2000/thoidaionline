@@ -22,7 +22,7 @@ export type Phase2NavigationAccess = {
 
 export type Phase2NavigationItem = {
   id: "projects" | "assign" | "attendance" | "attendance-admin" | "duty-schedule" | "online-work" | "online-work-admin" | "duty-roster" | "tasks" | "assets" | "my-assets" | "asset-status-requests" | "evaluations" | "account" | "users" | "departments"
-    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "work-report" | "weekly-report" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar" | "database";
+    | "department-plan" | "evaluation-summary" | "permissions" | "evaluation-rubrics" | "evaluation-cycles" | "work-schedule" | "work-schedule-leader" | "work-schedule-staff" | "work-schedule-admin" | "work-report" | "weekly-report" | "journalism-tasks" | "journalism-structures" | "journalism-reports" | "journalism-calendar" | "announcements" | "library" | "database";
   href: string;
 };
 
@@ -50,6 +50,7 @@ export function getPhase2Navigation(
     && (["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode) || access.departmentCode === "editorial");
   const navigation: Phase2Navigation = {
     primary: [
+      { id: "announcements", href: "/announcements" } as const,
       ...(access.canAssignTask || ["tong_bien_tap", "pho_tong_bien_tap"].includes(access.roleCode)
         ? [
             { id: "assign", href: "/tasks/assign" } as const,
@@ -59,22 +60,23 @@ export function getPhase2Navigation(
       ...(access.roleCode === "admin" || access.hasProjectMembership || access.canCreateProject ? [{ id: "projects", href: "/projects" } as const] : []),
       ...(access.isDepartmentManager || ["admin", "tong_bien_tap", "tbt_read_only"].includes(access.roleCode) ? [{ id: "work-report", href: "/reports/work" } as const] : []),
       ...(canAccessDepartmentPlan ? [{ id: "department-plan", href: "/planning/department" } as const] : []),
-      { id: "attendance", href: "/my-attendance" },
-      ...(access.rbacPermissionScopes?.["attendance.view_all"]?.some((scope) => ["department", "all"].includes(scope)) ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
+      { id: "weekly-report", href: "/reports/weekly" },
       ...((access.canEvaluateStep1 && access.isDepartmentManager)
         || (access.roleCode === "tong_bien_tap" && access.canEvaluateStep2)
         ? [{ id: "evaluations", href: "/evaluations" } as const]
         : []),
       { id: "evaluation-summary", href: "/evaluation-summary" },
+      { id: "attendance", href: "/my-attendance" },
+      ...(access.rbacPermissionScopes?.["attendance.view_all"]?.some((scope) => ["department", "all"].includes(scope)) ? [{ id: "attendance-admin", href: "/attendance" } as const] : []),
       { id: "work-schedule", href: "/work-schedule" },
       ...(canViewAllSchedules ? [{ id: "work-schedule-leader", href: "/work-schedule/leadership" } as const] : []),
       { id: "work-schedule-staff", href: "/work-schedule/staff" },
-      { id: "weekly-report", href: "/reports/weekly" },
       { id: "duty-schedule", href: "/duty-schedule" },
       { id: "online-work", href: "/online-work" },
       { id: "my-assets", href: "/my-assets" },
       ...((access.canViewAssets || access.canManageAssets) ? [{ id: "assets", href: "/assets" } as const] : []),
       ...(access.canManageAssets ? [{ id: "asset-status-requests", href: "/assets/status-requests" } as const] : []),
+      { id: "library", href: "/library" } as const,
       { id: "database", href: "/database/records" } as const,
     ],
     journalism: !JOURNALISM_UI_HIDDEN && canAccessJournalism ? [

@@ -34,7 +34,7 @@ export function isVisibleMobileOverlay(element: Element, getStyle: (node: Elemen
 export function isMobileNavigationActive(currentPath: string, href: string): boolean {
   const [pathname, query = ""] = currentPath.split("?");
   const personal = new URLSearchParams(query).get("type") === "personal";
-  if (href === "/") return pathname === "/" || (pathname === "/tasks" && !personal);
+  if (href === "/") return pathname === "/";
   if (href === "/my-tasks") return pathname === href || (pathname === "/tasks" && personal) || (pathname.startsWith("/tasks/") && pathname !== "/tasks/assign");
   return pathname === href || pathname.startsWith(href + "/");
 }

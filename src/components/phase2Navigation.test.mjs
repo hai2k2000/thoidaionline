@@ -25,7 +25,7 @@ test("existing Journalism permissions still gate section and structures", () => 
 });
 test("work and schedule navigation is preserved", () => {
   const navigation = getPhase2Navigation({ ...employee, canAssignTask: true });
-  assert.deepEqual(navigation.primary.slice(0, 2), [{ id: "assign", href: "/tasks/assign" }, { id: "tasks", href: "/tasks" }]);
+  assert.deepEqual(navigation.primary.slice(0, 3), [{ id: "announcements", href: "/announcements" }, { id: "assign", href: "/tasks/assign" }, { id: "tasks", href: "/tasks" }]);
   for (const id of ["attendance", "work-schedule", "work-schedule-staff", "duty-schedule", "online-work"]) assert.ok(navigation.primary.some(item => item.id === id));
   assert.deepEqual(navigation.account, [{ id: "account", href: "/account" }]);
   assert.deepEqual(navigation.configuration, []);
@@ -57,12 +57,11 @@ test("Department Plan navigation follows its existing authorization scope", () =
 
 test("Department Plan navigation keeps existing primary order and routes", () => {
   const navigation = getPhase2Navigation({ ...employee, roleCode: "admin", departmentCode: "business" });
-  assert.deepEqual(navigation.primary.slice(0, 4), [
-    { id: "tasks", href: "/tasks" },
-    { id: "projects", href: "/projects" },
-    { id: "department-plan", href: "/planning/department" },
-    { id: "attendance", href: "/my-attendance" },
-  ]);
+  const ids = navigation.primary.map((item) => item.id);
+  assert.ok(ids.indexOf("announcements") < ids.indexOf("tasks"));
+  assert.ok(ids.indexOf("tasks") < ids.indexOf("projects"));
+  assert.ok(ids.indexOf("projects") < ids.indexOf("department-plan"));
+  assert.ok(ids.indexOf("department-plan") < ids.indexOf("attendance"));
   assert.equal(navigation.primary.filter(item => item.id === "department-plan").length, 1);
   assert.equal(new Set(navigation.primary.map(item => item.href)).size, navigation.primary.length);
 });
@@ -118,4 +117,23 @@ test("every compatibility route has a deterministic target", () => {
     "/", "/my-tasks", "/performance", "/planning", "/planning/reports",
     "/tasks/active", "/tasks/done", "/tasks/pending-review",
   ]);
+});
+
+
+test("admin and employee primary navigation preserve the seven requested groups", () => {
+  const groups = [
+    ["announcements"],
+    ["assign", "tasks", "projects", "work-report", "department-plan", "weekly-report", "evaluations", "evaluation-summary"],
+    ["attendance", "attendance-admin"],
+    ["work-schedule", "work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"],
+    ["my-assets", "assets", "asset-status-requests"],
+    ["library"],
+    ["database"],
+  ];
+  for (const roleCode of ["admin", "nhan_vien"]) {
+    const navigation = getPhase2Navigation({ ...employee, roleCode, canAssignTask: true, canViewAssets: true, canManageAssets: true, isDepartmentManager: roleCode === "admin", rbacPermissionScopes: { "attendance.view_all": ["all"] } });
+    const positions = new Map(navigation.primary.map((item, index) => [item.id, index]));
+    const ordered = groups.flat().filter((id) => positions.has(id));
+    assert.deepEqual(navigation.primary.map((item) => item.id), ordered);
+  }
 });

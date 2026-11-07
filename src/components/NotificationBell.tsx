@@ -27,6 +27,8 @@ const timeText = (value: string) => new Intl.DateTimeFormat("vi-VN", {
 
 export default function NotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const itemsRef = useRef<NotificationItem[]>([]);
+  const loadFailed = useRef(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const sessionExpired = useRef(false);
@@ -46,8 +48,14 @@ export default function NotificationBell() {
       redirectToLogin();
       return;
     }
-    if (!response?.ok) return setLoading(false);
+    if (!response?.ok) {
+      loadFailed.current = true;
+      setLoading(false);
+      window.dispatchEvent(new CustomEvent("thoidai:notifications", { detail: { failed: true } }));
+      return;
+    }
     const payload = await response.json() as { items?: NotificationItem[]; unreadCount?: number };
+    loadFailed.current = false;
     setItems(payload.items ?? []);
     setUnreadCount(payload.unreadCount ?? 0);
     setLoading(false);
@@ -60,6 +68,24 @@ export default function NotificationBell() {
     window.addEventListener("focus", onFocus);
     return () => { window.clearTimeout(initialLoad); window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
   }, [load]);
+
+  useEffect(() => { itemsRef.current = items; }, [items]);
+  useEffect(() => {
+    if (!loading && !loadFailed.current) {
+      window.dispatchEvent(new CustomEvent("thoidai:notifications", { detail: { items, unreadCount, failed: false } }));
+    }
+  }, [items, unreadCount, loading]);
+  useEffect(() => {
+    const onRead = (event: Event) => {
+      const keys = (event as CustomEvent<{ keys: string[] }>).detail.keys;
+      const changed = itemsRef.current.filter((item) => keys.includes(item.key) && item.unread).length;
+      if (!changed) return;
+      setItems((current) => current.map((item) => keys.includes(item.key) ? { ...item, unread: false } : item));
+      setUnreadCount((count) => Math.max(0, count - changed));
+    };
+    window.addEventListener("thoidai:notifications-read", onRead);
+    return () => window.removeEventListener("thoidai:notifications-read", onRead);
+  }, []);
 
   const mark = async (keys: string[]) => {
     if (!keys.length) return;
@@ -88,7 +114,7 @@ export default function NotificationBell() {
       <div className="max-h-[420px] overflow-y-auto">
         {loading ? <p className="p-6 text-center text-sm text-slate-500">Đang tải… thông báo…</p> : null}
         {!loading && !items.length ? <p className="p-6 text-center text-sm text-slate-500">Chưa có thông báo.</p> : null}
-        {items.map((item) => <Link key={item.key} href={item.href} onClick={() => { if (item.unread) void mark([item.key]); detailsRef.current && (detailsRef.current.open = false); }} className={`block border-b px-4 py-3 transition hover:bg-orange-50 ${item.unread ? "bg-orange-50/60" : "bg-white"}`}>
+        {items.map((item) => <Link key={item.key} href={item.href} onClick={() => { if (item.unread) void mark([item.key]); if (detailsRef.current) detailsRef.current.open = false; }} className={`block border-b px-4 py-3 transition hover:bg-orange-50 ${item.unread ? "bg-orange-50/60" : "bg-white"}`}>
           <div className="flex gap-3"><span className={`mt-1 size-2.5 shrink-0 rounded-full ${kindClass[item.kind]}`} /><div className="min-w-0"><p className={`text-sm ${item.unread ? "font-bold text-slate-900" : "font-semibold text-slate-700"}`}>{item.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{item.message}</p><p className="mt-1 text-xs text-slate-400">{timeText(item.createdAt)}</p></div></div>
         </Link>)}
       </div>

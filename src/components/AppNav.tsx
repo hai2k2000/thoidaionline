@@ -1,6 +1,8 @@
 "use client";
 
 import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
+import { deskCopy } from "@/lib/deskHomeCopy.mjs";
+import { announcementCopy } from "@/lib/announcementLibraryCopy.mjs";
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -54,6 +56,8 @@ const labels = {
   "journalism-structures": "Chủ đề / Loạt bài",
   "journalism-reports": "Báo cáo nghiệp vụ báo chí",
   "journalism-calendar": "Lịch biên tập",
+  announcements: announcementCopy.navAnnouncements,
+  library: announcementCopy.navLibrary,
   database: "Cơ sở dữ liệu",
 } as const;
 
@@ -83,6 +87,7 @@ function NavContent({
   userLabel,
   avatarUrl,
   mobile = false,
+  showHome = false,
 }: {
   currentPath: string;
   navigation: Phase2Navigation;
@@ -91,6 +96,7 @@ function NavContent({
   userLabel?: string;
   avatarUrl?: string | null;
   mobile?: boolean;
+  showHome?: boolean;
 }) {
   const configurationActive = navigation.configuration.some((item) =>
     isNavigationActive(currentPath, item.href));
@@ -114,6 +120,7 @@ function NavContent({
       {navigation.primary.length > 0 ? <div className="mt-4 rounded-2xl bg-slate-50/80 p-2 ring-1 ring-slate-200/80">
       <div className="mb-2.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-orange-100 to-amber-50 px-2.5 py-2 ring-1 ring-orange-200"><div className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500 text-white"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><p className="text-xs font-extrabold uppercase tracking-[0.14em] text-orange-900">Công việc</p></div><span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-orange-700 ring-1 ring-orange-200">{navigation.primary.length}</span></div>
       <nav aria-label="Menu chính" className="space-y-1">
+            {showHome ? <Link href="/" onClick={onNavigate} aria-current={isNavigationActive(currentPath, "/") ? "page" : undefined} className={linkClass(isNavigationActive(currentPath, "/"))}><span aria-hidden="true" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${isNavigationActive(currentPath, "/") ? "bg-orange-500 text-white shadow-sm" : "bg-white text-slate-500 ring-1 ring-slate-200 group-hover:bg-orange-100 group-hover:text-orange-700 group-hover:ring-orange-200"}`}><svg viewBox="0 0 24 24" className="h-[18px] w-[18px] fill-none stroke-current" strokeWidth="1.8"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7" /></svg></span><span>{deskCopy.home}</span></Link> : null}
             {navigation.primary.filter((item) => !["work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"].includes(item.id)).map((item) => (
               item.id === "work-schedule" ? <details key={item.id} open={workScheduleOpen || workScheduleActive} onToggle={(event) => setWorkScheduleOpen(event.currentTarget.open)} className="group"><summary className={linkClass(workScheduleActive)}><NavIcon id={item.id} active={workScheduleActive} /><span className="leading-snug">{labels[item.id]}</span><span className="ml-auto"><ChevronIcon open={workScheduleOpen || workScheduleActive} /></span></summary><div className="ml-8 mt-1 space-y-1 border-l border-orange-200 pl-2">{navigation.primary.filter((child) => ["work-schedule-leader", "work-schedule-staff", "duty-schedule", "online-work"].includes(child.id)).map((child) => <Link key={child.id} href={child.href} aria-current={isNavigationActive(currentPath, child.href) ? "page" : undefined} onClick={onNavigate} className={linkClass(isNavigationActive(currentPath, child.href))}><span className="leading-snug">{labels[child.id]}</span></Link>)}</div></details> : (
               <Link
@@ -362,6 +369,7 @@ export default function AppNav({ currentPath, userLabel }: AppNavProps) {
 
       <div className="hidden max-h-[calc(100vh-1.5rem)] min-h-[640px] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)] lg:sticky lg:top-3 lg:block">
         <NavContent
+          showHome={!isCollaboratorRole(user?.role_code)}
           currentPath={currentPath}
           navigation={navigation}
           onNavigate={() => undefined}

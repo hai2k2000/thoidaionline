@@ -972,3 +972,7 @@ main section > h3 {
   .task-filter-bar > .task-filter-actions { flex: 1 1 100%; }
   .task-filter-actions > button, .task-filter-actions > a { flex: 1 1 0%; }
 }
+
+@keyframes desk-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.desk-rise { animation: desk-rise 420ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .desk-rise { animation: none; } }
