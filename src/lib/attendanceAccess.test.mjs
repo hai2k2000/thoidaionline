@@ -56,6 +56,12 @@ test("organization evaluation summary remains visible to every signed-in employe
   assert.match(navigation, /\{ id: "evaluation-summary", href: "\/evaluation-summary" \}/);
 });
 
+test("organization evaluation summary gates detail fields by task and attendance access", () => {
+  assert.match(evaluationRoute, /resolveAttendanceAccess/);
+  assert.match(evaluationRoute, /viewableTaskIds/);
+  assert.doesNotMatch(evaluationRoute, /role_code/);
+});
+
 test("attendance screens enforce authentication and RBAC scope server-side", () => {
   assert.match(attendanceLayout, /getSessionUser/);
   assert.match(attendanceLayout, /resolveAttendanceAccess/);

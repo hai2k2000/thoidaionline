@@ -53,6 +53,7 @@ type Dependencies = {
     legacyResult: boolean,
   ) => Promise<void>;
   taskRbacEnabled?: boolean;
+  taskRbacBaseChecker?: (user: ServerAuthUser, action: TaskAction) => Promise<(task: TaskAccessSnapshot) => boolean>;
   taskRbacBaseAllowed?: (
     user: ServerAuthUser,
     action: TaskAction | "create",
@@ -162,6 +163,23 @@ export function createTaskApplication(deps: Dependencies) {
   };
 
   return {
+    async viewableTaskIds(user: ServerAuthUser, taskIds: string[]): Promise<{ ok: true; ids: Set<string> } | { ok: false }> {
+      const result = await deps.repository.accessMany(taskIds);
+      if (!result.ok) return { ok: false };
+      let checker: ((task: TaskAccessSnapshot) => boolean) | null = null;
+      if (deps.taskRbacEnabled) {
+        try { checker = await deps.taskRbacBaseChecker?.(user, "view") ?? null; }
+        catch { checker = null; }
+      }
+      const ids = new Set<string>();
+      for (const task of result.data) {
+        let rbacBaseAllowed = !deps.taskRbacEnabled;
+        if (checker) { try { rbacBaseAllowed = checker(task); } catch { rbacBaseAllowed = false; } }
+        // Batch reads omit shadowTaskAction because it makes an RPC per task.
+        if (deps.canTaskAction(toActor(user), task, "view") && (!deps.taskRbacEnabled || rbacBaseAllowed)) ids.add(task.id);
+      }
+      return { ok: true, ids };
+    },
     async list(request: Request) {
       const guard = await deps.readActor();
       if (!guard.ok) return guard.response;
