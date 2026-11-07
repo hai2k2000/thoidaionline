@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
 import { announcementCopy as copy } from "@/lib/announcementLibraryCopy.mjs";
+import { libraryOfficeKind, libraryPreviewMime } from "@/lib/projectLibraryFile";
 
-type Folder = { id: string; name: string; system_key?: string | null }; type Item = { id: string; kind: string; title: string; url?: string | null; file_name?: string | null };
+type Folder = { id: string; name: string; system_key?: string | null }; type Item = { id: string; kind: string; title: string; url?: string | null; file_name?: string | null; mime_type?: string | null };
 
 export default function SharedLibraryShell({ folders, items, folderId, folderName, fullName, canManage }: { folders: Folder[]; items: Item[]; folderId: string | null; folderName: string | null; fullName: string; canManage: boolean }) {
   const router = useRouter(); const askConfirm = useConfirm(); const prompt = usePromptDialog(); const [error, setError] = useState(""); const [uploading, setUploading] = useState(false);
@@ -68,9 +69,11 @@ export default function SharedLibraryShell({ folders, items, folderId, folderNam
 </span>
 <span className="flex flex-wrap gap-2">
 {item.kind === "file" ? <>
+{libraryPreviewMime({ mime_type: item.mime_type ?? null, file_name: item.file_name ?? null, title: item.title }) !== null && libraryOfficeKind({ mime_type: item.mime_type ?? null, file_name: item.file_name ?? null, title: item.title }) === null ? <>
 <a className="inline-flex min-h-11 items-center rounded-xl border px-3" target="_blank" rel="noopener noreferrer" href={`/api/shared-library/file/${item.id}?disposition=inline`}>
 {copy.view}
 </a>
+</> : null}
 <a className="inline-flex min-h-11 items-center rounded-xl border px-3" href={`/api/shared-library/file/${item.id}?disposition=attachment`}>
 {copy.download}
 </a>
