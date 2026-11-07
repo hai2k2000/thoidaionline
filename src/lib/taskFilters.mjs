@@ -1,6 +1,6 @@
 import { JOURNALISM_UI_HIDDEN } from "./journalismUiHidden.mjs";
 
-const TASK_SCOPES = ["all", "assigned", "collaborating", "department_collaborating", "personal", "watching", "cancelled"];
+const TASK_SCOPES = ["all", "assigned", "collaborating", "department_collaborating", "personal", "mine", "watching", "cancelled"];
 const TASK_TYPES = ["assigned", "personal"];
 const TASK_STATUS_GROUPS = ["completed", "unfinished", "returned", "cancelled"];
 const TASK_STATUSES = [
