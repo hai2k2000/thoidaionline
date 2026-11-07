@@ -1,3 +1,5 @@
+import { announcementCopy } from "./announcementLibraryCopy.mjs";
+
 /** @typedef {'leave.approve'|'schedule.business.approve'|'schedule.event.approve'} ApprovalPermissionCode */
 /** @typedef {'self'|'assigned'|'department'|'all'} Scope */
 
@@ -22,7 +24,8 @@ export const PERMISSION_GROUP_DEFINITIONS = [
   { key: "project", label: "Dự án", matches: (code) => code === "project.create" },
   { key: "task", label: "Giao việc", matches: (code) => code.startsWith("task.") },
   { key: "record", label: "Dữ liệu (CSDL)", matches: (code) => code.startsWith("record.") },
-  { key: "asset", label: "Tài sản", matches: (code) => code.startsWith("asset.") || code === "announcement.manage" || code === "library.manage" },
+  { key: "asset", label: "Tài sản", matches: (code) => code.startsWith("asset.") },
+  { key: "communication", label: announcementCopy.permissionGroup, matches: (code) => code === "announcement.manage" || code === "library.manage" },
   { key: "attendance", label: "Chấm công & nghỉ phép", matches: (code) => code.startsWith("attendance.") || code === "leave.view_self" },
   { key: "schedule", label: "Lịch & kế hoạch", matches: (code) => code === "schedule.view_self" },
   { key: "journalism", label: "Báo chí", matches: (code) => code.startsWith("journalism.") },
@@ -51,9 +54,13 @@ export const APPROVAL_PERMISSION_LABELS = {
   "schedule.event.approve": "Duyệt kế hoạch tham gia sự kiện cá nhân",
 };
 export const PERMISSION_LABELS = {
+  "announcement.manage": announcementCopy.permissionAnnouncement,
+  "library.manage": announcementCopy.permissionLibrary,
   "project.create": "Tạo dự án",
 };
 export const PERMISSION_DESCRIPTIONS = {
+  "announcement.manage": announcementCopy.permissionAnnouncementHint,
+  "library.manage": announcementCopy.permissionLibraryHint,
   "project.create": "Tạo dự án mới và tự động trở thành Trưởng dự án.",
 };
 export const APPROVAL_PERMISSION_DESCRIPTIONS = {
