@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, isSameOriginRequest } from "@/lib/serverSession";
+import { requireReadActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 
 const bucket = serverSupabase.storage.from("profile-avatars");
@@ -9,6 +10,21 @@ const allowed = new Map([
   ["image/webp", { extension: "webp", signature: [0x52, 0x49, 0x46, 0x46] }],
 ]);
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
+
+export async function GET() {
+  const guard = await requireReadActor();
+  if (!guard.ok) return guard.response;
+  const { data, error } = await serverSupabase.from("staff_users").select("avatar_path").eq("id", guard.actor.id).eq("active", true).single();
+  const avatarPath = typeof data?.avatar_path === "string" ? data.avatar_path : null;
+  if (error) return new Response(null, { status: 503 });
+  if (!avatarPath) return new Response(null, { status: 404 });
+  const extension = avatarPath.split(".").pop()?.toLowerCase();
+  const contentType = extension === "jpg" || extension === "jpeg" ? "image/jpeg" : extension === "png" ? "image/png" : extension === "webp" ? "image/webp" : null;
+  if (!contentType) return new Response(null, { status: 404 });
+  const result = await bucket.download(avatarPath);
+  if (result.error || !result.data) return new Response(null, { status: 503 });
+  return new Response(result.data, { headers: { "Content-Type": contentType, "Cache-Control": "private, no-cache", "X-Content-Type-Options": "nosniff", "Content-Disposition": "inline" } });
+}
 
 export async function POST(request: Request) {
   if (!(await isSameOriginRequest())) return json({ error: "Yêu cầu không hợp lệ." }, 403);
@@ -27,8 +43,7 @@ export async function POST(request: Request) {
   const { error: updateError } = await serverSupabase.from("staff_users").update({ avatar_path: path }).eq("id", actor.id).eq("active", true);
   if (updateError) { console.error("[account/avatar] profile update failed", { code: updateError.code }); await bucket.remove([path]); return json({ error: "Ảnh đã tải lên nhưng chưa thể lưu vào hồ sơ. Vui lòng thử lại." }, 500); }
   await bucket.remove(["jpg", "png", "webp"].filter((item) => item !== format.extension).map((item) => `${actor.id}/avatar.${item}`));
-  const signed = await bucket.createSignedUrl(path, 3600);
-  return json({ ok: true, avatarUrl: signed.data?.signedUrl ?? null, message: "Đã cập nhật ảnh đại diện." });
+  return json({ ok: true, avatarUrl: `/api/account/avatar?t=${Date.now()}`, message: "Đã cập nhật ảnh đại diện." });
 }
 
 export async function DELETE() {

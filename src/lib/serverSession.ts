@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { isCollaboratorRole } from "./collaboratorRole.mjs";
 
 import { cookies, headers } from "next/headers";
@@ -103,9 +104,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
   if (!row.roles) return null;
   const collaborator = isCollaboratorRole(row.roles.code);
   const isDepartmentManager = !collaborator && row.job_titles?.code === "truong_phong";
-  const avatarResult = row.avatar_path
-    ? await serverSupabase.storage.from("profile-avatars").createSignedUrl(row.avatar_path, 3600)
-    : null;
+  const avatarVersion = row.avatar_path ? createHash("sha256").update(row.avatar_path).digest("hex").slice(0, 12) : null;
 
   const rbacActor = await loadRbacActor({ id: row.id, department_id: row.department_id, role_code: row.roles.code });
   return {
@@ -124,7 +123,7 @@ export async function getSessionUser(): Promise<ServerAuthUser | null> {
     must_change_password: row.must_change_password,
     is_department_manager: isDepartmentManager,
     permissions: normalizePermissions(collaborator ? { can_comment: row.roles.active } : row.roles.active ? row.roles.role_permissions : null),
-    avatar_url: avatarResult?.data?.signedUrl ?? null,
+    avatar_url: avatarVersion ? `/api/account/avatar?v=${avatarVersion}` : null,
     preferences: normalizeAccountPreferences(row.preferences),
     rbacPermissions: [...new Set(rbacActor.grants.filter((grant) => !collaborator || (["task.view", "task.comment"].includes(grant.permissionCode) && grant.scope === "assigned")).map((grant) => grant.permissionCode))],
     rbacPermissionScopes: Object.fromEntries((rbacActor.permissions ?? []).filter((permission) => !collaborator || ["task.view", "task.comment"].includes(permission.permissionCode)).map((permission) => [permission.permissionCode, collaborator ? permission.effectiveScopes.filter((scope) => scope === "assigned") : permission.effectiveScopes])),

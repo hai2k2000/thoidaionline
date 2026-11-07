@@ -33,6 +33,11 @@ export function deskGreeting(fullName, now = new Date()) {
   return prefix + (name ? ", " + name : "");
 }
 
+export function deskGreetingPeriod(now = new Date()) {
+  const hour = Number(vietnamParts(now).hour);
+  return hour < 11 ? "morning" : hour < 13 ? "noon" : hour < 18 ? "afternoon" : "evening";
+}
+
 export function deskDateLabel(now = new Date()) {
   const parts = vietnamParts(now);
   const weekday = deskCopy.weekdays[new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day))).getUTCDay()];

@@ -7,7 +7,7 @@ export const COLLABORATOR_API_RULES = [
   [`/api/mobile/push-token`, ["POST", "DELETE"]],
   [`/api/mobile/apk/latest`, ["GET"]], [`/api/mobile/apk/download`, ["GET"]],
   [`/api/auth/session`, ["GET"]], [`/api/auth/logout`, ["POST"]], [`/api/auth/mobile-logout`, ["POST"]],
-  [`/api/account/profile`, ["PATCH"]], [`/api/account/password`, ["PATCH"]], [`/api/account/avatar`, ["POST", "DELETE"]],
+  [`/api/account/profile`, ["PATCH"]], [`/api/account/password`, ["PATCH"]], [`/api/account/avatar`, ["GET", "POST", "DELETE"]],
   [`/api/tasks`, ["GET"]], [`/api/tasks/${UUID}`, ["GET"]], [`/api/tasks/${UUID}/comments`, ["POST"]],
   [`/api/tasks/${UUID}/attachments`, ["POST"]], [`/api/tasks/${UUID}/attachments/${UUID}`, ["GET"]],
   [`/api/tasks/${UUID}/progress-reports`, ["POST"]], [`/api/tasks/${UUID}/submit-completion`, ["POST"]],

@@ -7,7 +7,7 @@ import { getSessionUser } from "@/lib/serverSession";
 import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 import DeskHome from "@/components/DeskHome";
 import { loadDeskData } from "@/lib/deskRepository";
-import { deskGreeting, deskDateLabel } from "@/lib/deskHome.mjs";
+import { deskGreeting, deskGreetingPeriod, deskDateLabel } from "@/lib/deskHome.mjs";
 
 type LegacyRedirectPageProps = {
   searchParams: Promise<LegacySearchParams>;
@@ -21,5 +21,6 @@ export default async function LegacyRedirectPage({
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (isCollaboratorRole(user.role_code)) redirect("/my-tasks");
-  return <DeskHome fullName={user.full_name} avatarUrl={user.avatar_url} greeting={deskGreeting(user.full_name)} dateLabel={deskDateLabel()} data={await loadDeskData(user)} />;
+  const now = new Date();
+  return <DeskHome fullName={user.full_name} avatarUrl={user.avatar_url} greeting={deskGreeting(user.full_name, now)} greetingPeriod={deskGreetingPeriod(now)} dateLabel={deskDateLabel(now)} data={await loadDeskData(user)} />;
 }
