@@ -22,7 +22,7 @@ export const PERMISSION_GROUP_DEFINITIONS = [
   { key: "project", label: "Dự án", matches: (code) => code === "project.create" },
   { key: "task", label: "Giao việc", matches: (code) => code.startsWith("task.") },
   { key: "record", label: "Dữ liệu (CSDL)", matches: (code) => code.startsWith("record.") },
-  { key: "asset", label: "Tài sản", matches: (code) => code.startsWith("asset.") },
+  { key: "asset", label: "Tài sản", matches: (code) => code.startsWith("asset.") || code === "announcement.manage" || code === "library.manage" },
   { key: "attendance", label: "Chấm công & nghỉ phép", matches: (code) => code.startsWith("attendance.") || code === "leave.view_self" },
   { key: "schedule", label: "Lịch & kế hoạch", matches: (code) => code === "schedule.view_self" },
   { key: "journalism", label: "Báo chí", matches: (code) => code.startsWith("journalism.") },

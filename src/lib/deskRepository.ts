@@ -10,6 +10,8 @@ import { canReviewAnyLeave, canReviewAnyPersonalPlan, getApprovalCapabilities } 
 import { getPhase2Navigation } from "@/components/phase2Navigation";
 import { canUseJournalism } from "@/lib/journalismScope.mjs";
 import { deskCopy } from "@/lib/deskHomeCopy.mjs";
+import { announcementRepository } from "@/lib/announcementRepository";
+import { sharedLibraryRepository } from "@/lib/sharedLibraryRepository";
 import { buildDeskTodayItems, isDeskScheduleVisible, mergeDeskApprovalItems, pickDeskShortcuts, vietnamToday } from "@/lib/deskHome.mjs";
 
 type Row = Record<string, unknown>;
@@ -22,6 +24,8 @@ export type DeskData = {
   approvals: Result<{ items: DeskApprovalItem[]; total: number; showQueueLink: boolean }> | null;
   schedule: Result<{ duty: DeskScheduleItem[]; personal: DeskScheduleItem[]; leadership: DeskScheduleItem[] | null }>;
   shortcuts: Result<Array<{ id: string; label: string; href: string }>>;
+  announcements: Result<Array<{ id: string; title: string; important: boolean; created_at: string }>>;
+  library: Result<Array<{ id: string; kind: string; title: string; url: string | null; created_at: string }>>;
 };
 
 const ok = <T,>(value: T): Result<T> => ({ ok: true, value });
@@ -105,6 +109,9 @@ export async function loadScheduleBlock(user: ServerAuthUser, today: string): Pr
   return ok({ duty: dutyItems, personal: (personal.rows ?? []).filter(isDeskScheduleVisible).map(line), leadership: leadership ? (leadership.rows as unknown as Row[]).filter(isDeskScheduleVisible).map(line) : null });
 }
 
+export async function loadAnnouncementsBlock(): Promise<DeskData["announcements"]> { const result = await announcementRepository.listActive(3); return result.error ? failed() : ok((result.data ?? []).map((row) => ({ id: String(row.id), title: String(row.title ?? ""), important: Boolean(row.important), created_at: String(row.created_at) }))); }
+export async function loadLibraryBlock(): Promise<DeskData["library"]> { const result = await sharedLibraryRepository.listRecent(3); return result.error ? failed() : ok((result.data ?? []).map((row) => ({ id: String(row.id), kind: String(row.kind), title: String(row.title ?? ""), url: row.url ? String(row.url) : null, created_at: String(row.created_at) }))); }
+
 export async function loadShortcutsBlock(user: ServerAuthUser): Promise<Result<Array<{ id: string; label: string; href: string }>>> {
   const navigation = getPhase2Navigation({ roleCode: user.role_code, hasProjectMembership: false, departmentCode: user.department_code, canAccessJournalism: canUseJournalism({ roleCode: user.role_code, departmentCode: user.department_code, rbacPermissions: user.rbacPermissions }), canAssignTask: user.permissions.can_assign_task, canEvaluateStep1: user.permissions.can_evaluate_step1, canEvaluateStep2: user.permissions.can_evaluate_step2, isDepartmentManager: user.is_department_manager, canManageRubrics: user.permissions.can_manage_rubrics, canManageUsers: user.permissions.can_manage_users, canManagePermissions: user.permissions.can_manage_permissions, canViewDatabase: true, rbacPermissionScopes: user.rbacPermissionScopes });
   return ok(pickDeskShortcuts(navigation));
@@ -112,7 +119,7 @@ export async function loadShortcutsBlock(user: ServerAuthUser): Promise<Result<A
 
 export async function loadDeskData(user: ServerAuthUser): Promise<DeskData> {
   const today = vietnamToday();
-  const results = await Promise.allSettled([loadTodayBlock(user, today), loadApprovalsBlock(user, today), loadScheduleBlock(user, today), loadShortcutsBlock(user)]);
+  const results = await Promise.allSettled([loadTodayBlock(user, today), loadApprovalsBlock(user, today), loadScheduleBlock(user, today), loadShortcutsBlock(user), loadAnnouncementsBlock(), loadLibraryBlock()]);
   const value = <T,>(index: number): T => { const result = results[index]; return result.status === "fulfilled" ? result.value as T : failed() as T; };
-  return { today: value<DeskData["today"]>(0), approvals: value<DeskData["approvals"]>(1), schedule: value<DeskData["schedule"]>(2), shortcuts: value<DeskData["shortcuts"]>(3) };
+  return { today: value<DeskData["today"]>(0), approvals: value<DeskData["approvals"]>(1), schedule: value<DeskData["schedule"]>(2), shortcuts: value<DeskData["shortcuts"]>(3), announcements: value<DeskData["announcements"]>(4), library: value<DeskData["library"]>(5) };
 }
