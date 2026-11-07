@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
+import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 
@@ -113,7 +114,7 @@ export default function DepartmentsPage() {
               </select>
             </label>
           </div>
-          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách phòng ban, cuộn ngang để xem thêm">
+          <div className="table-scroll hidden rounded-lg border border-slate-200 md:block" tabIndex={0} aria-label="Danh sách phòng ban, cuộn ngang để xem thêm">
           <table className="data-table min-w-[640px] text-left text-sm">
             <thead className="bg-slate-50">
               <tr>
@@ -139,6 +140,9 @@ export default function DepartmentsPage() {
             </tbody>
           </table>
           </div>
+          <MobileCardList ariaLabel="Danh sách phòng ban">
+            {visibleDepartments.map((d) => <MobileCard key={d.id} title={d.name} status={<MobileCardBadge tone={d.active ? "success" : "neutral"}>{d.active ? "Đang dùng" : "Đã khóa"}</MobileCardBadge>} meta={[{ label: "Mã", value: d.code }]} footer={<button disabled={busy} onClick={() => updateDepartment(d.id, { active: !d.active })} className="min-h-10 rounded bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">{d.active ? "Khóa" : "Mở khóa"}</button>} />)}
+          </MobileCardList>
           {!visibleDepartments.length ? <p className="py-6 text-center text-sm text-slate-500">Không có phòng ban phù hợp bộ lọc.</p> : null}
         </section>
         </div>

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useAuth } from "@/lib/auth";
 import type { OfficialDocument } from "@/lib/services";
+import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
 
 const urgencyLabel: Record<string, string> = {
   normal: "Bình thường",
@@ -116,7 +117,7 @@ export default function DocumentDetailPage() {
 
         <section className="mt-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-lg font-semibold">Danh sách đã giao xử lý</h2>
-          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách đã giao xử lý, cuộn ngang để xem thêm">
+          <div className="table-scroll hidden rounded-lg border border-slate-200 md:block" tabIndex={0} aria-label="Danh sách đã giao xử lý, cuộn ngang để xem thêm">
           <table className="table-soft-red data-table min-w-[760px] text-left text-sm">
             <thead>
               <tr>
@@ -141,6 +142,9 @@ export default function DocumentDetailPage() {
             </tbody>
           </table>
           </div>
+          <MobileCardList ariaLabel="Danh sách đã giao xử lý">
+            {assignments.map((a) => <MobileCard key={a.id} title={a.staff_users?.full_name ?? "-"} status={<MobileCardBadge tone={a.status === "done" ? "success" : a.status === "overdue" ? "danger" : a.status === "in_progress" ? "warning" : "neutral"}>{assignmentStatusLabel[a.status ?? "todo"] ?? (a.status ?? "-")}</MobileCardBadge>} meta={[{ label: "Tên đăng nhập", value: a.staff_users?.username ?? "-" }, { label: "Hạn", value: a.due_date ? new Date(a.due_date).toLocaleDateString("vi-VN") : "-" }]} />)}
+          </MobileCardList>
         </section>
         </div>
       </div>

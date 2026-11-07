@@ -20,3 +20,20 @@ test("dialog exposes accessible safeguards", () => {
   for (const token of ['role="alertdialog"', 'aria-modal="true"', 'aria-labelledby', 'aria-describedby', 'cancelRef.current?.focus()', 'event.key === "Escape"', 'requireAcknowledge', 'disabled={Boolean(pending.options.requireAcknowledge) && !acknowledged}']) assert.match(source, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(read("src/app/layout.tsx"), /<ConfirmDialogProvider>/);
 });
+
+test("prompt dialog supports required confirmation and cancellation", () => {
+  const source = read("src/components/ConfirmDialog.tsx");
+  assert.match(source, /usePromptDialog/);
+  assert.match(source, /disabled=\{Boolean\(promptPending\.options\.required\) && !promptValue\.trim\(\)\}/);
+  assert.match(source, /finishPrompt\(null\)/);
+});
+
+test("native prompt calls are replaced", () => {
+  const violations = files("src").filter((file) => !file.endsWith("ConfirmDialog.test.mjs") && /window\.prompt\s*\(/s.test(read(file)));
+  assert.deepEqual(violations, []);
+});
+
+test("work schedule nav row is responsive", () => {
+  assert.match(read("src/components/WorkSchedulePageShell.tsx"), /flex-col/);
+  assert.match(read("src/components/WorkSchedulePageShell.tsx"), /lg:flex-row/);
+});

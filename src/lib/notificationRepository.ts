@@ -168,7 +168,7 @@ export const notificationRepository = {
         kind: "deadline",
         title: days < 0 ? "Công việc quá hạn" : "Công việc sắp đến hạn",
         message,
-        href: href(task.id), createdAt: new Date().toISOString(), unread: true, rank: 0,
+        href: href(task.id), createdAt: task.due_date ? `${task.due_date}T12:00:00+07:00` : "1970-01-01T00:00:00.000Z", unread: true, rank: 0,
       });
     }
 
@@ -202,7 +202,7 @@ export const notificationRepository = {
       });
     }
 
-    items.sort((a, b) => a.rank - b.rank || b.createdAt.localeCompare(a.createdAt));
+    items.sort((a, b) => a.rank - b.rank || b.createdAt.localeCompare(a.createdAt) || a.key.localeCompare(b.key));
     const visible = items.slice(0, 60);
     const keys = visible.map((item) => item.key);
     const readKeys = new Set<string>();

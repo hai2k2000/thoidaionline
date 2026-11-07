@@ -550,7 +550,7 @@ export default function UsersPage() {
             <div
               role="dialog"
               aria-modal="true"
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              className="mobile-dialog-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
               onMouseDown={(e) => {
                 if (e.target === e.currentTarget && canCloseSelectedUser)
                   closeSelectedUser();
@@ -731,7 +731,7 @@ export default function UsersPage() {
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="password-reset-title"
-                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+                    className="mobile-dialog-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
                   >
                     <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
                       <h3
@@ -768,7 +768,7 @@ export default function UsersPage() {
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="admin-set-password-title"
-                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+                    className="mobile-dialog-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
                   >
                     <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
                       <h3

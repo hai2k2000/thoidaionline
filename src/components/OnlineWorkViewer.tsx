@@ -108,7 +108,7 @@ export default function OnlineWorkViewer({ userLabel, initialView }: { userLabel
             {loading ? <p className="mt-4 rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Đang tải… lịch làm việc online…</p> : loadError ? <p role="alert" className="mt-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">Không tải được lịch làm việc online. Vui lòng thử lại.</p> : (
               <div className="mt-3 space-y-3">
                 {weeks.map((week) => (
-                  <div key={week[0].date} className="grid grid-cols-7 gap-1 overflow-x-auto">
+                  <div key={week[0].date} className="grid grid-cols-1 gap-1 md:grid-cols-7">
                     {week.map((cell, index) => (
                       <article
                         key={cell.date}

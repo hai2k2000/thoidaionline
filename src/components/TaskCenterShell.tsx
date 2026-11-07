@@ -1,6 +1,6 @@
 "use client";
 
-import { useConfirm } from "@/components/ConfirmDialog";
+import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { EmptyState, ErrorState } from "@/components/ui/StateViews";
 import { parseTaskRequirements } from "@/lib/taskRequirements";
@@ -173,11 +173,12 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
 
 function ApprovalQueue({ queue, data, onRefresh }: { queue: "assignment" | "completion"; data: TaskListResult; onRefresh: () => void }) {
   const { notify } = useActionFeedback();
+  const promptDialog = usePromptDialog();
   const [busy, setBusy] = useState<string | null>(null);
   const rows = data.items;
   const act = async (taskId: string, action: "approve" | "reject" | "return") => {
     const rejectLike = action !== "approve";
-    const reason = rejectLike ? window.prompt(action === "return" ? "Lý do yêu cầu làm lại:" : "Lý do từ chối giao việc:") : null;
+    const reason = rejectLike ? await promptDialog({ title: action === "return" ? "Lý do yêu cầu làm lại" : "Lý do từ chối giao việc", label: "Lý do", required: true, multiline: true }) : null;
     if (rejectLike && !reason?.trim()) return;
     setBusy(taskId);
     const response = queue === "assignment"

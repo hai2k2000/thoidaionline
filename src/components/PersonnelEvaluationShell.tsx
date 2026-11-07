@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import type {
   PersonnelEvaluationData,
 } from "@/lib/evaluationRepository";
+import { PersonnelEvaluationCards } from "@/components/mobile/PersonnelEvaluationCards";
 
 const reviewLabels: Record<string, string> = {
   self_draft: "Chờ Trưởng phòng chấm bước 1",
@@ -92,7 +93,7 @@ export default function PersonnelEvaluationShell({ data, invalidFilters, loadFai
 
           <section className="overflow-hidden rounded-xl border bg-white p-4 shadow-sm">
             <p className="mb-2 text-sm text-slate-600" role="status">{helperText}</p>
-            <div ref={scrollRef} tabIndex={0} onScroll={loadMoreOnScroll} className="max-h-[520px] overflow-auto" aria-label="Danh sách nhân viên, cuộn để xem thêm"><table className="w-full min-w-[860px] border-collapse text-sm">
+            <PersonnelEvaluationCards subjects={visibleSubjects} from={data.from} to={data.to} isLeader={isLeader} reviewLabel={reviewLabel} directTbtStatuses={directTbtStatuses} /><div ref={scrollRef} tabIndex={0} onScroll={loadMoreOnScroll} className="max-h-[520px] overflow-auto" aria-label="Danh sách nhân viên, cuộn để xem thêm"><table className="w-full min-w-[860px] border-collapse text-sm hidden md:table">
               <thead><tr className="border-b text-left text-slate-600"><th className="p-2">STT</th><th className="p-2">Nhân viên</th><th className="p-2">Phòng ban</th><th className="p-2">Vai trò</th><th className="p-2">Trạng thái đánh giá</th><th className="p-2">Tổng điểm</th><th className="p-2">Thao tác</th></tr></thead>
               <tbody>{visibleSubjects.map((person, index) => {
                 const detailHref = `/evaluations/${person.employeeId}?from=${data.from}&to=${data.to}`;

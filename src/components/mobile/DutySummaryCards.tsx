@@ -1,0 +1,7 @@
+import Link from "next/link";
+import { MobileCard, MobileCardList } from "@/components/mobile/MobileCardList";
+
+export type DutySummaryCardRow = { employeeId: string; fullName: string; department: string; positions: string[]; total: number; reviewed: number; completed: number; issues: number; notCompleted: number; onTime: number; late: number };
+export function DutySummaryCards({ rows, from, to }: { rows: DutySummaryCardRow[]; from: string; to: string }) {
+  return <MobileCardList ariaLabel="Bảng tổng kết đánh giá lịch trực" empty="Chưa có ca trực trong khoảng thời gian này.">{rows.map((row) => <MobileCard key={row.employeeId} maxMeta={10} title={<Link href={`/duty-schedule/summary/${row.employeeId}?from=${from}&to=${to}`} className="font-bold text-orange-700 underline">{row.fullName}</Link>} meta={[{ label: "Phòng", value: row.department }, { label: "Vị trí", value: row.positions.join(", ") || "—" }, { label: "Tổng ca", value: row.total }, { label: "Đã chấm", value: row.reviewed }]}>{[["Hoàn thành tốt", row.completed], ["Có sai sót", row.issues], ["Không hoàn thành", row.notCompleted], ["Đúng hạn", row.onTime], ["Quá hạn", row.late], ["Tỷ lệ tốt", `${row.reviewed ? Math.round(row.completed / row.reviewed * 100) : 0}%`]].map(([label, value]) => <p key={String(label)} className="text-sm text-text-muted">{label}: <span className="font-semibold text-text">{value}</span></p>)}</MobileCard>)}</MobileCardList>;
+}

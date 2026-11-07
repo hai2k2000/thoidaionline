@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
-import { useConfirm } from "@/components/ConfirmDialog";
+import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
 
 type Props = { taskId: string; taskType: "assigned" | "personal" | null; isAdmin: boolean; canEdit: boolean; canComplete: boolean; canClaim: boolean; terminal: boolean };
 
@@ -13,6 +13,7 @@ export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit
   const router = useRouter();
   const { notify } = useActionFeedback();
   const requestConfirmation = useConfirm();
+  const promptDialog = usePromptDialog();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -76,7 +77,7 @@ export default function PersonalTaskActions({ taskId, taskType, isAdmin, canEdit
         disabled={busy}
         onClick={async () => {
           if (!await requestConfirmation({ title: "Bạn có chắc muốn hủy công việc này?", tone: "danger" })) return;
-          const reason = window.prompt("Lý do hủy công việc");
+          const reason = await promptDialog({ title: "Lý do hủy công việc", label: "Lý do", required: true, multiline: true });
           if (reason?.trim()) void mutate("cancel", reason.trim());
         }}
         className="rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 disabled:opacity-50"

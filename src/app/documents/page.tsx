@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { listDocuments, type OfficialDocument } from "@/lib/services";
 import MobileFilters from "@/components/MobileFilters";
+import MobileCardList, { MobileCard, MobileCardBadge } from "@/components/mobile/MobileCardList";
 import AppNav from "@/components/AppNav";
 
 const docStatusLabel: Record<string, string> = {
@@ -70,7 +71,7 @@ export default function DocumentsPage() {
           </div></MobileFilters>
           <p className="mb-2 text-sm text-slate-600">{message}</p>
 
-          <div className="table-scroll rounded-lg border border-slate-200" tabIndex={0} aria-label="Danh sách tài liệu, cuộn ngang để xem thêm">
+          <div className="table-scroll hidden rounded-lg border border-slate-200 md:block" tabIndex={0} aria-label="Danh sách tài liệu, cuộn ngang để xem thêm">
           <table className="table-soft-red data-table min-w-[760px] text-left text-sm">
             <thead>
               <tr>
@@ -95,6 +96,9 @@ export default function DocumentsPage() {
             </tbody>
           </table>
           </div>
+          <MobileCardList ariaLabel="Danh sách tài liệu">
+            {filteredRows.map((r) => <MobileCard key={r.id ?? r.doc_code} href={r.id ? `/documents/${r.id}` : undefined} title={r.title ?? "-"} status={<MobileCardBadge tone={r.status === "done" ? "success" : r.status === "in_progress" ? "warning" : "neutral"}>{docStatusLabel[r.status ?? "new"] ?? (r.status ?? "Mới")}</MobileCardBadge>} meta={[{ label: "Mã", value: r.doc_code ?? "-" }, { label: "Loại", value: directionLabel[r.direction ?? ""] ?? r.direction ?? "-" }]} />)}
+          </MobileCardList>
         </section>
         </div>
       </div>
