@@ -2,6 +2,7 @@
 
 import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
 import { deskCopy } from "@/lib/deskHomeCopy.mjs";
+import { announcementCopy } from "@/lib/announcementLibraryCopy.mjs";
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -55,6 +56,8 @@ const labels = {
   "journalism-structures": "Chủ đề / Loạt bài",
   "journalism-reports": "Báo cáo nghiệp vụ báo chí",
   "journalism-calendar": "Lịch biên tập",
+  announcements: announcementCopy.navAnnouncements,
+  library: announcementCopy.navLibrary,
   database: "Cơ sở dữ liệu",
 } as const;
 

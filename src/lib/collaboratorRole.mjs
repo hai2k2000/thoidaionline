@@ -19,6 +19,6 @@ export const COLLABORATOR_API_RULES = [
 export function isCollaboratorAllowedPath(pathname, method = "GET") {
   const path = String(pathname ?? "/").split("?")[0].replace(/\/$/, "") || "/";
   if (path.startsWith("/api/")) return COLLABORATOR_API_RULES.some(([pattern, methods]) => new RegExp(`^${pattern}$`, "i").test(path) && methods.includes(method));
-  return path === "/app" || path === "/mobile-app" || path === "/my-tasks" || path === "/account" || path === "/projects" || new RegExp(`^/tasks/${UUID}$`, "i").test(path) || new RegExp(`^/projects/${UUID}$`, "i").test(path);
+  if (path === "/announcements" || path === "/library") return false; return path === "/app" || path === "/mobile-app" || path === "/my-tasks" || path === "/account" || path === "/projects" || new RegExp(`^/tasks/${UUID}$`, "i").test(path) || new RegExp(`^/projects/${UUID}$`, "i").test(path);
 }
 export function isCollaboratorAllowedApiPath(pathname, method = "GET") { return String(pathname ?? "").startsWith("/api/") && isCollaboratorAllowedPath(pathname, method); }

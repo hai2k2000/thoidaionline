@@ -24,6 +24,8 @@ export const RBAC_PERMISSION_CODES = [
   "schedule.event.approve",
   "asset.view",
   "asset.manage",
+  "announcement.manage",
+  "library.manage",
   "journalism.metadata.update",
   "journalism.publication.manage",
   "journalism.publication.verify",

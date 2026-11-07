@@ -100,6 +100,8 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261107100000_push_notifications.sql",
   "supabase/migrations/20261107120000_push_notifications_v2.sql",
   "supabase/migrations/20261107140000_admin_edit_project_task_status.sql",
+  "supabase/migrations/20261108090000_announcements_shared_library.sql",
+  "supabase/migrations/20261108090100_announcements_shared_library_seed.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ], "artifact migration mismatch");
