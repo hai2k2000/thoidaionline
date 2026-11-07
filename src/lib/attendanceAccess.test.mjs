@@ -10,6 +10,8 @@ const myAttendanceLayout = readFileSync(new URL("../app/my-attendance/layout.tsx
 const evaluationRoute = readFileSync(new URL("../app/api/public-evaluation-summary/route.ts", import.meta.url), "utf8");
 const navigation = readFileSync(new URL("../components/phase2Navigation.ts", import.meta.url), "utf8");
 const migration = readFileSync(new URL("../../supabase/migrations/20261028150000_attendance_rbac_v1.sql", import.meta.url), "utf8");
+const leaderMigration = readFileSync(new URL("../../supabase/migrations/20261108110000_attendance_view_all_leaders.sql", import.meta.url), "utf8");
+const leaderRevert = readFileSync(new URL("../../scripts/production/attendance-view-all-leaders-revert.sql", import.meta.url), "utf8");
 
 test("attendance access resolves all, department, none and manage", () => {
   assert.deepEqual(resolveAttendanceAccessFromScopes({ "attendance.view_all": ["department"], "attendance.manage": [] }), { orgScope: "department", canManage: false });
@@ -22,6 +24,22 @@ test("attendance migration adds the department scope and exemption column", () =
   assert.match(migration, /attendance\.view_all.*department/s);
   assert.match(migration, /role_permission_grants[\s\S]*r\.code='admin'[\s\S]*p\.code='attendance\.manage'/);
   assert.match(migration, /add column if not exists attendance_exempt boolean not null default false/i);
+});
+
+test("attendance leader migration grants exact scopes and has safe guards", () => {
+  assert.match(leaderMigration, /select r\.id, p\.id, 'all'[\s\S]*?r\.code\s*=\s*'tong_bien_tap' and p\.code\s*=\s*'attendance\.view_all'/);
+  assert.match(leaderMigration, /select r\.id, p\.id, 'department'[\s\S]*?r\.code\s*=\s*'truong_phong' and p\.code\s*=\s*'attendance\.view_all'/);
+  assert.match(leaderMigration, /on conflict \(role_id, permission_id, scope\) do nothing/i);
+  assert.match(leaderMigration, /raise exception/i);
+  assert.doesNotMatch(leaderMigration, /\bdelete\b/i);
+  assert.doesNotMatch(leaderMigration, /\bupdate\b/i);
+  assert.match(leaderRevert, /delete from public\.role_permission_grants/i);
+  assert.match(leaderRevert, /attendance\.view_all/);
+  assert.match(leaderRevert, /tong_bien_tap/);
+  assert.match(leaderRevert, /truong_phong/);
+  assert.match(leaderRevert, /'all'/);
+  assert.match(leaderRevert, /'department'/);
+  assert.doesNotMatch(leaderRevert, /\bupdate\b|\bdrop\b|\btruncate\b/i);
 });
 
 test("attendance API requires a signed-in actor and validates the date/scope", () => {
