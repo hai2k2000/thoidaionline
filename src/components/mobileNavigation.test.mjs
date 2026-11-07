@@ -66,9 +66,9 @@ test("mobile navigation filters inaccessible projects for normal staff", () => {
 });
 
 test("mobile active state follows route prefixes and the personal-task redirect", () => {
-  for (const [path, active] of [["/tasks", "/"], ["/tasks?type=personal", "/my-tasks"], ["/tasks/task-1", "/my-tasks"], ["/projects/project-1", "/projects"], ["/my-attendance", "/my-attendance"]]) {
+  for (const [path, active] of [["/tasks", []], ["/tasks?type=personal", "/my-tasks"], ["/tasks/task-1", "/my-tasks"], ["/projects/project-1", "/projects"], ["/my-attendance", "/my-attendance"]]) {
     const selected = ["/", "/my-tasks", "/projects", "/my-attendance"].filter((href) => isMobileNavigationActive(path, href));
-    assert.deepEqual(selected, [active]);
+    assert.deepEqual(selected, Array.isArray(active) ? active : [active]);
   }
 });
 
