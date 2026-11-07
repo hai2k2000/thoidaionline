@@ -2,6 +2,7 @@ export declare function fillCopy(template: string, values?: Record<string, strin
 export declare const deskCopy: Readonly<{ weekdays: readonly string[] } & Record<string, unknown>>;
 export declare function vietnamToday(now?: Date): string;
 export declare function deskGreeting(fullName: string, now?: Date): string;
+export declare function deskGreetingPeriod(now?: Date): "morning" | "noon" | "afternoon" | "evening";
 export declare function deskDateLabel(now?: Date): string;
 export declare function buildDeskTodayItems(rows: readonly Record<string, unknown>[], now?: Date): { items: Array<{ id: string; title: string; href: string; state: string; label: string }>; overdueCount: number; todayCount: number };
 export declare function mergeDeskApprovalItems<T extends { id: string }>(lists: readonly (readonly T[])[]): T[];

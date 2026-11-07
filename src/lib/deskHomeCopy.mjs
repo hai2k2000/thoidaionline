@@ -16,7 +16,7 @@ export const deskCopy = {
   dueToday: "Hôm nay",
   dueInDays: "Còn {n} ngày",
   blockToday: "Hôm nay của tôi",
-  blockShortcuts: "Lối tắt",
+  blockShortcuts: "Truy cập nhanh",
   blockApprovals: "Cần tôi duyệt",
   blockNotifications: "Thông báo",
   blockSchedule: "Lịch hôm nay",
