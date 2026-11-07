@@ -22,20 +22,14 @@ export async function getReleaseLabel() {
     releaseLabel = "B\u1ea3n dev";
     return releaseLabel;
   }
-  try {
-    const metadata = await readFile(join(process.cwd(), ".release-meta"), "utf8");
-    const commit = metadata.match(/^commit=(.+)$/m)?.[1]?.trim();
-    const createdAt = metadata.match(/^created_at=(.+)$/m)?.[1]?.trim();
-    if (!commit || !createdAt) throw new Error("Incomplete release metadata");
-    const date = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit" }).format(new Date(createdAt));
-    releaseLabel = `B\u1ea3n ${date} \u00b7 ${commit.slice(0, 7)}`;
-    return releaseLabel;
-  } catch {
-    let build = "development";
-    try {
-      build = (await readFile(join(process.cwd(), ".next", "BUILD_ID"), "utf8")).trim() || build;
-    } catch {}
-    releaseLabel = `B\u1ea3n ${build.slice(0, 7)}`;
+  if (process.env.THOIDAI_APP_VERSION) {
+    releaseLabel = `v${process.env.THOIDAI_APP_VERSION}`;
     return releaseLabel;
   }
+  let build = "development";
+  try {
+    build = (await readFile(join(process.cwd(), ".next", "BUILD_ID"), "utf8")).trim() || build;
+  } catch {}
+  releaseLabel = `B\u1ea3n ${build.slice(0, 7)}`;
+  return releaseLabel;
 }
