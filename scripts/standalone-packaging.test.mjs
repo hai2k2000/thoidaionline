@@ -243,3 +243,12 @@ test("attendance leader migration follows announcement permission label exactly 
     assert.ok(source.indexOf(migration) > source.indexOf("20261108100100_announcement_permission_label.sql"));
   }
 });
+
+test("self-approval migration is packaged after attendance leader migration", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const migration = "supabase/migrations/20261109120000_self_approve_personal_plans.sql";
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf("20261108110000_attendance_view_all_leaders.sql"));
+  }
+});

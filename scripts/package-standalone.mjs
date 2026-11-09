@@ -208,6 +208,7 @@ const migrationReference = [
   "supabase/migrations/20261108100000_announcement_department_scope.sql",
   "supabase/migrations/20261108100100_announcement_permission_label.sql",
   "supabase/migrations/20261108110000_attendance_view_all_leaders.sql",
+  "supabase/migrations/20261109120000_self_approve_personal_plans.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];
