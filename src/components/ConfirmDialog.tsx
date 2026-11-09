@@ -1,6 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, createContext, useContext, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, createContext, useContext, type ReactNode } from "react";
+
+export function FormDialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const titleId = useId();
+  const ref = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = () => Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href]') ?? []);
+    focusable()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeRef.current(); }
+      if (event.key !== "Tab") return;
+      const items = focusable(); const first = items[0]; const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); opener?.focus(); };
+  }, []);
+  return <div className="mobile-dialog-overlay fixed inset-0 z-[120] grid place-items-center bg-slate-950/55 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div ref={ref} role="dialog" aria-modal="true" aria-labelledby={titleId} className="w-full max-w-lg rounded-[var(--radius-sheet)] border border-border bg-surface p-5 text-text shadow-2xl"><h2 id={titleId} className="text-lg font-bold text-brand-ink">{title}</h2>{children}</div></div>;
+}
 
 type ConfirmOptions = {
   title: string;
@@ -62,7 +84,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
 
   return <PromptContext.Provider value={prompt}><ConfirmContext.Provider value={{ confirm }}>
     {children}
-    {promptPending ? <div className="mobile-dialog-overlay fixed inset-0 z-[120] grid place-items-center bg-slate-950/55 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) finishPrompt(null); }}><div ref={dialogRef} role="dialog" aria-modal="true" className="w-full max-w-lg rounded-[var(--radius-sheet)] border border-border bg-surface p-5 text-text shadow-2xl"><h2 className="text-lg font-bold text-brand-ink">{promptPending.options.title}</h2>{promptPending.options.message ? <p className="mt-3 text-sm text-text-muted">{promptPending.options.message}</p> : null}<label className="mt-4 grid gap-2 text-sm font-semibold">{promptPending.options.label}{promptPending.options.multiline ? <textarea ref={promptRef as React.RefObject<HTMLTextAreaElement>} value={promptValue} onChange={(event) => setPromptValue(event.target.value)} className="min-h-24 rounded border p-2 text-base font-normal" /> : <input ref={promptRef as React.RefObject<HTMLInputElement>} type={promptPending.options.type ?? "text"} value={promptValue} onChange={(event) => setPromptValue(event.target.value)} className="min-h-11 rounded border p-2 text-base font-normal" />}</label><div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={() => finishPrompt(null)} className="min-h-11 rounded border px-4 py-2">{promptPending.options.cancelLabel ?? "Hủy"}</button><button type="button" disabled={Boolean(promptPending.options.required) && !promptValue.trim()} onClick={() => finishPrompt(promptValue)} className="min-h-11 rounded bg-brand px-4 py-2 text-white disabled:opacity-50">{promptPending.options.confirmLabel ?? "Xác nhận"}</button></div></div></div> : null}
+    {promptPending ? <FormDialog title={promptPending.options.title} onClose={() => finishPrompt(null)}>{promptPending.options.message ? <p className="mt-3 text-sm text-text-muted">{promptPending.options.message}</p> : null}<label className="mt-4 grid gap-2 text-sm font-semibold">{promptPending.options.label}{promptPending.options.multiline ? <textarea ref={promptRef as React.RefObject<HTMLTextAreaElement>} value={promptValue} onChange={(event) => setPromptValue(event.target.value)} className="min-h-24 rounded border p-2 text-base font-normal" /> : <input ref={promptRef as React.RefObject<HTMLInputElement>} type={promptPending.options.type ?? "text"} value={promptValue} onChange={(event) => setPromptValue(event.target.value)} className="min-h-11 rounded border p-2 text-base font-normal" />}</label><div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={() => finishPrompt(null)} className="min-h-11 rounded border px-4 py-2">{promptPending.options.cancelLabel ?? "Hủy"}</button><button type="button" disabled={Boolean(promptPending.options.required) && !promptValue.trim()} onClick={() => finishPrompt(promptValue)} className="min-h-11 rounded bg-brand px-4 py-2 text-white disabled:opacity-50">{promptPending.options.confirmLabel ?? "Xác nhận"}</button></div></FormDialog> : null}
     {pending ? <div className="mobile-dialog-overlay fixed inset-0 z-[120] grid place-items-center bg-slate-950/55 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) finish(false); }}>
       <div ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby={pending.options.message ? "confirm-dialog-message" : undefined} className="w-full max-w-lg rounded-[var(--radius-sheet)] border border-border bg-surface p-5 text-text shadow-2xl sm:p-6">
         <h2 id="confirm-dialog-title" className="whitespace-pre-line text-lg font-bold text-brand-ink">{pending.options.title}</h2>
