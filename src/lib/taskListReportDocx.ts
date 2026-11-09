@@ -1,6 +1,6 @@
 import { AlignmentType, BorderStyle, Document, Footer, Packer, Paragraph, SimpleField, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
 import { buildTaskListReportModel, reportDate as date, reportSummary } from "./taskListReport.mjs";
-import type { ReportSection, TaskListReportModel } from "./taskListReport.mjs";
+import type { NextWeekPlanModel, ReportSection, TaskListReportModel } from "./taskListReport.mjs";
 import type { TaskListItemDto } from "./taskContracts";
 
 type ReportTask = Partial<TaskListItemDto> & { title: string; status: string };
@@ -30,6 +30,18 @@ function section({ title, groups }: ReportSection) {
   return [para(title, { bold: true, before: 160 }), new Table({ width: { size: 9500, type: WidthType.DXA }, columnWidths: [450, 2600, 1500, 1500, 1150, 2300], rows })];
 }
 
+function planSection(plan: NextWeekPlanModel): Array<Paragraph | Table> {
+  const planCell = (value: string) => new TableCell({ children: [new Paragraph({
+    spacing: { after: 20, line: 276 },
+    children: value.split(/\r\n|\r|\n/).map((text, index) => new TextRun({ text, font: FONT, size: SIZE, ...(index ? { break: 1 } : {}) })),
+  })] });
+  return [para(plan.title, { bold: true, before: 160 }), para(plan.periodLabel),
+    plan.rows.length ? new Table({ width: { size: 9500, type: WidthType.DXA }, columnWidths: [450, 4800, 2700, 1550], rows: [
+      new TableRow({ tableHeader: true, children: plan.headers.map(value => cell(value, true)) }),
+      ...plan.rows.map(row => new TableRow({ cantSplit: true, children: row.map(planCell) })),
+    ] }) : para(plan.emptyText)];
+}
+
 export async function exportTaskListReportDocx(source: TaskListReportModel | { tasks: ReportTask[]; from: string; to: string; userName: string; filterLabel: string; now?: Date }) {
   const input = "tasks" in source ? buildTaskListReportModel(source) : source;
   const content: Array<Paragraph | Table> = [
@@ -39,9 +51,11 @@ export async function exportTaskListReportDocx(source: TaskListReportModel | { t
     ] })] }),
     para("BÁO CÁO CÔNG VIỆC", { bold: true, align: AlignmentType.CENTER, before: 240 }),
     para("Từ ngày " + date(input.from) + " đến ngày " + date(input.to), { align: AlignmentType.CENTER }),
-    para("Bộ lọc: " + input.filterLabel),
+    ...(input.filterLabel ? [para("Bộ lọc: " + input.filterLabel)] : []),
     para(reportSummary(input.counts), { bold: true }),
-    ...input.sections.flatMap(section),
+    ...input.sections.filter(value => value.key !== "cancelled").flatMap(section),
+    ...planSection(input.nextWeekPlan),
+    ...input.sections.filter(value => value.key === "cancelled").flatMap(section),
     para("NGƯỜI LẬP", { bold: true, align: AlignmentType.CENTER, before: 420, after: 220 }),
     para(input.userName, { align: AlignmentType.CENTER }),
   ];

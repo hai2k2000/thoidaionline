@@ -48,7 +48,7 @@ test("report dates preserve all current list filters independently of pagination
   const parsed = parseReportRequest(new URL(taskListReportHref(query, { from: "2026-11-02", to: "2026-11-08" }), "https://example.test").searchParams);
   assert.deepEqual(parsed.query, { ...query, page: 1, pageSize: 100 });
   assert.equal(parsed.from, "2026-11-02");
-  assert.match(reportFilterLabel(query), /Việc của tôi/);
+  assert.doesNotMatch(reportFilterLabel(query), /Phạm vi|Việc của tôi/);
   assert.match(reportFilterLabel(query), /Chưa hoàn thành/);
 });
 
@@ -73,12 +73,67 @@ test("activity uses inclusive Vietnam dates and excludes future, undated and clo
 test("DOCX contains Vietnamese sections, task rows, groups, signature and page fields", async () => {
   const { exportTaskListReportDocx } = await import("./taskListReportDocx.ts");
   const tasks = [{ id: "a", title: "Bài hoàn thành", status: "done", completed_at: "2026-11-09T08:00:00Z", task_assignees: [{ user_id: "an", assignment_role: "owner", staff_users: { full_name: "Nguyễn An" } }], project: { name: "Dự án A" } }, { id: "b", title: "Bài đang viết", status: "in_progress", task_assignees: [{ user_id: "binh", assignment_role: "owner", staff_users: { full_name: "Bình" } }] }, { id: "c", title: "Bài quá hạn", status: "in_progress", due_date: "2020-01-01" }];
-  const buffer = await exportTaskListReportDocx({ tasks, from: "2026-11-09", to: "2026-11-15", userName: "Người lập thử", filterLabel: "Phạm vi: Việc của tôi" });
+  const buffer = await exportTaskListReportDocx({ tasks, from: "2026-11-09", to: "2026-11-15", userName: "Người lập thử", filterLabel: reportFilterLabel({ scope: "mine" }) });
   assert.ok(Buffer.isBuffer(buffer));
   const zip = await JSZip.loadAsync(buffer);
   const xml = await zip.file("word/document.xml").async("string");
   for (const text of ["TẠP CHÍ THỜI ĐẠI", "Độc lập - Tự do - Hạnh phúc", "BÁO CÁO CÔNG VIỆC", "Từ ngày 09/11/2026 đến ngày 15/11/2026", "I. Đã hoàn thành", "II. Đang thực hiện", "III. Quá hạn", "Người thực hiện", "NGƯỜI LẬP", "Người lập thử", "Bài hoàn thành", "Dự án A", "Bài đang viết", "Bài quá hạn", "Times New Roman"]) assert.ok(xml.includes(text), text);
   assert.match(await zip.file("word/footer1.xml").async("string"), /PAGE/);
+  assert.doesNotMatch(xml, /Phạm vi|Việc của tôi|Bộ lọc:/);
+  assert.match(xml, /IV\. Kế hoạch tuần sau/);
+  assert.match(xml, /………/);
+});
+
+test("scope-only filter disappears while department, person and status remain", () => {
+  assert.equal(reportFilterLabel({ scope: "mine" }), "");
+  assert.equal(reportFilterLabel({ scope: "mine", departmentId: "d", personId: "p", status: "in_progress" }, [
+    { department_id: "d", departments: { name: "Biên tập" }, task_assignees: [{ user_id: "p", staff_users: { full_name: "An" } }] },
+  ]), "Phòng: Biên tập; Người làm: An; Trạng thái: Đang thực hiện");
+});
+
+test("next-week range is the following Monday-Sunday across week and year boundaries", () => {
+  for (const [date, expected] of [
+    ["2026-11-09", { from: "2026-11-16", to: "2026-11-22" }],
+    ["2026-11-11", { from: "2026-11-16", to: "2026-11-22" }],
+    ["2026-11-15", { from: "2026-11-16", to: "2026-11-22" }],
+    ["2026-12-31", { from: "2027-01-04", to: "2027-01-10" }],
+    ["2028-02-27", { from: "2028-02-28", to: "2028-03-05" }],
+  ]) assert.deepEqual(report.nextWeekAfterReportDate(date), expected);
+  assert.equal(report.nextWeekAfterReportDate("2026-02-30"), null);
+  assert.deepEqual(report.nextWeekAfterReportDate(currentReportWeek(new Date("2026-11-08T17:00:00Z")).to), { from: "2026-11-16", to: "2026-11-22" });
+});
+
+test("plan accepts edited periods and old deadlines, ignores empty rows and strips unknown properties", () => {
+  const result = report.validateNextWeekPlan({ from: "2026-11-20", to: "2026-11-30", html: "ignored", items: [
+    { content: "  Nội dung <script>test</script>  ", assignee: " An ", dueDate: "2020-01-01", private: "ignored" },
+    { content: "   ", assignee: "", dueDate: "" },
+  ] }, "2026-11-15");
+  assert.deepEqual(result, { ok: true, plan: { from: "2026-11-20", to: "2026-11-30", items: [{ content: "Nội dung <script>test</script>", assignee: "An", dueDate: "2020-01-01" }] } });
+  assert.equal(report.validateNextWeekPlan({ from: "2026-11-16", to: "2026-11-22", items: [{ content: "", assignee: "An" }] }, "2026-11-15").ok, false);
+});
+
+test("quick-add uses selected active and overdue rows, deduplicates and enforces the row limit", () => {
+  const model = report.buildTaskListReportModel({ tasks: [
+    { id: "a", title: "Đang viết", status: "in_progress", due_date: "2099-01-01" },
+    { id: "b", title: "Quá hạn", status: "in_progress", due_date: "2020-01-01", due_time: "15:00" },
+    { id: "c", title: "Xong", status: "done" },
+    { id: "d", title: "Bỏ chọn", status: "in_progress" },
+  ], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  const selected = report.selectTaskListReportModel(model, ["a", "b", "c"]);
+  const items = report.appendNextWeekPlanTasks([], selected);
+  assert.deepEqual(items.map(item => [item.content, item.dueDate]), [["Đang viết", "2099-01-01"], ["Quá hạn", "2020-01-01"]]);
+  assert.deepEqual(report.appendNextWeekPlanTasks(items, selected), items);
+  assert.equal(report.appendNextWeekPlanTasks(Array.from({ length: 99 }, (_, i) => ({ content: String(i), assignee: "", dueDate: "" })), selected).length, 100);
+  assert.deepEqual(report.appendNextWeekPlanTasks([{ ...items[0], content: "  Đang viết  " }], selected).map(item => item.content), ["  Đang viết  ", "Quá hạn"]);
+});
+
+test("plan accepts boundary sizes and optional fields but rejects missing content in a nonempty row", () => {
+  const period = { from: "2026-11-16", to: "2026-11-22" };
+  const valid = report.validateNextWeekPlan({ ...period, items: Array.from({ length: 100 }, () => ({ content: "a".repeat(1000), assignee: "a".repeat(200) })) }, "2026-11-15");
+  assert.equal(valid.ok, true);
+  assert.equal(valid.plan.items.length, 100);
+  assert.equal(valid.plan.items[0].dueDate, "");
+  for (const item of [{ content: "", dueDate: "2026-11-20" }, { content: "a", assignee: null }, { content: "a", dueDate: null }, { content: "a\u0000" }]) assert.equal(report.validateNextWeekPlan({ ...period, items: [item] }, "2026-11-15").ok, false);
 });
 
 const routeSource = readFileSync(new URL("../app/api/tasks/report/docx/route.ts", import.meta.url), "utf8");

@@ -128,3 +128,38 @@ test("POST rejects nested filter values before URL serialization", async () => {
   assert.equal(response.status, 400);
   assert.equal(routes.calls.length, 0);
 });
+
+test("POST rejects invalid plan lengths, types and dates with Vietnamese 400 errors before reads", async () => {
+  const routes = await setup();
+  const valid = { from: "2026-11-16", to: "2026-11-22", items: [{ content: "Viết bài", assignee: "An", dueDate: "" }] };
+  for (const nextWeekPlan of [
+    null, [], { ...valid, items: Array(101).fill(valid.items[0]) },
+    { ...valid, items: [{ content: "a".repeat(1001) }] },
+    { ...valid, items: [{ content: "Viết", assignee: "a".repeat(201) }] },
+    { ...valid, items: [{ content: "Viết", dueDate: "2026-02-30" }] },
+    { ...valid, items: [{ content: { html: "Viết" } }] },
+    { ...valid, items: [{ content: "Viết", assignee: 1 }] },
+    { ...valid, items: [{ content: "Viết", dueDate: {} }] },
+    { ...valid, from: "2026-02-30" }, { ...valid, from: "2026-11-23" },
+  ]) {
+    const response = await routes.POST(post({ ...payload([visibleId]), nextWeekPlan }));
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error.message, /kế hoạch|Kế hoạch|công việc|Người thực hiện|Thời hạn/);
+  }
+  assert.equal(routes.calls.length, 0);
+});
+
+test("POST DOCX renders edited plan after III, escapes text and ignores unknown client fields", async () => {
+  const routes = await setup();
+  const nextWeekPlan = { from: "2026-11-20", to: "2026-11-30", title: "UNTRUSTED", items: [
+    { content: "Viết <script> & bài", assignee: "Nguyễn An", dueDate: "2026-11-25", html: "UNTRUSTED" },
+    { content: "", assignee: "", dueDate: "" },
+  ] };
+  const response = await routes.POST(post({ ...payload([visibleId]), nextWeekPlan }));
+  assert.equal(response.status, 200);
+  const xml = await (await JSZip.loadAsync(await response.arrayBuffer())).file("word/document.xml").async("string");
+  for (const value of ["IV. Kế hoạch tuần sau", "(Từ ngày 20/11/2026 đến ngày 30/11/2026)", "Nội dung công việc", "Người thực hiện", "Thời hạn", "Viết &lt;script&gt; &amp; bài", "25/11/2026"]) assert.ok(xml.includes(value), value);
+  assert.ok(xml.indexOf("III. Quá hạn") < xml.indexOf("IV. Kế hoạch tuần sau"));
+  assert.ok(xml.indexOf("IV. Kế hoạch tuần sau") < xml.indexOf("NGƯỜI LẬP"));
+  assert.doesNotMatch(xml, /UNTRUSTED|<script>|Phạm vi|Việc của tôi/);
+});
