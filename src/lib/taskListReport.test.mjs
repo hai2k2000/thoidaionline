@@ -7,6 +7,31 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { contentDisposition } from "./contentDisposition.mjs";
 import { isCollaboratorRole } from "./collaboratorRole.mjs";
+import * as report from "./taskListReport.mjs";
+
+test("selected report recomputes counts and assignee groups without changing the full model", () => {
+  assert.equal(typeof report.buildTaskListReportModel, "function");
+  const model = report.buildTaskListReportModel({ tasks: [
+    { id: "a", title: "Done", status: "done", task_assignees: [{ assignment_role: "owner", staff_users: { full_name: "An" } }] },
+    { id: "b", title: "Late", status: "in_progress", due_date: "2020-01-01", task_assignees: [{ assignment_role: "owner", staff_users: { full_name: "Bình" } }] },
+    { id: "c", title: "Open", status: "in_progress" },
+  ], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "Tất cả", now: new Date("2026-11-09T12:00:00Z") });
+  const selected = report.selectTaskListReportModel(model, ["a", "b", "foreign", "a"]);
+  assert.deepEqual(selected.counts, { total: 2, completed: 1, active: 1, overdue: 1, noDeadline: 1 });
+  assert.deepEqual(selected.sections.map(section => section.groups.flatMap(group => group.rows.map(row => row.id))), [["a"], [], ["b"]]);
+  assert.equal(selected.sections[2].groups[0].name, "Bình");
+  assert.equal(model.counts.total, 3);
+  assert.equal(report.selectTaskListReportModel(model, []).counts.total, 0);
+});
+
+test("report ids reject malformed or oversized selections and normalize UUID case", () => {
+  assert.equal(typeof report.parseReportIds, "function");
+  const id = "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA";
+  assert.deepEqual(report.parseReportIds(id + "," + id), [id.toLowerCase()]);
+  assert.deepEqual(report.parseReportIds([]), []);
+  assert.equal(report.parseReportIds(["foreign"]), null);
+  assert.equal(report.parseReportIds(Array(1001).fill(id)), null);
+});
 
 test("selectTasksForReport includes activity in the inclusive range", () => {
   const rows = [
@@ -58,7 +83,10 @@ test("DOCX contains Vietnamese sections, task rows, groups, signature and page f
 
 const routeSource = readFileSync(new URL("../app/api/tasks/report/docx/route.ts", import.meta.url), "utf8");
 function route(overrides = {}) {
-  const dependencies = { requireReadActor: async () => ({ ok: false, response: new Response(null, { status: 401 }) }), apiError: (_, status) => new Response(null, { status }), rpcFailure: () => new Response(null, { status: 503 }), isCollaboratorRole, parseReportRequest, taskRepository: { list: async () => { throw new Error("unexpected read"); } }, canUseJournalism: () => false, reportFilterLabel, selectTasksForReport, exportTaskListReportDocx: async () => new Uint8Array([80, 75]), taskListReportDocxFilename: (from, to) => "Bao_cao_cong_viec_" + from + "_" + to + ".docx", contentDisposition, ...overrides };
+  const dependencies = { ...report, requireReadActor: async () => ({ ok: false, response: new Response(null, { status: 401 }) }), apiError: (_, status) => new Response(null, { status }), rpcFailure: () => new Response(null, { status: 503 }), isCollaboratorRole, parseReportRequest, taskRepository: { list: async () => { throw new Error("unexpected read"); } }, canUseJournalism: () => false, reportFilterLabel, selectTasksForReport, exportTaskListReportDocx: async () => new Uint8Array([80, 75]), taskListReportDocxFilename: (from, to) => "Bao_cao_cong_viec_" + from + "_" + to + ".docx", contentDisposition, ...overrides };
+  const dataSource = readFileSync(new URL("./taskListReportData.ts", import.meta.url), "utf8").replace(/^import[\s\S]*?;\r?\n/gm, "").replace(/^export /gm, "");
+  const dataJs = ts.transpileModule(dataSource, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
+  dependencies.getTaskListReportData = new Function(...Object.keys(dependencies), dataJs + "\nreturn getTaskListReportData;")(...Object.values(dependencies));
   const source = routeSource.replace(/^import .*;\r?\n/gm, "").replace(/export /g, "");
   const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
   return new Function(...Object.keys(dependencies), js + "\nreturn GET;")(...Object.values(dependencies));
@@ -74,7 +102,7 @@ test("route reads every scoped page, filters activity, and emits safe no-store D
   const response = await route({ requireReadActor: async () => ({ ok: true, actor: user }), taskRepository: { list: async (actor, query) => { calls.push({ actor, query }); return { ok: true, data: { total: 101, items: query.page === 1 ? Array.from({ length: 100 }, (_, i) => ({ id: i, status: "in_progress", start_date: "2026-11-01" })) : [{ id: 101, status: "done", completed_at: "2026-10-01" }] } }; } }, exportTaskListReportDocx: async (input) => { model = input; return new Uint8Array([80, 75]); } })(request());
   assert.equal(response.status, 200); assert.equal(calls.length, 2);
   assert.equal(calls[0].actor.id, user.id); assert.equal(calls[0].query.scope, "mine");
-  assert.equal(calls[1].query.page, 2); assert.equal(model.tasks.length, 100); assert.equal(model.userName, user.full_name);
+  assert.equal(calls[1].query.page, 2); assert.equal(model.counts.total, 100); assert.equal(model.userName, user.full_name);
   assert.equal(response.headers.get("Cache-Control"), "no-store");
   assert.match(response.headers.get("Content-Disposition"), /filename\*=UTF-8''Bao_cao_cong_viec_/);
   assert.ok([...response.headers.get("Content-Disposition")].every(char => char.charCodeAt(0) < 128));

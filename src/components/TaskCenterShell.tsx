@@ -1,6 +1,6 @@
 "use client";
 
-import { FormDialog, useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
+import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { EmptyState, ErrorState } from "@/components/ui/StateViews";
 import { parseTaskRequirements } from "@/lib/taskRequirements";
@@ -20,7 +20,7 @@ import PersonalTaskActions from "@/components/PersonalTaskActions";
 import JournalismSummary from "@/components/JournalismSummary";
 import { useAuth } from "@/lib/auth";
 import { taskListHref } from "@/lib/taskFilters.mjs";
-import { currentReportWeek, taskListReportHref } from "@/lib/taskListReport.mjs";
+import TaskListReportDialog from "@/components/TaskListReportDialog";
 import { journalismLabels, journalismPublicationStatusLabel } from "@/lib/journalismUi.mjs";
 import { classifyTaskDeadline, deadlineLabel as presentDeadlineLabel, deadlineTone } from "@/lib/deadlinePresentation.mjs";
 import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
@@ -205,9 +205,6 @@ export default function TaskCenterShell(props: Props) {
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [reportDates, setReportDates] = useState(() => currentReportWeek());
-  const [reportBusy, setReportBusy] = useState(false);
-  const [reportError, setReportError] = useState("");
   const { logout } = useAuth();
   const onLogout = () => { logout(); router.replace("/login"); };
   const totalPages = Math.max(1, Math.ceil(tasks.total / tasks.pageSize));
@@ -241,22 +238,6 @@ export default function TaskCenterShell(props: Props) {
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
     } finally { setBulkBusy(false); }
-  };
-  const exportReport = async () => {
-    setReportBusy(true); setReportError("");
-    try {
-      const response = await fetch(taskListReportHref(query, reportDates), { cache: "no-store" });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error?.message ?? "Không thể xuất báo cáo công việc.");
-      }
-      const href = URL.createObjectURL(await response.blob());
-      const link = document.createElement("a"); link.href = href;
-      link.download = `Bao_cao_cong_viec_${reportDates.from}_${reportDates.to}.docx`;
-      document.body.appendChild(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(href), 1000); setReportOpen(false);
-    } catch (error) { setReportError(error instanceof Error ? error.message : "Không thể xuất báo cáo công việc."); }
-    finally { setReportBusy(false); }
   };
   const bulkCancel = async () => {
     const selectedTasks = tasks.items.filter((task) => selectedTaskIds.includes(task.id));
@@ -297,22 +278,8 @@ export default function TaskCenterShell(props: Props) {
               <form id="task-filter-form" action={basePath} className="task-filter-bar flex flex-wrap items-center gap-1.5 rounded-xl border bg-white p-2 shadow-sm">
                 <FilterFields key={JSON.stringify(query)} query={query} projects={projects} departments={departments} personOptions={personOptions} canFilterByPerson={canFilterByPerson} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} canReviewTaskApprovals={canReviewTaskApprovals} canSeeDepartmentCollaborating={canSeeDepartmentCollaborating} taskMode={taskMode} basePath={basePath} />
               </form>
-              </MobileFilters></div>{!taskMode && !query.approvalQueue && !isCollaboratorRole(currentUserRole) ? <button type="button" onClick={() => { setReportDates(currentReportWeek()); setReportError(""); setReportOpen(true); }} className="h-11 whitespace-nowrap rounded-lg bg-orange-700 px-3 text-xs font-semibold text-white">Xuất báo cáo</button> : null}</div>
-              {reportOpen ? <FormDialog title="Xuất báo cáo công việc" onClose={() => { if (!reportBusy) setReportOpen(false); }}>
-                <div>
-                  <p className="mt-2 text-sm text-text-muted">Xuất theo bộ lọc hiện tại, tối đa 1.000 công việc.</p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <label className="grid gap-1 text-sm font-semibold">Từ ngày<input required type="date" disabled={reportBusy} max={reportDates.to} value={reportDates.from} onChange={(event) => setReportDates({ ...reportDates, from: event.target.value })} className="min-h-11 rounded-lg border px-3" /></label>
-                    <label className="grid gap-1 text-sm font-semibold">Đến ngày<input required type="date" disabled={reportBusy} min={reportDates.from} value={reportDates.to} onChange={(event) => setReportDates({ ...reportDates, to: event.target.value })} className="min-h-11 rounded-lg border px-3" /></label>
-                  </div>
-                  <label className="mt-3 grid gap-1 text-sm font-semibold">Người lập<input readOnly value={userLabel} className="min-h-11 rounded-lg border bg-slate-50 px-3" /></label>
-                  {reportError ? <p role="alert" className="mt-3 text-sm text-red-700">{reportError}</p> : null}
-                  <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    <button type="button" disabled={reportBusy} onClick={() => setReportOpen(false)} className="min-h-11 rounded-lg border px-4">Hủy</button>
-                    <button type="button" onClick={() => void exportReport()} disabled={reportBusy || !reportDates.from || !reportDates.to || reportDates.from > reportDates.to} className="min-h-11 rounded-lg bg-orange-700 px-4 font-semibold text-white disabled:opacity-50">{reportBusy ? "Đang xuất…" : "Tải DOCX"}</button>
-                  </div>
-                </div>
-              </FormDialog> : null}
+              </MobileFilters></div>{!taskMode && !query.approvalQueue && !isCollaboratorRole(currentUserRole) ? <button type="button" onClick={() => setReportOpen(true)} className="h-11 whitespace-nowrap rounded-lg bg-orange-700 px-3 text-xs font-semibold text-white">Xuất báo cáo</button> : null}</div>
+              {reportOpen ? <TaskListReportDialog query={query} onClose={() => setReportOpen(false)} /> : null}
               {bulkPrintEnabled && selectedTaskIds.length ? <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3"><span className="text-sm font-semibold text-orange-900">Đã chọn: {selectedTaskIds.length} công việc</span><button type="button" disabled={bulkBusy} onClick={() => void bulkPrint()} className="rounded-lg bg-orange-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Xuất phiếu giao việc hàng loạt (ZIP)</button>{adminBulk ? <><button type="button" disabled={bulkBusy} onClick={() => void bulkCancel()} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Huỷ công việc</button><span className="text-xs text-slate-600">Xoá công việc: ADMIN DELETE CONTRACT NOT FOUND</span></> : null}</div> : null}
                 <section className="mobile-task-list mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
                 {canReviewTaskApprovals && query.approvalQueue ? <ApprovalQueue queue={query.approvalQueue} data={approvalQueue?.[query.approvalQueue] ?? { items: [], total: 0, page: 1, pageSize: 100 }} onRefresh={() => router.refresh()} /> : null}
