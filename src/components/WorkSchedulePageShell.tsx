@@ -130,7 +130,6 @@ export default function WorkSchedulePageShell({
   personalPlanDepartmentManager,
   personalPlanPeople,
   isDepartmentManager,
-  approvalActorId,
   canReviewPersonalPlans = false,
   userLabel,
   scheduleScope = "all",
@@ -592,8 +591,8 @@ export default function WorkSchedulePageShell({
 
           {canReviewPersonalPlans && activeTab === "approval" ? <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm" role="tabpanel">
             <h2 className="font-bold text-amber-950">Kế hoạch cá nhân chờ duyệt</h2>
-            {approvalRows.filter((row) => row.created_by !== approvalActorId).length ? <div className="mt-3 grid gap-3">
-              {approvalRows.filter((row) => row.created_by !== approvalActorId).map((row) => <article key={row.id} className="rounded-lg border bg-white p-3 text-sm">
+            {approvalRows.length ? <div className="mt-3 grid gap-3">
+              {approvalRows.map((row) => <article key={row.id} className="rounded-lg border bg-white p-3 text-sm">
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   <p><span className="font-semibold">Nhân sự:</span> {row.creator?.full_name ?? "Không rõ"}</p>
                   <p><span className="font-semibold">Ngày:</span> {new Date(`${row.work_date}T12:00:00`).toLocaleDateString("vi-VN")}</p>
