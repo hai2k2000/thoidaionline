@@ -5,7 +5,10 @@ import { resolveDisplayedAssigner } from "./taskAssignmentDisplay.mjs";
 
 /** @typedef {{ id: string, title: string, assignees: string, assigner: string, due: string, statusNote: string }} ReportRow */
 /** @typedef {{ key: string, title: string, groups: { name: string, rows: ReportRow[] }[] }} ReportSection */
-/** @typedef {{ from: string, to: string, userName: string, filterLabel: string, sections: ReportSection[], counts: { total: number, completed: number, active: number, overdue: number, noDeadline: number } }} TaskListReportModel */
+/** @typedef {{ content: string, assignee: string, dueDate: string }} NextWeekPlanItem */
+/** @typedef {{ from: string, to: string, items: NextWeekPlanItem[] }} NextWeekPlan */
+/** @typedef {NextWeekPlan & { title: string, periodLabel: string, headers: string[], rows: string[][], emptyText: string }} NextWeekPlanModel */
+/** @typedef {{ from: string, to: string, userName: string, filterLabel: string, sections: ReportSection[], counts: { total: number, completed: number, active: number, overdue: number, noDeadline: number }, nextWeekPlan: NextWeekPlanModel }} TaskListReportModel */
 
 export const reportDate = (value) => value ? formatDateOnlyVN(value.slice(0, 10)) : "—";
 export const reportSummary = (counts) => "Tổng: " + counts.total + " · Đã hoàn thành: " + counts.completed + " · Đang thực hiện: " + counts.active + " · Quá hạn: " + counts.overdue + " · Chưa có hạn: " + counts.noDeadline;
@@ -47,7 +50,7 @@ export function selectTaskListReportModel(model, ids) {
 export function buildTaskListReportModel(input) {
   const now = input.now ?? new Date();
   const statusLabels = { done: "Đã hoàn thành", new: "Mới", in_progress: "Đang thực hiện", waiting: "Chờ duyệt giao việc", pending_review: "Chờ duyệt hoàn thành", blocked: "Vướng mắc", rejected: "Trả lại", cancelled: "Đã hủy" };
-  const definitions = [["completed", "I. Đã hoàn thành"], ["active", "II. Đang thực hiện"], ["overdue", "III. Quá hạn"], ["cancelled", "IV. Đã hủy"]];
+  const definitions = [["completed", "I. Đã hoàn thành"], ["active", "II. Đang thực hiện"], ["overdue", "III. Quá hạn"], ["cancelled", "V. Đã hủy"]];
   /** @type {Map<string, ReportRow[]>} */
   const buckets = new Map(definitions.map(([key]) => [key, []]));
   for (const task of input.tasks) {
@@ -63,7 +66,7 @@ export function buildTaskListReportModel(input) {
     });
   }
   const sections = definitions.filter(([key]) => key !== "cancelled" || buckets.get(key).length).map(([key, title]) => ({ key, title, groups: groupReportRows(buckets.get(key)) }));
-  return { from: input.from, to: input.to, userName: input.userName, filterLabel: input.filterLabel, sections, counts: countReportSections(sections) };
+  return { from: input.from, to: input.to, userName: input.userName, filterLabel: input.filterLabel, sections, counts: countReportSections(sections), nextWeekPlan: buildNextWeekPlanModel(undefined, input.to) };
 }
 
 const vietnamDate = (value) => new Intl.DateTimeFormat("en-CA", {
@@ -78,10 +81,20 @@ export function currentReportWeek(now = new Date()) {
   return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 }
 
+export function nextWeekAfterReportDate(to) {
+  if (!validDate(to)) return null;
+  const start = new Date(to + "T00:00:00Z");
+  start.setUTCDate(start.getUTCDate() - (start.getUTCDay() + 6) % 7);
+  start.setUTCDate(start.getUTCDate() + 7);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+}
+
 const validDate = (value) => {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(value + "T00:00:00Z");
-  return Number.isFinite(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+  return Number.isFinite(parsed.valueOf()) && parsed.getUTCFullYear() >= 1 && parsed.toISOString().slice(0, 10) === value;
 };
 
 export function parseReportRequest(params) {
@@ -143,7 +156,65 @@ export function reportFilterLabel(query, rows = []) {
     if (key === "personId") return rows.flatMap(row => row.task_assignees ?? []).find(person => person.user_id === id)?.staff_users?.full_name;
     return null;
   };
-  const fields = { scope: "Phạm vi", departmentId: "Phòng", personId: "Người làm", taskType: "Loại", status: "Trạng thái", statusGroup: "Nhóm trạng thái", projectId: "Dự án", search: "Từ khóa", deadlineState: "Hạn", fromDate: "Bắt đầu từ", toDate: "Hạn đến", assignmentSource: "Nguồn giao", category: "Danh mục", journalism: "Nghiệp vụ", journalismWorkKindId: "Loại nghiệp vụ", publicationStatus: "Xuất bản", plannedPublicationFrom: "Xuất bản từ", plannedPublicationTo: "Xuất bản đến", topicId: "Chủ đề", seriesId: "Loạt bài" };
+  const fields = { departmentId: "Phòng", personId: "Người làm", taskType: "Loại", status: "Trạng thái", statusGroup: "Nhóm trạng thái", projectId: "Dự án", search: "Từ khóa", deadlineState: "Hạn", fromDate: "Bắt đầu từ", toDate: "Hạn đến", assignmentSource: "Nguồn giao", category: "Danh mục", journalism: "Nghiệp vụ", journalismWorkKindId: "Loại nghiệp vụ", publicationStatus: "Xuất bản", plannedPublicationFrom: "Xuất bản từ", plannedPublicationTo: "Xuất bản đến", topicId: "Chủ đề", seriesId: "Loạt bài" };
   return Object.entries(fields).filter(([key]) => query[key]).map(([key, title]) =>
-    title + ": " + (name(key, query[key]) || labels[query[key]] || query[key])).join("; ") || "Tất cả";
+    title + ": " + (name(key, query[key]) || labels[query[key]] || query[key])).join("; ");
+}
+
+/** @param {unknown} value @param {string} expectedTo @returns {{ ok: true, plan: NextWeekPlan } | { ok: false, message: string }} */
+export function validateNextWeekPlan(value, expectedTo) {
+  if (value === undefined) {
+    const period = nextWeekAfterReportDate(expectedTo);
+    return period && validDate(period.from) && validDate(period.to)
+      ? { ok: true, plan: { ...period, items: [] } }
+      : { ok: false, message: "Khoảng thời gian kế hoạch tuần sau không hợp lệ." };
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { ok: false, message: "Kế hoạch tuần sau không hợp lệ." };
+  if (!validDate(value.from) || !validDate(value.to) || value.from > value.to) return { ok: false, message: "Khoảng thời gian kế hoạch tuần sau không hợp lệ." };
+  if (!Array.isArray(value.items) || value.items.length > 100) return { ok: false, message: "Kế hoạch tuần sau có tối đa 100 dòng." };
+  const items = [];
+  for (const item of value.items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return { ok: false, message: "Dòng kế hoạch tuần sau không hợp lệ." };
+    if (typeof item.content !== "string" || item.content.length > 1000) return { ok: false, message: "Nội dung công việc phải là văn bản, tối đa 1.000 ký tự." };
+    if (item.assignee !== undefined && (typeof item.assignee !== "string" || item.assignee.length > 200)) return { ok: false, message: "Người thực hiện phải là văn bản, tối đa 200 ký tự." };
+    if (item.dueDate !== undefined && item.dueDate !== "" && !validDate(item.dueDate)) return { ok: false, message: "Thời hạn kế hoạch phải là ngày hợp lệ." };
+    const content = item.content.trim(), assignee = (item.assignee ?? "").trim(), dueDate = item.dueDate ?? "";
+    if (!content && !assignee && !dueDate) continue;
+    if (!content) return { ok: false, message: "Vui lòng nhập nội dung công việc cho dòng kế hoạch." };
+    // XML 1.0 cannot represent these control characters in DOCX text nodes.
+    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(content + assignee)) return { ok: false, message: "Nội dung kế hoạch chứa ký tự không hợp lệ." };
+    items.push({ content, assignee, dueDate });
+  }
+  return { ok: true, plan: { from: value.from, to: value.to, items } };
+}
+
+/** @param {unknown} value @param {string} reportTo @returns {NextWeekPlanModel} */
+export function buildNextWeekPlanModel(value, reportTo) {
+  const result = validateNextWeekPlan(value, reportTo);
+  if (!result.ok) throw new Error(result.message);
+  const plan = result.plan;
+  return { ...plan, title: "IV. Kế hoạch tuần sau", periodLabel: "(Từ ngày " + reportDate(plan.from) + " đến ngày " + reportDate(plan.to) + ")",
+    headers: ["STT", "Nội dung công việc", "Người thực hiện", "Thời hạn"], emptyText: "………",
+    rows: plan.items.map((item, index) => [String(index + 1), item.content, item.assignee, item.dueDate ? reportDate(item.dueDate) : ""]),
+  };
+}
+
+/** @param {TaskListReportModel} model @param {unknown} plan @returns {TaskListReportModel} */
+export function planFromReportModel(model, plan) {
+  return { ...model, nextWeekPlan: buildNextWeekPlanModel(plan, model.to) };
+}
+
+/** @param {NextWeekPlanItem[]} items @param {TaskListReportModel} model @returns {NextWeekPlanItem[]} */
+export function appendNextWeekPlanTasks(items, model) {
+  const key = item => JSON.stringify([item.content.trim(), item.assignee.trim(), item.dueDate]);
+  const result = [...items];
+  const seen = new Set(items.map(key));
+  for (const section of model.sections.filter(section => ["active", "overdue"].includes(section.key))) {
+    for (const row of section.groups.flatMap(group => group.rows)) {
+      const match = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(row.due);
+      const item = { content: row.title, assignee: row.assignees === "Chưa phân công" ? "" : row.assignees, dueDate: match ? `${match[3]}-${match[2]}-${match[1]}` : "" };
+      if (!seen.has(key(item)) && result.length < 100) { result.push(item); seen.add(key(item)); }
+    }
+  }
+  return result;
 }
