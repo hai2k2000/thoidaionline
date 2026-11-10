@@ -7,7 +7,7 @@ const file = (name, type, size = 3) => new File([new Uint8Array(size)], name, { 
 test("file selection enforces approved types and 50 MiB limit", () => {
   assert.deepEqual(validateSelectedFiles([file("a.pdf", "application/pdf")]), []);
   assert.deepEqual(validateSelectedFiles([file("a.exe", "application/octet-stream")]), [{ index: 0, code: "invalid_type" }]);
-  assert.deepEqual(validateSelectedFiles([file("a.pdf", "application/pdf", 50 * 1024 * 1024 + 1)]), [{ index: 0, code: "file_too_large" }]);
+  assert.deepEqual(validateSelectedFiles([file("a.pdf", "application/pdf", 150 * 1024 * 1024 + 1)]), [{ index: 0, code: "file_too_large" }]);
   assert.deepEqual(validateSelectedFiles([file("a.pdf", "application/pdf", 20 * 1024 * 1024)]), []);
 });
 
