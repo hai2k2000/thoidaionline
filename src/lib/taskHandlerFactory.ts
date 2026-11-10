@@ -1,4 +1,5 @@
 import { taskAttachmentMetadata } from "./taskAttachmentPolicy.mjs";
+import { normalizeTaskLink } from "./taskLinkPolicy.mjs";
 import { taskAttachmentHeaders, taskAttachmentRange } from "./taskAttachmentResponse.mjs";
 import { TIME_24H_REGEX } from "./time24h.mjs";
 import type {
@@ -341,6 +342,37 @@ export function createTaskApplication(deps: Dependencies) {
       if (!dueDate || !reason) return deps.error("invalid_request", 400);
       const result = await deps.repository.changeAssignedDeadline(actor.id, taskId, dueDate, reason);
       return result.ok ? deps.json({ task: result.data }) : deps.rpcFailure(result.error);
+    },
+
+    async addLink(request: Request, taskIdValue: unknown) {
+      const guard = await deps.mutationActor();
+      if (!guard.ok) return guard.response;
+      const taskId = guard.actor.role_code === "admin" ? deps.asUuid(taskIdValue) : await authorizeMutation(guard.actor, taskIdValue, "attachment");
+      if (!taskId) return deps.error("invalid_request", 400);
+      if (taskId instanceof Response) return taskId;
+      if (guard.actor.role_code === "admin") {
+        const access = await deps.repository.access(taskId);
+        if (!access.ok) return deps.rpcFailure(access.error);
+        if (!access.data) return deps.error("not_found", 404);
+        if (access.data.status === "cancelled") return deps.error("forbidden", 403);
+      }
+      const body = await bodyObject(request);
+      const input = body && normalizeTaskLink(body.url, body.title);
+      if (!input) return deps.error("invalid_request", 400);
+      const result = await deps.repository.addLink(guard.actor.id, taskId, input);
+      return result.ok ? deps.json({ link: result.data }, 201) : deps.rpcFailure(result.error);
+    },
+
+    async deleteLink(_request: Request, taskIdValue: unknown, linkIdValue: unknown) {
+      const guard = await deps.mutationActor();
+      if (!guard.ok) return guard.response;
+      const taskId = deps.asUuid(taskIdValue);
+      const linkId = deps.asUuid(linkIdValue);
+      if (!taskId || !linkId) return deps.error("invalid_request", 400);
+      // The RPC enforces admin-or-creator permission, including cancelled tasks.
+      const result = await deps.repository.deleteLink(guard.actor.id, taskId, linkId);
+      if (!result.ok) return deps.rpcFailure(result.error);
+      return result.data ? deps.json({ link: result.data }) : deps.error("not_found", 404);
     },
 
     async uploadAttachment(request: Request, taskIdValue: unknown) {

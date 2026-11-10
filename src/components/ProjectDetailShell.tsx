@@ -1,4 +1,5 @@
 "use client";
+import { uploadBatchTaskLinks, postTaskLink } from "@/lib/taskAssignmentLinks.mjs";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import ProjectTaskDeleteDialog from "@/components/ProjectTaskDeleteDialog";
@@ -80,8 +81,10 @@ export default function ProjectDetailShell({project,members,tasks,actorId,actorR
   if(createdTask) return;
   const result=await request(`/api/projects/${project.id}/tasks`,'POST',payload) as {task:{id:string}};
   setCreatedTask(result.task.id);setMessage('Đã giao công việc.');
+  const linksResult = await uploadBatchTaskLinks([{id:result.task.id,ordinal:1}],cards,postTaskLink);
   const file=cards[0].attachment;
   if(file){setAttachment(file);await upload(result.task.id,file);}
+  if(linksResult.failed.length)setMessage('Đã tạo công việc; '+linksResult.failed.map(failure=>failure.message).join(' '));
   router.refresh();
  }
  function update(event:FormEvent<HTMLFormElement>) {

@@ -22,6 +22,7 @@ import JournalismMetadataEditor from "@/components/JournalismMetadataEditor";
 import JournalismPublicationControls from "@/components/JournalismPublicationControls";
 import JournalismManualPublicationReport from "@/components/JournalismManualPublicationReport";
 import JournalismAssociationControls from "@/components/JournalismAssociationControls";
+import TaskLinkList from "@/components/TaskLinkList";
 import TaskAttachmentUploader from "@/components/TaskAttachmentUploader";
 import type { JournalismStructureSeries, JournalismStructureTopic } from "@/lib/journalismStructureRepository";
 
@@ -191,9 +192,10 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
                 </form> : null}
                 <Timeline empty="Chưa có báo cáo tiến độ.">{task.progress_reports.map((row) => <li key={row.id} className="break-words rounded-lg bg-slate-50 p-3"><div className="flex flex-wrap justify-between gap-2 text-xs text-slate-600"><time>{dateText(row.reported_on)}</time><span>{reportLabel[row.report_status] ?? row.report_status}</span></div><p className="mt-2 whitespace-pre-wrap">{row.progress_text}</p>{row.blockers ? <p className="mt-2 whitespace-pre-wrap text-amber-800">Vướng mắc: {row.blockers}</p> : null}</li>)}</Timeline>
               </Section> : null}
-              <Section title={`Đính kèm · Tệp (${task.attachments.length})`}>
+              <Section title={`Đính kèm · Tệp (${task.attachments.length}) · Liên kết (${task.links.length})`}>
                 {projectTask ? <p className="mb-3 text-sm text-slate-600">Tệp cũng xuất hiện trong <Link className="font-semibold text-orange-700 underline" href={`/projects/${task.project_id}?tab=library`}>Thư viện dự án</Link>.</p> : null}
                 {capabilities.attachment ? <div className="mb-4"><TaskAttachmentUploader taskId={task.id} disabled={busy} /></div> : null}
+                <TaskLinkList taskId={task.id} links={task.links} actorId={user?.id} admin={user?.role_code === "admin"} disabled={busy} />
                 <Timeline empty="Chưa có tệp.">{task.attachments.map((row) => <li key={row.id} className="break-words"><span>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB</span><button type="button" onClick={() => setPreviewUrl(`/api/tasks/${task.id}/attachments/${row.id}?disposition=inline`)} className="mr-3 min-h-11 rounded px-2 text-orange-700 underline focus-visible:ring-2">Xem</button><button onClick={() => download(row.id)} className="mt-1 block text-orange-700 underline">Tải xuống</button></li>)}</Timeline>
               </Section>
 

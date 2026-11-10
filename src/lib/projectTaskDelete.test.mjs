@@ -7,6 +7,7 @@ const repo = readFileSync('src/lib/projectRepository.ts', 'utf8');
 const ui = readFileSync('src/components/ProjectDetailShell.tsx', 'utf8');
 const migration = 'supabase/migrations/20261105200000_project_cancelled_task_delete.sql';
 const sql = existsSync(migration) ? readFileSync(migration, 'utf8') : '';
+const linkSql = readFileSync('supabase/migrations/20261110120000_task_link_attachments.sql', 'utf8');
 
 test('project task delete route validates ids and maps RPC errors', () => {
   assert.match(route, /export async function DELETE/);
@@ -62,12 +63,12 @@ test('inventory scans every migration and every direct task FK has explicit dele
       }
     }
   }
-  const cascades=['task_assignees.task_id','task_comments.task_id','task_progress_logs.task_id'];
-  const explicit=['task_deadline_history','task_progress_reports','task_status_events','task_attachments','task_recurrence_occurrences','task_evaluation_checkpoints','task_qualitative_evaluations','duty_task_reviews','task_completion_scores','journalism_task_details'];
+  const cascades=['notifications.task_id','task_assignees.task_id','task_comments.task_id','task_progress_logs.task_id'];
+  const explicit=['task_links','task_deadline_history','task_progress_reports','task_status_events','task_attachments','task_recurrence_occurrences','task_evaluation_checkpoints','task_qualitative_evaluations','duty_task_reviews','task_completion_scores','journalism_task_details'];
   assert.deepEqual([...actual.keys()].sort(), ['tasks.parent_task_id',...cascades,...explicit.map(t=>`${t}.task_id`),'department_plan_items.linked_task_id','project_library_items.source_task_id'].sort());
   for(const fk of cascades)assert.equal(actual.get(fk),'on delete cascade');
   assert.equal(actual.get('tasks.parent_task_id'),'on delete set null');
-  for(const table of explicit)assert.ok(sql.includes(`delete from public.${table} where task_id=any(p_task_ids)`),table);
+  for(const table of explicit)assert.ok((sql + linkSql).includes(`delete from public.${table} where task_id=any(p_task_ids)`),table);
   assert.match(sql,/update public.department_plan_items set linked_task_id=null/);
   assert.ok(sql.indexOf('delete from public.project_library_items')<sql.indexOf('delete from public.task_attachments'));
   assert.match(sql,/source_attachment_id in \(select id from public.task_attachments/);

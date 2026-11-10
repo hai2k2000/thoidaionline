@@ -13,6 +13,7 @@ import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVietnamPlannedPublication, validateJournalismCreateFields } from "@/lib/journalismCreateUi.mjs";
 import { journalismLabels } from "@/lib/journalismUi.mjs";
 import { addTaskCard, buildBatchPayload, createTaskCard, MAX_TASK_CARDS, removeTaskCard, validateTaskCards } from "@/lib/taskAssignmentCards.mjs";
+import { uploadBatchTaskLinks, postTaskLink } from "@/lib/taskAssignmentLinks.mjs";
 import { uploadBatchAttachments } from "@/lib/taskAssignmentAttachments.mjs";
 import CanonicalAssignmentForm, { type CanonicalAssignmentSubmit } from "@/components/CanonicalAssignmentForm";
 import ParticipantSelector, { type ParticipantPanel } from "@/components/ParticipantSelector";
@@ -249,11 +250,13 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
       }
       const result = await response.json() as { task?: { id: string }; tasks?: BatchTaskResult[] };
       const attachment = cards[0].attachment;
-      let attachmentWarning = "";
+      const createdLinkTasks = batch ? result.tasks ?? [] : result.task ? [{ ...result.task, ordinal: 1 }] : [];
+      const linksResult = await uploadBatchTaskLinks(createdLinkTasks, cards, postTaskLink);
+      let attachmentWarning = linksResult.failed.map(failure => failure.message).join(" ");
       if (!batch && attachment instanceof File && attachment.size > 0 && result.task?.id) {
         const form = new FormData(); form.set("file", attachment);
         const uploaded = await fetch(`/api/tasks/${result.task.id}/attachments`, { method: "POST", body: form });
-        if (!uploaded.ok) attachmentWarning = await responseErrorMessage(uploaded, "Tệp đính kèm chưa tải lên được.");
+        if (!uploaded.ok) attachmentWarning += " " + await responseErrorMessage(uploaded, "Tệp đính kèm chưa tải lên được.");
       }
       if (batch) {
         const createdTasks = result.tasks ?? [];
@@ -261,7 +264,7 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
         const uploadResult = await uploadBatchAttachments(createdTasks, attachments, uploadTaskAttachment);
         if (uploadResult.failed.length) {
           setBatchTaskResults(createdTasks); setPendingBatchAttachments(attachments.filter((item) => uploadResult.failed.some((failure) => failure.taskIndex === item.taskIndex))); setBatchAttachmentFailures(uploadResult.failed);
-          const text = `Đã tạo ${cards.length} công việc, nhưng một số tệp chưa tải lên được.`; setMessage(text); notify("error", text); return;
+          const text = `Đã tạo ${cards.length} công việc, nhưng một số tệp chưa tải lên được.`; setMessage(text + " " + attachmentWarning); notify("error", text + " " + attachmentWarning); return;
         }
       }
       const recipientName = people.find((person) => person.id === assigneeId)?.fullName ?? "người nhận việc";

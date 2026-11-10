@@ -16,6 +16,7 @@ function load(fetch) {
     };
     if (name === 'next/navigation') return { useRouter: () => ({ push: path => pushes.push(path), refresh() {}, back() {} }), useSearchParams: () => new URLSearchParams('returnTo=/attendance') };
     if (name.endsWith('taskAttachmentPolicy.mjs')) return { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES };
+    if (name.endsWith('TaskLinkAttacher')) return { default: 'TaskLinkAttacher' };
     if (name.endsWith('TaskAttachmentUploader')) return evaluate('TaskAttachmentUploader.tsx');
     if (name.endsWith('ActionFeedbackProvider') || name.endsWith('CameraCaptureButton') || name.endsWith('actionFeedback')) return {};
     throw new Error(name);

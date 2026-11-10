@@ -18,6 +18,7 @@ function load(fetch = async () => Response.json({ attachment: { id: 'a' } })) {
     if (name.endsWith('ActionFeedbackProvider')) return { useActionFeedback: () => ({ notify: (...v) => notices.push(v) }) };
     if (name.endsWith('taskAttachmentPolicy.mjs')) return { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES };
     if (name.endsWith('actionFeedback')) return { errorMessage: (e, fallback) => e?.message || fallback, responseErrorMessage: async (_, fallback) => fallback };
+    if (name.endsWith('TaskLinkAttacher')) return { default: 'TaskLinkAttacher' };
     if (name.endsWith('CameraCaptureButton')) return { default: 'CameraCaptureButton' };
     throw new Error(name);
   } };

@@ -214,6 +214,7 @@ export type TaskWorkflowContextDto = {
   source: "task_status_events" | "audit_logs";
 };
 export type TaskAttachmentDto = { id: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; uploaded_by: string; };
+export type TaskLinkDto = { id: string; url: string; title: string; created_at: string; created_by: string };
 export type DeleteTaskAttachmentResult = TaskAttachmentDto & { storage_path: string };
 export type TaskCompletionScoreDto = { id: string; requirement_results: Array<{ index: number; achieved: boolean }>; requirement_score: number; collaboration_score: number; initiative_score: number; total_score: number; note: string | null; created_at: string; reviewer: { full_name: string | null } | null; };
 
@@ -234,6 +235,7 @@ export type TaskDetailDto = TaskListItemDto & {
   deadline_history: TaskDeadlineHistoryDto[];
   status_events: TaskStatusEventDto[];
   attachments: TaskAttachmentDto[];
+  links: TaskLinkDto[];
   completion_score: TaskCompletionScoreDto | null;
   journalism: JournalismTaskDetailDto | null;
 };
@@ -428,6 +430,8 @@ export interface TaskRepository {
   cancelAssigned(actorId: string, taskId: string, reason: string): Promise<RepositoryResult<unknown>>;
   changeAssignedDeadline(actorId: string, taskId: string, dueDate: string, reason: string): Promise<RepositoryResult<unknown>>;
   addAttachmentMetadata(actorId: string, taskId: string, input: { storagePath: string; fileName: string; mimeType: string; sizeBytes: number }): Promise<RepositoryResult<TaskAttachmentDto>>;
+  addLink(actorId: string, taskId: string, input: { url: string; title: string }): Promise<RepositoryResult<TaskLinkDto>>;
+  deleteLink(actorId: string, taskId: string, linkId: string): Promise<RepositoryResult<TaskLinkDto | null>>;
   attachment(taskId: string, attachmentId: string): Promise<RepositoryResult<(TaskAttachmentDto & { storage_path: string }) | null>>;
   deleteAttachment(actorId: string, taskId: string, attachmentId: string, reason: string): Promise<RepositoryResult<DeleteTaskAttachmentResult | null>>;
   update(
