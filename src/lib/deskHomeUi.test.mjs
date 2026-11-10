@@ -2,6 +2,25 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 const source = (path) => readFileSync(new URL("../" + path, import.meta.url), "utf8");
+test("desk home puts announcements first in the right column before notifications", () => {
+  const home = source("components/DeskHome.tsx");
+  const columns = home.split('<div className="min-w-0 space-y-5">');
+  assert.equal(columns.length, 3);
+  const rightColumn = columns[2].split('<div className="mt-5 grid gap-5')[0];
+  assert.match(rightColumn, /^<Card id="desk-announcements" title=\{announcementCopy\.blockAnnouncements\}/);
+  assert.deepEqual([...rightColumn.matchAll(/<Card id="([^"]+)"/g)].map((match) => match[1]), [
+    "desk-announcements", "desk-notifications", "desk-schedule",
+  ]);
+});
+
+test("desk home bottom row contains only the full-width library", () => {
+  const home = source("components/DeskHome.tsx");
+  const bottomRow = home.slice(home.indexOf('<div className="mt-5 grid gap-5'));
+  assert.match(bottomRow, /^<div className="mt-5 grid gap-5">/);
+  assert.match(bottomRow, /title=\{announcementCopy\.blockLibrary\}/);
+  assert.doesNotMatch(bottomRow, /blockAnnouncements/);
+  assert.deepEqual([...bottomRow.matchAll(/<Card id="([^"]+)"/g)].map((match) => match[1]), ["desk-library"]);
+});
 test("desk home source stays ASCII and avoids unicode escapes", () => { for (const path of ["lib/deskHome.mjs", "components/DeskHome.tsx", "lib/deskRepository.ts", "app/page.tsx"]) { const text = source(path); assert.doesNotMatch(text, /[^\x00-\x7F]/); assert.doesNotMatch(text, /\\u[0-9A-Fa-f]{4}/); } });
 test("desk home wires required navigation and notification behavior", () => { const home = source("components/DeskHome.tsx"); const nav = source("components/AppNav.tsx"); assert.match(home, /id="desk-today"/); assert.match(home, /id="desk-approvals"/); assert.match(home, /id="desk-notifications"/); assert.match(home, /id="desk-schedule"/); assert.match(home, /POST/); assert.match(home, /\/api\/notifications/); assert.match(nav, /showHome={!isCollaboratorRole/); });
 test("repository keeps isolated blocks and no any", () => { const text = source("lib/deskRepository.ts"); for (const name of ["loadTodayBlock", "loadApprovalsBlock", "loadScheduleBlock", "loadShortcutsBlock"]) assert.match(text, new RegExp(name)); assert.doesNotMatch(text, /: any/); });
