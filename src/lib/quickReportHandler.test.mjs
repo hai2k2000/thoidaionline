@@ -5,6 +5,8 @@ import { normalizePermissions } from "./permissions.ts";
 import { apiError, apiJson } from "./apiResponse.ts";
 import { createTaskApplication } from "./taskHandlerFactory.ts";
 import { normalizeLegacyEvaluationInput } from "./legacyEvaluationValidation.ts";
+import { canTaskAction } from "./authorization.ts";
+import { taskBasePermission, canTaskBase } from "./taskAuthorization.ts";
 
 const uuid = (n) => `00000000-0000-4000-8000-0000000000${n}`;
 const actor = {
@@ -18,9 +20,14 @@ const validRow = (overrides = {}) => ({
   completionDate: "2026-10-01", status: "done", notes: "Xong", ...overrides,
 });
 
-const harness = (actorOverride = {}) => {
+const harness = (actorOverride = {}, status = "done") => {
   const calls = [];
-  const repository = { createQuickReportBatch: (...args) => { calls.push(args); return Promise.resolve({ ok: true, data: { batchId: uuid("20"), tasks: [], count: args[1].rows.length, replayed: false } }); } };
+  const uploads = [];
+  const repository = {
+    createQuickReportBatch: (...args) => { calls.push(args); return Promise.resolve({ ok: true, data: { batchId: uuid("20"), tasks: args[1].rows.map((row, index) => ({ ordinal: index + 1, id: uuid(String(50 + index)), title: row.title })), count: args[1].rows.length, replayed: false } }); },
+    access: async id => ({ ok: true, data: { id, createdBy: actor.id, ownerId: actor.id, assigneeId: actor.id, participants: [], departmentId: actor.department_id, taskType: "personal", workflowType: "REPORT_ONLY", status } }),
+    addAttachmentMetadata: async (...args) => { uploads.push(args); return { ok: true, data: { id: uuid("60"), file_name: args[2].fileName } }; },
+  };
   const app = createTaskApplication({
     repository,
     readActor: async () => ({ ok: true, actor: { ...actor, ...actorOverride } }),
@@ -29,11 +36,12 @@ const harness = (actorOverride = {}) => {
     rpcFailure: () => apiError("operation_failed", 500),
     asUuid: (value) => typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value) ? value : null,
     canAssignToDepartment: () => false, resolveAssignmentParticipants: async () => ({ ok: false }),
-    canTaskAction: () => false, taskRbacEnabled: false,
+    canTaskAction, taskRbacEnabled: true,
+    taskRbacBaseAllowed: async (user, action, task) => canTaskBase({ id: user.id, departmentId: user.department_id, roleCode: user.role_code, grants: [{ permissionCode: "task.view", scope: "self" }] }, taskBasePermission(action), task),
     normalizeLegacyEvaluationInput, newUuid: () => uuid("30"),
     uploadPrivateAttachment: async () => ({ ok: true }), removePrivateAttachment: async () => {}, signPrivateAttachment: async () => ({ ok: true, url: "" }),
   });
-  return { app, calls };
+  return { app, calls, uploads };
 };
 
 test("quick report single request uses actor-owned request id and row", async () => {
@@ -46,6 +54,28 @@ test("quick report single request uses actor-owned request id and row", async ()
   assert.equal(h.calls[0][0], actor.id);
   assert.equal(h.calls[0][1].requestId, uuid("40"));
   assert.equal(h.calls[0][1].rows[0].status, "done");
+  assert.deepEqual((await response.json()).tasks, [{ ordinal: 1, id: uuid("50"), title: "Sửa máy in" }]);
+});
+
+for (const status of ["in_progress", "done", "pending_review"]) {
+  test(`quick-report creator can upload through the handler in ${status}`, async () => {
+    const h = harness({}, status);
+    const form = new FormData();
+    form.set("file", new File(["evidence"], "proof.pdf", { type: "application/pdf" }));
+    const response = await h.app.uploadAttachment(new Request("https://example.test/api/tasks/attachments", { method: "POST", body: form }), uuid("50"));
+    assert.equal(response.status, 201);
+    assert.equal(h.uploads.length, 1);
+    assert.equal(h.uploads[0][0], actor.id);
+    assert.equal(h.uploads[0][1], uuid("50"));
+  });
+}
+
+test("unrelated user cannot upload to the quick report", async () => {
+  const h = harness({ id: uuid("99") });
+  const form = new FormData(); form.set("file", new File(["evidence"], "proof.pdf"));
+  const response = await h.app.uploadAttachment(new Request("https://example.test", { method: "POST", body: form }), uuid("50"));
+  assert.equal(response.status, 403);
+  assert.equal(h.uploads.length, 0);
 });
 
 test("quick report preserves a completion date different from the start date", async () => {
