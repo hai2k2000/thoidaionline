@@ -6,7 +6,7 @@ import path from "node:path";
 import { databaseRecordStorageKey } from "./storageKey";
 import { databaseRecordFileType } from "./fileType.mjs";
 
-const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const MAX_FILE_BYTES = 150 * 1024 * 1024;
 const ALLOWED = new Set([
   "application/pdf",
   "application/msword",
