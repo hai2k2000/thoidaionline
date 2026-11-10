@@ -17,6 +17,8 @@ function renderLibrary(item){
   'next/navigation':{useSearchParams:()=>new URLSearchParams(),useRouter:()=>({push:()=>{}})},
   'next/link':{__esModule:true,default:({children,...props})=>React.createElement('a',props,children)},
   '@/lib/projectLibraryFile':policy,'@/lib/projectLibrary':permissions,
+  '@/components/ui/StateViews':{EmptyState:()=>null,ErrorState:()=>null},
+  '@/components/ConfirmDialog':{useConfirm:()=>async()=>true},
   '@/components/ProjectUi':{ProjectIcon:()=>null},
   '@/components/ProjectLibraryPreview':{__esModule:true,default:()=>null},
   '@/components/CameraCaptureButton':{__esModule:true,default:()=>null},

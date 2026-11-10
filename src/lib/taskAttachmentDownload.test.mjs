@@ -31,6 +31,11 @@ const fixture = (options = {}) => {
   return { app, downloads: () => downloads };
 };
 
+for (const disposition of ['inline', 'attachment']) test(`task route honors disposition=${disposition}`, async () => {
+  const response = await fixture().app.downloadAttachment(taskId, attachmentId, new Request(`https://example.test?disposition=${disposition}`));
+  assert.match(response.headers.get('content-disposition'), new RegExp(`^${disposition};`));
+});
+
 test("allowed CTV receives bytes with private PDF headers instead of a signed URL", async () => {
   const { app } = fixture();
   assert.equal(isCollaboratorAllowedApiPath(`/api/tasks/${taskId}/attachments/${attachmentId}`, "GET"), true);
@@ -71,7 +76,7 @@ for (const mime of ["image/png", "image/jpeg", "image/gif", "image/webp", "image
 }
 test("Vietnamese filename and RFC 5987 punctuation are encoded with an ASCII fallback", async () => {
   const response = await fixture({ mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", name: "B\u00e1o c\u00e1o (1)'*.docx" }).app.downloadAttachment(taskId, attachmentId);
-  assert.equal(response.headers.get("content-disposition"), 'attachment; filename="Bao cao (1)\'*.docx"; filename*=UTF-8\'\'B%C3%A1o%20c%C3%A1o%20%281%29%27%2A.docx');
+  assert.equal(response.headers.get("content-disposition"), 'attachment; filename="Bao cao _1_.docx"; filename*=UTF-8\'\'B%C3%A1o%20c%C3%A1o%20%281%29%27%2A.docx');
 });
 for (const partial of [false, true]) test(`Range is forwarded and returns 206 (storage partial=${partial})`, async () => {
   const response = await fixture({ partial, expectedRange: "bytes=1-3" }).app.downloadAttachment(taskId, attachmentId, new Request("https://example.test", { headers: { Range: "bytes=1-3" } }));

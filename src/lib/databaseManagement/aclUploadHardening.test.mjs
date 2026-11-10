@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import * as fileTypes from "./fileType.mjs";
+import { contentDisposition } from '../contentDisposition.mjs';
 
 function load(path, dependencies = {}) {
   const source = stripTypeScriptTypes(readFileSync(path, "utf8"));
@@ -50,6 +51,55 @@ function database(options = {}) {
   const repository = load(base + "repository.ts", { serverSupabase: client, ...acl, ...policy, ...validation, languageCodeForCategory: () => null });
   return { tables, events, client, repository };
 }
+
+test('file preview uses existing ACL, rejects download, and exposes matching detail permissions', async () => {
+  const who = { ...actor, rbacPermissions: ['record.discover', 'record.preview'] };
+  for (const options of [{ record: { owner_id: 'u1' } }, { acl: [{ capability: 'preview', effect: 'allow', principal_type: 'user', principal_id: 'u1' }] }]) {
+    const { repository, tables } = database(options);
+    tables.db_record_external_links = []; tables.db_record_keywords = [];
+    assert.equal((await repository.getDatabaseRecordFile(who, 'r1', 'f1', 'preview')).id, 'f1');
+    await assert.rejects(repository.getDatabaseRecordFile(who, 'r1', 'f1'), /permission_denied/);
+    const detail = await repository.getVisibleDatabaseRecord(who, 'r1');
+    assert.equal(detail.canPreview, true);
+    assert.equal(detail.canDownload, false);
+  }
+});
+
+test('file preview route enforces repository permissions and audits preview separately', async () => {
+  const { fileResponseHeaders } = await import('../fileResponseHeaders.mjs');
+  for (const [permissions, mode, expected] of [
+    [['record.preview'], 'preview', 200], [['record.preview'], 'download', 403],
+    [[], 'preview', 403], [['record.download'], 'preview', 200], [['record.download'], 'download', 200],
+  ]) {
+    const who = { ...actor, rbacPermissions: ['record.discover', ...permissions] };
+    const { repository, tables } = database({ record: { owner_id: 'u1' } });
+    Object.assign(tables.db_record_files[0], { sha256: 'hash', mime_type: 'application/pdf' });
+    const audits = []; let reads = 0;
+    const route = load('src/app/api/database/records/[id]/files/[fileId]/route.ts', {
+      ...repository, fileResponseHeaders, contentDisposition, NextResponse: Response,
+      getSessionUser: async () => who,
+      readDatabaseRecordFile: async () => { reads++; return { bytes: Buffer.from('pdf'), sha256: 'hash' }; },
+      logServerAudit: async (event) => { audits.push(event); return 'delivered'; },
+    });
+    const response = await route.GET(new Request(`https://example.test/file?mode=${mode}`), { params: Promise.resolve({ id: 'r1', fileId: 'f1' }) });
+    assert.equal(response.status, expected, `${permissions}/${mode}`);
+    assert.equal(reads, expected === 200 ? 1 : 0);
+    assert.deepEqual(audits.map(event => event.action), expected === 200 ? [mode] : []);
+    if (expected === 200) assert.match(response.headers.get('content-disposition'), mode === 'preview' ? /^inline;/ : /^attachment;/);
+  }
+});
+
+test('preview cannot bypass metadata deny, preview deny, restricted category or deleted records', async () => {
+  const who = { ...actor, rbacPermissions: ['record.discover', 'record.preview'] };
+  for (const options of [
+    { acl: [{ capability: 'preview', effect: 'deny', principal_type: 'user', principal_id: 'u1' }] },
+    { acl: [{ capability: 'metadata.view', effect: 'deny', principal_type: 'user', principal_id: 'u1' }] },
+    { category: { restricted: true } }, { record: { status: 'deleted' } },
+  ]) {
+    const db = database({ ...options, record: { owner_id: 'u1', ...options.record } });
+    await assert.rejects(db.repository.getDatabaseRecordFile(who, 'r1', 'f1', 'preview'), /permission_denied|record_not_found/);
+  }
+});
 
 test("ACL management rejects a visible colleague but allows owner, admin and approvers", async () => {
   const cases = [

@@ -386,7 +386,7 @@ export function createTaskApplication(deps: Dependencies) {
       if (!attachment.ok) return deps.rpcFailure(attachment.error);
       if (!attachment.data) return deps.error("not_found", 404);
       const metadata = attachment.data;
-      const headers = taskAttachmentHeaders(metadata);
+      const headers = taskAttachmentHeaders(metadata, request ? new URL(request.url).searchParams.get("disposition") ?? "inline" : "inline");
       const rangeHeader = request?.headers.get("range");
       const range = taskAttachmentRange(rangeHeader, metadata.size_bytes);
       if (range === false) {

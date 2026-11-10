@@ -235,6 +235,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     canDelete,
     canEdit,
     canDownload,
+    canPreview: metadataAllowed && record.status !== "deleted" && (canDownload || await canRecord(actor, record, recordId, "preview")),
     canRestore,
     canManageAcl,
     approvalBlockReason: blockReason,
@@ -572,13 +573,15 @@ export async function upsertDatabaseRecordAcl(actor: DatabaseRecordActor, record
   return data;
 }
 
-export async function getDatabaseRecordFile(actor: DatabaseRecordActor, recordId: string, fileId: string) {
+export async function getDatabaseRecordFile(actor: DatabaseRecordActor, recordId: string, fileId: string, mode: "download" | "preview" = "download") {
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (!(await visibilityAllowed(actor, current, recordId))) throw new Error("permission_denied");
   const context = await actorContext(actor);
   const acl = await aclForRecord(recordId);
-  if (!decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, current)) throw new Error("permission_denied");
+  const canDownload = decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, current);
+  const canPreview = mode === "preview" && !databaseRecordMetadataDenied(context, acl) && await canRecord(actor, current, recordId, "preview");
+  if (!canDownload && !canPreview) throw new Error("permission_denied");
   const { data, error } = await serverSupabase.from("db_record_files").select("id,record_id,storage_key,original_name,mime_type,size_bytes,sha256").eq("id", fileId).eq("record_id", recordId).maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("file_not_found");

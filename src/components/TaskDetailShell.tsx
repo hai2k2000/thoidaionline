@@ -1,4 +1,5 @@
 ﻿"use client";
+import { FilePreviewList } from "@/components/FilePreviewDialog";
 
 import { parseTaskRequirements } from "@/lib/taskRequirements";
 import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
@@ -66,6 +67,8 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
   const requestConfirmation = useConfirm();
   const promptDialog = usePromptDialog();
   const [message, setMessage] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewFiles = task.attachments.map(file => ({ url: `/api/tasks/${task.id}/attachments/${file.id}?disposition=inline`, downloadUrl: `/api/tasks/${task.id}/attachments/${file.id}?disposition=attachment`, fileName: file.file_name, mimeType: file.mime_type, sizeBytes: file.size_bytes }));
   const [busy, setBusy] = useState(false);
   const [reportedOn, setReportedOn] = useState(today());
   const [reportStatus, setReportStatus] = useState("in_progress");
@@ -127,7 +130,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
     await jsonPost(`/api/tasks/${task.id}/comments`, { content: comment }); setComment("");
   };
   const download = (id: string) => {
-    window.open(`/api/tasks/${task.id}/attachments/${id}`, "_blank", "noopener,noreferrer");
+    window.open(`/api/tasks/${task.id}/attachments/${id}?disposition=attachment`, "_blank", "noopener,noreferrer");
   };
   const personal = task.task_type === "personal";
   const deadlineState = classifyTaskDeadline(task);
@@ -191,7 +194,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
               <Section title={`Đính kèm · Tệp (${task.attachments.length})`}>
                 {projectTask ? <p className="mb-3 text-sm text-slate-600">Tệp cũng xuất hiện trong <Link className="font-semibold text-orange-700 underline" href={`/projects/${task.project_id}?tab=library`}>Thư viện dự án</Link>.</p> : null}
                 {capabilities.attachment ? <div className="mb-4"><TaskAttachmentUploader taskId={task.id} disabled={busy} /></div> : null}
-                <Timeline empty="Chưa có tệp.">{task.attachments.map((row) => <li key={row.id} className="break-words"><span>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB</span><button onClick={() => download(row.id)} className="mt-1 block text-orange-700 underline">Tải xuống</button></li>)}</Timeline>
+                <Timeline empty="Chưa có tệp.">{task.attachments.map((row) => <li key={row.id} className="break-words"><span>{row.file_name} · {Math.ceil(row.size_bytes / 1024)} KB</span><button type="button" onClick={() => setPreviewUrl(`/api/tasks/${task.id}/attachments/${row.id}?disposition=inline`)} className="mr-3 min-h-11 rounded px-2 text-orange-700 underline focus-visible:ring-2">Xem</button><button onClick={() => download(row.id)} className="mt-1 block text-orange-700 underline">Tải xuống</button></li>)}</Timeline>
               </Section>
 
               {task.journalism ? <JournalismDetailSection journalism={task.journalism} /> : null}
@@ -213,6 +216,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
             <details className="rounded-xl border bg-white p-4 shadow-sm"><summary className="lg:sticky lg:top-[7.5rem] z-20 -mx-1 cursor-pointer bg-white px-1 py-1 font-bold">Lịch sử ({task.deadline_history.length + task.status_events.length + task.progress_logs.length})</summary><div className="mt-3 space-y-3"><details className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Thay đổi hạn ({task.deadline_history.length})</summary><div className="mt-3"><Timeline empty="Chưa đổi hạn.">{task.deadline_history.map((row) => <li key={row.id}>{dateText(row.changed_at)}: {dateText(row.old_due_date)} → {dateText(row.new_due_date)} · {row.reason}</li>)}</Timeline></div></details><details className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">Trạng thái ({task.status_events.length})</summary><div className="mt-3"><Timeline empty="Chưa có sự kiện.">{task.status_events.map((row) => <li key={row.id}>{dateText(row.created_at)}: {row.from_status ? `${statusLabel(row.from_status, task.approval_required, projectTask)} → ` : ""}{statusLabel(row.to_status, task.approval_required, projectTask)}{row.reason ? ` · ${row.reason}` : ""}</li>)}</Timeline></div></details></div></details>
           </aside>
         </div>
+      {previewUrl && <FilePreviewList files={previewFiles} selectedUrl={previewUrl} onSelect={setPreviewUrl} onClose={() => setPreviewUrl(null)} />}
       </main>
     </div>
   </div>;
