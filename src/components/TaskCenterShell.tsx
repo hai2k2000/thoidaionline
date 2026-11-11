@@ -20,6 +20,7 @@ import PersonalTaskActions from "@/components/PersonalTaskActions";
 import JournalismSummary from "@/components/JournalismSummary";
 import { useAuth } from "@/lib/auth";
 import { taskListHref } from "@/lib/taskFilters.mjs";
+import TaskListReportDialog from "@/components/TaskListReportDialog";
 import { journalismLabels, journalismPublicationStatusLabel } from "@/lib/journalismUi.mjs";
 import { classifyTaskDeadline, deadlineLabel as presentDeadlineLabel, deadlineTone } from "@/lib/deadlinePresentation.mjs";
 import { getAssignmentSourceDisplay, resolveDisplayedAssigner } from "@/lib/taskAssignmentDisplay.mjs";
@@ -203,6 +204,7 @@ export default function TaskCenterShell(props: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const { logout } = useAuth();
   const onLogout = () => { logout(); router.replace("/login"); };
   const totalPages = Math.max(1, Math.ceil(tasks.total / tasks.pageSize));
@@ -272,11 +274,12 @@ export default function TaskCenterShell(props: Props) {
           <>
 
               {taskMode ? <nav aria-label="Phạm vi lịch trực" className="mt-3 flex rounded-lg border border-orange-200 bg-white p-1 sm:w-fit"><Link href="/duty-schedule" className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600">Toàn cơ quan</Link><span className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white">Cá nhân</span></nav> : null}
-              <MobileFilters>
-              <form id="task-filter-form" action={basePath} className="task-filter-bar mt-3 flex flex-wrap items-center gap-1.5 rounded-xl border bg-white p-2 shadow-sm">
+              <div className="mt-3 flex flex-wrap items-center gap-2"><div className="min-w-0 flex-1"><MobileFilters>
+              <form id="task-filter-form" action={basePath} className="task-filter-bar flex flex-wrap items-center gap-1.5 rounded-xl border bg-white p-2 shadow-sm">
                 <FilterFields key={JSON.stringify(query)} query={query} projects={projects} departments={departments} personOptions={personOptions} canFilterByPerson={canFilterByPerson} journalismWorkKinds={journalismWorkKinds} journalismTopics={journalismTopics} journalismSeries={journalismSeries} canAccessJournalism={canAccessJournalism} canReviewTaskApprovals={canReviewTaskApprovals} canSeeDepartmentCollaborating={canSeeDepartmentCollaborating} taskMode={taskMode} basePath={basePath} />
               </form>
-              </MobileFilters>
+              </MobileFilters></div>{!taskMode && !query.approvalQueue && !isCollaboratorRole(currentUserRole) ? <button type="button" onClick={() => setReportOpen(true)} className="h-11 whitespace-nowrap rounded-lg bg-orange-700 px-3 text-xs font-semibold text-white">Xuất báo cáo</button> : null}</div>
+              {reportOpen ? <TaskListReportDialog query={query} onClose={() => setReportOpen(false)} /> : null}
               {bulkPrintEnabled && selectedTaskIds.length ? <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3"><span className="text-sm font-semibold text-orange-900">Đã chọn: {selectedTaskIds.length} công việc</span><button type="button" disabled={bulkBusy} onClick={() => void bulkPrint()} className="rounded-lg bg-orange-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Xuất phiếu giao việc hàng loạt (ZIP)</button>{adminBulk ? <><button type="button" disabled={bulkBusy} onClick={() => void bulkCancel()} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Huỷ công việc</button><span className="text-xs text-slate-600">Xoá công việc: ADMIN DELETE CONTRACT NOT FOUND</span></> : null}</div> : null}
                 <section className="mobile-task-list mt-3 overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
                 {canReviewTaskApprovals && query.approvalQueue ? <ApprovalQueue queue={query.approvalQueue} data={approvalQueue?.[query.approvalQueue] ?? { items: [], total: 0, page: 1, pageSize: 100 }} onRefresh={() => router.refresh()} /> : null}
