@@ -27,8 +27,9 @@ const protectedFilterBlock = `/* Keep each filter as an explicit flex item so po
   .task-filter-actions > button, .task-filter-actions > a { flex: 1 1 0%; }
 }`;
 
+// Since 64f0fe6 the card rule no longer sets position itself; a :not(.fixed, .absolute, …)
+// companion rule does, so floating panels keep their own positioning.
 const protectedPanelRule = `:where(.rounded-xl.border.bg-white, .rounded-2xl.border.bg-white, .rounded-lg.border.bg-white) {
-  position: relative;
   border-color: #e2e8f0 !important;
   border-width: 1px;
   background: #ffffff !important;
@@ -101,12 +102,15 @@ test("globals avoids transition all and keeps touch-friendly mobile selectors", 
 test("protected layout blocks remain byte-identical", () => {
   // Git stores LF; Windows checkouts may use CRLF. No other bytes are normalized.
   const normalized = globals.replaceAll("\r\n", "\n");
-  const filter = normalized.slice(normalized.indexOf("/* Keep each filter"));
-  assert.equal(filter.trimEnd(), protectedFilterBlock);
+  // Later rules may be appended after the block; only the block itself is protected.
+  const filterStart = normalized.indexOf("/* Keep each filter");
+  const filter = normalized.slice(filterStart, filterStart + protectedFilterBlock.length);
+  assert.equal(filter, protectedFilterBlock);
   const panel = normalized.match(/:where\(\.rounded-xl\.border\.bg-white, \.rounded-2xl\.border\.bg-white, \.rounded-lg\.border\.bg-white\) \{[^}]*\}/)[0];
   assert.equal(panel, protectedPanelRule);
   const precedingCss = normalized.slice(0, normalized.indexOf(protectedPanelRule)).replace(/\/\*[\s\S]*?\*\//g, "");
   assert.equal([...precedingCss].reduce((depth, char) => depth + (char === "{" ? 1 : char === "}" ? -1 : 0), 0), 0, "Panel rule must stay unlayered");
+  assert.match(normalized, /:where\(\.rounded-xl\.border\.bg-white, \.rounded-2xl\.border\.bg-white, \.rounded-lg\.border\.bg-white\):not\(\.fixed, \.absolute, \.sticky[^)]*\) \{\n  position: relative;\n\}/);
   assert.match(globals, /main h1 \{ font-size: 1\.25rem; line-height: 1\.3; \}/);
 });
 
