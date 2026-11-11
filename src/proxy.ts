@@ -2,7 +2,7 @@ import { isCollaboratorRole, isCollaboratorAllowedPath } from "@/lib/collaborato
 import { serverSupabase } from "@/lib/serverSupabase";
 import { NextRequest, NextResponse } from "next/server";
 import { getFirstLoginGateDecision } from "@/lib/firstLoginPassword";
-import { verifySignedSessionToken } from "@/lib/sessionToken";
+import { createSignedSessionToken, sessionTtlSeconds, shouldRenewRememberedSession, verifySignedSessionToken } from "@/lib/sessionToken";
 const SESSION_COOKIE = "thoidai_work_session";
 
 function nextWithNonce(request: NextRequest) {
@@ -45,13 +45,18 @@ export async function proxy(request: NextRequest) {
   const bearer = authorization?.match(/^Bearer\s+([^\s]+)$/i)?.[1];
   const token = request.cookies.get(SESSION_COOKIE)?.value ?? bearer;
   const session = verifySignedSessionToken({ token, secret });
+  let renew = false;
   if (session) {
     // Resolve the live role so existing sessions respect a role reassignment.
     const { data, error } = await serverSupabase.from("staff_users")
-      .select("roles(code)").eq("id", session.userId).maybeSingle();
+      .select("roles(code),active,session_version,must_change_password").eq("id", session.userId).maybeSingle();
     if (error) return NextResponse.json({ error: "Authorization unavailable" }, { status: 503 });
     const roles = data?.roles as unknown as { code: string } | { code: string }[] | null;
     const roleCode = Array.isArray(roles) ? roles[0]?.code : roles?.code;
+    renew = !!request.cookies.get(SESSION_COOKIE) && !!roleCode && data?.active === true
+      && data.session_version === session.sessionVersion && data.must_change_password !== true
+      && shouldRenewRememberedSession(session)
+      && !["/api/auth/login", "/api/auth/mobile-login", "/api/auth/logout", "/api/account/password", "/api/auth/reset-password"].includes(pathname);
     if (isCollaboratorRole(roleCode) && !isCollaboratorAllowedPath(pathname, request.method)) {
       return pathname.startsWith("/api/")
         ? NextResponse.json({ error: "Forbidden", code: "forbidden" }, { status: 403, headers: { "Cache-Control": "private, no-store" } })
@@ -77,7 +82,22 @@ export async function proxy(request: NextRequest) {
     session?.mustChangePassword === true,
   );
 
-  if (decision.type === "allow") return nextWithNonce(request);
+  if (decision.type === "allow") {
+    const response = nextWithNonce(request);
+    if (renew && session) {
+      response.cookies.set(SESSION_COOKIE, createSignedSessionToken({
+        userId: session.userId, sessionVersion: session.sessionVersion, remember: true, secret,
+      }), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        path: "/",
+        maxAge: sessionTtlSeconds(true),
+      });
+      response.headers.set("Cache-Control", "private, no-store");
+    }
+    return response;
+  }
   if (decision.type === "reject-api") {
     return NextResponse.json(
       { error: "Bạn phải đổi mật khẩu trước khi sử dụng chức năng này.", code: "password_change_required" },

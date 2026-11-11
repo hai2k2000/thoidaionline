@@ -1,12 +1,27 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_TTL_SECONDS = 8 * 60 * 60;
+export const REMEMBERED_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+export function sessionTtlSeconds(remember = false, mustChangePassword = false) {
+  return remember && !mustChangePassword ? REMEMBERED_SESSION_TTL_SECONDS : SESSION_TTL_SECONDS;
+}
+
+export function shouldRenewRememberedSession(
+  session: { remember?: boolean; issuedAt?: number; mustChangePassword?: boolean },
+  nowSeconds = Math.floor(Date.now() / 1000),
+) {
+  return session.remember === true && session.mustChangePassword !== true
+    && Number.isInteger(session.issuedAt) && nowSeconds - session.issuedAt! >= 24 * 60 * 60;
+}
 
 export type SessionPayload = {
   userId: string;
   expiresAt: number;
   sessionVersion?: number;
   mustChangePassword?: boolean;
+  remember?: boolean;
+  issuedAt?: number;
 };
 
 export type VerifiedSessionPayload = {
@@ -14,6 +29,8 @@ export type VerifiedSessionPayload = {
   expiresAt: number;
   sessionVersion: number;
   mustChangePassword: boolean;
+  remember: boolean;
+  issuedAt?: number;
 };
 
 const signature = (payload: string, secret: string) =>
@@ -28,6 +45,7 @@ export function createSignedSessionToken({
   userId,
   sessionVersion,
   mustChangePassword = false,
+  remember = false,
   secret,
   nowSeconds = Math.floor(Date.now() / 1000),
 }: {
@@ -35,11 +53,14 @@ export function createSignedSessionToken({
   sessionVersion: number;
   mustChangePassword?: boolean;
   secret: string;
+  remember?: boolean;
   nowSeconds?: number;
 }) {
   return signSessionPayload({
     userId,
-    expiresAt: nowSeconds + SESSION_TTL_SECONDS,
+    expiresAt: nowSeconds + sessionTtlSeconds(remember, mustChangePassword),
+    issuedAt: nowSeconds,
+    remember: remember === true && !mustChangePassword,
     sessionVersion,
     mustChangePassword,
   }, secret);
@@ -72,6 +93,8 @@ export function verifySignedSessionToken({
       expiresAt: parsed.expiresAt,
       sessionVersion,
       mustChangePassword: parsed.mustChangePassword === true,
+      remember: parsed.remember === true && parsed.mustChangePassword !== true,
+      issuedAt: Number.isInteger(parsed.issuedAt) ? parsed.issuedAt : undefined,
     };
   } catch {
     return null;
