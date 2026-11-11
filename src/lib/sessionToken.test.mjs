@@ -4,7 +4,10 @@ import test from "node:test";
 
 import {
   createSignedSessionToken,
+  REMEMBERED_SESSION_TTL_SECONDS,
+  SESSION_TTL_SECONDS,
   signSessionPayload,
+  shouldRenewRememberedSession,
   verifySignedSessionToken,
 } from "./sessionToken.ts";
 
@@ -23,7 +26,44 @@ test("new sessions preserve the database session version", () => {
     expiresAt: 28900,
     sessionVersion: 4,
     mustChangePassword: false,
+    remember: false,
+    issuedAt: 100,
   });
+});
+
+test("remembered and ordinary sessions use their respective TTLs", () => {
+  const secret = signingSecret();
+  const remembered = createSignedSessionToken({ userId: "u", sessionVersion: 1, remember: true, secret, nowSeconds: 100 });
+  const ordinary = createSignedSessionToken({ userId: "u", sessionVersion: 1, remember: false, secret, nowSeconds: 100 });
+  const payload = verifySignedSessionToken({ token: remembered, secret, nowSeconds: 101 });
+  assert.equal(payload.expiresAt, 100 + 30 * 24 * 60 * 60);
+  assert.equal(payload.issuedAt, 100);
+  assert.equal(payload.remember, true);
+  assert.equal(verifySignedSessionToken({ token: remembered, secret, nowSeconds: payload.expiresAt - 1 })?.userId, "u");
+  assert.equal(verifySignedSessionToken({ token: ordinary, secret, nowSeconds: 101 })?.expiresAt, 100 + 8 * 60 * 60);
+  assert.equal(verifySignedSessionToken({ token: remembered, secret, nowSeconds: 100 + REMEMBERED_SESSION_TTL_SECONDS }), null);
+  assert.equal(verifySignedSessionToken({ token: ordinary, secret, nowSeconds: 100 + SESSION_TTL_SECONDS }) , null);
+});
+
+test("legacy tokens without remember fields still verify as ordinary sessions", () => {
+  const secret = signingSecret();
+  const token = signSessionPayload({ userId: "u", expiresAt: 200 }, secret);
+  const verified = verifySignedSessionToken({ token, secret, nowSeconds: 100 });
+  assert.equal(verified?.userId, "u");
+  assert.equal(verified?.remember, false);
+});
+
+test("must-change-password sessions cannot be remembered", () => {
+  const secret = signingSecret();
+  const token = createSignedSessionToken({ userId: "u", sessionVersion: 1, remember: true, mustChangePassword: true, secret, nowSeconds: 100 });
+  assert.equal(verifySignedSessionToken({ token, secret, nowSeconds: 100 + SESSION_TTL_SECONDS - 1 })?.remember, false);
+  assert.equal(verifySignedSessionToken({ token, secret, nowSeconds: 100 + SESSION_TTL_SECONDS }), null);
+});
+
+test("renewal starts only after one day for remembered sessions", () => {
+  assert.equal(shouldRenewRememberedSession({ remember: true, issuedAt: 100 }, 100 + 86400 - 1), false);
+  assert.equal(shouldRenewRememberedSession({ remember: true, issuedAt: 100 }, 100 + 86400), true);
+  assert.equal(shouldRenewRememberedSession({ remember: false, issuedAt: 100 }, 100 + 86400), false);
 });
 
 test("new sessions preserve the first-login password requirement", () => {

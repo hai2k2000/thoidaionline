@@ -51,7 +51,7 @@ test("every API route outside the explicit allowlist is covered by the central g
   assert.match(proxy, /"\/api\/:path\*"/);
   assert.match(proxy, /isCollaboratorRole\(roleCode\) && !isCollaboratorAllowedPath\(pathname, request.method\)/);
   assert.match(proxy, /status: 403/);
-  assert.match(proxy, /from\("staff_users"\)[\s\S]*select\("roles\(code\)"\)/);
+  assert.match(proxy, /from\("staff_users"\)[\s\S]*select\("roles\(code\),active,session_version,must_change_password"\)/);
   const routes = readdirSync("src/app/api", { recursive: true }).map(String).map((p) => p.replaceAll("\\", "/")).filter((p) => p.endsWith("/route.ts")).map((p) => p.slice(0, -9));
   assert.ok(routes.length > 100);
   for (const route of routes) {
