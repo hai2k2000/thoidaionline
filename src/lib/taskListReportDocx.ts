@@ -17,7 +17,7 @@ function headerCell(children: Paragraph[], width: number) {
 }
 function section({ title, groups }: ReportSection) {
   let index = 0;
-  const rows = [new TableRow({ tableHeader: true, children: ["STT", "Công việc", "Người thực hiện", "Người giao", "Hạn", "Trạng thái/Ghi chú"].map(value => cell(value, true)) })];
+  const rows = [new TableRow({ tableHeader: true, children: ["STT", "Tên công việc", "Người thực hiện", "Người giao", "Hạn", "Trạng thái/Ghi chú"].map(value => cell(value, true)) })];
   for (const { name, rows: tasks } of groups) {
     rows.push(new TableRow({ children: [new TableCell({ columnSpan: 6, children: [para("Người thực hiện: " + name, { bold: true })] })] }));
     for (const task of tasks) {
@@ -53,9 +53,8 @@ export async function exportTaskListReportDocx(source: TaskListReportModel | { t
     para("Từ ngày " + date(input.from) + " đến ngày " + date(input.to), { align: AlignmentType.CENTER }),
     ...(input.filterLabel ? [para("Bộ lọc: " + input.filterLabel)] : []),
     para(reportSummary(input.counts), { bold: true }),
-    ...input.sections.filter(value => value.key !== "cancelled").flatMap(section),
+    ...input.sections.flatMap(section),
     ...planSection(input.nextWeekPlan),
-    ...input.sections.filter(value => value.key === "cancelled").flatMap(section),
     para("NGƯỜI LẬP", { bold: true, align: AlignmentType.CENTER, before: 420, after: 220 }),
     para(input.userName, { align: AlignmentType.CENTER }),
   ];

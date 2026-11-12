@@ -24,20 +24,21 @@ function ReportPreview({ model }: { model: TaskListReportModel }) {
     <p className="mt-2 text-sm font-bold">{reportSummary(model.counts)}</p>
     {model.sections.map(section => {
       let index = 0;
-      return <Fragment key={section.key}><section className="mt-5 min-w-0">
+      return <section key={section.key} className="mt-5 min-w-0">
         <h4 className="mb-2 font-bold">{section.title}</h4>
         <div tabIndex={0} role="region" aria-label={`Bảng ${section.title}`} className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-orange-700">
           <table className="w-full min-w-[600px] table-fixed border-collapse text-left text-xs sm:text-sm">
             <colgroup>{[5, 27, 16, 16, 12, 24].map((width, i) => <col key={i} style={{ width: width + "%" }} />)}</colgroup>
-            <thead><tr>{["STT", "Công việc", "Người thực hiện", "Người giao", "Hạn", "Trạng thái/Ghi chú"].map(title => <th key={title} scope="col" className="border border-slate-400 p-1.5">{title}</th>)}</tr></thead>
+            <thead><tr>{["STT", "Tên công việc", "Người thực hiện", "Người giao", "Hạn", "Trạng thái/Ghi chú"].map(title => <th key={title} scope="col" className="border border-slate-400 p-1.5">{title}</th>)}</tr></thead>
             <tbody>{section.groups.map(group => <Fragment key={group.name}>
               <tr><th colSpan={6} scope="rowgroup" className="border border-slate-400 bg-slate-50 p-1.5">Người thực hiện: {group.name}</th></tr>
               {group.rows.map(row => <tr key={row.id}>{[++index, row.title, row.assignees, row.assigner, row.due, row.statusNote].map((value, column) => <td key={column} className="break-words whitespace-pre-line border border-slate-400 p-1.5 align-top">{value}</td>)}</tr>)}
             </Fragment>)}{!section.groups.length ? <tr><td colSpan={6} className="border border-slate-400 p-2">Không có công việc.</td></tr> : null}</tbody>
           </table>
         </div>
-      </section>{section.key === "overdue" ? <NextWeekPlanPreview plan={model.nextWeekPlan} /> : null}</Fragment>;
+      </section>;
     })}
+    <NextWeekPlanPreview plan={model.nextWeekPlan} />
     <p className="mt-8 text-center font-bold">NGƯỜI LẬP</p>
     <p className="mt-8 text-center">{model.userName}</p>
   </article>;
@@ -48,7 +49,7 @@ function NextWeekPlanPreview({ plan }: { plan: TaskListReportModel["nextWeekPlan
     <section className="mt-5 min-w-0">
       <h4 className="mb-2 font-bold">{plan.title}</h4>
       <p className="text-sm">{plan.periodLabel}</p>
-      <div tabIndex={0} role="region" aria-label="Bảng Kế hoạch tuần sau" className="mt-2 overflow-x-auto focus-visible:outline-2 focus-visible:outline-orange-700">
+      <div tabIndex={0} role="region" aria-label={`Bảng ${plan.title}`} className="mt-2 overflow-x-auto focus-visible:outline-2 focus-visible:outline-orange-700">
         {plan.rows.length ? <table className="w-full min-w-[520px] table-fixed border-collapse text-left text-xs sm:text-sm">
           <colgroup>{[5, 50, 28, 17].map((width, i) => <col key={i} style={{ width: width + "%" }} />)}</colgroup>
           <thead><tr>{plan.headers.map(title => <th key={title} scope="col" className="border border-slate-400 p-1.5">{title}</th>)}</tr></thead>
@@ -187,7 +188,7 @@ export default function TaskListReportDialog({ query, onClose }: { query: TaskLi
           </aside>
           <div className="min-w-0 bg-slate-100 p-3 sm:p-5"><h3 className="mb-3 text-sm font-semibold text-text-muted">Xem trước · {selectedCount} công việc</h3>{preview ? <ReportPreview model={preview} /> : <p className="text-sm text-amber-800">Sửa kế hoạch tuần sau để cập nhật bản xem trước.</p>}</div>
           <section className="border-t border-border p-4 sm:p-6 lg:col-span-2">
-            <div className="flex flex-wrap items-end justify-between gap-3"><div><h3 className="text-base font-bold text-brand-ink">IV. Kế hoạch tuần sau</h3><p className="mt-1 text-sm text-text-muted">Dòng trống sẽ không được đưa vào báo cáo. Tối đa 100 dòng; lấy nhanh đến khi đủ 100 dòng.</p></div><button type="button" disabled={busy || stale || planItems.length >= 100} onClick={quickAdd} className={action}>Lấy các việc đang làm/quá hạn</button></div>
+            <div className="flex flex-wrap items-end justify-between gap-3"><div><h3 className="text-base font-bold text-brand-ink">II. Kế hoạch tuần sau</h3><p className="mt-1 text-sm text-text-muted">Dòng trống sẽ không được đưa vào báo cáo. Tối đa 100 dòng; lấy nhanh đến khi đủ 100 dòng.</p></div><button type="button" disabled={busy || stale || planItems.length >= 100} onClick={quickAdd} className={action}>Lấy các việc đang làm/quá hạn</button></div>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="grid gap-1 text-sm font-semibold">Từ ngày<input type="date" value={planDates.from} max={planDates.to} disabled={busy} onChange={event => setPlanDates({ ...planDates, from: event.target.value })} className={control} /></label><label className="grid gap-1 text-sm font-semibold">Đến ngày<input type="date" value={planDates.to} min={planDates.from} disabled={busy} onChange={event => setPlanDates({ ...planDates, to: event.target.value })} className={control} /></label></div>
             <div className="mt-3 space-y-3">{planItems.map((item, index) => <fieldset key={index} disabled={busy} className="min-w-0 rounded-lg border border-border p-3">
               <legend className="px-1 text-sm font-bold">Dòng {index + 1}</legend>

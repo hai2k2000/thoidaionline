@@ -9,19 +9,41 @@ import { contentDisposition } from "./contentDisposition.mjs";
 import { isCollaboratorRole } from "./collaboratorRole.mjs";
 import * as report from "./taskListReport.mjs";
 
-test("selected report recomputes counts and assignee groups without changing the full model", () => {
+test("selected report merges work sections, preserves status notes, excludes cancelled tasks, and recomputes counts", () => {
   assert.equal(typeof report.buildTaskListReportModel, "function");
   const model = report.buildTaskListReportModel({ tasks: [
     { id: "a", title: "Done", status: "done", task_assignees: [{ assignment_role: "owner", staff_users: { full_name: "An" } }] },
     { id: "b", title: "Late", status: "in_progress", due_date: "2020-01-01", task_assignees: [{ assignment_role: "owner", staff_users: { full_name: "Bình" } }] },
     { id: "c", title: "Open", status: "in_progress" },
+    { id: "d", title: "Cancelled", status: "cancelled" },
   ], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "Tất cả", now: new Date("2026-11-09T12:00:00Z") });
   const selected = report.selectTaskListReportModel(model, ["a", "b", "foreign", "a"]);
-  assert.deepEqual(selected.counts, { total: 2, completed: 1, active: 1, overdue: 1, noDeadline: 1 });
-  assert.deepEqual(selected.sections.map(section => section.groups.flatMap(group => group.rows.map(row => row.id))), [["a"], [], ["b"]]);
-  assert.equal(selected.sections[2].groups[0].name, "Bình");
+  assert.deepEqual(selected.counts, { total: 2 });
+  assert.deepEqual(selected.sections.map(section => section.groups.flatMap(group => group.rows.map(row => row.id))), [["a", "b"]]);
+  assert.equal(selected.sections[0].groups[1].name, "Bình");
+  assert.match(selected.sections[0].groups[1].rows[0].statusNote, /Quá hạn$/);
   assert.equal(model.counts.total, 3);
+  assert.deepEqual(model.sections.map(section => section.title), ["I. Công việc đã làm"]);
+  assert.equal(model.sections[0].groups.flatMap(group => group.rows).some(row => row.id === "d"), false);
   assert.equal(report.selectTaskListReportModel(model, []).counts.total, 0);
+});
+
+test("merged rows keep input order within assignees, completion dates and overdue notes", () => {
+  const model = report.buildTaskListReportModel({ tasks: [
+    { id: "open", title: "Z", status: "in_progress", due_date: "2099-01-01", report_notes: "Đang viết" },
+    { id: "done", title: "A", status: "done", due_date: "2020-01-01", completed_at: "2026-11-05T08:00:00Z" },
+    { id: "late", title: "B", status: "in_progress", due_date: "2020-01-01", report_notes: "Chờ dữ liệu" },
+    { id: "cancelled", title: "Không xuất", status: "cancelled", due_date: "2026-11-10" },
+  ], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "", now: new Date("2026-11-09T12:00:00Z") });
+  assert.equal(model.sections.length, 1);
+  assert.deepEqual(model.sections[0].groups[0].rows.map(row => [row.id, row.statusNote]), [
+    ["open", "Đang thực hiện · Đang viết"],
+    ["done", "Đã hoàn thành · 05/11/2026"],
+    ["late", "Đang thực hiện · Chờ dữ liệu · Quá hạn"],
+  ]);
+  assert.equal(report.reportSummary(model.counts), "Tổng: 3 công việc");
+  assert.equal(model.nextWeekPlan.title, "II. Kế hoạch tuần sau");
+  assert.deepEqual(report.selectTaskListReportModel(model, ["late", "open"]).sections[0].groups[0].rows.map(row => row.id), ["open", "late"]);
 });
 
 test("report ids reject malformed or oversized selections and normalize UUID case", () => {
@@ -65,6 +87,7 @@ test("activity uses inclusive Vietnam dates and excludes future, undated and clo
     { id: "open", status: "in_progress", start_date: "2020-01-01" },
     { id: "future", status: "new", start_date: "2026-11-16" },
     { id: "cancelled", status: "cancelled", start_date: "2020-01-01" },
+    { id: "cancelled-due", status: "cancelled", due_date: "2026-11-10", completed_at: "2026-11-10T08:00:00Z" },
     { id: "undated", status: "new" },
   ];
   assert.deepEqual(selectTasksForReport(rows, "2026-11-09", "2026-11-15").map(row => row.id), ["boundary", "open"]);
@@ -77,10 +100,11 @@ test("DOCX contains Vietnamese sections, task rows, groups, signature and page f
   assert.ok(Buffer.isBuffer(buffer));
   const zip = await JSZip.loadAsync(buffer);
   const xml = await zip.file("word/document.xml").async("string");
-  for (const text of ["TẠP CHÍ THỜI ĐẠI", "Độc lập - Tự do - Hạnh phúc", "BÁO CÁO CÔNG VIỆC", "Từ ngày 09/11/2026 đến ngày 15/11/2026", "I. Đã hoàn thành", "II. Đang thực hiện", "III. Quá hạn", "Người thực hiện", "NGƯỜI LẬP", "Người lập thử", "Bài hoàn thành", "Dự án A", "Bài đang viết", "Bài quá hạn", "Times New Roman"]) assert.ok(xml.includes(text), text);
+  for (const text of ["TẠP CHÍ THỜI ĐẠI", "Độc lập - Tự do - Hạnh phúc", "BÁO CÁO CÔNG VIỆC", "Từ ngày 09/11/2026 đến ngày 15/11/2026", "I. Công việc đã làm", "II. Kế hoạch tuần sau", "Người thực hiện", "NGƯỜI LẬP", "Người lập thử", "Bài hoàn thành", "Dự án A", "Bài đang viết", "Bài quá hạn", "Times New Roman"]) assert.ok(xml.includes(text), text);
+  for (const heading of ["I. Đã hoàn thành", "II. Đang thực hiện", "III. Quá hạn", "V. Đã hủy"]) assert.ok(!xml.includes(heading), heading);
   assert.match(await zip.file("word/footer1.xml").async("string"), /PAGE/);
   assert.doesNotMatch(xml, /Phạm vi|Việc của tôi|Bộ lọc:/);
-  assert.match(xml, /IV\. Kế hoạch tuần sau/);
+  assert.match(xml, /II\. Kế hoạch tuần sau/);
   assert.match(xml, /………/);
 });
 

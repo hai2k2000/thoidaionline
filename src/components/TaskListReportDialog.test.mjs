@@ -30,12 +30,15 @@ test("rendered preview omits an empty filter and shows the default next week wit
   const model = report.buildTaskListReportModel({ tasks: [], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: report.reportFilterLabel({ scope: "mine" }) });
   const html = renderToStaticMarkup(React.createElement(loadPreview(), { model }));
   assert.doesNotMatch(html, /Bộ lọc:|Phạm vi|Việc của tôi/);
-  assert.match(html, /IV\. Kế hoạch tuần sau/);
+  assert.match(html, /II\. Kế hoạch tuần sau/);
+  assert.match(html, /aria-label="Bảng II\. Kế hoạch tuần sau"/);
+  assert.equal((html.match(/<table\b/g) ?? []).length, 1);
+  assert.deepEqual([...html.matchAll(/<h4[^>]*>([^<]+)<\/h4>/g)].map(match => match[1]), ["I. Công việc đã làm", "II. Kế hoạch tuần sau"]);
   assert.match(html, /\(Từ ngày 16\/11\/2026 đến ngày 22\/11\/2026\)/);
   assert.match(html, /………/);
 });
 
-test("HTML and DOCX render the same plan rows as escaped text between III and cancelled/signature", async () => {
+test("HTML and DOCX render the same plan rows as escaped text after the work section", async () => {
   const { exportTaskListReportDocx } = await import("../lib/taskListReportDocx.ts");
   const model = report.planFromReportModel(report.buildTaskListReportModel({ tasks: [{ id: "cancelled", status: "cancelled", title: "Việc đã hủy" }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "Phòng: Biên tập" }), {
     from: "2026-11-17", to: "2026-11-25", items: [
@@ -46,11 +49,13 @@ test("HTML and DOCX render the same plan rows as escaped text between III and ca
   const html = renderToStaticMarkup(React.createElement(loadPreview(), { model }));
   const xml = await (await JSZip.loadAsync(await exportTaskListReportDocx(model))).file("word/document.xml").async("string");
   for (const output of [html, xml]) {
-    for (const value of ["Phòng: Biên tập", "IV. Kế hoạch tuần sau", "(Từ ngày 17/11/2026 đến ngày 25/11/2026)", "Nội dung công việc", "Thời hạn", "Bài &lt;img src=x onerror=alert(1)&gt; &amp; tin", "An &amp; Bình", "20/11/2026", "Nội dung tiếp theo"]) assert.ok(output.includes(value), value);
+    for (const value of ["Phòng: Biên tập", "I. Công việc đã làm", "II. Kế hoạch tuần sau", "(Từ ngày 17/11/2026 đến ngày 25/11/2026)", "Nội dung công việc", "Thời hạn", "Bài &lt;img src=x onerror=alert(1)&gt; &amp; tin", "An &amp; Bình", "20/11/2026", "Nội dung tiếp theo"]) assert.ok(output.includes(value), value);
     assert.doesNotMatch(output, /<img |………/);
-    assert.ok(output.indexOf("III. Quá hạn") < output.indexOf("IV. Kế hoạch tuần sau"));
-    assert.ok(output.indexOf("IV. Kế hoạch tuần sau") < output.indexOf("V. Đã hủy"));
-    assert.ok(output.indexOf("V. Đã hủy") < output.indexOf("NGƯỜI LẬP"));
+    assert.doesNotMatch(output, /Việc đã hủy/);
+    assert.ok(output.includes("Tổng: 0 công việc"));
+    for (const heading of ["I. Đã hoàn thành", "II. Đang thực hiện", "III. Quá hạn", "V. Đã hủy"]) assert.ok(!output.includes(heading), heading);
+    assert.ok(output.indexOf("I. Công việc đã làm") < output.indexOf("II. Kế hoạch tuần sau"));
+    assert.ok(output.indexOf("II. Kế hoạch tuần sau") < output.indexOf("NGƯỜI LẬP"));
   }
 });
 

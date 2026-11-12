@@ -4,14 +4,14 @@ import { formatDateOnlyVN } from "./businessDate.mjs";
 import { resolveDisplayedAssigner } from "./taskAssignmentDisplay.mjs";
 
 /** @typedef {{ id: string, title: string, assignees: string, assigner: string, due: string, statusNote: string }} ReportRow */
-/** @typedef {{ key: string, title: string, groups: { name: string, rows: ReportRow[] }[] }} ReportSection */
+/** @typedef {{ key: "work_done", title: string, groups: { name: string, rows: ReportRow[] }[] }} ReportSection */
 /** @typedef {{ content: string, assignee: string, dueDate: string }} NextWeekPlanItem */
 /** @typedef {{ from: string, to: string, items: NextWeekPlanItem[] }} NextWeekPlan */
 /** @typedef {NextWeekPlan & { title: string, periodLabel: string, headers: string[], rows: string[][], emptyText: string }} NextWeekPlanModel */
-/** @typedef {{ from: string, to: string, userName: string, filterLabel: string, sections: ReportSection[], counts: { total: number, completed: number, active: number, overdue: number, noDeadline: number }, nextWeekPlan: NextWeekPlanModel }} TaskListReportModel */
+/** @typedef {{ from: string, to: string, userName: string, filterLabel: string, sections: ReportSection[], counts: { total: number }, nextWeekPlan: NextWeekPlanModel }} TaskListReportModel */
 
 export const reportDate = (value) => value ? formatDateOnlyVN(value.slice(0, 10)) : "—";
-export const reportSummary = (counts) => "Tổng: " + counts.total + " · Đã hoàn thành: " + counts.completed + " · Đang thực hiện: " + counts.active + " · Quá hạn: " + counts.overdue + " · Chưa có hạn: " + counts.noDeadline;
+export const reportSummary = (counts) => "Tổng: " + counts.total + " công việc";
 
 /** @param {unknown} value @returns {string[] | null} */
 export function parseReportIds(value) {
@@ -34,38 +34,37 @@ export function groupReportRows(rows) {
 
 /** @param {ReportSection[]} sections */
 export function countReportSections(sections) {
-  const rows = (key) => sections.find(section => section.key === key)?.groups.flatMap(group => group.rows) ?? [];
   const all = sections.flatMap(section => section.groups.flatMap(group => group.rows));
-  return { total: all.length, completed: rows("completed").length, active: rows("active").length + rows("overdue").length, overdue: rows("overdue").length, noDeadline: all.filter(row => row.due === "—").length };
+  return { total: all.length };
 }
 
 /** @param {TaskListReportModel} model @param {string[]} ids @returns {TaskListReportModel} */
 export function selectTaskListReportModel(model, ids) {
   const selected = new Set(ids);
   const sections = model.sections.map(section => ({ ...section, groups: groupReportRows(section.groups.flatMap(group => group.rows).filter(row => selected.has(row.id))) }));
-  return { ...model, sections: sections.filter(section => section.key !== "cancelled" || section.groups.length), counts: countReportSections(sections) };
+  return { ...model, sections, counts: countReportSections(sections) };
 }
 
 /** @param {{ tasks: (Partial<import('./taskContracts').TaskListItemDto> & { title: string, status: string })[], from: string, to: string, userName: string, filterLabel: string, now?: Date }} input @returns {TaskListReportModel} */
 export function buildTaskListReportModel(input) {
   const now = input.now ?? new Date();
-  const statusLabels = { done: "Đã hoàn thành", new: "Mới", in_progress: "Đang thực hiện", waiting: "Chờ duyệt giao việc", pending_review: "Chờ duyệt hoàn thành", blocked: "Vướng mắc", rejected: "Trả lại", cancelled: "Đã hủy" };
-  const definitions = [["completed", "I. Đã hoàn thành"], ["active", "II. Đang thực hiện"], ["overdue", "III. Quá hạn"], ["cancelled", "V. Đã hủy"]];
-  /** @type {Map<string, ReportRow[]>} */
-  const buckets = new Map(definitions.map(([key]) => [key, []]));
+  const statusLabels = { done: "Đã hoàn thành", new: "Mới", in_progress: "Đang thực hiện", waiting: "Chờ duyệt giao việc", pending_review: "Chờ duyệt hoàn thành", blocked: "Vướng mắc", rejected: "Trả lại" };
+  const rows = [];
   for (const task of input.tasks) {
-    const key = task.status === "done" ? "completed" : task.status === "cancelled" ? "cancelled" : classifyTaskDeadline({ ...task, due_date: task.due_date ?? null }, now) === "overdue" ? "overdue" : "active";
+    if (task.status === "cancelled") continue;
+    const overdue = task.status !== "done" && classifyTaskDeadline({ ...task, due_date: task.due_date ?? null }, now) === "overdue";
     const completion = task.completed_at && Number.isFinite(Date.parse(task.completed_at)) ? new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(task.completed_at)) : "";
     const note = task.status === "done" ? completion : task.report_notes ?? "";
-    buckets.get(key).push({
+    rows.push({
       id: task.id, title: task.title + (task.project?.name ? " [" + task.project.name + "]" : ""),
       assignees: [...new Set((task.task_assignees ?? []).filter(person => ["owner", "assignee"].includes(person.assignment_role)).map(person => person.staff_users?.full_name).filter(Boolean))].join(", ") || "Chưa phân công",
       assigner: resolveDisplayedAssigner(task).value,
       due: reportDate(task.due_date) + (task.due_date && task.due_time ? " " + task.due_time.slice(0, 5) : ""),
-      statusNote: (statusLabels[task.status] ?? task.status) + (note ? " · " + note : ""),
+      statusNote: (statusLabels[task.status] ?? task.status) + (note ? " · " + note : "") + (overdue ? " · Quá hạn" : ""),
     });
   }
-  const sections = definitions.filter(([key]) => key !== "cancelled" || buckets.get(key).length).map(([key, title]) => ({ key, title, groups: groupReportRows(buckets.get(key)) }));
+  /** @type {ReportSection[]} */
+  const sections = [{ key: "work_done", title: "I. Công việc đã làm", groups: groupReportRows(rows) }];
   return { from: input.from, to: input.to, userName: input.userName, filterLabel: input.filterLabel, sections, counts: countReportSections(sections), nextWeekPlan: buildNextWeekPlanModel(undefined, input.to) };
 }
 
@@ -121,13 +120,14 @@ export function taskListReportHref(query, range) {
 }
 
 export function isTaskActiveInReportRange(task, from, to) {
+  if (task.status === "cancelled") return false;
   const due = task.due_date;
   const completed = task.completed_at && Number.isFinite(Date.parse(task.completed_at))
     ? vietnamDate(new Date(task.completed_at)) : null;
   const start = task.start_date;
   return Boolean((due && due >= from && due <= to)
     || (completed && completed >= from && completed <= to)
-    || (!["done", "cancelled"].includes(task.status) && start && start <= to));
+    || (task.status !== "done" && start && start <= to));
 }
 
 /** @template T @param {T[]} tasks @param {string} from @param {string} to @returns {T[]} */
@@ -193,7 +193,7 @@ export function buildNextWeekPlanModel(value, reportTo) {
   const result = validateNextWeekPlan(value, reportTo);
   if (!result.ok) throw new Error(result.message);
   const plan = result.plan;
-  return { ...plan, title: "IV. Kế hoạch tuần sau", periodLabel: "(Từ ngày " + reportDate(plan.from) + " đến ngày " + reportDate(plan.to) + ")",
+  return { ...plan, title: "II. Kế hoạch tuần sau", periodLabel: "(Từ ngày " + reportDate(plan.from) + " đến ngày " + reportDate(plan.to) + ")",
     headers: ["STT", "Nội dung công việc", "Người thực hiện", "Thời hạn"], emptyText: "………",
     rows: plan.items.map((item, index) => [String(index + 1), item.content, item.assignee, item.dueDate ? reportDate(item.dueDate) : ""]),
   };
@@ -209,12 +209,11 @@ export function appendNextWeekPlanTasks(items, model) {
   const key = item => JSON.stringify([item.content.trim(), item.assignee.trim(), item.dueDate]);
   const result = [...items];
   const seen = new Set(items.map(key));
-  for (const section of model.sections.filter(section => ["active", "overdue"].includes(section.key))) {
-    for (const row of section.groups.flatMap(group => group.rows)) {
-      const match = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(row.due);
-      const item = { content: row.title, assignee: row.assignees === "Chưa phân công" ? "" : row.assignees, dueDate: match ? `${match[3]}-${match[2]}-${match[1]}` : "" };
-      if (!seen.has(key(item)) && result.length < 100) { result.push(item); seen.add(key(item)); }
-    }
+  for (const row of model.sections.flatMap(section => section.groups.flatMap(group => group.rows))) {
+    if (row.statusNote.startsWith("Đã hoàn thành")) continue;
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(row.due);
+    const item = { content: row.title, assignee: row.assignees === "Chưa phân công" ? "" : row.assignees, dueDate: match ? `${match[3]}-${match[2]}-${match[1]}` : "" };
+    if (!seen.has(key(item)) && result.length < 100) { result.push(item); seen.add(key(item)); }
   }
   return result;
 }
