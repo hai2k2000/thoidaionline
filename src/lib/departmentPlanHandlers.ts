@@ -30,7 +30,7 @@ const asActor = (actor: Actor): AuthorizationActor => ({
 
 const repositoryError = (error: { code?: string | null } | null | undefined) => {
   if (error?.code === "23505") return apiError("conflict", 409);
-  if (error?.code === "40001") return apiError("conflict", 409);
+  if (error?.code === "40001" || error?.code === "55000") return apiError("conflict", 409);
   if (error?.code === "42501") return apiError("forbidden", 403);
   if (error?.code === "P0002") return apiError("not_found", 404);
   if (error?.code === "23514" || error?.code === "22023" || error?.code === "22007" || error?.code === "22P02" || error?.code === "P0001") return apiError("invalid_request", 400);

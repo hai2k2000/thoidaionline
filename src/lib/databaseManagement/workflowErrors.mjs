@@ -3,7 +3,7 @@ export function classifyWorkflowRpcError(error) {
   const message = String(error?.message ?? "");
   if (code === "42501") return /self approval/i.test(message) ? "self_approval_forbidden" : "permission_denied";
   if (code === "P0002") return "record_not_found";
-  if (code === "40001") return "stale_conflict";
+  if (code === "40001" || code === "55000") return "stale_conflict";
   if (code === "22023") return /reason/i.test(message) ? "return_reason_required" : "invalid_transition";
   return "workflow_failed";
 }
