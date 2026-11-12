@@ -98,6 +98,18 @@ test("POST and GET ids intersect the visible list; DOCX matches the selected pre
   assert.ok(!getXml.includes("Visible task"));
 });
 
+test("preview selection and DOCX both exclude cancelled tasks and counts", async () => {
+  const routes = await setup({ items: [...tasks, { id: foreignId, title: "Cancelled report task", status: "cancelled", due_date: "2026-11-10" }] });
+  const preview = await (await routes.preview(new Request(url))).json();
+  assert.deepEqual(preview.counts, { total: 2 });
+  assert.deepEqual(preview.sections.map(section => section.title), ["I. Công việc đã làm"]);
+  assert.ok(!JSON.stringify(preview).includes(foreignId));
+  const response = await routes.POST(post(payload([visibleId, foreignId])));
+  const xml = await (await JSZip.loadAsync(await response.arrayBuffer())).file("word/document.xml").async("string");
+  assert.match(xml, /Tổng: 1 công việc/);
+  assert.doesNotMatch(xml, /Cancelled report task|V\. Đã hủy/);
+});
+
 test("invalid dates, approval queues, malformed ids and bodies fail before repository reads", async () => {
   const routes = await setup();
   for (const body of [null, [], { ...payload([]), from: "2026-02-30" }, { ...payload([]), filters: { approvalQueue: "assignment" } }, payload(["invalid"]), payload(Array(1001).fill(visibleId)), { ...payload([]), filters: "mine" }]) {
@@ -149,7 +161,7 @@ test("POST rejects invalid plan lengths, types and dates with Vietnamese 400 err
   assert.equal(routes.calls.length, 0);
 });
 
-test("POST DOCX renders edited plan after III, escapes text and ignores unknown client fields", async () => {
+test("POST DOCX renders edited plan after work, escapes text and ignores unknown client fields", async () => {
   const routes = await setup();
   const nextWeekPlan = { from: "2026-11-20", to: "2026-11-30", title: "UNTRUSTED", items: [
     { content: "Viết <script> & bài", assignee: "Nguyễn An", dueDate: "2026-11-25", html: "UNTRUSTED" },
@@ -158,8 +170,9 @@ test("POST DOCX renders edited plan after III, escapes text and ignores unknown 
   const response = await routes.POST(post({ ...payload([visibleId]), nextWeekPlan }));
   assert.equal(response.status, 200);
   const xml = await (await JSZip.loadAsync(await response.arrayBuffer())).file("word/document.xml").async("string");
-  for (const value of ["IV. Kế hoạch tuần sau", "(Từ ngày 20/11/2026 đến ngày 30/11/2026)", "Nội dung công việc", "Người thực hiện", "Thời hạn", "Viết &lt;script&gt; &amp; bài", "25/11/2026"]) assert.ok(xml.includes(value), value);
-  assert.ok(xml.indexOf("III. Quá hạn") < xml.indexOf("IV. Kế hoạch tuần sau"));
-  assert.ok(xml.indexOf("IV. Kế hoạch tuần sau") < xml.indexOf("NGƯỜI LẬP"));
+  for (const value of ["I. Công việc đã làm", "II. Kế hoạch tuần sau", "(Từ ngày 20/11/2026 đến ngày 30/11/2026)", "Nội dung công việc", "Người thực hiện", "Thời hạn", "Viết &lt;script&gt; &amp; bài", "25/11/2026"]) assert.ok(xml.includes(value), value);
+  for (const heading of ["I. Đã hoàn thành", "II. Đang thực hiện", "III. Quá hạn", "V. Đã hủy"]) assert.ok(!xml.includes(heading), heading);
+  assert.ok(xml.indexOf("I. Công việc đã làm") < xml.indexOf("II. Kế hoạch tuần sau"));
+  assert.ok(xml.indexOf("II. Kế hoạch tuần sau") < xml.indexOf("NGƯỜI LẬP"));
   assert.doesNotMatch(xml, /UNTRUSTED|<script>|Phạm vi|Việc của tôi/);
 });
