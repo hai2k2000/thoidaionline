@@ -87,6 +87,7 @@ const makeHarness = ({
   taskRbacBaseAllowed = undefined,
   rpcFailure = () => apiError("operation_failed", 500),
   adminEditError = null,
+  linkError = null,
 } = {}) => {
   const calls = [];
   const shadowCalls = [];
@@ -114,6 +115,8 @@ const makeHarness = ({
     evaluate: (...args) => { calls.push(["evaluate", ...args]); return result({}); },
     submitQualitativeEvaluation: (...args) => { calls.push(["submitQualitativeEvaluation", ...args]); return result({}); },
     comment: (...args) => { calls.push(["comment", ...args]); return result({}); },
+    addLink: (...args) => { calls.push(["addLink", ...args]); return linkError ? Promise.resolve({ ok: false, error: linkError }) : result({ id: "link", ...args[2] }); },
+    deleteLink: (...args) => { calls.push(["deleteLink", ...args]); return linkError ? Promise.resolve({ ok: false, error: linkError }) : result({ id: args[2] }); },
     bulkPlan: (...args) => { calls.push(["bulkPlan", ...args]); return result({}); },
   };
   const app = createTaskApplication({
@@ -154,6 +157,31 @@ const makeHarness = ({
 
 const adminBody = { title: "Task", description: "Content", startDate: "2026-11-04", dueDate: null, dueTime: null, priority: "normal", status: "in_progress", reason: "Correction", expectedUpdatedAt: "2026-11-04T00:00:00.000Z" };
 const adminRequest = body => new Request("https://example.test/api/tasks/admin-edit", { method: "PATCH", body: JSON.stringify(body) });
+test("task links use mutation auth and attachment permission", async () => {
+  assert.equal((await makeHarness({ mutationActor: null }).app.addLink(adminRequest({}), taskId)).status, 403);
+  assert.equal((await makeHarness({ taskAccess: access({ ownerId: "other", assigneeId: "other", participants: [] }) }).app.addLink(adminRequest({ url: "https://example.org" }), taskId)).status, 403);
+  assert.equal((await makeHarness({ mutationActor: makeActor({ role_code: "admin" }), taskAccess: access({ status: "cancelled" }) }).app.addLink(adminRequest({ url: "https://example.org" }), taskId)).status, 403);
+});
+test("task links validate and pass normalized values to the repository", async () => {
+  const h = makeHarness();
+  for (const body of [{ url: "http://example.org" }, { url: "https://user@example.org" }, { url: "https://example.org", title: 12 }, []]) {
+    assert.equal((await h.app.addLink(adminRequest(body), taskId)).status, 400);
+  }
+  assert.equal(h.calls.length, 0);
+  const response = await h.app.addLink(adminRequest({ url: "  https://example.org/doc  ", title: "  Document  " }), taskId);
+  assert.equal(response.status, 201);
+  assert.deepEqual(h.calls[0], ["addLink", "actor", taskId, { url: "https://example.org/doc", title: "Document" }]);
+  assert.equal((await response.json()).link.title, "Document");
+});
+test("link deletion authenticates and delegates creator/admin permission to the RPC", async () => {
+  assert.equal((await makeHarness({ mutationActor: null }).app.deleteLink(adminRequest({}), taskId, taskId)).status, 403);
+  const h = makeHarness();
+  assert.equal((await h.app.deleteLink(adminRequest({}), taskId, "bad")).status, 400);
+  const response = await h.app.deleteLink(adminRequest({}), taskId, taskId);
+  assert.equal(response.status, 200);
+  assert.deepEqual(h.calls[0], ["deleteLink", "actor", taskId, taskId]);
+  assert.equal((await response.json()).link.id, taskId);
+});
 test("admin edit accepts no deadline and rejects time without date", async () => {
   const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }) });
   assert.equal((await h.app.adminEditTask(adminRequest(adminBody), taskId)).status, 200);
@@ -620,4 +648,17 @@ test("GET tasks forwards normalized sort to repository", async () => {
     assert.equal(response.status, 200);
     assert.equal(harness.calls[0][2].sort, expected);
   }
+});
+
+test("link handlers preserve RPC permission, validation and not-found errors", async () => {
+  for (const [code, status] of [["42501", 403], ["22023", 400], ["P0002", 404]]) {
+    const h = makeHarness({ linkError: { code }, rpcFailure: error => apiError(error.code, status) });
+    assert.equal((await h.app.addLink(adminRequest({ url: "https://example.org" }), taskId)).status, status);
+    assert.equal((await h.app.deleteLink(adminRequest({}), taskId, taskId)).status, status);
+  }
+});
+test("admin may add task links without ordinary attachment permission", async () => {
+  const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }), taskAccess: access({ ownerId: "other", assigneeId: "other", participants: [] }) });
+  assert.equal((await h.app.addLink(adminRequest({ url: "https://example.org" }), taskId)).status, 201);
+  assert.equal(h.calls[0][3].title, "example.org");
 });

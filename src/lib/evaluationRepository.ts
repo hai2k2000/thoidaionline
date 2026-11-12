@@ -41,6 +41,7 @@ export type PersonnelEvaluationTask = {
   completion_submitted_at: string | null; completed_at: string | null;
   cancelled_at: string | null; cancel_reason: string | null;
   owner_id: string | null; owner_name: string | null;
+  links: import("./taskContracts").TaskLinkDto[];
   attachments: { id: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; uploaded_by: string | null }[];
   progress_reports: { id: string; reported_by: string; reported_on: string; report_status: string; progress_text: string; blockers: string | null; created_at: string }[];
   progress_logs: { id: string; old_progress: number | null; new_progress: number; note: string | null; created_at: string; user_id: string | null }[];

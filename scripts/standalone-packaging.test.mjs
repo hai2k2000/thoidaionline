@@ -262,6 +262,15 @@ test("CSDL status option repair migration is packaged after self-approval migrat
   }
 });
 
+test("task link attachment migration is included once after status options", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const migration = "supabase/migrations/20261110120000_task_link_attachments.sql";
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf("20261110100000_database_management_v1_status_field_options.sql"));
+  }
+});
+
 test("Hop dong nguoi thuc hien migration is packaged after CSDL status option repair", () => {
   for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
     const source = readFileSync(file, "utf8");
