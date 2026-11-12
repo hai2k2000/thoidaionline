@@ -211,6 +211,7 @@ const migrationReference = [
   "supabase/migrations/20261109120000_self_approve_personal_plans.sql",
   "supabase/migrations/20261110100000_database_management_v1_status_field_options.sql",
   "supabase/migrations/20261110120000_task_link_attachments.sql",
+  "supabase/migrations/20261112100000_database_management_v1_hop_dong_nguoi_thuc_hien.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
 ];

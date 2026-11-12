@@ -6,7 +6,7 @@ import { removeDatabaseRecordFile, writeDatabaseRecordFile } from "@/lib/databas
 import { logServerAudit } from "@/lib/serverAudit";
 import { databaseRecordFileType, hasDatabaseRecordFileMagic } from "@/lib/databaseManagement/fileType.mjs";
 
-const MAX_MULTIPART_BYTES = 51 * 1024 * 1024;
+const MAX_MULTIPART_BYTES = 151 * 1024 * 1024;
 const IDEMPOTENCY_KEY = /^[a-zA-Z0-9_-]{8,200}$/;
 
 function boundedBody(body: ReadableStream<Uint8Array>, limit: number, onExceeded: () => void) {
@@ -61,7 +61,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "file_required" }, { status: 400 });
-  if (file.size > 50 * 1024 * 1024) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
+  if (file.size > 150 * 1024 * 1024) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
   const mimeType = databaseRecordFileType(file.name);
   if (!mimeType) return NextResponse.json({ error: "unsupported_file_type" }, { status: 415 });
   const fileBytes = new Uint8Array(await file.arrayBuffer());

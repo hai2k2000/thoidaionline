@@ -1547,3 +1547,12 @@ Follow Up:
 
 Next:
 - Owner handoff; no commit/push or deployment per this task's explicit instructions. See PROJECT_LIBRARY_FILE_PROXY_REPORT.md round 2 for changed files and evidence.
+
+
+## Remember login - 2026-11-11
+
+Current Task: approved 30-day remembered sliding sessions, local implementation complete.
+Implemented: APK/PWA default checkbox; strict boolean login flag; 30-day token/cookie; proxy renewal after 24 hours with live active/version checks; ordinary and legacy sessions do not slide. Session endpoint no longer overwrites cookies. Remembered logout revokes account sessions to prevent concurrent renewal resurrection; password-change revocation remains intact. No migration.
+Validation: focused suite 35/35 PASS; related selection 107/108 (existing phase2RedirectRoutes /my-tasks assertion fails, unchanged from bb48f1e); tsc --noEmit PASS; changed-file ESLint PASS (0 errors/warnings); full lint retains baseline 1 error in deskHomeCopy.d.mts and 22 warnings; diff whitespace check PASS.
+One implementation review identified the logout race; corrected and covered by regression tests. No extra review cycle.
+No commit, push, SSH, Docker, deployment or KB sync performed, per task constraints.

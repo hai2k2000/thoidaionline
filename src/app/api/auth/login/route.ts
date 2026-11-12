@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSessionToken, isSameOriginRequest, SESSION_COOKIE, sessionCookieOptions } from "@/lib/serverSession";
+import { createSessionToken, isSameOriginRequest, SESSION_COOKIE, sessionCookieOptionsFor } from "@/lib/serverSession";
 import { authenticateCredentials, AuthenticationUnavailableError } from "@/lib/authenticateCredentials";
 import { clearLoginAttempts, consumeLoginAttempt } from "@/lib/loginRateLimit";
 
@@ -7,13 +7,14 @@ export async function POST(request: Request) {
   if (!(await isSameOriginRequest())) return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 403 });
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > 4096) return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 400 });
-  const body = await request.json().catch(() => null) as { identifier?: string; password?: string } | null;
+  const body = await request.json().catch(() => null) as { identifier?: string; password?: string; remember?: boolean } | null;
   if (typeof body?.identifier !== "string" || typeof body.password !== "string") {
     return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
   }
   const identifier = body.identifier.trim().toLowerCase();
   // Passwords are opaque secrets; preserve the exact user input for verification.
   const password = body.password;
+  const remember = body.remember === true;
   if (identifier.length < 1 || identifier.length > 200 || password.length < 1 || password.length > 200) {
     return NextResponse.json({ error: "Sai tài khoản hoặc mật khẩu." }, { status: 401 });
   }
@@ -45,8 +46,8 @@ export async function POST(request: Request) {
   const response = NextResponse.json({ ok: true, mustChangePassword: false });
   response.cookies.set(
     SESSION_COOKIE,
-    createSessionToken(authenticated.userId, authenticated.sessionVersion, false),
-    sessionCookieOptions,
+    createSessionToken(authenticated.userId, authenticated.sessionVersion, false, remember),
+    sessionCookieOptionsFor(remember),
   );
   return response;
 }

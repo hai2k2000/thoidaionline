@@ -32,7 +32,7 @@ type ModuleKey = "hr" | "assets" | "documents" | "performance";
 type AuthContextType = {
   loading: boolean;
   user: AuthUser | null;
-  login: (identifier: string, password: string) => Promise<{ ok: boolean; error?: string; mustChangePassword?: boolean }>;
+  login: (identifier: string, password: string, remember?: boolean) => Promise<{ ok: boolean; error?: string; mustChangePassword?: boolean }>;
   logout: () => Promise<void>;
   hasPermission: (key: PermissionKey | string) => boolean;
   canAccessModule: (module: ModuleKey) => boolean;
@@ -87,13 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("reduce-motion", user?.preferences.reduceMotion === true);
   }, [user?.preferences]);
 
-  const login = async (identifier: string, password: string) => {
+  const login = async (identifier: string, password: string, remember = false) => {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         identifier: identifier.trim().toLowerCase(),
         password,
+        remember,
       }),
     });
     if (!response.ok) {

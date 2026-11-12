@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   experimental: {
-    proxyClientMaxBodySize: "51mb",
+    proxyClientMaxBodySize: "151mb",
   },
   outputFileTracingExcludes: {
     "*": ["src/**", "docs/**", "mobile/**", "supabase/**", "bridge/**", "work/**", "sql/**", "deploy/**", "scripts/e2e/**", "**/*.test.*", "AGENTS.md", "*.md"],
