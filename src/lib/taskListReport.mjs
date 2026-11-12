@@ -3,8 +3,8 @@ import { classifyTaskDeadline } from "./deadlineClassification.mjs";
 import { formatDateOnlyVN } from "./businessDate.mjs";
 import { resolveDisplayedAssigner } from "./taskAssignmentDisplay.mjs";
 
-/** @typedef {{ id: string, title: string, assignees: string, assigner: string, due: string, statusNote: string }} ReportRow */
-/** @typedef {{ key: "work_done", title: string, groups: { name: string, rows: ReportRow[] }[] }} ReportSection */
+/** @typedef {{ id: string, title: string, assignees: string, role: string, assigner: string, due: string, statusNote: string }} ReportRow */
+/** @typedef {{ key: "work_done", title: string, rows: ReportRow[] }} ReportSection */
 /** @typedef {{ content: string, assignee: string, dueDate: string }} NextWeekPlanItem */
 /** @typedef {{ from: string, to: string, items: NextWeekPlanItem[] }} NextWeekPlan */
 /** @typedef {NextWeekPlan & { title: string, periodLabel: string, headers: string[], rows: string[][], emptyText: string }} NextWeekPlanModel */
@@ -12,6 +12,7 @@ import { resolveDisplayedAssigner } from "./taskAssignmentDisplay.mjs";
 
 export const reportDate = (value) => value ? formatDateOnlyVN(value.slice(0, 10)) : "—";
 export const reportSummary = (counts) => "Tổng: " + counts.total + " công việc";
+export function taskListReportDocxFilename(from, to, userName) { const formatDate = value => { const [year, month, day] = value.split("-"); return `${day}.${month}.${year}`; }; const safeName = userName.replace(/[\\/:*?"<>|\u0000-\u001F\u007F]/g, "").trim(); return `Báo cáo công việc tuần ${formatDate(from)}-${formatDate(to)}${safeName ? ` - ${safeName}` : ""}.docx`; }
 
 /** @param {unknown} value @returns {string[] | null} */
 export function parseReportIds(value) {
@@ -21,50 +22,44 @@ export function parseReportIds(value) {
   return [...new Set(ids.map(id => id.toLowerCase()))];
 }
 
-/** @param {ReportRow[]} rows */
-export function groupReportRows(rows) {
-  /** @type {Map<string, ReportRow[]>} */
-  const groups = new Map();
-  for (const row of rows) {
-    if (!groups.has(row.assignees)) groups.set(row.assignees, []);
-    groups.get(row.assignees).push(row);
-  }
-  return [...groups].sort(([a], [b]) => a.localeCompare(b, "vi")).map(([name, rows]) => ({ name, rows }));
-}
-
 /** @param {ReportSection[]} sections */
 export function countReportSections(sections) {
-  const all = sections.flatMap(section => section.groups.flatMap(group => group.rows));
+  const all = sections.flatMap(section => section.rows);
   return { total: all.length };
 }
 
 /** @param {TaskListReportModel} model @param {string[]} ids @returns {TaskListReportModel} */
 export function selectTaskListReportModel(model, ids) {
   const selected = new Set(ids);
-  const sections = model.sections.map(section => ({ ...section, groups: groupReportRows(section.groups.flatMap(group => group.rows).filter(row => selected.has(row.id))) }));
+  const sections = model.sections.map(section => ({ ...section, rows: section.rows.filter(row => selected.has(row.id)) }));
   return { ...model, sections, counts: countReportSections(sections) };
 }
 
-/** @param {{ tasks: (Partial<import('./taskContracts').TaskListItemDto> & { title: string, status: string })[], from: string, to: string, userName: string, filterLabel: string, now?: Date }} input @returns {TaskListReportModel} */
+/** @param {{ tasks: (Partial<import('./taskContracts').TaskListItemDto> & { title: string, status: string })[], from: string, to: string, userName: string, filterLabel: string, actorId?: string, now?: Date }} input @returns {TaskListReportModel} */
 export function buildTaskListReportModel(input) {
   const now = input.now ?? new Date();
   const statusLabels = { done: "Đã hoàn thành", new: "Mới", in_progress: "Đang thực hiện", waiting: "Chờ duyệt giao việc", pending_review: "Chờ duyệt hoàn thành", blocked: "Vướng mắc", rejected: "Trả lại" };
   const rows = [];
-  for (const task of input.tasks) {
+  for (const task of [...input.tasks].sort((a, b) => (a.due_date ?? "9999-12-31").localeCompare(b.due_date ?? "9999-12-31") || a.title.localeCompare(b.title, "vi"))) {
     if (task.status === "cancelled") continue;
+    const actorAssignments = input.actorId ? (task.task_assignees ?? []).filter(person => person.user_id === input.actorId && ["owner", "assignee"].includes(person.assignment_role)) : [];
+    if (input.actorId && !actorAssignments.length) continue;
     const overdue = task.status !== "done" && classifyTaskDeadline({ ...task, due_date: task.due_date ?? null }, now) === "overdue";
     const completion = task.completed_at && Number.isFinite(Date.parse(task.completed_at)) ? new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(task.completed_at)) : "";
-    const note = task.status === "done" ? completion : task.report_notes ?? "";
+    const quickReport = task.workflow_type === "REPORT_ONLY" || task.task_type === "report_only";
+    const progress = task.latest_progress_report ?? [...(task.task_progress_reports ?? [])].sort((a, b) => `${b.reported_on ?? ""}T${b.created_at ?? ""}`.localeCompare(`${a.reported_on ?? ""}T${a.created_at ?? ""}`))[0];
+    const note = quickReport ? (task.report_notes?.trim() || "") : (task.status === "done" ? completion : (task.status === "blocked" && progress?.blockers?.trim() ? progress.blockers.trim() : (progress?.progress_text?.trim() || progress?.blockers?.trim() || "")));
+    const status = statusLabels[task.status] ?? task.status;
     rows.push({
-      id: task.id, title: task.title + (task.project?.name ? " [" + task.project.name + "]" : ""),
+      id: task.id, title: task.title + (task.project?.name ? " [" + task.project.name + "]" : ""), role: actorAssignments.some(person => person.assignment_role === "owner") ? "Người thực hiện" : "Người phối hợp",
       assignees: [...new Set((task.task_assignees ?? []).filter(person => ["owner", "assignee"].includes(person.assignment_role)).map(person => person.staff_users?.full_name).filter(Boolean))].join(", ") || "Chưa phân công",
       assigner: resolveDisplayedAssigner(task).value,
       due: reportDate(task.due_date) + (task.due_date && task.due_time ? " " + task.due_time.slice(0, 5) : ""),
-      statusNote: (statusLabels[task.status] ?? task.status) + (note ? " · " + note : "") + (overdue ? " · Quá hạn" : ""),
+      statusNote: quickReport ? (note || status) : status + (note ? " · " + note : "") + (overdue ? " · Quá hạn" : ""),
     });
   }
   /** @type {ReportSection[]} */
-  const sections = [{ key: "work_done", title: "I. Công việc đã làm", groups: groupReportRows(rows) }];
+  const sections = [{ key: "work_done", title: "I. Công việc đã làm", rows }];
   return { from: input.from, to: input.to, userName: input.userName, filterLabel: input.filterLabel, sections, counts: countReportSections(sections), nextWeekPlan: buildNextWeekPlanModel(undefined, input.to) };
 }
 
@@ -209,7 +204,7 @@ export function appendNextWeekPlanTasks(items, model) {
   const key = item => JSON.stringify([item.content.trim(), item.assignee.trim(), item.dueDate]);
   const result = [...items];
   const seen = new Set(items.map(key));
-  for (const row of model.sections.flatMap(section => section.groups.flatMap(group => group.rows))) {
+  for (const row of model.sections.flatMap(section => section.rows)) {
     if (row.statusNote.startsWith("Đã hoàn thành")) continue;
     const match = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(row.due);
     const item = { content: row.title, assignee: row.assignees === "Chưa phân công" ? "" : row.assignees, dueDate: match ? `${match[3]}-${match[2]}-${match[1]}` : "" };

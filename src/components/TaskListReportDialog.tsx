@@ -1,8 +1,8 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/StateViews";
-import { appendNextWeekPlanTasks, currentReportWeek, nextWeekAfterReportDate, planFromReportModel, validateNextWeekPlan, reportDate, reportSummary, selectTaskListReportModel, taskListReportHref } from "@/lib/taskListReport.mjs";
+import { appendNextWeekPlanTasks, currentReportWeek, nextWeekAfterReportDate, planFromReportModel, validateNextWeekPlan, reportDate, reportSummary, selectTaskListReportModel, taskListReportHref, taskListReportDocxFilename } from "@/lib/taskListReport.mjs";
 import type { TaskListReportModel } from "@/lib/taskListReport.mjs";
 import type { TaskListQuery } from "@/lib/taskContracts";
 
@@ -22,22 +22,16 @@ function ReportPreview({ model }: { model: TaskListReportModel }) {
     <p className="mt-1 text-center text-sm">Từ ngày {reportDate(model.from)} đến ngày {reportDate(model.to)}</p>
     {model.filterLabel ? <p className="mt-4 break-words text-sm">Bộ lọc: {model.filterLabel}</p> : null}
     <p className="mt-2 text-sm font-bold">{reportSummary(model.counts)}</p>
-    {model.sections.map(section => {
-      let index = 0;
-      return <section key={section.key} className="mt-5 min-w-0">
-        <h4 className="mb-2 font-bold">{section.title}</h4>
-        <div tabIndex={0} role="region" aria-label={`Bảng ${section.title}`} className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-orange-700">
-          <table className="w-full min-w-[600px] table-fixed border-collapse text-left text-xs sm:text-sm">
-            <colgroup>{[5, 27, 16, 16, 12, 24].map((width, i) => <col key={i} style={{ width: width + "%" }} />)}</colgroup>
-            <thead><tr>{["STT", "Tên công việc", "Người thực hiện", "Người giao", "Hạn", "Trạng thái/Ghi chú"].map(title => <th key={title} scope="col" className="border border-slate-400 p-1.5">{title}</th>)}</tr></thead>
-            <tbody>{section.groups.map(group => <Fragment key={group.name}>
-              <tr><th colSpan={6} scope="rowgroup" className="border border-slate-400 bg-slate-50 p-1.5">Người thực hiện: {group.name}</th></tr>
-              {group.rows.map(row => <tr key={row.id}>{[++index, row.title, row.assignees, row.assigner, row.due, row.statusNote].map((value, column) => <td key={column} className="break-words whitespace-pre-line border border-slate-400 p-1.5 align-top">{value}</td>)}</tr>)}
-            </Fragment>)}{!section.groups.length ? <tr><td colSpan={6} className="border border-slate-400 p-2">Không có công việc.</td></tr> : null}</tbody>
-          </table>
-        </div>
-      </section>;
-    })}
+    {model.sections.map(section => <section key={section.key} className="mt-5 min-w-0">
+      <h4 className="mb-2 font-bold">{section.title}</h4>
+      <div tabIndex={0} role="region" aria-label={`B?ng ${section.title}`} className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-orange-700">
+        <table className="w-full min-w-[600px] table-fixed border-collapse text-left text-xs sm:text-sm">
+          <colgroup>{[5, 35, 60].map((width, i) => <col key={i} style={{ width: width + "%" }} />)}</colgroup>
+          <thead><tr>{["STT", "T?n c?ng vi?c", "K?t qu?/Ghi ch?"].map(title => <th key={title} scope="col" className="border border-slate-400 p-1.5">{title}</th>)}</tr></thead>
+          <tbody>{section.rows.map((row, index) => <tr key={row.id}>{[index + 1, row.title, row.statusNote].map((value, column) => <td key={column} className="break-words whitespace-pre-line border border-slate-400 p-1.5 align-top">{value}</td>)}</tr>)}{!section.rows.length ? <tr><td colSpan={3} className="border border-slate-400 p-2">Kh?ng c? c?ng vi?c.</td></tr> : null}</tbody>
+        </table>
+      </div>
+    </section>)}
     <NextWeekPlanPreview plan={model.nextWeekPlan} />
     <p className="mt-8 text-center font-bold">NGƯỜI LẬP</p>
     <p className="mt-8 text-center">{model.userName}</p>
@@ -97,7 +91,7 @@ export default function TaskListReportDialog({ query, onClose }: { query: TaskLi
       if (controller.signal.aborted) return;
       const report = body as TaskListReportModel;
       setModel(report);
-      setSelectedIds(report.sections.flatMap(section => section.groups.flatMap(group => group.rows.map(row => row.id))));
+      setSelectedIds(report.sections.flatMap(section => section.rows.map(row => row.id)));
     } catch (cause) {
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Không thể tải bản xem trước.");
     } finally {
@@ -135,17 +129,17 @@ export default function TaskListReportDialog({ query, onClose }: { query: TaskLi
       }
       const href = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
-      link.href = href; link.download = `Bao_cao_cong_viec_${model.from}_${model.to}.docx`;
+      link.href = href; link.download = taskListReportDocxFilename(model.from, model.to, model.userName);
       document.body.appendChild(link); link.click(); link.remove();
       window.setTimeout(() => URL.revokeObjectURL(href), 1000);
     } catch (cause) { setDownloadError(cause instanceof Error ? cause.message : "Không thể xuất báo cáo công việc."); }
     finally { setBusy(false); }
   };
-  const allIds = model?.sections.flatMap(section => section.groups.flatMap(group => group.rows.map(row => row.id))) ?? [];
+  const allIds = model?.sections.flatMap(section => section.rows.map(row => row.id)) ?? [];
   const needle = normalize(search.trim());
   const matches = (row: { title: string; assignees: string }) => normalize(row.title + " " + row.assignees).includes(needle);
-  const hasMatches = model?.sections.some(section => section.groups.some(group => group.rows.some(matches)));
-  const people = [...new Set(model?.sections.flatMap(section => section.groups.flatMap(group => group.rows.flatMap(row => row.assignees.split(", ")))).filter(value => value && value !== "Chưa phân công") ?? [])];
+  const hasMatches = model?.sections.some(section => section.rows.some(matches));
+  const people = [...new Set(model?.sections.flatMap(section => section.rows.flatMap(row => row.assignees.split(", "))).filter(value => value && value !== "Chưa phân công") ?? [])];
   const updatePlanItem = (index: number, patch: Partial<PlanItem>) => setPlanItems(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const addPlanItem = () => setPlanItems(current => current.length >= 100 ? current : [...current, { content: "", assignee: "", dueDate: "" }]);
   const removePlanItem = (index: number) => setPlanItems(current => current.filter((_, itemIndex) => itemIndex !== index));
@@ -173,7 +167,7 @@ export default function TaskListReportDialog({ query, onClose }: { query: TaskLi
             <input id={searchId} type="search" value={search} onChange={event => setSearch(event.target.value)} className={control + " mt-1 w-full"} placeholder="Nhập từ khóa…" />
             <div className="mt-4 max-h-[45dvh] space-y-4 overflow-y-auto lg:max-h-[60dvh]">
               {!model.counts.total ? <EmptyState title="Không có công việc trong khoảng ngày này" description="Thử chọn khoảng ngày khác hoặc thay đổi bộ lọc công việc." /> : !hasMatches ? <EmptyState title="Không tìm thấy công việc" description="Thử từ khóa khác. Các lựa chọn hiện tại vẫn được giữ." /> : model.sections.map(section => {
-                const rows = section.groups.flatMap(group => group.rows);
+                const rows = section.rows;
                 const visible = rows.filter(matches);
                 const ids = rows.map(row => row.id);
                 if (!visible.length && needle) return null;

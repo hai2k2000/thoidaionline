@@ -15,19 +15,11 @@ function headerCell(children: Paragraph[], width: number) {
   const border = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   return new TableCell({ width: { size: width, type: WidthType.DXA }, borders: { top: border, bottom: border, left: border, right: border }, children });
 }
-function section({ title, groups }: ReportSection) {
-  let index = 0;
-  const rows = [new TableRow({ tableHeader: true, children: ["STT", "Tên công việc", "Người thực hiện", "Người giao", "Hạn", "Trạng thái/Ghi chú"].map(value => cell(value, true)) })];
-  for (const { name, rows: tasks } of groups) {
-    rows.push(new TableRow({ children: [new TableCell({ columnSpan: 6, children: [para("Người thực hiện: " + name, { bold: true })] })] }));
-    for (const task of tasks) {
-      rows.push(new TableRow({ cantSplit: true, children: [
-        cell(++index), cell(task.title), cell(task.assignees), cell(task.assigner), cell(task.due), cell(task.statusNote),
-      ] }));
-    }
-  }
-  if (!groups.length) rows.push(new TableRow({ children: [new TableCell({ columnSpan: 6, children: [para("Không có công việc.")] })] }));
-  return [para(title, { bold: true, before: 160 }), new Table({ width: { size: 9500, type: WidthType.DXA }, columnWidths: [450, 2600, 1500, 1500, 1150, 2300], rows })];
+function section({ title, rows: tasks }: ReportSection) {
+  const rows = [new TableRow({ tableHeader: true, children: ["STT", "Tên công việc", "Kết quả/Ghi chú"].map(value => cell(value, true)) })];
+  tasks.forEach((task, index) => rows.push(new TableRow({ cantSplit: true, children: [cell(index + 1), cell(task.title), cell(task.statusNote)] })));
+  if (!tasks.length) rows.push(new TableRow({ children: [new TableCell({ columnSpan: 3, children: [para("Không có công việc.")] })] }));
+  return [para(title, { bold: true, before: 160 }), new Table({ width: { size: 9500, type: WidthType.DXA }, columnWidths: [500, 4200, 4800], rows })];
 }
 
 function planSection(plan: NextWeekPlanModel): Array<Paragraph | Table> {
