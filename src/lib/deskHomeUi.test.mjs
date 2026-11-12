@@ -2,14 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 const source = (path) => readFileSync(new URL("../" + path, import.meta.url), "utf8");
-test("desk home puts announcements first in the right column before notifications", () => {
+test("desk home puts announcements first in the main column before today and notifications first in the right column", () => {
   const home = source("components/DeskHome.tsx");
   const columns = home.split('<div className="min-w-0 space-y-5">');
   assert.equal(columns.length, 3);
+  const mainColumn = columns[1];
   const rightColumn = columns[2].split('<div className="mt-5 grid gap-5')[0];
-  assert.match(rightColumn, /^<Card id="desk-announcements" title=\{announcementCopy\.blockAnnouncements\}/);
+  assert.match(mainColumn, /^<Card id="desk-announcements" title=\{announcementCopy\.blockAnnouncements\}/);
+  assert.ok(mainColumn.indexOf('id="desk-announcements"') < mainColumn.indexOf('id="desk-today"'));
   assert.deepEqual([...rightColumn.matchAll(/<Card id="([^"]+)"/g)].map((match) => match[1]), [
-    "desk-announcements", "desk-notifications", "desk-schedule",
+    "desk-notifications", "desk-schedule",
   ]);
 });
 
