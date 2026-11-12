@@ -41,6 +41,7 @@ export const deskCopy = {
   leavePrefix: "Nghỉ phép",
   staffFallback: "Nhân sự",
   shortcutAssign: "Tạo việc",
+  shortcutTaskList: "Danh sách công việc",
   shortcutWeeklyReport: "Báo cáo tuần",
   shortcutAttendance: "Chấm công",
   shortcutDuty: "Lịch trực",

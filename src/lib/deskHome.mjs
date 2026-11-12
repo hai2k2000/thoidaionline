@@ -84,7 +84,7 @@ export function isDeskScheduleVisible(row) {
 }
 
 export function pickDeskShortcuts(navigation) {
-  const wanted = [["assign", deskCopy.shortcutAssign], ["weekly-report", deskCopy.shortcutWeeklyReport], ["attendance", deskCopy.shortcutAttendance], ["duty-schedule", deskCopy.shortcutDuty], ["work-schedule", deskCopy.shortcutSchedule], ["database", deskCopy.shortcutDatabase]];
+  const wanted = [["tasks", deskCopy.shortcutTaskList], ["assign", deskCopy.shortcutAssign], ["weekly-report", deskCopy.shortcutWeeklyReport], ["attendance", deskCopy.shortcutAttendance], ["duty-schedule", deskCopy.shortcutDuty], ["work-schedule", deskCopy.shortcutSchedule], ["database", deskCopy.shortcutDatabase]];
   return wanted.flatMap(([id, label]) => {
     const item = navigation?.primary?.find((entry) => entry.id === id);
     return item ? [{ id: item.id, href: item.href, label }] : [];
