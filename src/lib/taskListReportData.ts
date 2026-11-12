@@ -1,6 +1,6 @@
 import "server-only";
 
-import { taskRepository } from "@/lib/taskRepository";
+import { loadLatestTaskProgressReports, taskRepository } from "@/lib/taskRepository";
 import { apiError, rpcFailure } from "@/lib/serverApi";
 import { canUseJournalism } from "@/lib/journalismScope.mjs";
 import { buildTaskListReportModel, reportFilterLabel, selectTasksForReport } from "@/lib/taskListReport.mjs";
@@ -19,5 +19,9 @@ export async function getTaskListReportData(user: ServerAuthUser, query: TaskLis
     all.push(...result.data.items);
     if (all.length >= result.data.total || result.data.items.length === 0) break;
   }
-  return { ok: true as const, model: buildTaskListReportModel({ tasks: selectTasksForReport(all, from, to), from, to, userName: user.full_name, filterLabel: reportFilterLabel(query, all) }) };
+  const selected = selectTasksForReport(all, from, to);
+  const progressResult = await loadLatestTaskProgressReports(selected.map(task => task.id));
+  if (!progressResult.ok) return { ok: false as const, response: rpcFailure(progressResult.error) };
+  const tasks = selected.map(task => ({ ...task, latest_progress_report: progressResult.data.get(task.id) }));
+  return { ok: true as const, model: buildTaskListReportModel({ tasks, from, to, userName: user.full_name, actorId: user.id, filterLabel: reportFilterLabel(query, all) }) };
 }

@@ -32,6 +32,16 @@ test("progress report stays date plus status plus narrative with no percentage U
   assert.doesNotMatch(detail, /progress_percent|type="range"|Tiến độ\s*%/i);
 });
 
+test("normal assigned tasks use the shared progress section while personal and quick reports stay hidden", () => {
+  const detail = read("../components/TaskDetailShell.tsx");
+  assert.match(detail, /progressReportsSupported/);
+  assert.match(detail, /task\.task_type === "assigned"/);
+  assert.match(detail, /task\.workflow_type !== "REPORT_ONLY"/);
+  assert.match(detail, /task\.task_category !== "duty" \|\| isCollaboratorRole/);
+  assert.match(detail, /title=\{projectTask \? "Ti\u1ebfn \u0111\u1ed9" : "C\u1eadp nh\u1eadt ti\u1ebfn \u0111\u1ed9"\}/);
+  assert.match(detail, /empty="Ch\u01b0a c\u00f3 b\u00e1o c\u00e1o ti\u1ebfn \u0111\u1ed9\."/);
+});
+
 test("task detail defaults to one overview and collapses secondary information in the sidebar", () => {
   const detail = read("../components/TaskDetailShell.tsx");
   assert.doesNotMatch(detail, /role="tablist"|task-panel-progress|task-panel-history/);

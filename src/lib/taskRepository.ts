@@ -97,6 +97,31 @@ const journalismListFields = (
 const TASK_ACCESS_FIELDS = "id,project_id,projects!tasks_project_id_fkey(project_members(user_id,role,staff_users!project_members_user_id_fkey(active))),department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id),self_claimable,task_type,status,approval_required,task_status_events(from_status,to_status),task_assignees(user_id,assignment_role),department_plan_items!department_plan_items_linked_task_id_fkey(id,department_plan_id)";
 
 const TASK_LIST_FIELDS = journalismListFields();
+
+export type ReportTaskProgress = Pick<TaskListItemDto, never> & {
+  id: string;
+  report_status: string;
+  progress_text: string;
+  blockers: string | null;
+  reported_on: string;
+  created_at: string;
+};
+
+export async function loadLatestTaskProgressReports(taskIds: string[]): Promise<RepositoryResult<Map<string, ReportTaskProgress>>> {
+  const latest = new Map<string, ReportTaskProgress>();
+  if (!taskIds.length) return ok(latest);
+  const { data, error } = await serverSupabase
+    .from("task_progress_reports")
+    .select("id,task_id,report_status,progress_text,blockers,reported_on,created_at")
+    .in("task_id", taskIds)
+    .order("reported_on", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) return fail(error);
+  for (const row of (data ?? []) as Array<ReportTaskProgress & { task_id: string }>) {
+    if (!latest.has(row.task_id)) latest.set(row.task_id, row);
+  }
+  return ok(latest);
+}
 // Keep a minimal relation embedded so PostgREST can exclude Journalism rows
 // for actors outside the approved Journalism scope.
 const NON_JOURNALISM_TASK_FIELDS = [

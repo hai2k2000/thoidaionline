@@ -162,6 +162,22 @@ test("assign, report, review, update and comment require explicit permission plu
   assert.equal(canTaskAction(actor({ id: "other" }), task(), "comment"), false);
 });
 
+test("normal assigned task progress reports allow owner and collaborator but deny watcher", () => {
+  const normalTask = task({
+    taskType: "assigned",
+    projectId: null,
+    ownerId: "owner",
+    assigneeId: "assignee",
+    participants: [
+      { userId: "collaborator", assignmentRole: "assignee" },
+      { userId: "watcher", assignmentRole: "watcher" },
+    ],
+  });
+  assert.equal(canTaskAction(actor({ id: "owner" }), normalTask, "report"), true);
+  assert.equal(canTaskAction(actor({ id: "collaborator" }), normalTask, "report"), true);
+  assert.equal(canTaskAction(actor({ id: "watcher" }), normalTask, "report"), false);
+});
+
 test("null departments never create same-department authority", () => {
   const manager = actor({
     departmentId: null,
