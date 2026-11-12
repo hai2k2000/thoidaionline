@@ -9,7 +9,7 @@ import { announcementCopy as copy } from "@/lib/announcementLibraryCopy.mjs";
 
 type Folder = { id: string; name: string; system_key?: string | null }; type Item = { id: string; kind: string; title: string; url?: string | null; file_name?: string | null };
 
-export default function SharedLibraryShell({ folders, items, folderId, folderName, fullName, canManage }: { folders: Folder[]; items: Item[]; folderId: string | null; folderName: string | null; fullName: string; canManage: boolean }) {
+export default function SharedLibraryShell({ folders, items, folderId, folderName, fullName, canManage, showSharedRecords = false }: { folders: Folder[]; items: Item[]; folderId: string | null; folderName: string | null; fullName: string; canManage: boolean; showSharedRecords?: boolean }) {
   const router = useRouter(); const askConfirm = useConfirm(); const prompt = usePromptDialog(); const [error, setError] = useState(""); const [uploading, setUploading] = useState(false);
   const remove = async (path: string, folder: boolean) => { if (!await askConfirm({ title: folder ? copy.removeFolderTitle : copy.removeItemTitle, message: folder ? copy.removeFolderMessage : copy.removeItemMessage, tone: "danger" })) return; try { const response = await fetch(path, { method: "DELETE" }); if (!response.ok) { const data = await response.json().catch(() => null); setError(data?.error === "not_empty" ? copy.folderNotEmpty : copy.saveFailed); return; } router.refresh(); } catch { setError(copy.saveFailed); } };
   const createFolder = async () => { const name = await prompt({ title: copy.addFolder, label: copy.folderName, required: true }); if (!name) return; try { const response = await fetch("/api/shared-library", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "folder", name, parentId: folderId }) }); if (!response.ok) { setError(copy.saveFailed); return; } router.refresh(); } catch { setError(copy.saveFailed); } };
@@ -55,7 +55,11 @@ export default function SharedLibraryShell({ folders, items, folderId, folderNam
 </p>
 </> : null}
 </div> : null}<div className="mt-5 space-y-2">
-{folders.map((folder) => <div key={folder.id} className="flex min-h-11 items-center justify-between rounded-xl border p-3">
+{showSharedRecords ? <div className="flex min-h-11 items-center justify-between rounded-xl border border-orange-200 bg-orange-50/50 p-3">
+<Link className="min-w-0 break-words font-semibold" href="/library?view=csdl">
+{copy.sharedRecordsFolder}
+</Link>
+</div> : null}{folders.map((folder) => <div key={folder.id} className="flex min-h-11 items-center justify-between rounded-xl border p-3">
 <Link className="min-w-0 break-words font-semibold" href={`/library?folder=${folder.id}`}>
 {folder.name}
 </Link>
@@ -80,7 +84,7 @@ export default function SharedLibraryShell({ folders, items, folderId, folderNam
 {copy.remove}
 </button> : null}
 </span>
-</div>)}{!folders.length && !items.length ? <p className="py-8 text-center text-slate-500">
+</div>)}{!showSharedRecords && !folders.length && !items.length ? <p className="py-8 text-center text-slate-500">
 {copy.emptyFolder}
 </p> : null}
 </div>
