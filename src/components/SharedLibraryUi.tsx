@@ -60,8 +60,8 @@ export function LibraryFrame({ fullName, crumb, intro, actions, children }: { fu
       <AppNav currentPath="/library" userLabel={fullName} />
       <main className="min-w-0 flex-1 space-y-4">
         <header className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-          <nav aria-label="breadcrumb" className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
-            {crumb ? <><Link className="rounded-md px-1 py-0.5 font-medium text-orange-700 hover:bg-orange-50 focus-visible:ring-2 focus-visible:ring-orange-500" href="/library">{copy.libraryHeading}</Link><span aria-hidden="true">/</span><span className="min-w-0 break-words font-medium text-slate-700">{crumb}</span></> : <span className="font-medium text-slate-700">{copy.libraryRoot}</span>}
+          <nav aria-label="breadcrumb" className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm leading-6 text-slate-500">
+            {crumb ? <><Link className="inline-flex items-center rounded-md font-medium leading-6 text-orange-700 hover:bg-orange-50 focus-visible:ring-2 focus-visible:ring-orange-500" href="/library">{copy.libraryHeading}</Link><span aria-hidden="true" className="leading-6">/</span><span className="min-w-0 break-words leading-6 font-medium text-slate-700">{crumb}</span></> : <span className="font-medium text-slate-700">{copy.libraryRoot}</span>}
           </nav>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">

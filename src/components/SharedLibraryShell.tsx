@@ -54,7 +54,7 @@ export default function SharedLibraryShell({ folders, items, folderId, folderNam
         </div>)}
       </div>
     </section> : null}
-    {items.length ? <ul className="divide-y overflow-hidden rounded-2xl border bg-white shadow-sm">
+    {items.length ? <ul className="divide-y divide-slate-200 overflow-hidden rounded-2xl border bg-white shadow-sm">
       {items.map((item) => { const meta = [item.kind === "link" ? copy.linkBadge : item.file_name && item.file_name !== item.title ? item.file_name : "", librarySize(item.size_bytes), libraryDate(item.created_at), item.uploaded_by_name ? `${copy.uploadedBy}: ${item.uploaded_by_name}` : ""].filter(Boolean); return <li key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <FileBadge tone={fileTone(item.kind, item.file_name, item.mime_type)} />
