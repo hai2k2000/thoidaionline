@@ -7,6 +7,7 @@ main() {
   local NOW=${THOIDAI_BACKUP_NOW:-}
   local PG_CONTAINER=${THOIDAI_BACKUP_PG_CONTAINER:-supabase_db_thoidai-work}
   local STORAGE=${THOIDAI_BACKUP_STORAGE:-/opt/thoidai-work/storage}
+  local DATABASE_RECORDS=${DATABASE_RECORD_STORAGE_ROOT:-/opt/thoidai-work/storage/database-records}
   local cleanup_partial=''
   [[ "$MAX_MB" =~ ^[0-9]+$ ]] || { echo 'invalid THOIDAI_BACKUP_MAX_MB' >&2; return 2; }
   timestamp() { [[ -n "$NOW" ]] && printf '%s\n' "$NOW" || date -u +%Y%m%dT%H%M%SZ; }
@@ -45,7 +46,7 @@ main() {
     done
   }
   run_backup() {
-    local kind=daily label='' name partial dump tarfile prev prevtar current_mb
+    local kind=daily label='' name partial dump tarfile records_tar prev prevtar prevrecords current_mb separate_records=0
     [[ "${1:-}" == '--kind' ]] && { kind=${2:?}; shift 2; }
     [[ "${1:-}" == '--label' ]] && { label=${2:?}; shift 2; }
     [[ "$kind" == daily || "$kind" == predeploy ]] || return 2
@@ -55,11 +56,17 @@ main() {
     current_mb=$(du -sm -- "$ROOT" | awk '{print $1}'); (( current_mb + 50 <= MAX_MB )) || { echo 'BACKUP_CAP=EXCEEDED'; return 3; }
     exec 9>"$LOCK"; flock -n 9 || return 1
     name="$(timestamp)-$kind${label:+-$label}"; partial="$ROOT/$kind/.$name.partial"; cleanup_partial="$partial"; mkdir -p "$partial"
-    dump="$partial/postgres.dump"; tarfile="$partial/storage.tar.gz"
+    dump="$partial/postgres.dump"; tarfile="$partial/storage.tar.gz"; records_tar="$partial/database-records.tar.gz"
+    storage_real=$(realpath -m -- "$STORAGE"); records_real=$(realpath -m -- "$DATABASE_RECORDS")
+    [[ "$records_real" == "$storage_real" || "$records_real" == "$storage_real"/* ]] || separate_records=1
     docker exec "$PG_CONTAINER" pg_dump -U postgres -d postgres -Fc > "$dump"; chmod 600 "$dump"; [[ -s "$dump" ]]
     docker exec -i "$PG_CONTAINER" pg_restore --list < "$dump" > "$partial/pg.list"; (( $(wc -l < "$partial/pg.list") > 100 ))
     tar --exclude='*/cache' --exclude='cache' -czf "$tarfile" -C "$(dirname "$STORAGE")" "$(basename "$STORAGE")"; tar -tzf "$tarfile" >/dev/null
-    { printf 'created_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"; printf 'postgres_version='; docker exec "$PG_CONTAINER" psql -U postgres -d postgres -Atc 'show server_version'; printf 'pg_restore_items=%s\n' "$(wc -l < "$partial/pg.list")"; (cd "$partial" && sha256sum postgres.dump storage.tar.gz); (cd "$partial" && stat -c 'size=%s path=%n' postgres.dump storage.tar.gz); } > "$partial/manifest.txt"
+    if (( separate_records )); then
+      [[ -d "$DATABASE_RECORDS" ]] || { echo "database record storage missing: $DATABASE_RECORDS" >&2; return 1; }
+      tar -czf "$records_tar" -C "$(dirname "$DATABASE_RECORDS")" "$(basename "$DATABASE_RECORDS")"; tar -tzf "$records_tar" >/dev/null
+    fi
+    { printf 'created_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"; printf 'postgres_version='; docker exec "$PG_CONTAINER" psql -U postgres -d postgres -Atc 'show server_version'; printf 'pg_restore_items=%s\n' "$(wc -l < "$partial/pg.list")"; if (( separate_records )); then printf 'database_record_storage_root=%s\n' "$DATABASE_RECORDS"; (cd "$partial" && sha256sum postgres.dump storage.tar.gz database-records.tar.gz); (cd "$partial" && stat -c 'size=%s path=%n' postgres.dump storage.tar.gz database-records.tar.gz); else (cd "$partial" && sha256sum postgres.dump storage.tar.gz); (cd "$partial" && stat -c 'size=%s path=%n' postgres.dump storage.tar.gz); fi; } > "$partial/manifest.txt"
     prev=''
     while IFS= read -r candidate; do
       [[ "$candidate" == .* ]] && continue
@@ -67,8 +74,11 @@ main() {
       prev="$ROOT/daily/$candidate"
       break
     done < <(find "$ROOT/daily" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -r)
-    prevtar="$prev/storage.tar.gz"
-    if [[ -f "$prev/postgres.dump" && -f "$prevtar" ]] && [[ "$(sha256sum "$dump" | awk '{print $1}')" == "$(sha256sum "$prev/postgres.dump" | awk '{print $1}')" ]] && [[ "$(sha256sum "$tarfile" | awk '{print $1}')" == "$(sha256sum "$prevtar" | awk '{print $1}')" ]]; then echo "DUPLICATE_OF=$(basename "$prev")" >> "$ROOT/backup.log"; rm -rf -- "$partial"; cleanup_partial=''; return 0; fi
+    prevtar="$prev/storage.tar.gz"; prevrecords="$prev/database-records.tar.gz"
+    duplicate=0
+    if [[ -f "$prev/postgres.dump" && -f "$prevtar" ]] && [[ "$(sha256sum "$dump" | awk '{print $1}')" == "$(sha256sum "$prev/postgres.dump" | awk '{print $1}')" ]] && [[ "$(sha256sum "$tarfile" | awk '{print $1}')" == "$(sha256sum "$prevtar" | awk '{print $1}')" ]]; then duplicate=1; fi
+    if (( separate_records )); then [[ -f "$prevrecords" ]] && [[ "$(sha256sum "$records_tar" | awk '{print $1}')" == "$(sha256sum "$prevrecords" | awk '{print $1}')" ]] || duplicate=0; fi
+    if (( duplicate )); then echo "DUPLICATE_OF=$(basename "$prev")" >> "$ROOT/backup.log"; rm -rf -- "$partial"; cleanup_partial=''; return 0; fi
     mv -- "$partial" "$ROOT/$kind/$name"; cleanup_partial=''; printf '%s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" "$(du -sm -- "$ROOT/$kind/$name" | awk '{print $1}')" > "$ROOT/last-success"; retention --apply
   }
   status() { local layer latest count total age; total=$(du -sm -- "$ROOT" 2>/dev/null | awk '{print $1}'); for layer in daily predeploy; do latest=$(find "$ROOT/$layer" -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | sort -r | head -n1 || true); count=$(find "$ROOT/$layer" -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | wc -l); echo "$layer latest=${latest:-none} count=$count"; if [[ "$layer" == daily && -n "$latest" ]]; then age=$(( $(date +%s) - $(stat -c %Y "$latest") )); (( age <= 26 * 3600 )) || return 1; fi; done; echo "total_mb=$total"; [[ -f "$ROOT/last-success" ]] && echo "last-success=$(cat "$ROOT/last-success")"; }

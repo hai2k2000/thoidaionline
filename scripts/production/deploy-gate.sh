@@ -47,8 +47,19 @@ flock -n 9 || { echo "DEPLOY ABORTED: deploy lock unavailable" >&2; exit 1; }
 if [[ "${THOIDAI_CANARY_ONLY:-0}" == 1 ]]; then echo "canary gate: PASS"; exit 0; fi
 "$nginx_guard"
 
-new_release=${THOIDAI_NEW_RELEASE_PATH:-$release_root/$(basename "$artifact")}
-[[ ! -e "$new_release" && ! -L "$new_release" ]] || { echo "release target already exists" >&2; exit 1; }
+[[ "$artifact_commit" =~ ^[0-9a-f]{40}$ ]] || { echo "DEPLOY ABORTED: artifact commit is invalid" >&2; exit 1; }
+if [[ -n "${THOIDAI_NEW_RELEASE_PATH:-}" ]]; then
+  new_release=$THOIDAI_NEW_RELEASE_PATH
+  [[ ! -e "$new_release" && ! -L "$new_release" ]] || { echo "release target already exists" >&2; exit 1; }
+else
+  release_base="$release_root/thoidai-standalone-$artifact_commit"
+  new_release=$release_base
+  revision=2
+  while [[ -e "$new_release" || -L "$new_release" ]]; do
+    new_release="${release_base}-r${revision}"
+    revision=$((revision + 1))
+  done
+fi
 new_release_path=$(resolve_path "$new_release")
 [[ "$new_release_path" != "$artifact_path" ]] || { echo "DEPLOY ABORTED: release target aliases artifact staging" >&2; exit 1; }
 "$node_bin" "$artifact/verify-standalone-artifact.mjs" "$artifact"
