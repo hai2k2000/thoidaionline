@@ -25,7 +25,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ f
   const raw = params.folder;
   const folderId = raw && asUuid(raw) ? raw : null;
   const result = await sharedLibraryRepository.listFolder(folderId);
-  const folder = folderId ? await serverSupabase.from("shared_library_folders").select("name").eq("id", folderId).is("deleted_at", null).maybeSingle() : { data: null };
+  const folder = folderId ? await serverSupabase.from("shared_library_folders").select("name,system_key").eq("id", folderId).is("deleted_at", null).maybeSingle() : { data: null };
+  const counts = await sharedLibraryRepository.countItems(result.folders.map((entry) => entry.id));
+  const folders = result.folders.map((entry) => ({ ...entry, item_count: counts.get(entry.id) ?? 0 }));
+  let sharedRecordCount: number | null = null;
+  if (folderId === null) {
+    try { const first = (await listVisibleDatabaseRecords(user, { visibility: "public", status: "approved", limit: 1 }))[0] as { total_count?: number | null } | undefined; sharedRecordCount = Number(first?.total_count ?? 0); } catch { sharedRecordCount = null; }
+  }
   const canManage = hasPermission(await loadRbacActor({ id: user.id, department_id: user.department_id, role_code: user.role_code }), "library.manage");
-  return <SharedLibraryShell folders={result.folders} items={result.items} folderId={folderId} folderName={folder.data?.name ?? null} fullName={user.full_name} canManage={canManage} showSharedRecords={folderId === null} />;
+  return <SharedLibraryShell folders={folders} items={result.items} folderId={folderId} folderName={folder.data?.name ?? null} folderKey={folder.data?.system_key ?? null} fullName={user.full_name} canManage={canManage} showSharedRecords={folderId === null} sharedRecordCount={sharedRecordCount} />;
 }

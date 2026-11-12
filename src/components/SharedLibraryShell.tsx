@@ -3,95 +3,76 @@
 import { ChangeEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import AppNav from "@/components/AppNav";
 import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
+import { EmptyPanel, FileBadge, FolderGlyph, LibraryFrame, buttonClass, fileTone, folderHint, libraryDate, librarySize, primaryButtonClass } from "@/components/SharedLibraryUi";
 import { announcementCopy as copy } from "@/lib/announcementLibraryCopy.mjs";
 
-type Folder = { id: string; name: string; system_key?: string | null }; type Item = { id: string; kind: string; title: string; url?: string | null; file_name?: string | null };
+type Folder = { id: string; name: string; system_key?: string | null; item_count?: number };
+type Item = { id: string; kind: string; title: string; description?: string | null; url?: string | null; file_name?: string | null; mime_type?: string | null; size_bytes?: number | null; created_at?: string | null; uploaded_by_name?: string | null };
 
-export default function SharedLibraryShell({ folders, items, folderId, folderName, fullName, canManage, showSharedRecords = false }: { folders: Folder[]; items: Item[]; folderId: string | null; folderName: string | null; fullName: string; canManage: boolean; showSharedRecords?: boolean }) {
+const tileClass = "group flex min-h-24 items-start gap-3 rounded-2xl border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-orange-500";
+const removeClass = "inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 hover:bg-red-50 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-500";
+
+export default function SharedLibraryShell({ folders, items, folderId, folderName, folderKey = null, fullName, canManage, showSharedRecords = false, sharedRecordCount = null }: { folders: Folder[]; items: Item[]; folderId: string | null; folderName: string | null; folderKey?: string | null; fullName: string; canManage: boolean; showSharedRecords?: boolean; sharedRecordCount?: number | null }) {
   const router = useRouter(); const askConfirm = useConfirm(); const prompt = usePromptDialog(); const [error, setError] = useState(""); const [uploading, setUploading] = useState(false);
   const remove = async (path: string, folder: boolean) => { if (!await askConfirm({ title: folder ? copy.removeFolderTitle : copy.removeItemTitle, message: folder ? copy.removeFolderMessage : copy.removeItemMessage, tone: "danger" })) return; try { const response = await fetch(path, { method: "DELETE" }); if (!response.ok) { const data = await response.json().catch(() => null); setError(data?.error === "not_empty" ? copy.folderNotEmpty : copy.saveFailed); return; } router.refresh(); } catch { setError(copy.saveFailed); } };
   const createFolder = async () => { const name = await prompt({ title: copy.addFolder, label: copy.folderName, required: true }); if (!name) return; try { const response = await fetch("/api/shared-library", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "folder", name, parentId: folderId }) }); if (!response.ok) { setError(copy.saveFailed); return; } router.refresh(); } catch { setError(copy.saveFailed); } };
   const addLink = async () => { const title = await prompt({ title: copy.addLink, label: copy.linkTitle, required: true }); const url = title ? await prompt({ title: copy.addLink, label: copy.linkUrl, required: true }) : null; if (!title || !url) return; try { const response = await fetch("/api/shared-library", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "link", title, url, folderId }) }); if (!response.ok) { setError(copy.saveFailed); return; } router.refresh(); } catch { setError(copy.saveFailed); } };
   const upload = async (event: ChangeEvent<HTMLInputElement>) => { const files = Array.from(event.target.files ?? []); if (!folderId || !files.length) return; setUploading(true); setError(""); try { for (const file of files) { const formData = new FormData(); formData.append("file", file); formData.append("folderId", folderId); formData.append("title", file.name); const response = await fetch("/api/shared-library", { method: "POST", body: formData }); if (!response.ok) { setError(copy.uploadFailed); return; } } router.refresh(); } catch { setError(copy.uploadFailed); } finally { setUploading(false); event.target.value = ""; } };
-  return <div className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
-<div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 lg:flex-row lg:gap-6">
-<AppNav currentPath="/library" userLabel={fullName} />
-<main className="min-w-0 flex-1">
-<section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-<h1 className="text-2xl font-bold">
-{copy.libraryTitle}
-</h1>
-<p className="mt-1 text-sm text-slate-600">
-{copy.libraryIntro}
-</p>
-<nav className="mt-4 flex flex-wrap gap-2 text-sm">
-<Link className="inline-flex min-h-11 items-center rounded-xl border px-3" href="/library">
-{copy.libraryRoot}
-</Link>
-{folderName ? <span className="inline-flex min-h-11 items-center rounded-xl bg-orange-50 px-3">
-{folderName}
-</span> : null}
-</nav>
-{error ? <p className="mt-3 text-sm text-red-700" role="alert">
-{error}
-</p> : null}{canManage ? <div className="mt-4 flex flex-wrap gap-2">
-<button className="inline-flex min-h-11 items-center rounded-xl border px-3 font-semibold" onClick={() => void createFolder()}>
-{copy.addFolder}
-</button>
-{folderId ? <>
-<button className="inline-flex min-h-11 items-center rounded-xl border px-3 font-semibold" onClick={() => void addLink()}>
-{copy.addLink}
-</button>
-<label className="inline-flex min-h-11 items-center rounded-xl border px-3 font-semibold">
-<span>
-{uploading ? copy.uploading : copy.uploadFile}
-</span>
-<input className="sr-only" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" onChange={(event) => void upload(event)} />
-</label>
-<p className="basis-full text-sm text-slate-500">
-{copy.uploadRules}
-</p>
-</> : null}
-</div> : null}<div className="mt-5 space-y-2">
-{showSharedRecords ? <div className="flex min-h-11 items-center justify-between rounded-xl border border-orange-200 bg-orange-50/50 p-3">
-<Link className="min-w-0 break-words font-semibold" href="/library?view=csdl">
-{copy.sharedRecordsFolder}
-</Link>
-</div> : null}{folders.map((folder) => <div key={folder.id} className="flex min-h-11 items-center justify-between rounded-xl border p-3">
-<Link className="min-w-0 break-words font-semibold" href={`/library?folder=${folder.id}`}>
-{folder.name}
-</Link>
-{canManage && !folder.system_key ? <button className="inline-flex min-h-11 items-center rounded-xl border px-3 text-red-700" onClick={() => void remove(`/api/shared-library/folders/${folder.id}`, true)}>
-{copy.remove}
-</button> : null}
-</div>)}{items.map((item) => <div key={item.id} className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
-<span className="min-w-0 break-words font-semibold">
-{item.title}
-</span>
-<span className="flex flex-wrap gap-2">
-{item.kind === "file" ? <>
-<a className="inline-flex min-h-11 items-center rounded-xl border px-3" target="_blank" rel="noopener noreferrer" href={`/api/shared-library/file/${item.id}?disposition=inline`}>
-{copy.view}
-</a>
-<a className="inline-flex min-h-11 items-center rounded-xl border px-3" href={`/api/shared-library/file/${item.id}?disposition=attachment`}>
-{copy.download}
-</a>
-</> : <a className="inline-flex min-h-11 items-center rounded-xl border px-3" target="_blank" rel="noopener noreferrer" href={item.url ?? "#"}>
-{copy.open}
-</a>}{canManage ? <button className="inline-flex min-h-11 items-center rounded-xl border px-3 text-red-700" onClick={() => void remove(`/api/shared-library/${item.id}`, false)}>
-{copy.remove}
-</button> : null}
-</span>
-</div>)}{!showSharedRecords && !folders.length && !items.length ? <p className="py-8 text-center text-slate-500">
-{copy.emptyFolder}
-</p> : null}
-</div>
-</section>
-</main>
-</div>
-</div>;
+  const actions = canManage ? <>
+    <button type="button" className={folderId ? buttonClass : primaryButtonClass} onClick={() => void createFolder()}>{copy.addFolder}</button>
+    {folderId ? <button type="button" className={primaryButtonClass} onClick={() => void addLink()}>{copy.addLink}</button> : null}
+  </> : null;
+  return <LibraryFrame fullName={fullName} crumb={folderName} intro={folderId ? folderHint(folderKey) : copy.libraryIntro} actions={actions}>
+    {error ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</p> : null}
+    {folderId && canManage ? <label className="flex cursor-pointer flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-orange-200 bg-orange-50/40 px-4 py-5 text-center text-orange-800 focus-within:ring-2 focus-within:ring-orange-500">
+      <span className="font-semibold">{uploading ? copy.uploading : copy.uploadFile}</span>
+      <span className="text-sm text-orange-700/80">{copy.uploadRules}</span>
+      <input className="sr-only" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" disabled={uploading} onChange={(event) => void upload(event)} />
+    </label> : null}
+    {showSharedRecords || folders.length ? <section className="space-y-3">
+      {folderId ? <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{copy.libraryFoldersHeading}</h2> : null}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {showSharedRecords ? <Link href="/library?view=csdl" className={`${tileClass} border-orange-200 bg-gradient-to-br from-orange-50 to-white`}>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-600 text-white"><FolderGlyph kind="records" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block break-words font-semibold text-slate-900 group-hover:text-orange-700">{copy.sharedRecordsFolder}</span>
+            <span className="mt-0.5 block text-sm text-slate-500">{copy.sharedRecordsHint}</span>
+            {sharedRecordCount !== null ? <span className="mt-2 inline-flex rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">{sharedRecordCount} {copy.recordsUnit}</span> : null}
+          </span>
+        </Link> : null}
+        {folders.map((folder) => <div key={folder.id} className="relative">
+          <Link href={`/library?folder=${folder.id}`} className={`${tileClass} h-full`}>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700 ring-1 ring-orange-100"><FolderGlyph kind={folder.system_key} /></span>
+            <span className={`min-w-0 flex-1 ${canManage && !folder.system_key ? "pr-12" : ""}`}>
+              <span className="block break-words font-semibold text-slate-900 group-hover:text-orange-700">{folder.name}</span>
+              <span className="mt-0.5 block text-sm text-slate-500">{folderHint(folder.system_key)}</span>
+              {typeof folder.item_count === "number" ? <span className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{folder.item_count} {copy.itemsUnit}</span> : null}
+            </span>
+          </Link>
+          {canManage && !folder.system_key ? <button type="button" className={`${removeClass} absolute right-2 top-2`} onClick={() => void remove(`/api/shared-library/folders/${folder.id}`, true)}>{copy.remove}</button> : null}
+        </div>)}
+      </div>
+    </section> : null}
+    {items.length ? <ul className="divide-y overflow-hidden rounded-2xl border bg-white shadow-sm">
+      {items.map((item) => { const meta = [item.kind === "link" ? copy.linkBadge : item.file_name && item.file_name !== item.title ? item.file_name : "", librarySize(item.size_bytes), libraryDate(item.created_at), item.uploaded_by_name ? `${copy.uploadedBy}: ${item.uploaded_by_name}` : ""].filter(Boolean); return <li key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <FileBadge tone={fileTone(item.kind, item.file_name, item.mime_type)} />
+          <div className="min-w-0">
+            <p className="break-words font-semibold text-slate-900">{item.title}</p>
+            {item.description ? <p className="mt-0.5 break-words text-sm text-slate-600">{item.description}</p> : null}
+            {meta.length ? <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 break-words text-xs text-slate-500">{meta.map((part) => <span key={part}>{part}</span>)}</p> : null}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 sm:shrink-0">
+          {item.kind === "file" ? <>
+            <a className={buttonClass} target="_blank" rel="noopener noreferrer" href={`/api/shared-library/file/${item.id}?disposition=inline`}>{copy.view}</a>
+            <a className={buttonClass} href={`/api/shared-library/file/${item.id}?disposition=attachment`}>{copy.download}</a>
+          </> : <a className={buttonClass} target="_blank" rel="noopener noreferrer" href={item.url ?? "#"}>{copy.open}</a>}
+          {canManage ? <button type="button" className={removeClass} onClick={() => void remove(`/api/shared-library/${item.id}`, false)}>{copy.remove}</button> : null}
+        </div>
+      </li>; })}
+    </ul> : null}
+    {!showSharedRecords && !folders.length && !items.length ? <EmptyPanel title={copy.emptyFolder} hint={folderId ? copy.emptyFolderHint : undefined} /> : null}
+  </LibraryFrame>;
 }
-
-
