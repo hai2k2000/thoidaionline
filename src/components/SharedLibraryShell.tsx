@@ -1,4 +1,6 @@
 "use client";
+import { TASK_ATTACHMENT_ACCEPT, TASK_ATTACHMENT_FORMAT_MESSAGE, validateTaskAttachment } from "@/lib/taskAttachmentPolicy.mjs";
+
 
 import { ChangeEvent, useState } from "react";
 import Link from "next/link";
@@ -18,7 +20,7 @@ export default function SharedLibraryShell({ folders, items, folderId, folderNam
   const remove = async (path: string, folder: boolean) => { if (!await askConfirm({ title: folder ? copy.removeFolderTitle : copy.removeItemTitle, message: folder ? copy.removeFolderMessage : copy.removeItemMessage, tone: "danger" })) return; try { const response = await fetch(path, { method: "DELETE" }); if (!response.ok) { const data = await response.json().catch(() => null); setError(data?.error === "not_empty" ? copy.folderNotEmpty : copy.saveFailed); return; } router.refresh(); } catch { setError(copy.saveFailed); } };
   const createFolder = async () => { const name = await prompt({ title: copy.addFolder, label: copy.folderName, required: true }); if (!name) return; try { const response = await fetch("/api/shared-library", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "folder", name, parentId: folderId }) }); if (!response.ok) { setError(copy.saveFailed); return; } router.refresh(); } catch { setError(copy.saveFailed); } };
   const addLink = async () => { const title = await prompt({ title: copy.addLink, label: copy.linkTitle, required: true }); const url = title ? await prompt({ title: copy.addLink, label: copy.linkUrl, required: true }) : null; if (!title || !url) return; try { const response = await fetch("/api/shared-library", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "link", title, url, folderId }) }); if (!response.ok) { setError(copy.saveFailed); return; } router.refresh(); } catch { setError(copy.saveFailed); } };
-  const upload = async (event: ChangeEvent<HTMLInputElement>) => { const files = Array.from(event.target.files ?? []); if (!folderId || !files.length) return; setUploading(true); setError(""); try { for (const file of files) { const formData = new FormData(); formData.append("file", file); formData.append("folderId", folderId); formData.append("title", file.name); const response = await fetch("/api/shared-library", { method: "POST", body: formData }); if (!response.ok) { setError(copy.uploadFailed); return; } } router.refresh(); } catch { setError(copy.uploadFailed); } finally { setUploading(false); event.target.value = ""; } };
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => { const files = Array.from(event.target.files ?? []); if (!folderId || !files.length) return; setUploading(true); setError(""); try { for (const file of files) { const validation = await validateTaskAttachment(file); if (validation) { setError(validation); return; } const formData = new FormData(); formData.append("file", file); formData.append("folderId", folderId); formData.append("title", file.name); const response = await fetch("/api/shared-library", { method: "POST", body: formData }); if (!response.ok) { setError(TASK_ATTACHMENT_FORMAT_MESSAGE); return; } } router.refresh(); } catch { setError(TASK_ATTACHMENT_FORMAT_MESSAGE); } finally { setUploading(false); event.target.value = ""; } };
   const actions = canManage ? <>
     <button type="button" className={folderId ? buttonClass : primaryButtonClass} onClick={() => void createFolder()}>{copy.addFolder}</button>
     {folderId ? <button type="button" className={primaryButtonClass} onClick={() => void addLink()}>{copy.addLink}</button> : null}
@@ -27,8 +29,8 @@ export default function SharedLibraryShell({ folders, items, folderId, folderNam
     {error ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</p> : null}
     {folderId && canManage ? <label className="flex cursor-pointer flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-orange-200 bg-orange-50/40 px-4 py-5 text-center text-orange-800 focus-within:ring-2 focus-within:ring-orange-500">
       <span className="font-semibold">{uploading ? copy.uploading : copy.uploadFile}</span>
-      <span className="text-sm text-orange-700/80">{copy.uploadRules}</span>
-      <input className="sr-only" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" disabled={uploading} onChange={(event) => void upload(event)} />
+      <span className="text-sm text-orange-700/80">{copy.uploadRules} {TASK_ATTACHMENT_FORMAT_MESSAGE}</span>
+      <input className="sr-only" type="file" multiple accept={TASK_ATTACHMENT_ACCEPT} disabled={uploading} onChange={(event) => void upload(event)} />
     </label> : null}
     {showSharedRecords || folders.length ? <section className="space-y-3">
       {folderId ? <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{copy.libraryFoldersHeading}</h2> : null}

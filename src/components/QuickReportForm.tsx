@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { TASK_ATTACHMENT_ACCEPT, uploadErrorMessage, validateTaskAttachment } from "@/components/TaskAttachmentUploader";
+import { TASK_ATTACHMENT_FORMAT_MESSAGE } from "@/lib/taskAttachmentPolicy.mjs";
 import type { QuickReportBatchResult } from "@/lib/taskContracts";
 
 const categories = [["computer", "CNTT / Máy tính"], ["network", "Mạng / Internet"], ["printer_device", "Máy in / Thiết bị"], ["facilities", "Điện / Cơ sở vật chất"], ["official_document", "Công văn"], ["administration", "Hành chính"], ["other", "Khác"]] as const;
@@ -29,14 +30,14 @@ export default function QuickReportForm() {
   const update = (index: number, patch: Partial<Row>) => setRows((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row));
   const addRow = () => setRows((current) => [...current, emptyRow(defaultDate, defaultCategory)]);
   const removeRow = (index: number) => setRows((current) => current.length === 1 ? current : current.filter((_, rowIndex) => rowIndex !== index));
-  const selectFiles = (index: number, selected: File[]) => {
+  const selectFiles = async (index: number, selected: File[]) => {
     if (locked) return;
+    const results = await Promise.all(selected.map(async file => ({ file, validation: await validateTaskAttachment(file) })));
     setRows(current => current.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       const files = [...row.files];
       const fileErrors: string[] = [];
-      for (const file of selected) {
-        const validation = validateTaskAttachment(file);
+      for (const { file, validation } of results) {
         if (validation) fileErrors.push(`${file.name}: ${validation}`);
         else if (files.length >= 10) fileErrors.push(`${file.name}: Mỗi công việc được đính kèm tối đa 10 tệp.`);
         else files.push(file);
@@ -52,7 +53,7 @@ export default function QuickReportForm() {
       for (const row of rows) {
         if (row.files.length > 10) throw new Error("Mỗi công việc được đính kèm tối đa 10 tệp.");
         for (const file of row.files) {
-          const validation = validateTaskAttachment(file);
+          const validation = await validateTaskAttachment(file);
           if (validation) throw new Error(`${file.name}: ${validation}`);
         }
       }
@@ -95,9 +96,9 @@ export default function QuickReportForm() {
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="grid gap-4 p-4">{rows.map((row, index) => <article key={index} className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="mb-3 flex items-center justify-between"><h2 className="font-bold text-slate-800">Việc {index + 1}</h2>{rows.length > 1 ? <button type="button" onClick={() => removeRow(index)} className="rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700">Xóa</button> : null}</div><div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold sm:col-span-2">Nội dung công việc<input value={row.title} onChange={(event) => update(index, { title: event.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 font-normal" maxLength={500} /></label><label className="text-sm font-semibold">Nhóm công việc<select value={row.category} onChange={(event) => update(index, { category: event.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 font-normal">{categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className="text-sm font-semibold">Ngày bắt đầu<input type="date" value={row.startDate} onChange={(event) => update(index, { startDate: event.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 font-normal" required /></label><label className="text-sm font-semibold">Ngày hoàn thành<input type="date" value={row.completionDate} onChange={(event) => update(index, { completionDate: event.target.value })} disabled={row.status !== "done"} className="mt-1 w-full rounded-lg border px-3 py-2 font-normal disabled:bg-slate-100" /></label><label className="text-sm font-semibold">Trạng thái<select value={row.status} onChange={(event) => update(index, { status: event.target.value as Row["status"], completionDate: event.target.value === "in_progress" ? "" : row.completionDate || row.startDate })} className="mt-1 w-full rounded-lg border px-3 py-2 font-normal"><option value="in_progress">Đang xử lý</option><option value="done">Hoàn thành</option></select></label><label className="text-sm font-semibold sm:col-span-2">Kết quả / ghi chú<textarea value={row.notes} onChange={(event) => update(index, { notes: event.target.value })} className="mt-1 min-h-24 w-full rounded-lg border px-3 py-2 font-normal" maxLength={10000} /></label>
           <div className="min-w-0 text-sm sm:col-span-2">
             <label className="grid gap-2 font-semibold">Đính kèm tệp
-              <input type="file" multiple accept={TASK_ATTACHMENT_ACCEPT} disabled={locked} className="w-full min-w-0 rounded-lg border bg-white p-2 font-normal" onChange={event => { selectFiles(index, Array.from(event.target.files ?? [])); event.target.value = ""; }} />
+              <input type="file" multiple accept={TASK_ATTACHMENT_ACCEPT} disabled={locked} className="w-full min-w-0 rounded-lg border bg-white p-2 font-normal" onChange={event => { void selectFiles(index, Array.from(event.target.files ?? [])); event.target.value = ""; }} />
             </label>
-            <p className="mt-1 text-xs text-slate-500">Tối đa 10 tệp mỗi công việc. PDF, PNG, JPG, JPEG, DOCX, XLSX; tối đa 10 MB/tệp.</p>
+            <p className="mt-1 text-xs text-slate-500">Tối đa 10 tệp mỗi công việc. {TASK_ATTACHMENT_FORMAT_MESSAGE}</p>
             <ul className="mt-2 flex flex-wrap gap-2">{row.files.map((file, fileIndex) => <li key={fileIndex} className="flex max-w-full items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1">
               <span className="min-w-0 break-all">{file.name} · {file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.ceil(file.size / 1024)} KB`}</span>
               <button type="button" aria-label={`Xóa tệp ${file.name}`} disabled={locked} onClick={() => update(index, { files: row.files.filter((_, i) => i !== fileIndex), fileErrors: [] })} className="shrink-0 rounded-full px-2 py-1 font-bold text-red-700">×</button>

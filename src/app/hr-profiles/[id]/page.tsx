@@ -1,4 +1,5 @@
 "use client";
+import { TASK_ATTACHMENT_ACCEPT, validateTaskAttachment } from "@/lib/taskAttachmentPolicy.mjs";
 import CameraCaptureButton from "@/components/CameraCaptureButton";
 
 
@@ -61,6 +62,7 @@ export default function HrProfileDetailPage() {
         const fd = new FormData();
         fd.append("file", profileFile);
         fd.append("userId", params.id);
+        const validation = await validateTaskAttachment(profileFile); if (validation) throw new Error(validation);
         const upRes = await fetch("/api/hr/upload", { method: "POST", body: fd });
         const upJson = await upRes.json();
         if (!upRes.ok) throw new Error(upJson?.error || "Tải tệp lên thất bại");
@@ -166,7 +168,7 @@ export default function HrProfileDetailPage() {
 
             <div className="md:col-span-2">
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tệp hợp đồng lao động</label>
-              <input className="min-h-11 rounded-lg border px-3 py-2" type="file" onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)} />
+              <input className="min-h-11 rounded-lg border px-3 py-2" type="file" accept={TASK_ATTACHMENT_ACCEPT} onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)} />
               <CameraCaptureButton disabled={saving || isReadOnly()} onCapture={setProfileFile} />
               {profileFile ? <p className="mt-1 break-all text-xs text-slate-600">{profileFile.name}</p> : null}
               <div className="mt-2 text-sm">

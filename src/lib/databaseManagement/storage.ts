@@ -1,4 +1,5 @@
 import "server-only";
+import { legacyOfficeMime, hasOle2Magic } from "../legacyOffice.mjs";
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
@@ -24,6 +25,7 @@ export async function writeDatabaseRecordFile(recordId: string, file: { name: st
   if (!/^[0-9a-f-]{36}$/i.test(recordId)) throw new Error("invalid_record_id");
   const mimeType = databaseRecordFileType(file.name);
   if (!mimeType || !ALLOWED.has(mimeType) || file.mimeType !== mimeType || file.bytes.byteLength <= 0 || file.bytes.byteLength > MAX_FILE_BYTES) throw new Error("invalid_file");
+  if (legacyOfficeMime(file.name) && !hasOle2Magic(file.bytes)) throw new Error("invalid_file");
   const bytes = file.bytes;
   const key = databaseRecordStorageKey(recordId, file.name, requestId);
   const root = path.resolve(databaseRecordStorageRoot());

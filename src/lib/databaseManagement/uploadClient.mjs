@@ -1,17 +1,20 @@
-export const MAX_RECORD_FILE_BYTES = 150 * 1024 * 1024;
-export const RECORD_FILE_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-]);
+import { legacyOfficeMime, hasLegacyOfficeFileMagic } from '../legacyOffice.mjs';
+import { databaseRecordFileType, DATABASE_RECORD_FILE_TYPES } from './fileType.mjs';
 
-export function validateSelectedFiles(files) {
-  return files.flatMap((file, index) => [
-    !RECORD_FILE_TYPES.has(file.type) ? { index, code: "invalid_type" } : null,
-    file.size <= 0 || file.size > MAX_RECORD_FILE_BYTES ? { index, code: "file_too_large" } : null,
-  ].filter(Boolean));
+export const MAX_RECORD_FILE_BYTES = 150 * 1024 * 1024;
+export const RECORD_FILE_TYPES = new Set(DATABASE_RECORD_FILE_TYPES.values());
+
+export async function validateSelectedFiles(files) {
+  const errors = [];
+  for (const [index, file] of files.entries()) {
+    const legacy = legacyOfficeMime(file.name);
+    let validType = Boolean(databaseRecordFileType(file.name));
+    if (validType && legacy) validType = await hasLegacyOfficeFileMagic(file);
+    else if (validType) validType = RECORD_FILE_TYPES.has((file.type || '').split(';')[0].trim().toLowerCase());
+    if (!validType) errors.push({ index, code: "invalid_type" });
+    if (file.size <= 0 || file.size > MAX_RECORD_FILE_BYTES) errors.push({ index, code: "file_too_large" });
+  }
+  return errors;
 }
 
 function normalizeUpload(item, index) {
@@ -24,7 +27,7 @@ export async function uploadRecordFiles(recordId, files, fetchImpl = fetch, opti
   const timeoutMs = options.timeoutMs ?? 30_000;
   for (const file of files) {
     const item = normalizeUpload(file, files.indexOf(file));
-    const validation = validateSelectedFiles([item.file]);
+    const validation = await validateSelectedFiles([item.file]);
     if (validation.length) {
       failed.push({ file: item.file, uploadId: item.uploadId, code: validation[0].code });
       continue;

@@ -1,3 +1,5 @@
+import { readTaskAttachmentMetadata, TASK_ATTACHMENT_FORMAT_MESSAGE } from "@/lib/taskAttachmentPolicy.mjs";
+import { legacyOfficeMime } from "@/lib/legacyOffice.mjs";
 import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { mkdir, readFile, stat, writeFile } from "fs/promises";
 import { NextResponse } from "next/server";
@@ -14,7 +16,7 @@ const allowed = new Map([
   ["image/png", { extension: "png", signature: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] }],
   ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", { extension: "docx", signature: [0x50, 0x4b, 0x03, 0x04] }],
   ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", { extension: "xlsx", signature: [0x50, 0x4b, 0x03, 0x04] }],
-  ["application/msword", { extension: "doc", signature: [0xd0, 0xcf, 0x11, 0xe0] }],
+  ["application/vnd.ms-excel", { extension: "xls", signature: [] }],
 ]);
 const json = (body: unknown, status = 200) => NextResponse.json(body, {
   status,
@@ -48,14 +50,16 @@ export async function POST(req: Request) {
       return json({ error: "Không có quyền cập nhật hồ sơ này." }, 403);
     }
 
-    const format = allowed.get(file.type);
+    const metadata = await readTaskAttachmentMetadata(file);
+    const legacy = legacyOfficeMime(file.name);
+    const format = metadata && (legacy ? { extension: metadata.extension, signature: [] } : allowed.get(metadata.mimeType));
     if (!format || file.size < format.signature.length || file.size > MAX_BYTES) {
-      return json({ error: "Chỉ nhận PDF, JPG, PNG, DOCX hoặc XLSX, dung lượng tối đa 10 MB." }, 400);
+      return json({ error: TASK_ATTACHMENT_FORMAT_MESSAGE }, 400);
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());
     if (!format.signature.every((value, index) => bytes[index] === value)) {
-      return json({ error: "Nội dung tệp không đúng định dạng." }, 400);
+      return json({ error: TASK_ATTACHMENT_FORMAT_MESSAGE }, 400);
     }
     if (!asUuid(userId)) return json({ error: "userId không hợp lệ." }, 400);
     const fileName = `${safe(userId)}-${crypto.randomUUID()}.${format.extension}`;
@@ -82,7 +86,7 @@ export async function GET(req: Request) {
     return json({ error: "Không có quyền xem tệp này." }, 403);
   }
   const base = path.basename(fileName);
-  const match = new RegExp(`^${userId.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}-[0-9a-f-]{36}\\.(pdf|jpg|png|docx|xlsx|doc)$`, "i").exec(base);
+  const match = new RegExp(`^${userId.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}-[0-9a-f-]{36}\\.(pdf|jpg|png|docx|xlsx|doc|xls)$`, "i").exec(base);
   if (!match) return json({ error: "Không tìm thấy tệp." }, 404);
   const filePath = path.join(/* turbopackIgnore: true */ uploadDir(), base);
   const file = await readFile(/* turbopackIgnore: true */ filePath).catch(() => null);
@@ -90,12 +94,12 @@ export async function GET(req: Request) {
   const info = await stat(/* turbopackIgnore: true */ filePath).catch(() => null);
   if (!info || info.size > MAX_BYTES) return json({ error: "Không tìm thấy tệp." }, 404);
   const contentType = {
-    pdf: "application/pdf", jpg: "image/jpeg", png: "image/png", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", doc: "application/msword",
+    pdf: "application/pdf", jpg: "image/jpeg", png: "image/png", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", doc: "application/msword", xls: "application/vnd.ms-excel",
   }[match[1].toLowerCase()] || "application/octet-stream";
   return new Response(file, {
     headers: {
       "Content-Type": contentType,
-      "Content-Disposition": contentDisposition(base, { inline: true }),
+      "Content-Disposition": contentDisposition(base, { inline: !legacyOfficeMime(base) }),
       "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
       "X-Content-Type-Options": "nosniff",
     },

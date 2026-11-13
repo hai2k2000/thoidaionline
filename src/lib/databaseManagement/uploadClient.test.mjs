@@ -4,11 +4,12 @@ import { reconcileRecordFile, uploadRecordFiles, validateSelectedFiles } from ".
 
 const file = (name, type, size = 3) => new File([new Uint8Array(size)], name, { type });
 
-test("file selection enforces approved types and 50 MiB limit", () => {
-  assert.deepEqual(validateSelectedFiles([file("a.pdf", "application/pdf")]), []);
-  assert.deepEqual(validateSelectedFiles([file("a.exe", "application/octet-stream")]), [{ index: 0, code: "invalid_type" }]);
-  assert.deepEqual(validateSelectedFiles([file("a.pdf", "application/pdf", 150 * 1024 * 1024 + 1)]), [{ index: 0, code: "file_too_large" }]);
-  assert.deepEqual(validateSelectedFiles([file("a.pdf", "application/pdf", 20 * 1024 * 1024)]), []);
+test("file selection enforces approved types and 50 MiB limit", async () => {
+  assert.deepEqual(await validateSelectedFiles([file("a.pdf", "application/pdf")]), []);
+  assert.deepEqual(await validateSelectedFiles([file("a.pdf", "application/octet-stream")]), [{ index: 0, code: "invalid_type" }]);
+  assert.deepEqual(await validateSelectedFiles([file("a.exe", "application/octet-stream")]), [{ index: 0, code: "invalid_type" }]);
+  assert.deepEqual(await validateSelectedFiles([file("a.pdf", "application/pdf", 150 * 1024 * 1024 + 1)]), [{ index: 0, code: "file_too_large" }]);
+  assert.deepEqual(await validateSelectedFiles([file("a.pdf", "application/pdf", 20 * 1024 * 1024)]), []);
 });
 
 test("upload rejects invalid files before making a request", async () => {
@@ -24,7 +25,8 @@ test("upload rejects invalid files before making a request", async () => {
 test("upload retries only failed files", async () => {
   const calls = [];
   let attempt = 0;
-  const files = [file("ok.pdf", "application/pdf"), file("retry.doc", "application/msword")];
+  const ole = Uint8Array.from([0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1,0]);
+  const files = [file("ok.pdf", "application/pdf"), new File([ole], "retry.doc", { type: "application/msword" })];
   const result = await uploadRecordFiles("record-1", files, async (_url, init) => {
     const name = init.body.get("file").name;
     calls.push(name);
