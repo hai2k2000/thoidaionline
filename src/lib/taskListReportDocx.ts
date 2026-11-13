@@ -1,5 +1,5 @@
 import { AlignmentType, BorderStyle, Document, Footer, Packer, Paragraph, SimpleField, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
-import { buildTaskListReportModel, reportDate as date, reportSummary } from "./taskListReport.mjs";
+import { buildTaskListReportModel, reportSummary } from "./taskListReport.mjs";
 import type { NextWeekPlanModel, ReportSection, TaskListReportModel } from "./taskListReport.mjs";
 import type { TaskListItemDto } from "./taskContracts";
 
@@ -42,9 +42,10 @@ export async function exportTaskListReportDocx(source: TaskListReportModel | { t
       headerCell([para("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", { bold: true, align: AlignmentType.CENTER }), para("Độc lập - Tự do - Hạnh phúc", { align: AlignmentType.CENTER })], 5200),
     ] })] }),
     para("BÁO CÁO CÔNG VIỆC", { bold: true, align: AlignmentType.CENTER, before: 240 }),
-    para("Từ ngày " + date(input.from) + " đến ngày " + date(input.to), { align: AlignmentType.CENTER }),
     ...(input.filterLabel ? [para("Bộ lọc: " + input.filterLabel)] : []),
     para(reportSummary(input.counts), { bold: true }),
+    para(input.generalInfo.title, { bold: true, before: 160 }),
+    ...input.generalInfo.lines.map(line => para(line)),
     ...input.sections.flatMap(section),
     ...planSection(input.nextWeekPlan),
     para("NGƯỜI LẬP", { bold: true, align: AlignmentType.CENTER, before: 420, after: 220 }),

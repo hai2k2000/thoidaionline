@@ -23,7 +23,7 @@ test("selected report merges work sections, preserves status notes, excludes can
   assert.match(selected.sections[0].rows[1].statusNote, /^.+$/);
   assert.match(selected.sections[0].rows[0].statusNote, /Qu/);
   assert.equal(model.counts.total, 3);
-  assert.equal(model.sections[0].title, "I. \u0043\u00f4ng vi\u1ec7c \u0111\u00e3 l\u00e0m");
+  assert.equal(model.sections[0].title, "II. \u0043\u00f4ng vi\u1ec7c \u0111\u00e3 l\u00e0m");
   assert.equal(model.sections[0].rows.some(row => row.id === "d"), false);
   assert.equal(report.selectTaskListReportModel(model, []).counts.total, 0);
 });
@@ -38,7 +38,7 @@ test("merged rows keep input order within assignees, completion dates and overdu
   assert.equal(model.sections.length, 1);
   assert.deepEqual(model.sections[0].rows.map(row => row.id), ["done", "late", "open"]);
   assert.ok(model.sections[0].rows.every(row => typeof row.statusNote === "string"));
-  assert.ok(model.nextWeekPlan.title.startsWith("II."));
+  assert.ok(model.nextWeekPlan.title.startsWith("III."));
   assert.deepEqual(report.selectTaskListReportModel(model, ["late", "open"]).sections[0].rows.map(row => row.id), ["late", "open"]);
 });
 
@@ -124,11 +124,11 @@ test("DOCX contains the flat work table, signature and page fields", async () =>
   assert.ok(Buffer.isBuffer(buffer));
   const zip = await JSZip.loadAsync(buffer);
   const xml = await zip.file("word/document.xml").async("string");
-  for (const text of ["T\u1ea0P CH\u00cd TH\u1edcI \u0110\u1ea0I", "B\u00c1O C\u00c1O C\u00d4NG VI\u1ec6C", "STT", "Times New Roman", "II. K\u1ebf ho\u1ea1ch tu\u1ea7n sau"]) assert.ok(xml.includes(text), text);
+  for (const text of ["T\u1ea0P CH\u00cd TH\u1edcI \u0110\u1ea0I", "B\u00c1O C\u00c1O C\u00d4NG VI\u1ec6C", "STT", "Times New Roman", "III. K\u1ebf ho\u1ea1ch tu\u1ea7n sau"]) assert.ok(xml.includes(text), text);
   for (const heading of ["I. ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ hoÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â n thÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â nh", "II. ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Âang thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â±c hiÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡n", "III. QuÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡n", "V. ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§y"]) assert.ok(!xml.includes(heading), heading);
   assert.match(await zip.file("word/footer1.xml").async("string"), /PAGE/);
   assert.doesNotMatch(xml, /PhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡m vi|ViÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡c cÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§a tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´i|BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âc:/);
-  assert.match(xml, /II\. K\u1ebf ho\u1ea1ch tu\u1ea7n sau/);
+  assert.match(xml, /III\. K\u1ebf ho\u1ea1ch tu\u1ea7n sau/);
   assert.match(xml, /\u2026{3}/);
 });
 
@@ -215,11 +215,64 @@ test("route rejects oversized lists and invalid ranges without a partial export"
 });
 
 
-test("done reports ignore blockers and choose the newest dated progress entry", () => {
+test("done reports fall back to blockers and choose reported date before creation time", () => {
   const tasks = [
     { id: "blank", title: "Blank", status: "done", completed_at: "2026-11-10T08:00:00Z", latest_progress_report: { progress_text: "   ", blockers: "Old blocker" } },
-    { id: "history", title: "History", status: "done", completed_at: "2026-11-10T08:00:00Z", task_progress_reports: [{ reported_on: "2026-11-11", created_at: "2026-11-11T10:00:00Z", progress_text: "Old" }, { reported_on: "2026-11-13", created_at: "2026-11-13T10:00:00Z", progress_text: "Latest" }] },
+    { id: "history", title: "History", status: "done", completed_at: "2026-11-10T08:00:00Z", task_progress_reports: [{ reported_on: "2026-11-11", created_at: "2026-11-14T10:00:00Z", progress_text: "Old" }, { reported_on: "2026-11-13", created_at: "2026-11-13T10:00:00Z", progress_text: "Latest" }, { reported_on: "2026-11-13", created_at: "2026-11-13T09:00:00Z", progress_text: "Earlier same day" }] },
   ];
   const model = report.buildTaskListReportModel({ tasks, from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
-  assert.deepEqual(model.sections[0].rows.map(row => row.statusNote), ["Đã hoàn thành 10/11/2026", "Đã hoàn thành 10/11/2026 · Latest"]);
+  assert.deepEqual(model.sections[0].rows.map(row => row.statusNote), ["Đã hoàn thành 10/11/2026 · Old blocker", "Đã hoàn thành 10/11/2026 · Latest"]);
 });
+
+test("report model includes the approved general information section", () => {
+  const model = report.buildTaskListReportModel({ tasks: [], from: "2026-11-06", to: "2026-11-12", userName: "Nguyễn An", jobTitle: "Nhân viên", leaveText: "………………………………………………", filterLabel: "" });
+  assert.deepEqual(model.generalInfo, {
+    title: "I. Thông tin chung và thời gian làm việc/vắng mặt",
+    lines: [
+      "Họ và tên: Nguyễn An",
+      "Chức danh: Nhân viên",
+      "Thời gian thực hiện báo cáo: Từ ngày 6/11/2026 đến ngày 12/11/2026",
+      "Thời gian đi công tác/tác nghiệp bên ngoài: Theo phân công (nếu có)",
+      "Thời gian xin nghỉ phép: ………………………………………………",
+    ],
+  });
+  assert.equal(model.sections[0].title, "II. Công việc đã làm");
+  assert.equal(model.nextWeekPlan.title, "III. Kế hoạch tuần sau");
+});
+
+test("leave formatting clips approved ranges, ignores other statuses and joins entries", () => {
+  assert.equal(report.formatReportLeaveText([], "2026-11-06", "2026-11-12"), "………………………………………………");
+  assert.equal(report.formatReportLeaveText([{ start_date: "2026-11-08", end_date: "2026-11-08", start_period: "morning", end_period: "morning", leave_type: "annual" }], "2026-11-06", "2026-11-12"), "8/11/2026 (buổi sáng, phép năm)");
+  assert.equal(report.formatReportLeaveText([{ start_date: "2026-11-01", end_date: "2026-11-20", start_period: "full", end_period: "full", leave_type: "annual" }], "2026-11-06", "2026-11-12"), "6/11/2026 - 12/11/2026 (phép năm)");
+  assert.equal(report.formatReportLeaveText([{ start_date: "2026-11-06", end_date: "2026-11-06", start_period: "full", end_period: "full", leave_type: "annual" }, { start_date: "2026-11-12", end_date: "2026-11-12", start_period: "afternoon", end_period: "afternoon", leave_type: "sick" }], "2026-11-06", "2026-11-12"), "6/11/2026 (phép năm); 12/11/2026 (buổi chiều, nghỉ ốm)");
+});
+
+test("leave excludes pending and rejected requests and retains only unclipped half-day boundaries", () => {
+  const leave = { start_date: "2026-11-05", end_date: "2026-11-08", start_period: "afternoon", end_period: "morning", status: "approved" };
+  assert.equal(report.formatReportLeaveText([leave], "2026-11-06", "2026-11-12"), "6/11/2026 - 8/11/2026 (8/11/2026 buổi sáng)");
+  assert.equal(report.formatReportLeaveText([leave], "2026-11-08", "2026-11-12"), "8/11/2026 (buổi sáng)");
+  assert.equal(report.formatReportLeaveText([leave], "2026-11-06", "2026-11-07"), "6/11/2026 - 7/11/2026");
+  assert.equal(report.formatReportLeaveText(["pending", "rejected"].map(status => ({ ...leave, status })), "2026-11-06", "2026-11-12"), "………………………………………………");
+});
+
+const update = { progress_text: "  Nội dung mới  ", blockers: "  Vướng mắc  " };
+for (const [name, task, expected] of [
+  ["in progress", { status: "in_progress", latest_progress_report: update }, "Đang thực hiện · Nội dung mới"],
+  ["blocked prefers progress", { status: "blocked", latest_progress_report: update }, "Vướng mắc · Nội dung mới"],
+  ["blockers fallback", { status: "in_progress", latest_progress_report: { progress_text: "  ", blockers: "  Chờ dữ liệu  " } }, "Đang thực hiện · Chờ dữ liệu"],
+  ["done without date", { status: "done", latest_progress_report: update }, "Đã hoàn thành · Nội dung mới"],
+  ["quick done update", { status: "done", workflow_type: "REPORT_ONLY", completed_at: "2026-11-10T08:00:00Z", report_notes: "Ghi chú cũ", latest_progress_report: update }, "Đã hoàn thành 10/11/2026 · Nội dung mới"],
+  ["quick overdue update", { status: "in_progress", workflow_type: "REPORT_ONLY", due_date: "2020-01-01", report_notes: "Ghi chú cũ", latest_progress_report: update }, "Đang thực hiện · Nội dung mới · Quá hạn"],
+  ["legacy quick update", { status: "blocked", task_type: "report_only", report_notes: "Ghi chú cũ", latest_progress_report: update }, "Vướng mắc · Nội dung mới"],
+  ["quick without update", { status: "done", workflow_type: "REPORT_ONLY", report_notes: "  Ghi chú cũ  " }, "Ghi chú cũ"],
+  ["quick without notes", { status: "in_progress", workflow_type: "REPORT_ONLY", due_date: "2020-01-01" }, "Đang thực hiện"],
+  ["normal without update", { status: "in_progress", report_notes: "Ignored" }, "Đang thực hiện"],
+  ["overdue without update", { status: "blocked", due_date: "2020-01-01" }, "Vướng mắc · Quá hạn"],
+  ["overdue with update", { status: "blocked", due_date: "2020-01-01", latest_progress_report: update }, "Vướng mắc · Nội dung mới · Quá hạn"],
+  ["done never overdue", { status: "done", due_date: "2020-01-01", completed_at: "2026-11-10T08:00:00Z", latest_progress_report: update }, "Đã hoàn thành 10/11/2026 · Nội dung mới"],
+]) {
+  test(`status note: ${name}`, () => {
+    const model = report.buildTaskListReportModel({ tasks: [{ id: "task", title: "Task", ...task }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "", now: new Date("2026-11-13T12:00:00Z") });
+    assert.equal(model.sections[0].rows[0].statusNote, expected);
+  });
+}

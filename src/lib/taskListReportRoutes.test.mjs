@@ -30,6 +30,25 @@ const payload = ids => ({ filters: { scope: "mine", fromDate: "2026-01-01", toDa
 
 async function setup(options = {}) {
   const calls = [];
+  const reportRows = {
+    staff: options.staff ?? { job_titles: { name: "Biên tập viên" } },
+    leaves: options.leaves ?? [],
+  };
+  const serverSupabase = { from(table) {
+    const state = { table, filters: {} };
+    const builder = {
+      select: () => builder,
+      eq: (key, value) => { state.filters[key] = value; return builder; },
+      lte: (key, value) => { state.filters[key] = value; return builder; },
+      gte: (key, value) => { state.filters[key] = value; return builder; },
+      maybeSingle: async () => { assert.equal(state.filters.id, user.id); return { data: reportRows.staff, error: null }; },
+      then: (resolve, reject) => {
+        assert.deepEqual(state.filters, { requester_id: user.id, status: "approved", start_date: "2026-11-15", end_date: "2026-11-09" });
+        return (options.leaveFailure ? Promise.reject(new Error("unavailable")) : Promise.resolve({ data: reportRows.leaves, error: options.leaveError ? {} : null })).then(resolve, reject);
+      },
+    };
+    return builder;
+  } };
   const dependencies = {
     ...report, taskListHref, isCollaboratorRole, contentDisposition,
     requireReadActor: async () => options.unauthenticated ? { ok: false, response: new Response(null, { status: 401 }) } : { ok: true, actor: { ...user, role_code: options.role ?? user.role_code } },
@@ -43,7 +62,8 @@ async function setup(options = {}) {
       assert.equal(query.pageSize, 100);
       return options.failure ? { ok: false, error: {} } : { ok: true, data: { total: options.total ?? tasks.length, items: options.items ?? tasks } };
     } },
-    loadLatestTaskProgressReports: async ids => ({ ok: true, data: new Map(ids.map(id => [id, undefined])) }),
+    loadLatestTaskProgressReports: async ids => ({ ok: true, data: new Map(ids.map(id => [id, options.progress?.get(id)])) }),
+    serverSupabase,
     ...await import("./taskListReportDocx.ts"),
   };
   Object.assign(dependencies, loadModule("./taskListReportData.ts", dependencies, ["getTaskListReportData"]));
@@ -79,6 +99,51 @@ test("preview returns only actor-visible report fields, flat rows and counts", a
   assert.ok(!JSON.stringify(model).includes("private"));
 });
 
+test("preview includes the job title and clipped approved leave from the server report path", async () => {
+  const routes = await setup({ leaves: [
+    { start_date: "2026-11-01", end_date: "2026-11-10", start_period: "full", end_period: "full", leave_type: "annual", status: "approved" },
+    { start_date: "2026-11-12", end_date: "2026-11-12", start_period: "morning", end_period: "morning", leave_type: "sick", status: "pending" },
+  ] });
+  const model = await (await routes.preview(new Request(url))).json();
+  assert.deepEqual(model.generalInfo.lines, [
+    "Họ và tên: " + user.full_name,
+    "Chức danh: Biên tập viên",
+    "Thời gian thực hiện báo cáo: Từ ngày 9/11/2026 đến ngày 15/11/2026",
+    "Thời gian đi công tác/tác nghiệp bên ngoài: Theo phân công (nếu có)",
+    "Thời gian xin nghỉ phép: 9/11/2026 - 10/11/2026 (phép năm)",
+  ]);
+});
+
+test("unavailable leave and missing job title retain the role and dotted fallback", async () => {
+  for (const options of [{ leaves: [] }, { leaveFailure: true }, { leaveError: true }]) {
+    const routes = await setup({ ...options, staff: { job_titles: null } });
+    const model = await (await routes.preview(new Request(url))).json();
+    assert.equal(model.jobTitle, "Nhân viên");
+    assert.equal(model.generalInfo.lines[4], "Thời gian xin nghỉ phép: ………………………………………………");
+  }
+});
+
+test("preview and DOCX load latest updates for normal and REPORT_ONLY tasks", async () => {
+  const routes = await setup({
+    items: [{ ...tasks[0], workflow_type: "REPORT_ONLY", report_notes: "Old quick note" }, tasks[1]],
+    progress: new Map([
+      [visibleId, { progress_text: "Latest quick update", blockers: null }],
+      [secondId, { progress_text: "Latest normal update", blockers: null }],
+    ]),
+  });
+  const model = await (await routes.preview(new Request(url))).json();
+  assert.deepEqual(model.sections[0].rows.map(row => row.statusNote), [
+    "Đang thực hiện · Latest normal update",
+    "Đã hoàn thành 09/11/2026 · Latest quick update",
+  ]);
+  for (const response of [await routes.GET(new Request(url)), await routes.POST(post(payload([visibleId, secondId])))]) {
+    assert.equal(response.status, 200);
+    const xml = await (await JSZip.loadAsync(await response.arrayBuffer())).file("word/document.xml").async("string");
+    for (const row of model.sections[0].rows) assert.ok(xml.includes(row.statusNote));
+    assert.ok(!xml.includes("Old quick note"));
+  }
+});
+
 test("POST and GET ids intersect the visible list; DOCX matches the selected preview", async () => {
   const routes = await setup();
   const response = await routes.POST(post(payload([visibleId, foreignId])));
@@ -103,7 +168,7 @@ test("preview selection and DOCX both exclude cancelled tasks and counts", async
   const routes = await setup({ items: [...tasks, { id: foreignId, title: "Cancelled report task", status: "cancelled", due_date: "2026-11-10" }] });
   const preview = await (await routes.preview(new Request(url))).json();
   assert.deepEqual(preview.counts, { total: 2 });
-  assert.equal(preview.sections[0].title, "I. \u0043\u00f4ng vi\u1ec7c \u0111\u00e3 l\u00e0m");
+  assert.equal(preview.sections[0].title, "II. \u0043\u00f4ng vi\u1ec7c \u0111\u00e3 l\u00e0m");
   assert.ok(!JSON.stringify(preview).includes(foreignId));
   const response = await routes.POST(post(payload([visibleId, foreignId])));
   const xml = await (await JSZip.loadAsync(await response.arrayBuffer())).file("word/document.xml").async("string");
@@ -171,9 +236,9 @@ test("POST DOCX renders edited plan after work, escapes text and ignores unknown
   const response = await routes.POST(post({ ...payload([visibleId]), nextWeekPlan }));
   assert.equal(response.status, 200);
   const xml = await (await JSZip.loadAsync(await response.arrayBuffer())).file("word/document.xml").async("string");
-  for (const value of ["I. \u0043\u00f4ng vi\u1ec7c \u0111\u00e3 l\u00e0m", "II. K\u1ebf ho\u1ea1ch tu\u1ea7n sau", "25/11/2026"]) assert.ok(xml.includes(value), value);
+  for (const value of ["II. \u0043\u00f4ng vi\u1ec7c \u0111\u00e3 l\u00e0m", "III. K\u1ebf ho\u1ea1ch tu\u1ea7n sau", "25/11/2026"]) assert.ok(xml.includes(value), value);
   for (const heading of ["I. Ãƒâ€žÃ‚ÂÃƒÆ’Ã‚Â£ hoÃƒÆ’Ã‚Â n thÃƒÆ’Ã‚Â nh", "II. Ãƒâ€žÃ‚Âang thÃƒÂ¡Ã‚Â»Ã‚Â±c hiÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡n", "III. QuÃƒÆ’Ã‚Â¡ hÃƒÂ¡Ã‚ÂºÃ‚Â¡n", "V. Ãƒâ€žÃ‚ÂÃƒÆ’Ã‚Â£ hÃƒÂ¡Ã‚Â»Ã‚Â§y"]) assert.ok(!xml.includes(heading), heading);
-  assert.ok(xml.includes("I. Công việc đã làm"));
-  assert.ok(xml.includes("II. Kế hoạch tuần sau"));
+  assert.ok(xml.includes("II. Công việc đã làm"));
+  assert.ok(xml.includes("III. Kế hoạch tuần sau"));
   assert.doesNotMatch(xml, /UNTRUSTED|<script>|PhÃƒÂ¡Ã‚ÂºÃ‚Â¡m vi|ViÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡c cÃƒÂ¡Ã‚Â»Ã‚Â§a tÃƒÆ’Ã‚Â´i/);
 });
