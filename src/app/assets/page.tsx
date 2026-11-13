@@ -394,7 +394,7 @@ export default function AssetsPage() {
                   <dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vị trí</dt><dd className={`mt-1 font-medium ${row.location_id ? "text-slate-800" : "text-slate-500"}`}>{locationLabel(row)}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người sử dụng</dt><dd className={`mt-1 ${owner.unassigned ? "font-medium text-amber-700" : "text-slate-600"}`}>{owner.person}</dd></div>{row.note ? <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú</dt><dd className="mt-1 line-clamp-2 leading-5 text-slate-600" title={row.note}>{row.note}</dd></div> : null}</dl>
                 </Link>;
               })}
-              {loaded && !message && filteredRows.length === 0 ? <EmptyState title="Kh?ng c? t?i s?n ph? h?p b? l?c." /> : null}
+              {loaded && !message && filteredRows.length === 0 ? <EmptyState title="Không có tài sản phù hợp bộ lọc." /> : null}
             </div>
           </section>
         </div>

@@ -124,7 +124,7 @@ test("DOCX contains the flat work table, signature and page fields", async () =>
 
 test("scope-only filter disappears while department, person and status remain", () => {
   assert.equal(reportFilterLabel({ scope: "mine" }), "");
-  assert.ok(reportFilterLabel({ scope: "mine", departmentId: "d", personId: "p", status: "in_progress" }, [{ department_id: "d", departments: { name: "Bi?n t?p" }, task_assignees: [{ user_id: "p", staff_users: { full_name: "An" } }] }]).includes("An"));
+  assert.ok(reportFilterLabel({ scope: "mine", departmentId: "d", personId: "p", status: "in_progress" }, [{ department_id: "d", departments: { name: "Biên tập" }, task_assignees: [{ user_id: "p", staff_users: { full_name: "An" } }] }]).includes("An"));
 });
 
 test("next-week range is the following Monday-Sunday across week and year boundaries", () => {

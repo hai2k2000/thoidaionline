@@ -48,6 +48,6 @@ export default function ProjectsGrid({ projects, canReadAll = false }: { project
         <p className="mt-4 text-xs text-slate-500">Cập nhật {new Date(project.updated_at).toLocaleDateString("vi-VN")}</p>
       </Link>)}
     </div>
-    {!visible.length ? <EmptyState title={projects.length ? "Kh?ng t?m th?y d? ?n ph? h?p" : "Ch?a c? d? ?n"} description={projects.length ? "Th? t?n kh?c ho?c x?a b? l?c." : "C?c d? ?n b?n tham gia s? xu?t hi?n t?i ??y."} action={projects.length ? <button type="button" onClick={() => { setFilters({ ...DEFAULT_PROJECT_LIST_FILTERS }); }} className="min-h-11 rounded-lg border border-orange-200 px-4 font-semibold text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500">X?a b? l?c</button> : undefined} /> : null}
+    {!visible.length ? <EmptyState title={projects.length ? "Không tìm thấy dự án phù hợp" : "Chưa có dự án"} description={projects.length ? "Thử tên khác hoặc xóa bộ lọc." : "Các dự án bạn tham gia sẽ xuất hiện tại đây."} action={projects.length ? <button type="button" onClick={() => { setFilters({ ...DEFAULT_PROJECT_LIST_FILTERS }); }} className="min-h-11 rounded-lg border border-orange-200 px-4 font-semibold text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500">Xóa bộ lọc</button> : undefined} /> : null}
   </>;
 }
