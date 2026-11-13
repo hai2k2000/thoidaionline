@@ -199,7 +199,7 @@ export type LegacyEvaluationDto = {
   created_at: string;
 };
 
-export type TaskProgressReportDto = { id: string; reported_by: string; reported_on: string; report_status: string; progress_text: string; blockers: string | null; created_at: string; };
+export type TaskProgressReportDto = { id: string; reported_by: string; reported_on: string; report_status: string; progress_text: string; blockers: string | null; created_at: string; reporter?: { full_name: string | null } | null; };
 export type TaskQualitativeEvaluationSource = "chatgpt" | "leader";
 export type TaskQualitativeEvaluationDto = { id: string; evaluation_text: string; evaluation_deadline: string; evaluation_source: TaskQualitativeEvaluationSource; created_at: string; evaluator: { full_name: string | null } | null; };
 export type TaskDeadlineHistoryDto = { id: string; old_due_date: string | null; new_due_date: string | null; reason: string; changed_at: string; };

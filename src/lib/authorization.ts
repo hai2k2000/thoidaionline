@@ -204,10 +204,10 @@ export function canTaskAction(
         && task.status === "new"
         && task.assigneeId === null;
     case "report":
-      return actor.roleCode === "admin"
+      return task.status !== "cancelled" && (actor.roleCode === "admin"
         || task.ownerId === actor.id
         || task.assigneeId === actor.id
-        || isParticipant(actor, task, false);
+        || isParticipant(actor, task, false));
     case "complete_assigned":
       return task.taskType === "assigned"
         && task.assigneeId === actor.id

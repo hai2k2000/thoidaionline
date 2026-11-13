@@ -139,8 +139,9 @@ test("release metadata uses the complete ordered migration reference", () => {
   assert.ok(migrations.includes("supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261028090000_database_management_v1_doan_the_types.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261028120000_database_management_v1_record_type_sort_order.sql"));
-  assert.equal(migrations.at(-3), "supabase/migrations/20261027090100_storage_anon_lockdown.sql");
-  assert.equal(migrations.at(-1), "supabase/migrations/20261112140100_legacy_office_metadata_validation.sql");
+  assert.equal(migrations.at(-4), "supabase/migrations/20261027090100_storage_anon_lockdown.sql");
+  assert.equal(migrations.at(-2), "supabase/migrations/20261112140100_legacy_office_metadata_validation.sql");
+  assert.equal(migrations.at(-1), "supabase/migrations/20261113100000_progress_report_after_done.sql");
   assert.ok(migrations.includes("supabase/migrations/20261028100000_rbac_approval_permissions_v1.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261028150000_attendance_rbac_v1.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261028160000_attendance_late_exception_review.sql"));

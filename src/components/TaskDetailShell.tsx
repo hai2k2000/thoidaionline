@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { FilePreviewList } from "@/components/FilePreviewDialog";
 
 import { parseTaskRequirements } from "@/lib/taskRequirements";
@@ -123,7 +123,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
   };
   const submitProgress = async (event: FormEvent) => {
     event.preventDefault();
-    await jsonPost(`/api/tasks/${task.id}/progress-reports`, { reportedOn, reportStatus, progressText, blockers });
+    await jsonPost(`/api/tasks/${task.id}/progress-reports`, { reportedOn, reportStatus: resultUpdate ? "in_progress" : reportStatus, progressText, blockers });
     setProgressText(""); setBlockers("");
   };
   const submitComment = async (event: FormEvent) => {
@@ -137,6 +137,7 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
   const progressReportsSupported = task.workflow_type !== "REPORT_ONLY"
     && (projectTask || (task.task_type === "assigned"
       && (task.task_category !== "duty" || isCollaboratorRole(user?.role_code))));
+  const resultUpdate = ["done", "pending_review"].includes(task.status);
   const deadlineState = classifyTaskDeadline(task);
   const canComplete = (personal ? capabilities.personalComplete : capabilities.completeAssigned)
     && !["waiting", "pending_review", "done", "cancelled"].includes(task.status);
@@ -177,15 +178,15 @@ export default function TaskDetailShell({ returnTo, departmentPlanLinked, task, 
             <section aria-label="Tổng quan" className="space-y-2.5">
               <Section title="Mô tả công việc"><p className="whitespace-pre-wrap break-words leading-7">{task.description || "—"}</p></Section>{requirements.length ? <Section title="Yêu cầu công việc"><ul className={projectTask ? "space-y-2 [&>li]:rounded-lg [&>li]:border [&>li]:border-slate-100 [&>li]:bg-slate-50 [&>li]:p-3 [&>li]:break-words" : "list-disc space-y-2 pl-5"}>{requirements.map((item, index) => <li key={index}>{projectTask ? <span aria-hidden="true" className="mr-2 text-orange-600">□</span> : null}{item}</li>)}</ul> </Section> : null}
               {task.status === "rejected" ? <section className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-900"><h2 className="font-bold">Lý do trả lại</h2><p className="mt-2 whitespace-pre-wrap text-sm">{returnReason || "Chưa ghi nhận lý do."}</p></section> : null}
-              {progressReportsSupported ? <Section title={projectTask ? "Tiến độ" : "Cập nhật tiến độ"}>
+              {progressReportsSupported ? <Section title={task.status === "done" ? "Cập nhật kết quả" : projectTask ? "Tiến độ" : "Cập nhật tiến độ"}>
                 {capabilities.report ? <form onSubmit={submitProgress} className="mb-5 grid gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-2">
                   <label className="grid gap-1 text-sm font-semibold">Ngày báo cáo<input aria-label="Ngày báo cáo" type="date" value={reportedOn} onChange={(event) => setReportedOn(event.target.value)} required className="min-w-0 rounded-lg border bg-white p-2.5 focus:ring-2 focus:ring-orange-300" /></label>
-                  <label className="grid gap-1 text-sm font-semibold">Trạng thái<select aria-label="Trạng thái" value={reportStatus} onChange={(event) => setReportStatus(event.target.value)} className="rounded-lg border bg-white p-2.5 focus:ring-2 focus:ring-orange-300"><option value="in_progress">Đang thực hiện</option><option value="blocked">Có vướng mắc</option><option value="nearly_done">Sắp xong</option></select></label>
+                  <label className="grid gap-1 text-sm font-semibold">Trạng thái<select aria-label="Trạng thái" value={resultUpdate ? "in_progress" : reportStatus} onChange={(event) => setReportStatus(event.target.value)} disabled={resultUpdate} className="rounded-lg border bg-white p-2.5 focus:ring-2 focus:ring-orange-300"><option value="in_progress">{resultUpdate ? "Cập nhật kết quả" : "Đang thực hiện"}</option>{!resultUpdate ? <><option value="blocked">Có vướng mắc</option><option value="nearly_done">Sắp xong</option></> : null}</select></label>
                   <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Nội dung cập nhật<textarea aria-label="Nội dung cập nhật" value={progressText} onChange={(event) => setProgressText(event.target.value)} required maxLength={10000} rows={3} className="rounded-lg border bg-white p-3 focus:ring-2 focus:ring-orange-300" /></label>
-                  <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Vướng mắc<textarea aria-label="Vướng mắc" value={blockers} onChange={(event) => setBlockers(event.target.value)} required={reportStatus === "blocked"} maxLength={10000} rows={2} className="rounded-lg border bg-white p-3 focus:ring-2 focus:ring-orange-300" /></label>
+                  <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Vướng mắc<textarea aria-label="Vướng mắc" value={blockers} onChange={(event) => setBlockers(event.target.value)} required={!resultUpdate && reportStatus === "blocked"} maxLength={10000} rows={2} className="rounded-lg border bg-white p-3 focus:ring-2 focus:ring-orange-300" /></label>
                   <button disabled={busy} className="min-h-11 rounded-lg bg-orange-700 px-4 py-2 font-semibold text-white disabled:opacity-50 sm:justify-self-start">Lưu tiến độ</button>
                 </form> : null}
-                <Timeline empty="Chưa có báo cáo tiến độ.">{task.progress_reports.map((row) => <li key={row.id} className="break-words rounded-lg bg-slate-50 p-3"><div className="flex flex-wrap justify-between gap-2 text-xs text-slate-600"><time>{dateText(row.reported_on)}</time><span>{reportLabel[row.report_status] ?? row.report_status}</span></div><p className="mt-2 whitespace-pre-wrap">{row.progress_text}</p>{row.blockers ? <p className="mt-2 whitespace-pre-wrap text-amber-800">Vướng mắc: {row.blockers}</p> : null}</li>)}</Timeline>
+                <Timeline empty="Chưa có báo cáo tiến độ.">{task.progress_reports.map((row) => <li key={row.id} className="break-words rounded-lg bg-slate-50 p-3"><div className="flex flex-wrap justify-between gap-2 text-xs text-slate-600"><time>{dateText(row.reported_on)}</time><span>{row.reporter?.full_name ? `${row.reporter.full_name} · ` : ""}{reportLabel[row.report_status] ?? row.report_status}</span></div><p className="mt-2 whitespace-pre-wrap">{row.progress_text}</p>{row.blockers ? <p className="mt-2 whitespace-pre-wrap text-amber-800">Vướng mắc: {row.blockers}</p> : null}</li>)}</Timeline>
               </Section> : null}
               <Section title={`Đính kèm · Tệp (${task.attachments.length}) · Liên kết (${task.links.length})`}>
                 {projectTask ? <p className="mb-3 text-sm text-slate-600">Tệp cũng xuất hiện trong <Link className="font-semibold text-orange-700 underline" href={`/projects/${task.project_id}?tab=library`}>Thư viện dự án</Link>.</p> : null}

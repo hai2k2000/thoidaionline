@@ -60,6 +60,16 @@ test("normal assigned tasks append the latest progress report to the status note
   assert.match(model.sections[0].rows[0].statusNote, /Latest progress note/);
 });
 
+test("done normal tasks include latest progress text in the result note", () => {
+  const model = report.buildTaskListReportModel({ tasks: [{ id: "done", title: "Đã xong", status: "done", completed_at: "2026-11-10T08:00:00Z", latest_progress_report: { progress_text: "Đã bàn giao kết quả", blockers: "Không còn vướng" } }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  assert.equal(model.sections[0].rows[0].statusNote, "Đã hoàn thành 10/11/2026 · Đã bàn giao kết quả");
+});
+
+test("done normal tasks without progress keep only the completion date", () => {
+  const model = report.buildTaskListReportModel({ tasks: [{ id: "done", title: "Đã xong", status: "done", completed_at: "2026-11-10T08:00:00Z" }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  assert.equal(model.sections[0].rows[0].statusNote, "Đã hoàn thành 10/11/2026");
+});
+
 test("report ids reject malformed or oversized selections and normalize UUID case", () => {
   assert.equal(typeof report.parseReportIds, "function");
   const id = "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA";
@@ -202,4 +212,14 @@ test("route rejects oversized lists and invalid ranges without a partial export"
   const get = route({ requireReadActor: async () => ({ ok: true, actor: user }), taskRepository: { list: async () => ({ ok: true, data: { total: 1001, items: [] } }) } });
   assert.equal((await get(request())).status, 400);
   assert.equal((await get(new Request("https://example.test/api/tasks/report/docx?from=2026-02-30&to=2026-03-01"))).status, 400);
+});
+
+
+test("done reports ignore blockers and choose the newest dated progress entry", () => {
+  const tasks = [
+    { id: "blank", title: "Blank", status: "done", completed_at: "2026-11-10T08:00:00Z", latest_progress_report: { progress_text: "   ", blockers: "Old blocker" } },
+    { id: "history", title: "History", status: "done", completed_at: "2026-11-10T08:00:00Z", task_progress_reports: [{ reported_on: "2026-11-11", created_at: "2026-11-11T10:00:00Z", progress_text: "Old" }, { reported_on: "2026-11-13", created_at: "2026-11-13T10:00:00Z", progress_text: "Latest" }] },
+  ];
+  const model = report.buildTaskListReportModel({ tasks, from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  assert.deepEqual(model.sections[0].rows.map(row => row.statusNote), ["Đã hoàn thành 10/11/2026", "Đã hoàn thành 10/11/2026 · Latest"]);
 });

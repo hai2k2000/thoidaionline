@@ -48,14 +48,14 @@ export function buildTaskListReportModel(input) {
     const completion = task.completed_at && Number.isFinite(Date.parse(task.completed_at)) ? new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(task.completed_at)) : "";
     const quickReport = task.workflow_type === "REPORT_ONLY" || task.task_type === "report_only";
     const progress = task.latest_progress_report ?? [...(task.task_progress_reports ?? [])].sort((a, b) => `${b.reported_on ?? ""}T${b.created_at ?? ""}`.localeCompare(`${a.reported_on ?? ""}T${a.created_at ?? ""}`))[0];
-    const note = quickReport ? (task.report_notes?.trim() || "") : (task.status === "done" ? completion : (task.status === "blocked" && progress?.blockers?.trim() ? progress.blockers.trim() : (progress?.progress_text?.trim() || progress?.blockers?.trim() || "")));
+    const note = quickReport ? (task.report_notes?.trim() || "") : (task.status === "done" ? [completion, progress?.progress_text?.trim() || ""].filter(Boolean).join(" · ") : (task.status === "blocked" && progress?.blockers?.trim() ? progress.blockers.trim() : (progress?.progress_text?.trim() || progress?.blockers?.trim() || "")));
     const status = statusLabels[task.status] ?? task.status;
     rows.push({
       id: task.id, title: task.title + (task.project?.name ? " [" + task.project.name + "]" : ""), role: actorAssignments.some(person => person.assignment_role === "owner") ? "Người thực hiện" : "Người phối hợp",
       assignees: [...new Set((task.task_assignees ?? []).filter(person => ["owner", "assignee"].includes(person.assignment_role)).map(person => person.staff_users?.full_name).filter(Boolean))].join(", ") || "Chưa phân công",
       assigner: resolveDisplayedAssigner(task).value,
       due: reportDate(task.due_date) + (task.due_date && task.due_time ? " " + task.due_time.slice(0, 5) : ""),
-      statusNote: quickReport ? (note || status) : status + (note ? " · " + note : "") + (overdue ? " · Quá hạn" : ""),
+      statusNote: quickReport ? (note || status) : task.status === "done" ? (note ? status + " " + note : status) : status + (note ? " · " + note : "") + (overdue ? " · Quá hạn" : ""),
     });
   }
   /** @type {ReportSection[]} */
