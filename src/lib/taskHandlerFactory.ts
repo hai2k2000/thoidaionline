@@ -1,4 +1,4 @@
-import { taskAttachmentMetadata } from "./taskAttachmentPolicy.mjs";
+import { readTaskAttachmentMetadata, TASK_ATTACHMENT_FORMAT_MESSAGE } from "./taskAttachmentPolicy.mjs";
 import { normalizeTaskLink } from "./taskLinkPolicy.mjs";
 import { taskAttachmentHeaders, taskAttachmentRange } from "./taskAttachmentResponse.mjs";
 import { TIME_24H_REGEX } from "./time24h.mjs";
@@ -390,8 +390,8 @@ export function createTaskApplication(deps: Dependencies) {
       const form = await request.formData().catch(() => null);
       const file = form?.get("file");
       if (!(file instanceof File)) return deps.error("invalid_request", 400);
-      const metadata = taskAttachmentMetadata(file);
-      if (!metadata) return deps.error("invalid_request", 400);
+      const metadata = await readTaskAttachmentMetadata(file);
+      if (!metadata) return deps.json({ error: { code: "invalid_request", message: TASK_ATTACHMENT_FORMAT_MESSAGE } }, 400);
       const { extension, mimeType } = metadata;
       const storagePath = `${taskId}/${deps.newUuid()}.${extension}`;
       const upload = await deps.uploadPrivateAttachment(storagePath, await file.arrayBuffer(), mimeType);

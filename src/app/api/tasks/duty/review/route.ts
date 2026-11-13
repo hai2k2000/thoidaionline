@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import { apiError, apiJson, asUuid, requireMutationActor, requireReadActor } from "@/lib/serverApi";
 import { serverSupabase } from "@/lib/serverSupabase";
 
+import { readTaskAttachmentMetadata, TASK_ATTACHMENT_FORMAT_MESSAGE } from "@/lib/taskAttachmentPolicy.mjs";
+
 const storage = serverSupabase.storage.from("task-private");
 const results = new Set(["completed", "issues", "not_completed"]);
-const allowed = new Map([["application/pdf","pdf"],["image/png","png"],["image/jpeg","jpg"],["application/vnd.openxmlformats-officedocument.wordprocessingml.document","docx"],["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","xlsx"]]);
 
 export async function POST(request: Request) {
   const guard = await requireMutationActor(); if (!guard.ok) return guard.response;
@@ -18,11 +19,12 @@ export async function POST(request: Request) {
   const previous = await serverSupabase.from("duty_task_reviews").select("evidence_path").eq("task_id", taskId).maybeSingle();
   const file = form.get("evidence"); let evidence: { evidence_path?:string; evidence_name?:string; evidence_mime?:string; evidence_size?:number } = {};
   if (file instanceof File && file.size > 0) {
-    const extension = allowed.get(file.type); if (!extension || file.size > 10485760) return apiError("invalid_request", 400);
+    const metadata = await readTaskAttachmentMetadata(file); if (!metadata) return apiJson({ error: { code: "invalid_request", message: TASK_ATTACHMENT_FORMAT_MESSAGE } }, 400);
+    const { extension, mimeType } = metadata;
     const path = `duty-evidence/${taskId}/${randomUUID()}.${extension}`;
-    const uploaded = await storage.upload(path, Buffer.from(await file.arrayBuffer()), { contentType:file.type, cacheControl:"3600", upsert:false });
+    const uploaded = await storage.upload(path, Buffer.from(await file.arrayBuffer()), { contentType:mimeType, cacheControl:"3600", upsert:false });
     if (uploaded.error) return apiError("operation_failed", 500);
-    evidence = { evidence_path:path, evidence_name:file.name.slice(0,500), evidence_mime:file.type, evidence_size:file.size };
+    evidence = { evidence_path:path, evidence_name:file.name.slice(0,500), evidence_mime:mimeType, evidence_size:file.size };
   }
   const payload = { task_id:taskId, result, on_time:onTime === "true", issue_notes:notes || null, reviewed_by:guard.actor.id, reviewed_at:new Date().toISOString(), updated_at:new Date().toISOString(), ...evidence };
   const saved = await serverSupabase.from("duty_task_reviews").upsert(payload, { onConflict:"task_id" });

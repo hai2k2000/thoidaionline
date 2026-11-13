@@ -1,3 +1,5 @@
+import { legacyOfficeMime, LEGACY_OFFICE_MIME_TYPES } from './legacyOffice.mjs';
+
 type FileMetadata = { mime_type: string | null; file_name: string | null; title: string };
 const inlineTypes = new Set([
   'application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif',
@@ -15,11 +17,14 @@ const extensionTypes: Record<string, string> = {
   ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 };
 export function libraryFileMime(item: FileMetadata): string {
+  const legacy = legacyOfficeMime(item.file_name || item.title);
+  if (legacy) return legacy;
   const stored = (item.mime_type || '').split(';')[0].trim().toLowerCase();
   return stored || extensionTypes[(item.file_name || item.title).split('.').pop()?.toLowerCase() || ''] || 'application/octet-stream';
 }
 export function libraryOfficeKind(item: FileMetadata): 'docx' | 'xlsx' | null {
   const mime = libraryFileMime(item);
+  if ((Object.values(LEGACY_OFFICE_MIME_TYPES) as string[]).includes(mime)) return null;
   if (mime === extensionTypes.docx) return 'docx';
   if (mime === extensionTypes.xlsx) return 'xlsx';
   const extension = (item.file_name || item.title).split('.').pop()?.toLowerCase();

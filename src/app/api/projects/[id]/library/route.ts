@@ -3,7 +3,7 @@ import { apiError, apiJson, asUuid, readJsonObject, requireMutationActor, requir
 import { projectLibraryRepository as library } from '@/lib/projectLibraryRepository';
 import { projectRepository } from '@/lib/projectRepository';
 import { serverSupabase } from '@/lib/serverSupabase';
-import { taskAttachmentMetadata } from '@/lib/taskAttachmentPolicy.mjs';
+import { readTaskAttachmentMetadata, TASK_ATTACHMENT_FORMAT_MESSAGE } from '@/lib/taskAttachmentPolicy.mjs';
 type Context={params:Promise<{id:string}>};
 const optionalId=(value:unknown)=>value==null||value===''?null:asUuid(value);
 const invalidId=(value:unknown)=>value!=null&&value!==''&&!asUuid(value);
@@ -25,7 +25,7 @@ export async function POST(request:Request,{params}:Context){
   if(guard.actor.role_code!=='admin'&&!members.data.some(m=>m.user_id===guard.actor.id&&m.staff_users?.active))return apiError('forbidden',403);
   const form=await request.formData().catch(()=>null);const file=form?.get('file');const folder=form?.get('folderId');
   if(!(file instanceof File)||invalidId(folder))return apiError('invalid_request',400);
-  const metadata=taskAttachmentMetadata(file);if(!metadata)return apiError('invalid_request',400);
+  const metadata=await readTaskAttachmentMetadata(file);if(!metadata)return apiJson({error:{code:'invalid_request',message:TASK_ATTACHMENT_FORMAT_MESSAGE}},400);
   const storagePath=`projects/${id}/${guard.actor.id}/${randomUUID()}.${metadata.extension}`;
   const storage=serverSupabase.storage.from('task-private');
   const uploaded=await storage.upload(storagePath,await file.arrayBuffer(),{contentType:metadata.mimeType,cacheControl:'3600',upsert:false});

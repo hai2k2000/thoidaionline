@@ -1,3 +1,5 @@
+import { legacyOfficeMime, LEGACY_OFFICE_MIME_TYPES } from './legacyOffice.mjs';
+
 const extensionKinds = {
   pdf: 'pdf', png: 'image', jpg: 'image', jpeg: 'image', gif: 'image', webp: 'image', avif: 'image',
   mp4: 'video', webm: 'video', ogv: 'video', mov: 'video',
@@ -8,6 +10,7 @@ const extensionKinds = {
 export function filePreviewKind({ fileName = '', mimeType = '' }) {
   const mime = (mimeType || '').split(';')[0].trim().toLowerCase();
   const extension = fileName.split('.').pop().toLowerCase();
+  if (legacyOfficeMime(fileName) || Object.values(LEGACY_OFFICE_MIME_TYPES).includes(mime)) return null;
   if (/html|svg|javascript|ecmascript|(?:\/|\+)xml$/.test(mime) || /^(html?|svg|xml|m?js|xhtml)$/.test(extension)) return null;
   if (mime === 'application/pdf') return 'pdf';
   if (/^image\/(png|jpeg|gif|webp|avif)$/.test(mime)) return 'image';

@@ -4,25 +4,19 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { errorMessage, responseErrorMessage } from "@/lib/actionFeedback";
 import { useActionFeedback } from "@/components/ActionFeedbackProvider";
-import { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES } from "@/lib/taskAttachmentPolicy.mjs";
+import { validateTaskAttachment, TASK_ATTACHMENT_FORMAT_MESSAGE, TASK_ATTACHMENT_ACCEPT as POLICY_ACCEPT } from "@/lib/taskAttachmentPolicy.mjs";
 import type { TaskAttachmentDto } from "@/lib/taskContracts";
 import TaskLinkAttacher from "@/components/TaskLinkAttacher";
 import CameraCaptureButton from "@/components/CameraCaptureButton";
 
-export const TASK_ATTACHMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.docx,.xlsx";
+export const TASK_ATTACHMENT_ACCEPT = POLICY_ACCEPT;
 
-export function validateTaskAttachment(file: File): string | null {
-  if (file.size < 1) return "Tệp rỗng. Vui lòng chọn tệp có nội dung.";
-  if (file.size > TASK_ATTACHMENT_MAX_BYTES) return "Tệp vượt quá dung lượng tối đa 10 MB.";
-  if (!taskAttachmentMetadata(file)) return "Định dạng tệp không được hỗ trợ. Chỉ nhận PDF, PNG, JPG, DOCX hoặc XLSX.";
-  return null;
-}
+export { validateTaskAttachment };
 
 export function uploadErrorMessage(status: number, code?: string, fallback = "Không thể tải tệp lên.") {
-  if (status === 400) return "Tệp không hợp lệ hoặc thiếu dữ liệu.";
+  if (status === 400 || status === 415) return TASK_ATTACHMENT_FORMAT_MESSAGE;
   if (status === 403) return "Bạn không có quyền tải tệp lên công việc này.";
-  if (status === 413) return "Tệp vượt quá dung lượng tối đa 10 MB.";
-  if (status === 415) return "Định dạng tệp không được hỗ trợ.";
+  if (status === 413) return TASK_ATTACHMENT_FORMAT_MESSAGE;
   if (status >= 500) return "Dịch vụ tạm thời chưa sẵn sàng. Vui lòng thử lại.";
   return code === "forbidden" ? "Bạn không có quyền tải tệp lên công việc này." : fallback;
 }
@@ -55,7 +49,7 @@ export default function TaskAttachmentUploader({ taskId, disabled = false, onUpl
     try {
       for (const file of files) {
         index += 1;
-        const validation = validateTaskAttachment(file);
+        const validation = await validateTaskAttachment(file);
         if (validation) { reject(file, validation); continue; }
         setProgress(`Đang tải lên… (${index}/${files.length})`);
         try {

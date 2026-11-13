@@ -70,3 +70,26 @@ test("metadata failure removes the uploaded object", async () => {
   assert.equal(response.status, 409);
   assert.deepEqual(calls.removals, [`${taskId}/44444444-4444-4444-8444-444444444444.docx`]);
 });
+
+test("task upload canonicalizes legacy Office and blocks invalid bytes before storage", async () => {
+  const ole = Uint8Array.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+  for (const [extension, mime] of [['doc', 'application/msword'], ['xls', 'application/vnd.ms-excel']]) {
+    for (const type of ['', 'application/octet-stream', 'application/x-msword']) {
+      const { app, calls } = application();
+      const form = new FormData(); form.set('file', new File([ole], `fixture.${extension}`, { type }));
+      const response = await app.uploadAttachment(new Request('https://example.test', { method: 'POST', body: form }), taskId);
+      assert.equal(response.status, 201);
+      assert.equal(calls.uploads[0].mimeType, mime);
+      assert.equal(calls.metadata[0].mimeType, mime);
+    }
+  }
+  for (const [extension, bytes] of [['doc', 'MZ'], ['xls', 'PK\x03\x04'], ['docm', ole], ['xlsm', ole], ['pptm', ole], ['exe', ole], ['ppt', ole]]) {
+    const { app, calls } = application();
+    const form = new FormData(); form.set('file', new File([bytes], `fixture.${extension}`, { type: 'application/pdf' }));
+    const response = await app.uploadAttachment(new Request('https://example.test', { method: 'POST', body: form }), taskId);
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error.message, /PDF, PNG, JPG, JPEG, DOC, DOCX, XLS, XLSX/);
+    assert.equal(calls.uploads.length, 0);
+    assert.equal(calls.metadata.length, 0);
+  }
+});
