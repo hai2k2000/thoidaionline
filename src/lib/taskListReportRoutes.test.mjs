@@ -89,7 +89,7 @@ test("POST and GET ids intersect the visible list; DOCX matches the selected pre
   const xml = await zip.file("word/document.xml").async("string");
   assert.match(xml, /Visible task/);
   assert.ok(!xml.includes("Other visible task"));
-  assert.match(xml, /T?ng: 1/);
+  assert.match(xml, /Tổng: 1/);
   const preview = await (await routes.preview(new Request(url))).json();
   const selected = report.selectTaskListReportModel(preview, [visibleId, foreignId]);
   assert.ok(xml.includes(report.reportSummary(selected.counts)));

@@ -656,7 +656,7 @@ function AttendancePageContent() {
               </div>
             </div>
           </div>
-          {message.startsWith("?ang t?i") ? <LoadingState label={message} /> : <p className="mt-2 text-sm text-slate-600">{message}</p>}
+          {message.startsWith("Đang tải") ? <LoadingState label={message} /> : <p className="mt-2 text-sm text-slate-600">{message}</p>}
           {isOrganizationView ? <MobileFilters label="Bộ lọc nhân sự"><div className="mt-3 grid gap-2 rounded-lg border bg-slate-50 p-3 sm:grid-cols-4">
             <label className="text-sm font-semibold">Phòng ban<select value={departmentFilter} onChange={(event) => changeDepartmentFilter(event.target.value)} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal"><option value="">Tất cả phòng ban</option>{filterOptions.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label className="text-sm font-semibold">Nhân viên<input list="attendance-staff-options" value={staffQuery} onChange={(event) => { const query = event.target.value; setStaffQuery(query); const match = filterOptions.staff.find((item) => item.full_name === query && (!departmentFilter || item.department_id === departmentFilter)); if (match || query === "") { const nextStaff = match?.id ?? ""; setStaffFilter(nextStaff); updateQuery({ staffId: nextStaff }); refreshAfterFilterChange({ staffFilter: nextStaff }); } }} className="mt-1 min-h-10 w-full rounded border px-3 py-2 font-normal" placeholder="Tìm nhân viên" /><datalist id="attendance-staff-options">{filterOptions.staff.filter((item) => !departmentFilter || item.department_id === departmentFilter).map((item) => <option key={item.id} value={item.full_name} />)}</datalist></label>

@@ -24,11 +24,11 @@ function ReportPreview({ model }: { model: TaskListReportModel }) {
     <p className="mt-2 text-sm font-bold">{reportSummary(model.counts)}</p>
     {model.sections.map(section => <section key={section.key} className="mt-5 min-w-0">
       <h4 className="mb-2 font-bold">{section.title}</h4>
-      <div tabIndex={0} role="region" aria-label={`B?ng ${section.title}`} className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-orange-700">
+      <div tabIndex={0} role="region" aria-label={`Bảng ${section.title}`} className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-orange-700">
         <table className="w-full min-w-[600px] table-fixed border-collapse text-left text-xs sm:text-sm">
           <colgroup>{[5, 35, 60].map((width, i) => <col key={i} style={{ width: width + "%" }} />)}</colgroup>
-          <thead><tr>{["STT", "T?n c?ng vi?c", "K?t qu?/Ghi ch?"].map(title => <th key={title} scope="col" className="border border-slate-400 p-1.5">{title}</th>)}</tr></thead>
-          <tbody>{section.rows.map((row, index) => <tr key={row.id}>{[index + 1, row.title, row.statusNote].map((value, column) => <td key={column} className="break-words whitespace-pre-line border border-slate-400 p-1.5 align-top">{value}</td>)}</tr>)}{!section.rows.length ? <tr><td colSpan={3} className="border border-slate-400 p-2">Kh?ng c? c?ng vi?c.</td></tr> : null}</tbody>
+          <thead><tr>{["STT", "Tên công việc", "Kết quả/Ghi chú"].map(title => <th key={title} scope="col" className="border border-slate-400 p-1.5">{title}</th>)}</tr></thead>
+          <tbody>{section.rows.map((row, index) => <tr key={row.id}>{[index + 1, row.title, row.statusNote].map((value, column) => <td key={column} className="break-words whitespace-pre-line border border-slate-400 p-1.5 align-top">{value}</td>)}</tr>)}{!section.rows.length ? <tr><td colSpan={3} className="border border-slate-400 p-2">Không có công việc.</td></tr> : null}</tbody>
         </table>
       </div>
     </section>)}
