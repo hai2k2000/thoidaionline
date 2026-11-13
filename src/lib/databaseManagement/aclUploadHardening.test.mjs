@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import * as fileTypes from "./fileType.mjs";
+import { legacyOfficeMime, hasOle2Magic } from "../legacyOffice.mjs";
 import { contentDisposition } from '../contentDisposition.mjs';
 
 function load(path, dependencies = {}) {
@@ -169,7 +170,7 @@ test("storage uses provided bytes and extension MIME, and reports ownership of w
   let writes = 0;
   const bytes = Buffer.from("%PDF-1.7");
   const storage = load(base + "storage.ts", {
-    ...fileTypes, Buffer, process,
+    ...fileTypes, legacyOfficeMime, hasOle2Magic, Buffer, process,
     path: (await import("node:path")).default,
     createHash: (await import("node:crypto")).createHash,
     databaseRecordStorageKey: () => "11111111-1111-4111-8111-111111111111/request.pdf",

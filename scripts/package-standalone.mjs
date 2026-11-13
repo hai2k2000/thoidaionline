@@ -93,6 +93,10 @@ await cp(join(root, "scripts", "artifact-manifest.mjs"), join(output, "artifact-
 await cp(join(root, "scripts", "verify-artifact-manifest.mjs"), join(output, "verify-artifact-manifest.mjs"));
 const authenticatedSmokeFiles = [
   "scripts/production/push-dispatch-once.mjs",
+  "scripts/production/progress-after-done-dryrun.sh",
+  "scripts/production/progress-after-done-revert.sql",
+  "scripts/production/progress-after-done-post.sql",
+  "supabase/tests/progress_after_done_behaviour.sql",
   "scripts/production/push-notifications-dryrun.sh",
   "scripts/production/push-notifications-v2-dryrun.sh",
   "scripts/production/push-notifications-v2-post.sql", "scripts/production/push-notifications-v2-revert.sql",
@@ -210,8 +214,13 @@ const migrationReference = [
   "supabase/migrations/20261108110000_attendance_view_all_leaders.sql",
   "supabase/migrations/20261109120000_self_approve_personal_plans.sql",
   "supabase/migrations/20261110100000_database_management_v1_status_field_options.sql",
+  "supabase/migrations/20261110120000_task_link_attachments.sql",
+  "supabase/migrations/20261112100000_database_management_v1_hop_dong_nguoi_thuc_hien.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
+  "supabase/migrations/20261112140000_allow_legacy_office_uploads.sql",
+  "supabase/migrations/20261112140100_legacy_office_metadata_validation.sql",
+  "supabase/migrations/20261113100000_progress_report_after_done.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");
 const riskOutput = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", root], {

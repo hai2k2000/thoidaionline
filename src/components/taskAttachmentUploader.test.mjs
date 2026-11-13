@@ -3,7 +3,8 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
-import { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES } from '../lib/taskAttachmentPolicy.mjs';
+import * as policy from '../lib/taskAttachmentPolicy.mjs';
+const { TASK_ATTACHMENT_MAX_BYTES } = policy;
 
 function load(fetch = async () => Response.json({ attachment: { id: 'a' } })) {
   const notices = [], states = [], refs = []; let cursor = 0, refCursor = 0, refreshes = 0;
@@ -16,8 +17,9 @@ function load(fetch = async () => Response.json({ attachment: { id: 'a' } })) {
     };
     if (name === 'next/navigation') return { useRouter: () => ({ refresh() { refreshes++; } }) };
     if (name.endsWith('ActionFeedbackProvider')) return { useActionFeedback: () => ({ notify: (...v) => notices.push(v) }) };
-    if (name.endsWith('taskAttachmentPolicy.mjs')) return { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES };
+    if (name.endsWith('taskAttachmentPolicy.mjs')) return policy;
     if (name.endsWith('actionFeedback')) return { errorMessage: (e, fallback) => e?.message || fallback, responseErrorMessage: async (_, fallback) => fallback };
+    if (name.endsWith('TaskLinkAttacher')) return { default: 'TaskLinkAttacher' };
     if (name.endsWith('CameraCaptureButton')) return { default: 'CameraCaptureButton' };
     throw new Error(name);
   } };
@@ -44,13 +46,13 @@ test('captured photos use the existing upload, size validation and permission gu
   await disabled.props.onCapture(new File(['photo'], 'denied.jpg', { type: 'image/jpeg' }));
   assert.equal(calls.length, 1);
 });
-test('precheck matches server MIME fallback and size boundaries', () => {
+test('precheck matches server MIME fallback and size boundaries', async () => {
   const { validateTaskAttachment } = load();
-  for (const type of ['', 'application/octet-stream', 'application/pdf']) assert.equal(validateTaskAttachment(new File(['x'], 'report.pdf', { type })), null);
-  assert.match(validateTaskAttachment(new File(['x'], 'bad.exe')), /định dạng|Định dạng/);
-  assert.match(validateTaskAttachment({ name: 'a.pdf', type: 'application/pdf', size: 0 }), /rỗng/);
-  assert.equal(validateTaskAttachment({ name: 'a.pdf', type: 'application/pdf', size: TASK_ATTACHMENT_MAX_BYTES }), null);
-  assert.match(validateTaskAttachment({ name: 'a.pdf', type: 'application/pdf', size: TASK_ATTACHMENT_MAX_BYTES + 1 }), /10 MB/);
+  for (const type of ['', 'application/octet-stream', 'application/pdf']) assert.equal(await validateTaskAttachment(new File(['x'], 'report.pdf', { type })), null);
+  assert.match(await validateTaskAttachment(new File(['x'], 'bad.exe')), /định dạng|Định dạng/);
+  assert.match(await validateTaskAttachment({ name: 'a.pdf', type: 'application/pdf', size: 0 }), /rỗng/);
+  assert.equal(await validateTaskAttachment({ name: 'a.pdf', type: 'application/pdf', size: TASK_ATTACHMENT_MAX_BYTES }), null);
+  assert.match(await validateTaskAttachment({ name: 'a.pdf', type: 'application/pdf', size: TASK_ATTACHMENT_MAX_BYTES + 1 }), /10 MB/);
 });
 test('selection uploads sequentially, continues after network failure, refreshes and resets', async () => {
   const calls = []; let release;
@@ -69,5 +71,5 @@ test('selection uploads sequentially, continues after network failure, refreshes
 });
 test('HTTP errors have Vietnamese messages including non-JSON proxy errors', () => {
   const { uploadErrorMessage } = load();
-  for (const [status, pattern] of [[400, /không hợp lệ/], [403, /quyền/], [413, /10 MB/], [415, /định dạng|Định dạng/], [500, /thử lại/], [503, /thử lại/]]) assert.match(uploadErrorMessage(status), pattern);
+  for (const [status, pattern] of [[400, /Chấp nhận/], [403, /quyền/], [413, /10 MB/], [415, /định dạng|Định dạng/], [500, /thử lại/], [503, /thử lại/]]) assert.match(uploadErrorMessage(status), pattern);
 });

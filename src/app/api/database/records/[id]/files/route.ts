@@ -4,7 +4,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { canAccessDatabaseRecordForActor, assertCanModifyRecordFiles, reopenRecordAfterFileChange } from "@/lib/databaseManagement/repository";
 import { removeDatabaseRecordFile, writeDatabaseRecordFile } from "@/lib/databaseManagement/storage";
 import { logServerAudit } from "@/lib/serverAudit";
-import { databaseRecordFileType, hasDatabaseRecordFileMagic } from "@/lib/databaseManagement/fileType.mjs";
+import { databaseRecordFileType, hasDatabaseRecordFileMagic, DATABASE_RECORD_FORMAT_MESSAGE } from "@/lib/databaseManagement/fileType.mjs";
 
 const MAX_MULTIPART_BYTES = 151 * 1024 * 1024;
 const IDEMPOTENCY_KEY = /^[a-zA-Z0-9_-]{8,200}$/;
@@ -39,7 +39,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const contentLengthHeader = request.headers.get("content-length");
   const contentLength = contentLengthHeader === null ? null : /^\d+$/.test(contentLengthHeader.trim()) ? Number(contentLengthHeader) : NaN;
   if (contentLength !== null && (!Number.isSafeInteger(contentLength) || contentLength < 0)) return NextResponse.json({ error: "invalid_content_length" }, { status: 400 });
-  if (contentLength !== null && Number.isFinite(contentLength) && contentLength > MAX_MULTIPART_BYTES) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
+  if (contentLength !== null && Number.isFinite(contentLength) && contentLength > MAX_MULTIPART_BYTES) return NextResponse.json({ error: "file_too_large", message: DATABASE_RECORD_FORMAT_MESSAGE }, { status: 413 });
   const recordId = (await context.params).id;
   const uploadRequestId = request.headers.get("Idempotency-Key")?.trim() ?? "";
   if (uploadRequestId && !IDEMPOTENCY_KEY.test(uploadRequestId)) return NextResponse.json({ error: "invalid_idempotency_key" }, { status: 400 });
@@ -56,16 +56,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const boundedRequest = body ? new Request(request.url, { method: request.method, headers: request.headers, body, duplex: "half" } as RequestInit) : request;
     form = await boundedRequest.formData();
   } catch (error) {
-    if (bodyExceeded || (error instanceof Error && error.message === "file_too_large")) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
+    if (bodyExceeded || (error instanceof Error && error.message === "file_too_large")) return NextResponse.json({ error: "file_too_large", message: DATABASE_RECORD_FORMAT_MESSAGE }, { status: 413 });
     return NextResponse.json({ error: "invalid_multipart" }, { status: 400 });
   }
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "file_required" }, { status: 400 });
-  if (file.size > 150 * 1024 * 1024) return NextResponse.json({ error: "file_too_large" }, { status: 413 });
+  if (file.size > 150 * 1024 * 1024) return NextResponse.json({ error: "file_too_large", message: DATABASE_RECORD_FORMAT_MESSAGE }, { status: 413 });
   const mimeType = databaseRecordFileType(file.name);
-  if (!mimeType) return NextResponse.json({ error: "unsupported_file_type" }, { status: 415 });
+  if (!mimeType) return NextResponse.json({ error: "unsupported_file_type", message: DATABASE_RECORD_FORMAT_MESSAGE }, { status: 415 });
   const fileBytes = new Uint8Array(await file.arrayBuffer());
-  if (!hasDatabaseRecordFileMagic(file.name, fileBytes)) return NextResponse.json({ error: "unsupported_file_type" }, { status: 415 });
+  if (!hasDatabaseRecordFileMagic(file.name, fileBytes)) return NextResponse.json({ error: "unsupported_file_type", message: DATABASE_RECORD_FORMAT_MESSAGE }, { status: 415 });
   let storageKey: string | null = null;
   let storageCreated = false;
   let retainStorageForReconciliation = false;

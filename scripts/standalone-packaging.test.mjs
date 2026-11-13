@@ -139,7 +139,9 @@ test("release metadata uses the complete ordered migration reference", () => {
   assert.ok(migrations.includes("supabase/migrations/20261027160000_database_management_v1_drop_source_person.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261028090000_database_management_v1_doan_the_types.sql"));
   assert.ok(migrations.includes("supabase/migrations/20261028120000_database_management_v1_record_type_sort_order.sql"));
-  assert.equal(migrations.at(-1), "supabase/migrations/20261027090100_storage_anon_lockdown.sql");
+  assert.equal(migrations.at(-4), "supabase/migrations/20261027090100_storage_anon_lockdown.sql");
+  assert.equal(migrations.at(-2), "supabase/migrations/20261112140100_legacy_office_metadata_validation.sql");
+  assert.equal(migrations.at(-1), "supabase/migrations/20261113100000_progress_report_after_done.sql");
   assert.ok(migrations.includes("supabase/migrations/20261028100000_rbac_approval_permissions_v1.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261028150000_attendance_rbac_v1.sql"));
     assert.ok(migrations.includes("supabase/migrations/20261028160000_attendance_late_exception_review.sql"));
@@ -259,5 +261,34 @@ test("CSDL status option repair migration is packaged after self-approval migrat
     const migration = "supabase/migrations/20261110100000_database_management_v1_status_field_options.sql";
     assert.equal(source.split(migration).length - 1, 1);
     assert.ok(source.indexOf(migration) > source.indexOf("20261109120000_self_approve_personal_plans.sql"));
+  }
+});
+
+test("task link attachment migration is included once after status options", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const migration = "supabase/migrations/20261110120000_task_link_attachments.sql";
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf("20261110100000_database_management_v1_status_field_options.sql"));
+  }
+});
+
+test("Hop dong nguoi thuc hien migration is packaged after CSDL status option repair", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const migration = "supabase/migrations/20261112100000_database_management_v1_hop_dong_nguoi_thuc_hien.sql";
+    assert.equal(source.split(migration).length - 1, 1);
+    assert.ok(source.indexOf(migration) > source.indexOf("20261110100000_database_management_v1_status_field_options.sql"));
+  }
+});
+
+test("legacy Office bucket and metadata migrations ship once in dependency order", () => {
+  for (const file of ["scripts/package-standalone.mjs", "scripts/verify-standalone-artifact.mjs"]) {
+    const source = readFileSync(file, "utf8");
+    const bucket = "supabase/migrations/20261112140000_allow_legacy_office_uploads.sql";
+    const metadata = "supabase/migrations/20261112140100_legacy_office_metadata_validation.sql";
+    assert.equal(source.split(bucket).length - 1, 1);
+    assert.equal(source.split(metadata).length - 1, 1);
+    assert.ok(source.indexOf(metadata) > source.indexOf(bucket));
   }
 });

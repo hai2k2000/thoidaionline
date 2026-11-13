@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set +x
+tmp=''
+work=''
+step=init
+
+cleanup() {
+  local rc=$?
+  set +u
+  set +e
+  if [[ -n "$tmp" ]]; then
+    docker rm -f -v "$tmp" >/dev/null 2>&1 || rc=1
+  fi
+  [[ -n "$work" ]] && rm -rf -- "$work"
+  if [[ $rc -ne 0 ]]; then
+    echo "LEGACY_OFFICE_UPLOADS_DRYRUN_RESULT=FAIL step=$step" >&2
+  else
+    echo "LEGACY_OFFICE_UPLOADS_DRYRUN_RESULT=PASS step=$step"
+  fi
+  trap - EXIT
+  exit "$rc"
+}
+
+main() {
+  set -Eeuo pipefail
+  trap cleanup EXIT
+  umask 077
+  [[ "${THOIDAI_LEGACY_OFFICE_UPLOADS_DRYRUN_APPROVED:-0}" == 1 ]] || { echo 'LEGACY_OFFICE_UPLOADS_DRYRUN_ERROR=approval required' >&2; return 1; }
+  : "${BUNDLE_DIR:?BUNDLE_DIR is required}"; : "${POSTGRES_IMAGE:?POSTGRES_IMAGE is required}"
+  command -v docker >/dev/null; command -v node >/dev/null; command -v psql >/dev/null
+  local evidence="/opt/ops/thoidai-work/legacy-office-uploads-evidence/dryrun-$(date -u +%Y%m%dT%H%M%SZ)"
+  local daily=/opt/ops/thoidai-work/backups/managed/daily
+  local backup='' dump='' manifest='' db_password='' port='' candidate="legacy-office-uploads-dryrun-$$"
+  local free_kb docker_root ready=0
+  mkdir -p "$evidence"
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  step=disk
+  source "$BUNDLE_DIR/scripts/production/disk-guard.sh"
+  docker_root=$(docker info --format '{{.DockerRootDir}}')
+  free_kb=$(df -Pk "$docker_root" | awk 'NR==2 {print $4}')
+  disk_guard_require "$free_kb" "$THOIDAI_DISK_DEFAULT_HEADROOM_KB" legacy-office-uploads-dryrun
+  work=$(mktemp -d)
+
+  # Latest verified daily backup: fail closed if its checksum does not match.
+  step=backup
+  while IFS= read -r entry; do
+    [[ -f "$daily/$entry/postgres.dump" && -f "$daily/$entry/manifest.txt" ]] && { backup="$daily/$entry"; break; }
+  done < <(find "$daily" -mindepth 1 -maxdepth 1 -type d -name '*-daily' -printf '%f\n' | sort -r)
+  [[ -n "$backup" ]]
+  dump="$backup/postgres.dump"; manifest="$backup/manifest.txt"
+  [[ "$(awk '$2=="postgres.dump" || $2=="*postgres.dump" {print $1; exit}' "$manifest")" == "$(sha256sum "$dump" | awk '{print $1}')" ]]
+  echo LEGACY_OFFICE_UPLOADS_BACKUP=PASS
+
+  step=postgres
+  local containers
+  containers=$(docker ps -a --format '{{.Names}}')
+  if grep -Eq '^legacy-office-uploads-dryrun-[^[:space:]]+$' <<<"$containers"; then
+    echo 'LEGACY_OFFICE_UPLOADS_DRYRUN_ERROR=leftover dry-run container exists' >&2; return 1
+  fi
+  db_password=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
+  # Claim cleanup ownership only after the leftover check; never remove an old container.
+  tmp="$candidate"
+  POSTGRES_PASSWORD="$db_password" docker run -d --name "$tmp" --memory 512m \
+    -p 127.0.0.1::5432 -e POSTGRES_PASSWORD "$POSTGRES_IMAGE" >/dev/null 2>&1
+  for _ in $(seq 1 90); do
+    if docker exec "$tmp" pg_isready -h 127.0.0.1 -U supabase_admin -d postgres >/dev/null 2>&1; then ready=1; break; fi
+    sleep 2
+  done
+  [[ "$ready" == 1 ]]
+  step=restore
+  docker exec -i "$tmp" psql -q -h 127.0.0.1 -U supabase_admin -d postgres \
+    -v ON_ERROR_STOP=1 -c 'create schema if not exists supabase_migrations;' </dev/null >/dev/null
+  docker exec -i "$tmp" pg_restore --schema=public --schema=storage --schema=supabase_migrations -h 127.0.0.1 -U supabase_admin -d postgres \
+    < "$dump" >"$work/restore.log" 2>&1 || true
+  port=$(docker port "$tmp" 5432/tcp | sed -n 's/^127.0.0.1:\([0-9]*\)$/\1/p')
+  [[ "$port" =~ ^[0-9]+$ ]]
+  export PGHOST=127.0.0.1 PGPORT="$port" PGUSER=supabase_admin PGDATABASE=postgres PGPASSWORD="$db_password"
+  local restore_counts
+  if ! restore_counts=$(psql -X -v ON_ERROR_STOP=1 -qAt -F'|' -c "select (select count(*) from public.tasks), (select count(*) from public.staff_users), (select count(*) from storage.buckets), (select count(*) from supabase_migrations.schema_migrations)" 2>/dev/null) || ! [[ "$restore_counts" =~ ^[0-9]+\|[0-9]+\|[0-9]+\|[1-9][0-9]*$ ]]; then
+    echo 'LEGACY_OFFICE_UPLOADS_RESTORE=FAIL' >&2
+    return 1
+  fi
+  echo "$restore_counts"
+  echo LEGACY_OFFICE_UPLOADS_RESTORE=PASS
+
+  # Restore may leave default grants on V1 and V1.1 objects; reassert their ACLs.
+  step=restore_acl
+  psql -X -v ON_ERROR_STOP=1 -q >"$work/restore-acl.log" 2>&1 <<'SQL'
+revoke all on table public.projects,public.project_members from public,anon,authenticated;
+grant all on table public.projects,public.project_members to service_role;
+do $$ declare f text; begin foreach f in array array['enforce_assignee_manager_watcher()','review_task_completion(uuid,uuid,text,text)','api_project_actor_can_create(uuid)','api_project_is_lead(uuid,uuid)','api_assert_task_action(uuid,uuid,text)','api_create_project(uuid,text,text,text,uuid,uuid[])','api_update_project(uuid,uuid,text,text,text,uuid)','api_set_project_member(uuid,uuid,uuid,text,boolean)','api_close_project(uuid,uuid)','api_assign_project_task(uuid,uuid,text,text,uuid,uuid,date,time,text,uuid[],uuid[],text,text)'] loop execute format('revoke all on function public.%s from public,anon,authenticated',f); execute format('grant execute on function public.%s to service_role',f); execute format('alter function public.%s owner to postgres',f); end loop; end $$;
+revoke all on table public.project_library_folders,public.project_library_items from public,anon,authenticated;
+grant all on table public.project_library_folders,public.project_library_items to service_role;
+do $$ declare f regprocedure; begin
+ for f in select oid::regprocedure from pg_proc where pronamespace='public'::regnamespace and proname in ('api_project_can_assign','guard_project_staff_role','guard_project_lead_role','api_assert_project_library','ensure_project_task_folder','create_project_task_folder','api_list_project_library','api_create_project_library_folder','api_mutate_project_library_folder','api_add_project_library_item','api_mutate_project_library_item','api_get_project_library_file','file_project_task_attachment') loop
+ execute format('revoke all on function %s from public,anon,authenticated',f);
+ execute format('grant execute on function %s to service_role',f);
+ execute format('alter function %s owner to postgres',f);
+ end loop;
+end $$;
+do $$ declare f regprocedure; begin
+ for f in select oid::regprocedure from pg_proc where pronamespace='public'::regnamespace and proname in ('api_assign_task_v2','api_assign_task_batch_v1','api_register_journalism_task_v1','api_change_assigned_task_deadline') loop
+ execute format('revoke all on function %s from public,anon,authenticated',f);
+ execute format('grant execute on function %s to service_role',f);
+ execute format('alter function %s owner to postgres',f);
+ end loop;
+end $$;
+revoke all privileges on table storage.objects,storage.buckets from anon,authenticated;
+do $$ declare p record; begin
+ for p in select schemaname,tablename,policyname from pg_policies where schemaname='storage' and roles && array['anon','authenticated','public']::name[] loop
+   execute format('drop policy %I on %I.%I',p.policyname,p.schemaname,p.tablename);
+ end loop;
+end $$;
+revoke all on function public.api_add_task_attachment(uuid,uuid,text,text,text,bigint) from public,anon,authenticated;
+grant execute on function public.api_add_task_attachment(uuid,uuid,text,text,text,bigint) to service_role;
+SQL
+  echo LEGACY_OFFICE_UPLOADS_RESTORE_ACL=REASSERTED
+
+  step=behaviour
+  # One connection keeps TEMP snapshots alive across apply/reapply/revert/reapply.
+  psql -X -v ON_ERROR_STOP=1 -f "$BUNDLE_DIR/supabase/tests/legacy_office_uploads_behaviour.sql" >"$work/behaviour.log" 2>&1 || {
+    echo 'LEGACY_OFFICE_UPLOADS_BEHAVIOUR=FAIL' >&2; return 1;
+  }
+  echo LEGACY_OFFICE_UPLOADS_BEHAVIOUR=PASS
+  step=complete
+  echo LEGACY_OFFICE_UPLOADS_DRYRUN_CHECKS=PASS >"$evidence/result.txt"
+}
+main "$@" </dev/null

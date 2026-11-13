@@ -1,9 +1,10 @@
 import "server-only";
 
-import { taskRepository } from "@/lib/taskRepository";
+import { serverSupabase } from "@/lib/serverSupabase";
+import { loadLatestTaskProgressReports, taskRepository } from "@/lib/taskRepository";
 import { apiError, rpcFailure } from "@/lib/serverApi";
 import { canUseJournalism } from "@/lib/journalismScope.mjs";
-import { buildTaskListReportModel, reportFilterLabel, selectTasksForReport } from "@/lib/taskListReport.mjs";
+import { buildTaskListReportModel, formatReportLeaveText, reportFilterLabel, selectTasksForReport } from "@/lib/taskListReport.mjs";
 import type { ServerAuthUser } from "@/lib/serverSession";
 import type { TaskListItemDto, TaskListQuery } from "@/lib/taskContracts";
 
@@ -19,5 +20,25 @@ export async function getTaskListReportData(user: ServerAuthUser, query: TaskLis
     all.push(...result.data.items);
     if (all.length >= result.data.total || result.data.items.length === 0) break;
   }
-  return { ok: true as const, model: buildTaskListReportModel({ tasks: selectTasksForReport(all, from, to), from, to, userName: user.full_name, filterLabel: reportFilterLabel(query, all) }) };
+  const selected = selectTasksForReport(all, from, to);
+  const progressResult = await loadLatestTaskProgressReports(selected.map(task => task.id));
+  if (!progressResult.ok) return { ok: false as const, response: rpcFailure(progressResult.error) };
+  const tasks = selected.map(task => ({ ...task, latest_progress_report: progressResult.data.get(task.id) }));
+  let jobTitle = user.role_name || "Nhân viên";
+  let leaveText = "………………………………………………";
+  try {
+    const [staff, leave] = await Promise.allSettled([
+      serverSupabase.from("staff_users").select("job_titles(name)").eq("id", user.id).maybeSingle(),
+      serverSupabase.from("leave_requests").select("start_date,end_date,start_period,end_period,leave_type,status").eq("requester_id", user.id).eq("status", "approved").lte("start_date", to).gte("end_date", from),
+    ]);
+    if (staff.status === "fulfilled" && !staff.value.error) {
+      const relation = staff.value.data?.job_titles;
+      const titleRelation = Array.isArray(relation) ? relation[0] : relation;
+      jobTitle = titleRelation?.name?.trim() || jobTitle;
+    }
+    if (leave.status === "fulfilled" && !leave.value.error) leaveText = formatReportLeaveText(leave.value.data ?? [], from, to);
+  } catch {
+    // Profile and attendance data are optional; keep the report available with safe fallbacks.
+  }
+  return { ok: true as const, model: buildTaskListReportModel({ tasks, from, to, userName: user.full_name, jobTitle, leaveText, actorId: user.id, filterLabel: reportFilterLabel(query, all) }) };
 }

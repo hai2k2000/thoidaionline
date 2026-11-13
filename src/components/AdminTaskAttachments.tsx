@@ -3,6 +3,7 @@ import { FilePreviewList } from "@/components/FilePreviewDialog";
 import { useState } from "react";
 import type { TaskDetailDto } from "@/lib/taskContracts";
 import { responseErrorMessage, errorMessage } from "@/lib/actionFeedback";
+import TaskLinkList from "@/components/TaskLinkList";
 import TaskAttachmentUploader from "@/components/TaskAttachmentUploader";
 
 export default function AdminTaskAttachments({ task }: { task: TaskDetailDto }) {
@@ -27,6 +28,7 @@ export default function AdminTaskAttachments({ task }: { task: TaskDetailDto }) 
   return <section className="grid gap-3 rounded-xl border bg-white p-4 shadow-sm">
     <h2 className="font-semibold">Tệp đính kèm</h2>
     {attachments.length ? <ul className="grid gap-2">{attachments.map(item => <li key={item.id} className="flex flex-wrap items-center gap-3"><button type="button" disabled={busy} onClick={() => open(item.id)} className="min-w-0 flex-1 break-words text-left text-orange-700 underline">{item.file_name}</button><button type="button" onClick={() => setPreviewUrl(`/api/tasks/${task.id}/attachments/${item.id}?disposition=inline`)} className="min-h-11 rounded border px-3 py-2 focus-visible:ring-2">Xem</button><button type="button" disabled={busy || !reason.trim()} onClick={() => remove(item.id)} className="rounded border border-red-200 px-3 py-2 text-red-700 disabled:opacity-50">Xóa</button></li>)}</ul> : <p className="text-sm text-slate-500">Chưa có tệp đính kèm.</p>}
+    <TaskLinkList taskId={task.id} links={task.links} admin disabled={busy} />
     <label className="text-sm font-semibold">Lý do xóa tệp<input value={reason} onChange={event => setReason(event.target.value)} maxLength={2000} placeholder="Bắt buộc khi xóa tệp" className="mt-1 w-full rounded-lg border px-3 py-2"/></label>
     <TaskAttachmentUploader taskId={task.id} disabled={busy || task.status === "cancelled"} admin onUploaded={(attachment) => attachment && setAttachments(items => [...items, attachment])} />
     {message ? <p role="status" className="text-sm">{message}</p> : null}

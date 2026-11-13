@@ -97,6 +97,31 @@ const journalismListFields = (
 const TASK_ACCESS_FIELDS = "id,project_id,projects!tasks_project_id_fkey(project_members(user_id,role,staff_users!project_members_user_id_fkey(active))),department_id,created_by,owner_id,assignee_id,reviewer_id,departments(manager_id),self_claimable,task_type,status,approval_required,task_status_events(from_status,to_status),task_assignees(user_id,assignment_role),department_plan_items!department_plan_items_linked_task_id_fkey(id,department_plan_id)";
 
 const TASK_LIST_FIELDS = journalismListFields();
+
+export type ReportTaskProgress = Pick<TaskListItemDto, never> & {
+  id: string;
+  report_status: string;
+  progress_text: string;
+  blockers: string | null;
+  reported_on: string;
+  created_at: string;
+};
+
+export async function loadLatestTaskProgressReports(taskIds: string[]): Promise<RepositoryResult<Map<string, ReportTaskProgress>>> {
+  const latest = new Map<string, ReportTaskProgress>();
+  if (!taskIds.length) return ok(latest);
+  const { data, error } = await serverSupabase
+    .from("task_progress_reports")
+    .select("id,task_id,report_status,progress_text,blockers,reported_on,created_at")
+    .in("task_id", taskIds)
+    .order("reported_on", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) return fail(error);
+  for (const row of (data ?? []) as Array<ReportTaskProgress & { task_id: string }>) {
+    if (!latest.has(row.task_id)) latest.set(row.task_id, row);
+  }
+  return ok(latest);
+}
 // Keep a minimal relation embedded so PostgREST can exclude Journalism rows
 // for actors outside the approved Journalism scope.
 const NON_JOURNALISM_TASK_FIELDS = [
@@ -786,7 +811,7 @@ export const taskRepository: TaskRepository = {
     const projectTask = (taskResult.data as unknown as TaskListItemDto).project_id != null;
     const [commentResult, legacyProgressResult, evaluationResult,
       progressResult, qualitativeEvaluationResult, deadlineResult, statusResult,
-      attachmentResult, completionScoreResult] = await Promise.all([
+      attachmentResult, completionScoreResult, linkResult] = await Promise.all([
       serverSupabase.from("task_comments")
         .select("id,content,created_at,user_id,staff_users(full_name)")
         .eq("task_id", taskId).order("created_at", { ascending: false }),
@@ -797,7 +822,7 @@ export const taskRepository: TaskRepository = {
         .select("id,task_id,employee_id,reviewer_id,rating,effort_weight,total_score,completion,on_time,opinion,checkpoint_date,is_final,created_at")
         .eq("task_id", taskId).order("checkpoint_date", { ascending: false }).order("created_at", { ascending: false }),
       serverSupabase.from("task_progress_reports")
-        .select("id,reported_by,reported_on,report_status,progress_text,blockers,created_at")
+        .select("id,reported_by,reported_on,report_status,progress_text,blockers,created_at,reporter:staff_users!task_progress_reports_reported_by_fkey(full_name)")
         .eq("task_id", taskId).order("reported_on", { ascending: false }).order("created_at", { ascending: false }),
       projectTask ? Promise.resolve({ data: [], error: null }) : serverSupabase.from("task_qualitative_evaluations")
         .select("id,evaluation_text,evaluation_deadline,evaluation_source,created_at,evaluator:staff_users!task_qualitative_evaluations_evaluator_id_fkey(full_name)")
@@ -814,11 +839,14 @@ export const taskRepository: TaskRepository = {
       projectTask ? Promise.resolve({ data: null, error: null }) : serverSupabase.from("task_completion_scores")
         .select("id,requirement_results,requirement_score,collaboration_score,initiative_score,total_score,note,created_at,reviewer:staff_users!task_completion_scores_reviewer_id_fkey(full_name)")
         .eq("task_id", taskId).maybeSingle(),
+      serverSupabase.from("task_links")
+        .select("id,url,title,created_at,created_by")
+        .eq("task_id", taskId).is("deleted_at", null).order("created_at", { ascending: false }),
     ]);
     const error = taskResult.error ?? commentResult.error ?? legacyProgressResult.error
       ?? evaluationResult.error ?? progressResult.error ?? qualitativeEvaluationResult.error
       ?? deadlineResult.error
-      ?? statusResult.error ?? attachmentResult.error ?? completionScoreResult.error;
+      ?? statusResult.error ?? attachmentResult.error ?? completionScoreResult.error ?? linkResult.error;
     if (error) return fail(error);
     if (!taskResult.data) return ok(null);
     const approvalEvent = selectAssignmentApprovalActor(
@@ -840,7 +868,7 @@ export const taskRepository: TaskRepository = {
       ...(taskResult.data as unknown as Omit<TaskDetailDto,
         "comments" | "progress_logs" | "legacy_evaluations" | "progress_reports"
         | "qualitative_evaluations"
-        | "deadline_history" | "status_events" | "attachments" | "completion_score">),
+        | "deadline_history" | "status_events" | "attachments" | "links" | "completion_score">),
       ...resolveTaskCompatibility(taskResult.data as unknown as TaskListItemDto),
       assignment_approved_by: (taskResult.data as unknown as TaskListItemDto).assignment_approved_by
         ?? approvalEvent?.actor_id
@@ -857,6 +885,7 @@ export const taskRepository: TaskRepository = {
       deadline_history: (deadlineResult.data ?? []) as unknown as TaskDetailDto["deadline_history"],
       status_events: (statusResult.data ?? []) as unknown as TaskDetailDto["status_events"],
       attachments: (attachmentResult.data ?? []) as unknown as TaskDetailDto["attachments"],
+      links: (linkResult.data ?? []) as unknown as TaskDetailDto["links"],
       completion_score: completionScoreResult.data as unknown as TaskDetailDto["completion_score"],
       effort_weight: projectTask ? null : (taskResult.data as unknown as TaskDetailDto).effort_weight,
       journalism: (() => {
@@ -1073,6 +1102,12 @@ export const taskRepository: TaskRepository = {
     { p_actor_id: actorId, p_task_id: taskId, p_storage_path: input.storagePath,
       p_file_name: input.fileName, p_mime_type: input.mimeType, p_size_bytes: input.sizeBytes },
   ),
+  addLink: (actorId, taskId, input) => mutation("api_add_task_link", {
+    p_actor_id: actorId, p_task_id: taskId, p_url: input.url, p_title: input.title,
+  }),
+  deleteLink: (actorId, taskId, linkId) => mutation("api_delete_task_link", {
+    p_actor_id: actorId, p_task_id: taskId, p_link_id: linkId,
+  }),
   async attachment(taskId, attachmentId) {
     const { data, error } = await serverSupabase.from("task_attachments")
       .select("id,file_name,mime_type,size_bytes,created_at,uploaded_by,storage_path")

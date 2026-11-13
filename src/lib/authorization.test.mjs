@@ -162,6 +162,31 @@ test("assign, report, review, update and comment require explicit permission plu
   assert.equal(canTaskAction(actor({ id: "other" }), task(), "comment"), false);
 });
 
+test("normal assigned task progress reports allow owner and collaborator but deny watcher", () => {
+  const normalTask = task({
+    taskType: "assigned",
+    projectId: null,
+    ownerId: "owner",
+    assigneeId: "assignee",
+    participants: [
+      { userId: "collaborator", assignmentRole: "assignee" },
+      { userId: "watcher", assignmentRole: "watcher" },
+    ],
+  });
+  assert.equal(canTaskAction(actor({ id: "owner" }), normalTask, "report"), true);
+  assert.equal(canTaskAction(actor({ id: "collaborator" }), normalTask, "report"), true);
+  assert.equal(canTaskAction(actor({ id: "watcher" }), normalTask, "report"), false);
+});
+
+test("progress reports on done and pending review preserve owner/collaborator permissions", () => {
+  for (const projectId of [null, "project"]) for (const status of ["done", "pending_review", "cancelled"]) {
+    const snapshot = task({ taskType: "assigned", projectId, status, ownerId: "owner", assigneeId: "assignee", participants: [{ userId: "participant-owner", assignmentRole: "owner" }, { userId: "collaborator", assignmentRole: "assignee" }, { userId: "watcher", assignmentRole: "watcher" }] });
+    for (const id of ["owner", "assignee", "participant-owner", "collaborator", "watcher"]) {
+      assert.equal(canTaskAction(actor({ id }), snapshot, "report"), status !== "cancelled" && id !== "watcher", [projectId, status, id].join("/"));
+    }
+  }
+});
+
 test("null departments never create same-department authority", () => {
   const manager = actor({
     departmentId: null,

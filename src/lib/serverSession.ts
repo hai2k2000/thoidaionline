@@ -7,6 +7,7 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import {
   createSignedSessionToken,
   SESSION_TTL_SECONDS,
+  sessionTtlSeconds,
   verifySignedSessionToken,
 } from "@/lib/sessionToken";
 import {
@@ -46,8 +47,8 @@ function secret() {
   return value;
 }
 
-export function createSessionToken(userId: string, sessionVersion: number, mustChangePassword = false) {
-  return createSignedSessionToken({ userId, sessionVersion, mustChangePassword, secret: secret() });
+export function createSessionToken(userId: string, sessionVersion: number, mustChangePassword = false, remember = false) {
+  return createSignedSessionToken({ userId, sessionVersion, mustChangePassword, remember, secret: secret() });
 }
 
 export function verifySessionToken(token: string | undefined) {
@@ -149,3 +150,7 @@ export const sessionCookieOptions = {
   path: "/",
   maxAge: SESSION_TTL_SECONDS,
 };
+
+export function sessionCookieOptionsFor(remember = false, mustChangePassword = false) {
+  return { ...sessionCookieOptions, maxAge: sessionTtlSeconds(remember, mustChangePassword) };
+}

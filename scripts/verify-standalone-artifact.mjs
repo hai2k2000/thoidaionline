@@ -7,7 +7,11 @@ import { verifyManifest } from "./verify-artifact-manifest.mjs";
 const root = resolve(process.argv[2] || process.cwd());
 // The runtime cache is created on first start; it is intentionally not an uploaded build requirement.
 for (const path of [
-  "scripts/production/push-dispatch-once.mjs", "scripts/production/push-notifications-dryrun.sh", "scripts/production/push-notifications-revert.sql", "scripts/production/attendance-view-all-leaders-revert.sql", "scripts/production/push-notifications-post.sql",
+  "scripts/production/push-dispatch-once.mjs",
+  "scripts/production/progress-after-done-dryrun.sh",
+  "scripts/production/progress-after-done-revert.sql",
+  "scripts/production/progress-after-done-post.sql",
+  "supabase/tests/progress_after_done_behaviour.sql", "scripts/production/push-notifications-dryrun.sh", "scripts/production/push-notifications-revert.sql", "scripts/production/attendance-view-all-leaders-revert.sql", "scripts/production/push-notifications-post.sql",
   "scripts/production/push-notifications-v2-dryrun.sh", "scripts/production/push-notifications-v2-post.sql", "scripts/production/push-notifications-v2-revert.sql", "supabase/tests/push_notifications_v2_behaviour.sql",
   "src/lib/push/dispatcher.mjs", "src/lib/push/fcm.mjs", "src/lib/push/subscription.mjs", "supabase/tests/push_notifications_behaviour.sql",
   "server.js", ".next/BUILD_ID", ".next/server/app-paths-manifest.json", ".next/static", "public", "start-standalone.mjs", "scripts/production/controlled-deploy-exception.mjs", "scripts/production/produce-rbac-readiness.mjs", "scripts/production/verify-rbac-disposable-restore.sh",
@@ -107,8 +111,13 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261108110000_attendance_view_all_leaders.sql",
   "supabase/migrations/20261109120000_self_approve_personal_plans.sql",
   "supabase/migrations/20261110100000_database_management_v1_status_field_options.sql",
+  "supabase/migrations/20261110120000_task_link_attachments.sql",
+  "supabase/migrations/20261112100000_database_management_v1_hop_dong_nguoi_thuc_hien.sql",
   "supabase/migrations/20261031140000_duty_roster_status_fix.sql",
   "supabase/migrations/20261027090100_storage_anon_lockdown.sql",
+  "supabase/migrations/20261112140000_allow_legacy_office_uploads.sql",
+  "supabase/migrations/20261112140100_legacy_office_metadata_validation.sql",
+  "supabase/migrations/20261113100000_progress_report_after_done.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);

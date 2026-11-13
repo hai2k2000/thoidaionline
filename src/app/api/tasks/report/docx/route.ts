@@ -2,8 +2,8 @@ import { contentDisposition } from "@/lib/contentDisposition.mjs";
 import { requireReadActor } from "@/lib/serverApi";
 import { apiError } from "@/lib/apiResponse";
 import { isCollaboratorRole } from "@/lib/collaboratorRole.mjs";
-import { exportTaskListReportDocx, taskListReportDocxFilename } from "@/lib/taskListReportDocx";
-import { parseReportRequest, parseReportIds, taskListReportHref, selectTaskListReportModel, validateNextWeekPlan, planFromReportModel } from "@/lib/taskListReport.mjs";
+import { exportTaskListReportDocx } from "@/lib/taskListReportDocx";
+import { parseReportRequest, parseReportIds, taskListReportHref, taskListReportDocxFilename, selectTaskListReportModel, validateNextWeekPlan, planFromReportModel } from "@/lib/taskListReport.mjs";
 import { getTaskListReportData } from "@/lib/taskListReportData";
 
 export const runtime = "nodejs";
@@ -53,5 +53,5 @@ async function exportReport(request: Request, post: boolean) {
   // Selection is intersected after the actor-scoped read; client IDs grant no access.
   const model = planFromReportModel(ids === undefined ? result.model : selectTaskListReportModel(result.model, ids), planResult.plan);
   const buffer = await exportTaskListReportDocx(model);
-  return new Response(new Uint8Array(buffer), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": contentDisposition(taskListReportDocxFilename(from, to)), "Cache-Control": "no-store" } });
+  return new Response(new Uint8Array(buffer), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": contentDisposition(taskListReportDocxFilename(from, to, model.userName)), "Cache-Control": "no-store" } });
 }

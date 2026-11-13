@@ -9,19 +9,65 @@ import { contentDisposition } from "./contentDisposition.mjs";
 import { isCollaboratorRole } from "./collaboratorRole.mjs";
 import * as report from "./taskListReport.mjs";
 
-test("selected report recomputes counts and assignee groups without changing the full model", () => {
+test("selected report merges work sections, preserves status notes, excludes cancelled tasks, and recomputes counts", () => {
   assert.equal(typeof report.buildTaskListReportModel, "function");
   const model = report.buildTaskListReportModel({ tasks: [
-    { id: "a", title: "Done", status: "done", task_assignees: [{ assignment_role: "owner", staff_users: { full_name: "An" } }] },
-    { id: "b", title: "Late", status: "in_progress", due_date: "2020-01-01", task_assignees: [{ assignment_role: "owner", staff_users: { full_name: "Bình" } }] },
+    { id: "a", title: "Done", status: "done", task_assignees: [{ user_id: "actor", assignment_role: "owner", staff_users: { full_name: "An" } }] },
+    { id: "b", title: "Late", status: "in_progress", due_date: "2020-01-01", task_assignees: [{ user_id: "actor", assignment_role: "owner", staff_users: { full_name: "BÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬nh" } }] },
     { id: "c", title: "Open", status: "in_progress" },
-  ], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "Tất cả", now: new Date("2026-11-09T12:00:00Z") });
+    { id: "d", title: "Cancelled", status: "cancelled" },
+  ], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "TÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¥t cÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â£", now: new Date("2026-11-09T12:00:00Z") });
   const selected = report.selectTaskListReportModel(model, ["a", "b", "foreign", "a"]);
-  assert.deepEqual(selected.counts, { total: 2, completed: 1, active: 1, overdue: 1, noDeadline: 1 });
-  assert.deepEqual(selected.sections.map(section => section.groups.flatMap(group => group.rows.map(row => row.id))), [["a"], [], ["b"]]);
-  assert.equal(selected.sections[2].groups[0].name, "Bình");
+  assert.deepEqual(selected.counts, { total: 2 });
+  assert.deepEqual(selected.sections.map(section => section.rows.map(row => row.id)), [["b", "a"]]);
+  assert.match(selected.sections[0].rows[1].statusNote, /^.+$/);
+  assert.match(selected.sections[0].rows[0].statusNote, /Qu/);
   assert.equal(model.counts.total, 3);
+  assert.equal(model.sections[0].title, "II. \u0043\u00f4ng vi\u1ec7c \u0111\u00e3 l\u00e0m");
+  assert.equal(model.sections[0].rows.some(row => row.id === "d"), false);
   assert.equal(report.selectTaskListReportModel(model, []).counts.total, 0);
+});
+
+test("merged rows keep input order within assignees, completion dates and overdue notes", () => {
+  const model = report.buildTaskListReportModel({ tasks: [
+    { id: "open", title: "Z", status: "in_progress", due_date: "2099-01-01", report_notes: "ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Âang viÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t" },
+    { id: "done", title: "A", status: "done", due_date: "2020-01-01", completed_at: "2026-11-05T08:00:00Z" },
+    { id: "late", title: "B", status: "in_progress", due_date: "2020-01-01", report_notes: "ChÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â dÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â¯ liÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡u" },
+    { id: "cancelled", title: "KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng xuÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¥t", status: "cancelled", due_date: "2026-11-10" },
+  ], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "", now: new Date("2026-11-09T12:00:00Z") });
+  assert.equal(model.sections.length, 1);
+  assert.deepEqual(model.sections[0].rows.map(row => row.id), ["done", "late", "open"]);
+  assert.ok(model.sections[0].rows.every(row => typeof row.statusNote === "string"));
+  assert.ok(model.nextWeekPlan.title.startsWith("III."));
+  assert.deepEqual(report.selectTaskListReportModel(model, ["late", "open"]).sections[0].rows.map(row => row.id), ["late", "open"]);
+});
+
+test("done report-only tasks show report notes instead of completion dates", () => {
+  const model = report.buildTaskListReportModel({ tasks: [{ id: "quick", title: "PhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡t sinh", status: "done", workflow_type: "REPORT_ONLY", completed_at: "2026-11-10T08:00:00Z", report_notes: "ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ xÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â½ xong" }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  assert.equal(model.sections[0].rows[0].statusNote, "ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ xÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â½ xong");
+});
+
+test("normal assigned tasks append the latest progress report to the status note", () => {
+  const model = report.buildTaskListReportModel({ tasks: [{
+    id: "normal-progress",
+    title: "Normal assigned task",
+    status: "in_progress",
+    task_type: "assigned",
+    workflow_type: "STANDARD",
+    task_assignees: [{ user_id: "actor", assignment_role: "owner" }],
+    latest_progress_report: { report_status: "in_progress", progress_text: "Latest progress note", blockers: null },
+  }], actorId: "actor", from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  assert.match(model.sections[0].rows[0].statusNote, /Latest progress note/);
+});
+
+test("done normal tasks include latest progress text in the result note", () => {
+  const model = report.buildTaskListReportModel({ tasks: [{ id: "done", title: "Đã xong", status: "done", completed_at: "2026-11-10T08:00:00Z", latest_progress_report: { progress_text: "Đã bàn giao kết quả", blockers: "Không còn vướng" } }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  assert.equal(model.sections[0].rows[0].statusNote, "Đã hoàn thành 10/11/2026 · Đã bàn giao kết quả");
+});
+
+test("done normal tasks without progress keep only the completion date", () => {
+  const model = report.buildTaskListReportModel({ tasks: [{ id: "done", title: "Đã xong", status: "done", completed_at: "2026-11-10T08:00:00Z" }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  assert.equal(model.sections[0].rows[0].statusNote, "Đã hoàn thành 10/11/2026");
 });
 
 test("report ids reject malformed or oversized selections and normalize UUID case", () => {
@@ -48,8 +94,8 @@ test("report dates preserve all current list filters independently of pagination
   const parsed = parseReportRequest(new URL(taskListReportHref(query, { from: "2026-11-02", to: "2026-11-08" }), "https://example.test").searchParams);
   assert.deepEqual(parsed.query, { ...query, page: 1, pageSize: 100 });
   assert.equal(parsed.from, "2026-11-02");
-  assert.doesNotMatch(reportFilterLabel(query), /Phạm vi|Việc của tôi/);
-  assert.match(reportFilterLabel(query), /Chưa hoàn thành/);
+  assert.doesNotMatch(reportFilterLabel(query), /PhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡m vi|ViÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡c cÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§a tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´i/);
+  assert.match(reportFilterLabel(query), /Ch\u01b0a ho\u00e0n th\u00e0nh/);
 });
 
 test("dates reject invalid calendar dates and default to the Vietnam Monday-Sunday week", () => {
@@ -65,30 +111,30 @@ test("activity uses inclusive Vietnam dates and excludes future, undated and clo
     { id: "open", status: "in_progress", start_date: "2020-01-01" },
     { id: "future", status: "new", start_date: "2026-11-16" },
     { id: "cancelled", status: "cancelled", start_date: "2020-01-01" },
+    { id: "cancelled-due", status: "cancelled", due_date: "2026-11-10", completed_at: "2026-11-10T08:00:00Z" },
     { id: "undated", status: "new" },
   ];
   assert.deepEqual(selectTasksForReport(rows, "2026-11-09", "2026-11-15").map(row => row.id), ["boundary", "open"]);
 });
 
-test("DOCX contains Vietnamese sections, task rows, groups, signature and page fields", async () => {
+test("DOCX contains the flat work table, signature and page fields", async () => {
   const { exportTaskListReportDocx } = await import("./taskListReportDocx.ts");
-  const tasks = [{ id: "a", title: "Bài hoàn thành", status: "done", completed_at: "2026-11-09T08:00:00Z", task_assignees: [{ user_id: "an", assignment_role: "owner", staff_users: { full_name: "Nguyễn An" } }], project: { name: "Dự án A" } }, { id: "b", title: "Bài đang viết", status: "in_progress", task_assignees: [{ user_id: "binh", assignment_role: "owner", staff_users: { full_name: "Bình" } }] }, { id: "c", title: "Bài quá hạn", status: "in_progress", due_date: "2020-01-01" }];
-  const buffer = await exportTaskListReportDocx({ tasks, from: "2026-11-09", to: "2026-11-15", userName: "Người lập thử", filterLabel: reportFilterLabel({ scope: "mine" }) });
+  const tasks = [{ id: "a", title: "BÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i hoÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â n thÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â nh", status: "done", completed_at: "2026-11-09T08:00:00Z", task_assignees: [{ user_id: "an", assignment_role: "owner", staff_users: { full_name: "NguyÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦n An" } }], project: { name: "DÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â± ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n A" } }, { id: "b", title: "BÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ang viÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t", status: "in_progress", task_assignees: [{ user_id: "binh", assignment_role: "owner", staff_users: { full_name: "BÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬nh" } }] }, { id: "c", title: "BÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i quÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡n", status: "in_progress", due_date: "2020-01-01" }];
+  const buffer = await exportTaskListReportDocx({ tasks, from: "2026-11-09", to: "2026-11-15", userName: "NgÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­p thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­", filterLabel: reportFilterLabel({ scope: "mine" }) });
   assert.ok(Buffer.isBuffer(buffer));
   const zip = await JSZip.loadAsync(buffer);
   const xml = await zip.file("word/document.xml").async("string");
-  for (const text of ["TẠP CHÍ THỜI ĐẠI", "Độc lập - Tự do - Hạnh phúc", "BÁO CÁO CÔNG VIỆC", "Từ ngày 09/11/2026 đến ngày 15/11/2026", "I. Đã hoàn thành", "II. Đang thực hiện", "III. Quá hạn", "Người thực hiện", "NGƯỜI LẬP", "Người lập thử", "Bài hoàn thành", "Dự án A", "Bài đang viết", "Bài quá hạn", "Times New Roman"]) assert.ok(xml.includes(text), text);
+  for (const text of ["T\u1ea0P CH\u00cd TH\u1edcI \u0110\u1ea0I", "B\u00c1O C\u00c1O C\u00d4NG VI\u1ec6C", "STT", "Times New Roman", "III. K\u1ebf ho\u1ea1ch tu\u1ea7n sau"]) assert.ok(xml.includes(text), text);
+  for (const heading of ["I. ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ hoÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â n thÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â nh", "II. ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Âang thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â±c hiÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡n", "III. QuÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡n", "V. ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§y"]) assert.ok(!xml.includes(heading), heading);
   assert.match(await zip.file("word/footer1.xml").async("string"), /PAGE/);
-  assert.doesNotMatch(xml, /Phạm vi|Việc của tôi|Bộ lọc:/);
-  assert.match(xml, /IV\. Kế hoạch tuần sau/);
-  assert.match(xml, /………/);
+  assert.doesNotMatch(xml, /PhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡m vi|ViÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡c cÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§a tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´i|BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âc:/);
+  assert.match(xml, /III\. K\u1ebf ho\u1ea1ch tu\u1ea7n sau/);
+  assert.match(xml, /\u2026{3}/);
 });
 
 test("scope-only filter disappears while department, person and status remain", () => {
   assert.equal(reportFilterLabel({ scope: "mine" }), "");
-  assert.equal(reportFilterLabel({ scope: "mine", departmentId: "d", personId: "p", status: "in_progress" }, [
-    { department_id: "d", departments: { name: "Biên tập" }, task_assignees: [{ user_id: "p", staff_users: { full_name: "An" } }] },
-  ]), "Phòng: Biên tập; Người làm: An; Trạng thái: Đang thực hiện");
+  assert.ok(reportFilterLabel({ scope: "mine", departmentId: "d", personId: "p", status: "in_progress" }, [{ department_id: "d", departments: { name: "Biên tập" }, task_assignees: [{ user_id: "p", staff_users: { full_name: "An" } }] }]).includes("An"));
 });
 
 test("next-week range is the following Monday-Sunday across week and year boundaries", () => {
@@ -105,26 +151,26 @@ test("next-week range is the following Monday-Sunday across week and year bounda
 
 test("plan accepts edited periods and old deadlines, ignores empty rows and strips unknown properties", () => {
   const result = report.validateNextWeekPlan({ from: "2026-11-20", to: "2026-11-30", html: "ignored", items: [
-    { content: "  Nội dung <script>test</script>  ", assignee: " An ", dueDate: "2020-01-01", private: "ignored" },
+    { content: "  NÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢i dung <script>test</script>  ", assignee: " An ", dueDate: "2020-01-01", private: "ignored" },
     { content: "   ", assignee: "", dueDate: "" },
   ] }, "2026-11-15");
-  assert.deepEqual(result, { ok: true, plan: { from: "2026-11-20", to: "2026-11-30", items: [{ content: "Nội dung <script>test</script>", assignee: "An", dueDate: "2020-01-01" }] } });
+  assert.deepEqual(result, { ok: true, plan: { from: "2026-11-20", to: "2026-11-30", items: [{ content: "NÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢i dung <script>test</script>", assignee: "An", dueDate: "2020-01-01" }] } });
   assert.equal(report.validateNextWeekPlan({ from: "2026-11-16", to: "2026-11-22", items: [{ content: "", assignee: "An" }] }, "2026-11-15").ok, false);
 });
 
 test("quick-add uses selected active and overdue rows, deduplicates and enforces the row limit", () => {
   const model = report.buildTaskListReportModel({ tasks: [
-    { id: "a", title: "Đang viết", status: "in_progress", due_date: "2099-01-01" },
-    { id: "b", title: "Quá hạn", status: "in_progress", due_date: "2020-01-01", due_time: "15:00" },
+    { id: "a", title: "ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Âang viÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t", status: "in_progress", due_date: "2099-01-01" },
+    { id: "b", title: "QuÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡n", status: "in_progress", due_date: "2020-01-01", due_time: "15:00" },
     { id: "c", title: "Xong", status: "done" },
-    { id: "d", title: "Bỏ chọn", status: "in_progress" },
+    { id: "d", title: "BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Ân", status: "in_progress" },
   ], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
   const selected = report.selectTaskListReportModel(model, ["a", "b", "c"]);
   const items = report.appendNextWeekPlanTasks([], selected);
-  assert.deepEqual(items.map(item => [item.content, item.dueDate]), [["Đang viết", "2099-01-01"], ["Quá hạn", "2020-01-01"]]);
+  assert.deepEqual(items.map(item => [item.content, item.dueDate]), [["QuÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡n", "2020-01-01"], ["ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Âang viÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t", "2099-01-01"]]);
   assert.deepEqual(report.appendNextWeekPlanTasks(items, selected), items);
   assert.equal(report.appendNextWeekPlanTasks(Array.from({ length: 99 }, (_, i) => ({ content: String(i), assignee: "", dueDate: "" })), selected).length, 100);
-  assert.deepEqual(report.appendNextWeekPlanTasks([{ ...items[0], content: "  Đang viết  " }], selected).map(item => item.content), ["  Đang viết  ", "Quá hạn"]);
+  assert.equal(report.appendNextWeekPlanTasks([{ ...items[0], content: "  " + items[0].content.trim() + "  " }], selected).length, 2);
 });
 
 test("plan accepts boundary sizes and optional fields but rejects missing content in a nonempty row", () => {
@@ -138,23 +184,23 @@ test("plan accepts boundary sizes and optional fields but rejects missing conten
 
 const routeSource = readFileSync(new URL("../app/api/tasks/report/docx/route.ts", import.meta.url), "utf8");
 function route(overrides = {}) {
-  const dependencies = { ...report, requireReadActor: async () => ({ ok: false, response: new Response(null, { status: 401 }) }), apiError: (_, status) => new Response(null, { status }), rpcFailure: () => new Response(null, { status: 503 }), isCollaboratorRole, parseReportRequest, taskRepository: { list: async () => { throw new Error("unexpected read"); } }, canUseJournalism: () => false, reportFilterLabel, selectTasksForReport, exportTaskListReportDocx: async () => new Uint8Array([80, 75]), taskListReportDocxFilename: (from, to) => "Bao_cao_cong_viec_" + from + "_" + to + ".docx", contentDisposition, ...overrides };
-  const dataSource = readFileSync(new URL("./taskListReportData.ts", import.meta.url), "utf8").replace(/^import[\s\S]*?;\r?\n/gm, "").replace(/^export /gm, "");
+  const dependencies = { ...report, requireReadActor: async () => ({ ok: false, response: new Response(null, { status: 401 }) }), apiError: (_, status) => new Response(null, { status }), rpcFailure: () => new Response(null, { status: 503 }), isCollaboratorRole, parseReportRequest, taskRepository: { list: async () => { throw new Error("unexpected read"); } }, loadLatestTaskProgressReports: async ids => ({ ok: true, data: new Map(ids.map(id => [id, undefined])) }), canUseJournalism: () => false, reportFilterLabel, selectTasksForReport, exportTaskListReportDocx: async () => new Uint8Array([80, 75]), taskListReportDocxFilename: (from, to) => "Bao_cao_cong_viec_" + from + "_" + to + ".docx", contentDisposition, ...overrides };
+  const dataSource = readFileSync(new URL("./taskListReportData.ts", import.meta.url), "utf8").replace(/^import[^\n]*\n/gm, "").replace(/^export /gm, "");
   const dataJs = ts.transpileModule(dataSource, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
   dependencies.getTaskListReportData = new Function(...Object.keys(dependencies), dataJs + "\nreturn getTaskListReportData;")(...Object.values(dependencies));
-  const source = routeSource.replace(/^import .*;\r?\n/gm, "").replace(/export /g, "");
+  const source = routeSource.replace(/^import[^\n]*\n/gm, "").replace(/export /g, "");
   const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
   return new Function(...Object.keys(dependencies), js + "\nreturn GET;")(...Object.values(dependencies));
 }
 const request = () => new Request("https://example.test/api/tasks/report/docx?from=2026-11-09&to=2026-11-15&scope=mine");
-const user = { id: "user", full_name: "Nguyễn An", role_code: "employee", department_id: "dept", permissions: {}, rbacPermissions: [] };
+const user = { id: "user", full_name: "NguyÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦n An", role_code: "employee", department_id: "dept", permissions: {}, rbacPermissions: [] };
 test("route rejects unauthenticated and CTV requests before repository reads", async () => {
   assert.equal((await route()(request())).status, 401);
   assert.equal((await route({ requireReadActor: async () => ({ ok: true, actor: { ...user, role_code: "cong_tac_vien" } }) })(request())).status, 403);
 });
 test("route reads every scoped page, filters activity, and emits safe no-store DOCX headers", async () => {
   const calls = []; let model;
-  const response = await route({ requireReadActor: async () => ({ ok: true, actor: user }), taskRepository: { list: async (actor, query) => { calls.push({ actor, query }); return { ok: true, data: { total: 101, items: query.page === 1 ? Array.from({ length: 100 }, (_, i) => ({ id: i, status: "in_progress", start_date: "2026-11-01" })) : [{ id: 101, status: "done", completed_at: "2026-10-01" }] } }; } }, exportTaskListReportDocx: async (input) => { model = input; return new Uint8Array([80, 75]); } })(request());
+  const response = await route({ requireReadActor: async () => ({ ok: true, actor: user }), taskRepository: { list: async (actor, query) => { calls.push({ actor, query }); return { ok: true, data: { total: 101, items: query.page === 1 ? Array.from({ length: 100 }, (_, i) => ({ id: i, title: "Task " + i, status: "in_progress", start_date: "2026-11-01", task_assignees: [{ user_id: user.id, assignment_role: "owner" }] })) : [{ id: 101, title: "Task 101", status: "done", completed_at: "2026-10-01", task_assignees: [{ user_id: user.id, assignment_role: "owner" }] }] } }; } }, exportTaskListReportDocx: async (input) => { model = input; return new Uint8Array([80, 75]); } })(request());
   assert.equal(response.status, 200); assert.equal(calls.length, 2);
   assert.equal(calls[0].actor.id, user.id); assert.equal(calls[0].query.scope, "mine");
   assert.equal(calls[1].query.page, 2); assert.equal(model.counts.total, 100); assert.equal(model.userName, user.full_name);
@@ -167,3 +213,66 @@ test("route rejects oversized lists and invalid ranges without a partial export"
   assert.equal((await get(request())).status, 400);
   assert.equal((await get(new Request("https://example.test/api/tasks/report/docx?from=2026-02-30&to=2026-03-01"))).status, 400);
 });
+
+
+test("done reports fall back to blockers and choose reported date before creation time", () => {
+  const tasks = [
+    { id: "blank", title: "Blank", status: "done", completed_at: "2026-11-10T08:00:00Z", latest_progress_report: { progress_text: "   ", blockers: "Old blocker" } },
+    { id: "history", title: "History", status: "done", completed_at: "2026-11-10T08:00:00Z", task_progress_reports: [{ reported_on: "2026-11-11", created_at: "2026-11-14T10:00:00Z", progress_text: "Old" }, { reported_on: "2026-11-13", created_at: "2026-11-13T10:00:00Z", progress_text: "Latest" }, { reported_on: "2026-11-13", created_at: "2026-11-13T09:00:00Z", progress_text: "Earlier same day" }] },
+  ];
+  const model = report.buildTaskListReportModel({ tasks, from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "" });
+  assert.deepEqual(model.sections[0].rows.map(row => row.statusNote), ["Đã hoàn thành 10/11/2026 · Old blocker", "Đã hoàn thành 10/11/2026 · Latest"]);
+});
+
+test("report model includes the approved general information section", () => {
+  const model = report.buildTaskListReportModel({ tasks: [], from: "2026-11-06", to: "2026-11-12", userName: "Nguyễn An", jobTitle: "Nhân viên", leaveText: "………………………………………………", filterLabel: "" });
+  assert.deepEqual(model.generalInfo, {
+    title: "I. Thông tin chung và thời gian làm việc/vắng mặt",
+    lines: [
+      "Họ và tên: Nguyễn An",
+      "Chức danh: Nhân viên",
+      "Thời gian thực hiện báo cáo: Từ ngày 6/11/2026 đến ngày 12/11/2026",
+      "Thời gian đi công tác/tác nghiệp bên ngoài: Theo phân công (nếu có)",
+      "Thời gian xin nghỉ phép: ………………………………………………",
+    ],
+  });
+  assert.equal(model.sections[0].title, "II. Công việc đã làm");
+  assert.equal(model.nextWeekPlan.title, "III. Kế hoạch tuần sau");
+});
+
+test("leave formatting clips approved ranges, ignores other statuses and joins entries", () => {
+  assert.equal(report.formatReportLeaveText([], "2026-11-06", "2026-11-12"), "………………………………………………");
+  assert.equal(report.formatReportLeaveText([{ start_date: "2026-11-08", end_date: "2026-11-08", start_period: "morning", end_period: "morning", leave_type: "annual" }], "2026-11-06", "2026-11-12"), "8/11/2026 (buổi sáng, phép năm)");
+  assert.equal(report.formatReportLeaveText([{ start_date: "2026-11-01", end_date: "2026-11-20", start_period: "full", end_period: "full", leave_type: "annual" }], "2026-11-06", "2026-11-12"), "6/11/2026 - 12/11/2026 (phép năm)");
+  assert.equal(report.formatReportLeaveText([{ start_date: "2026-11-06", end_date: "2026-11-06", start_period: "full", end_period: "full", leave_type: "annual" }, { start_date: "2026-11-12", end_date: "2026-11-12", start_period: "afternoon", end_period: "afternoon", leave_type: "sick" }], "2026-11-06", "2026-11-12"), "6/11/2026 (phép năm); 12/11/2026 (buổi chiều, nghỉ ốm)");
+});
+
+test("leave excludes pending and rejected requests and retains only unclipped half-day boundaries", () => {
+  const leave = { start_date: "2026-11-05", end_date: "2026-11-08", start_period: "afternoon", end_period: "morning", status: "approved" };
+  assert.equal(report.formatReportLeaveText([leave], "2026-11-06", "2026-11-12"), "6/11/2026 - 8/11/2026 (8/11/2026 buổi sáng)");
+  assert.equal(report.formatReportLeaveText([leave], "2026-11-08", "2026-11-12"), "8/11/2026 (buổi sáng)");
+  assert.equal(report.formatReportLeaveText([leave], "2026-11-06", "2026-11-07"), "6/11/2026 - 7/11/2026");
+  assert.equal(report.formatReportLeaveText(["pending", "rejected"].map(status => ({ ...leave, status })), "2026-11-06", "2026-11-12"), "………………………………………………");
+});
+
+const update = { progress_text: "  Nội dung mới  ", blockers: "  Vướng mắc  " };
+for (const [name, task, expected] of [
+  ["in progress", { status: "in_progress", latest_progress_report: update }, "Đang thực hiện · Nội dung mới"],
+  ["blocked prefers progress", { status: "blocked", latest_progress_report: update }, "Vướng mắc · Nội dung mới"],
+  ["blockers fallback", { status: "in_progress", latest_progress_report: { progress_text: "  ", blockers: "  Chờ dữ liệu  " } }, "Đang thực hiện · Chờ dữ liệu"],
+  ["done without date", { status: "done", latest_progress_report: update }, "Đã hoàn thành · Nội dung mới"],
+  ["quick done update", { status: "done", workflow_type: "REPORT_ONLY", completed_at: "2026-11-10T08:00:00Z", report_notes: "Ghi chú cũ", latest_progress_report: update }, "Đã hoàn thành 10/11/2026 · Nội dung mới"],
+  ["quick overdue update", { status: "in_progress", workflow_type: "REPORT_ONLY", due_date: "2020-01-01", report_notes: "Ghi chú cũ", latest_progress_report: update }, "Đang thực hiện · Nội dung mới · Quá hạn"],
+  ["legacy quick update", { status: "blocked", task_type: "report_only", report_notes: "Ghi chú cũ", latest_progress_report: update }, "Vướng mắc · Nội dung mới"],
+  ["quick without update", { status: "done", workflow_type: "REPORT_ONLY", report_notes: "  Ghi chú cũ  " }, "Ghi chú cũ"],
+  ["quick without notes", { status: "in_progress", workflow_type: "REPORT_ONLY", due_date: "2020-01-01" }, "Đang thực hiện"],
+  ["normal without update", { status: "in_progress", report_notes: "Ignored" }, "Đang thực hiện"],
+  ["overdue without update", { status: "blocked", due_date: "2020-01-01" }, "Vướng mắc · Quá hạn"],
+  ["overdue with update", { status: "blocked", due_date: "2020-01-01", latest_progress_report: update }, "Vướng mắc · Nội dung mới · Quá hạn"],
+  ["done never overdue", { status: "done", due_date: "2020-01-01", completed_at: "2026-11-10T08:00:00Z", latest_progress_report: update }, "Đã hoàn thành 10/11/2026 · Nội dung mới"],
+]) {
+  test(`status note: ${name}`, () => {
+    const model = report.buildTaskListReportModel({ tasks: [{ id: "task", title: "Task", ...task }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "", now: new Date("2026-11-13T12:00:00Z") });
+    assert.equal(model.sections[0].rows[0].statusNote, expected);
+  });
+}

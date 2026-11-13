@@ -30,12 +30,15 @@ test("rendered preview omits an empty filter and shows the default next week wit
   const model = report.buildTaskListReportModel({ tasks: [], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: report.reportFilterLabel({ scope: "mine" }) });
   const html = renderToStaticMarkup(React.createElement(loadPreview(), { model }));
   assert.doesNotMatch(html, /Bộ lọc:|Phạm vi|Việc của tôi/);
-  assert.match(html, /IV\. Kế hoạch tuần sau/);
+  assert.match(html, /III\. Kế hoạch tuần sau/);
+  assert.match(html, /aria-label="Bảng III\. Kế hoạch tuần sau"/);
+  assert.equal((html.match(/<table\b/g) ?? []).length, 1);
+  assert.deepEqual([...html.matchAll(/<h4[^>]*>([^<]+)<\/h4>/g)].map(match => match[1]), ["I. Thông tin chung và thời gian làm việc/vắng mặt", "II. Công việc đã làm", "III. Kế hoạch tuần sau"]);
   assert.match(html, /\(Từ ngày 16\/11\/2026 đến ngày 22\/11\/2026\)/);
   assert.match(html, /………/);
 });
 
-test("HTML and DOCX render the same plan rows as escaped text between III and cancelled/signature", async () => {
+test("HTML and DOCX render the same plan rows as escaped text after the work section", async () => {
   const { exportTaskListReportDocx } = await import("../lib/taskListReportDocx.ts");
   const model = report.planFromReportModel(report.buildTaskListReportModel({ tasks: [{ id: "cancelled", status: "cancelled", title: "Việc đã hủy" }], from: "2026-11-09", to: "2026-11-15", userName: "An", filterLabel: "Phòng: Biên tập" }), {
     from: "2026-11-17", to: "2026-11-25", items: [
@@ -46,11 +49,13 @@ test("HTML and DOCX render the same plan rows as escaped text between III and ca
   const html = renderToStaticMarkup(React.createElement(loadPreview(), { model }));
   const xml = await (await JSZip.loadAsync(await exportTaskListReportDocx(model))).file("word/document.xml").async("string");
   for (const output of [html, xml]) {
-    for (const value of ["Phòng: Biên tập", "IV. Kế hoạch tuần sau", "(Từ ngày 17/11/2026 đến ngày 25/11/2026)", "Nội dung công việc", "Thời hạn", "Bài &lt;img src=x onerror=alert(1)&gt; &amp; tin", "An &amp; Bình", "20/11/2026", "Nội dung tiếp theo"]) assert.ok(output.includes(value), value);
-    assert.doesNotMatch(output, /<img |………/);
-    assert.ok(output.indexOf("III. Quá hạn") < output.indexOf("IV. Kế hoạch tuần sau"));
-    assert.ok(output.indexOf("IV. Kế hoạch tuần sau") < output.indexOf("V. Đã hủy"));
-    assert.ok(output.indexOf("V. Đã hủy") < output.indexOf("NGƯỜI LẬP"));
+    for (const value of ["Phòng: Biên tập", "II. Công việc đã làm", "III. Kế hoạch tuần sau", "(Từ ngày 17/11/2026 đến ngày 25/11/2026)", "Nội dung công việc", "Thời hạn", "Bài &lt;img src=x onerror=alert(1)&gt; &amp; tin", "An &amp; Bình", "20/11/2026", "Nội dung tiếp theo"]) assert.ok(output.includes(value), value);
+    assert.doesNotMatch(output, /<img /);
+    assert.doesNotMatch(output, /Việc đã hủy/);
+    assert.ok(output.includes("Tổng: 0 công việc"));
+    for (const heading of ["I. Đã hoàn thành", "II. Đang thực hiện", "III. Quá hạn", "V. Đã hủy"]) assert.ok(!output.includes(heading), heading);
+    assert.ok(output.indexOf("II. Công việc đã làm") < output.indexOf("III. Kế hoạch tuần sau"));
+    assert.ok(output.indexOf("III. Kế hoạch tuần sau") < output.indexOf("NGƯỜI LẬP"));
   }
 });
 
@@ -64,4 +69,16 @@ test("multiline plan content keeps LF and CRLF breaks in preview and Wordprocess
   const xml = await (await JSZip.loadAsync(await exportTaskListReportDocx(model))).file("word/document.xml").async("string");
   assert.equal((xml.match(/<w:br\s*\/>/g) ?? []).length, 2);
   assert.match(xml, /Dòng một<\/w:t>[\s\S]*<w:br\s*\/>[\s\S]*Dòng hai<\/w:t>[\s\S]*<w:br\s*\/>[\s\S]*Dòng ba<\/w:t>/);
+});
+
+test("general information is identical in preview and DOCX, including title fallback", async () => {
+  const { exportTaskListReportDocx } = await import("../lib/taskListReportDocx.ts");
+  const model = report.buildTaskListReportModel({ tasks: [], from: "2026-11-06", to: "2026-11-12", userName: "Nguyễn An", filterLabel: "" });
+  const html = renderToStaticMarkup(React.createElement(loadPreview(), { model }));
+  const xml = await (await JSZip.loadAsync(await exportTaskListReportDocx(model))).file("word/document.xml").async("string");
+  for (const output of [html, xml]) {
+    for (const text of [model.generalInfo.title, "Họ và tên: Nguyễn An", "Chức danh: Nhân viên", "Thời gian thực hiện báo cáo: Từ ngày 6/11/2026 đến ngày 12/11/2026", "Thời gian đi công tác/tác nghiệp bên ngoài: Theo phân công (nếu có)", "Thời gian xin nghỉ phép: ………………………………………………"]) assert.ok(output.includes(text), text);
+    assert.ok(output.indexOf(model.generalInfo.title) < output.indexOf("II. Công việc đã làm"));
+    assert.ok(!output.includes("06/11/2026"));
+  }
 });

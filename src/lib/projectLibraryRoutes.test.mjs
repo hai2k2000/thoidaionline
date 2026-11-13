@@ -3,7 +3,7 @@ import test from 'node:test';
 import ts from 'typescript';
 import {readFileSync} from 'node:fs';
 import {libraryFileHeaders} from './projectLibraryFile.ts';
-import {taskAttachmentMetadata} from './taskAttachmentPolicy.mjs';
+import {readTaskAttachmentMetadata,TASK_ATTACHMENT_FORMAT_MESSAGE} from './taskAttachmentPolicy.mjs';
 const id='11111111-1111-4111-8111-111111111111';const actor={id,role_code:'cong_tac_vien'};
 const context={params:Promise.resolve({id,itemId:id})};
 async function load(file,deps){
@@ -14,7 +14,7 @@ async function load(file,deps){
 }
 const apiError=(error,status)=>Response.json({error},{status});
 function dependencies({member=true,registration=true,download=true}={}){
- const calls=[];const deps={apiError,apiJson:(data,status=200)=>Response.json(data,{status}),asUuid:v=>typeof v==='string'&&/^[a-f0-9-]{36}$/.test(v)?v:null,readJsonObject:r=>r.json(),requireReadActor:async()=>({ok:true,actor}),requireMutationActor:async()=>({ok:true,actor}),rpcFailure:e=>apiError(e.code,e.code==='42501'?403:409),randomUUID:()=>id,taskAttachmentMetadata,libraryFileHeaders,
+ const calls=[];const deps={apiError,apiJson:(data,status=200)=>Response.json(data,{status}),asUuid:v=>typeof v==='string'&&/^[a-f0-9-]{36}$/.test(v)?v:null,readJsonObject:r=>r.json(),requireReadActor:async()=>({ok:true,actor}),requireMutationActor:async()=>({ok:true,actor}),rpcFailure:e=>apiError(e.code,e.code==='42501'?403:409),randomUUID:()=>id,readTaskAttachmentMetadata,TASK_ATTACHMENT_FORMAT_MESSAGE,libraryFileHeaders,
  projectRepository:{listMembers:async()=>({ok:true,data:member?[{user_id:id,staff_users:{active:true}}]:[]})},
  projectLibraryRepository:{addItem:async(...args)=>{calls.push(['register',...args]);return registration?{ok:true,data:{id}}:{ok:false,error:{code:'42501'}};},file:async()=>{calls.push(['file']);return download?{ok:true,data:{kind:'file',storage_path:'stored/path.pdf',file_name:'report.pdf',title:'report',mime_type:'application/pdf'}}:{ok:false,error:{code:'42501'}};}},
  serverSupabase:{storage:{from:bucket=>{assert.equal(bucket,'task-private');return {upload:async(...args)=>{calls.push(['upload',...args]);return {error:null};},remove:async(...args)=>calls.push(['remove',...args]),createSignedUrl:async(...args)=>{calls.push(['sign',...args]);return {data:{signedUrl:'https://example.test/download'},error:null};}};}}}};

@@ -40,6 +40,7 @@ export declare const deskCopy: Readonly<{
   leavePrefix: string;
   staffFallback: string;
   shortcutAssign: string;
+  shortcutTaskList: string;
   shortcutWeeklyReport: string;
   shortcutAttendance: string;
   shortcutDuty: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
@@ -8,16 +8,27 @@ import PasswordInput from "@/components/PasswordInput";
 import AuthShell from "@/components/AuthShell";
 import { resolvePostLoginPath } from "@/lib/firstLoginPassword";
 
+import { shouldRememberLoginDefault } from "@/lib/installApp.mjs";
+
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setRemember(shouldRememberLoginDefault({
+      userAgent: navigator.userAgent,
+      standalone: window.matchMedia("(display-mode: standalone)").matches,
+      iosStandalone: (navigator as Navigator & { standalone?: boolean }).standalone === true,
+    })), 0);
+    return () => clearTimeout(timer);
+  }, []);
   const [message, setMessage] = useState("");
 
   const submit = async () => {
     try {
-      const res = await login(identifier.trim(), password);
+      const res = await login(identifier.trim(), password, remember);
       if (!res.ok) return setMessage(`Đăng nhập không thành công: ${res.error}`);
       setMessage("Đăng nhập thành công.");
       router.replace(resolvePostLoginPath(res.mustChangePassword === true, new URLSearchParams(window.location.search).get("next")));
@@ -55,6 +66,13 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
           </label>
+          <div>
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-800">
+              <input type="checkbox" name="remember" checked={remember} onChange={(event) => setRemember(event.target.checked)} aria-describedby="remember-help" className="h-5 w-5 accent-orange-700" />
+              Ghi nhớ đăng nhập
+            </label>
+            <p id="remember-help" className="text-sm leading-5 text-slate-600">Giữ đăng nhập 30 ngày trên thiết bị này. Không chọn trên máy dùng chung.</p>
+          </div>
           <button type="submit" className="min-h-12 w-full rounded-none bg-orange-700 px-4 py-3 text-base font-semibold text-white hover:bg-orange-800">
             Đăng nhập
           </button>

@@ -3,7 +3,8 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
-import { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES } from '../lib/taskAttachmentPolicy.mjs';
+import * as policy from '../lib/taskAttachmentPolicy.mjs';
+const { TASK_ATTACHMENT_MAX_BYTES } = policy;
 
 function load(fetch) {
   const states = [], refs = [], pushes = []; let cursor = 0, refCursor = 0;
@@ -15,7 +16,8 @@ function load(fetch) {
       useRef(initial) { const i = refCursor++; return refs[i] ??= { current: initial }; },
     };
     if (name === 'next/navigation') return { useRouter: () => ({ push: path => pushes.push(path), refresh() {}, back() {} }), useSearchParams: () => new URLSearchParams('returnTo=/attendance') };
-    if (name.endsWith('taskAttachmentPolicy.mjs')) return { taskAttachmentMetadata, TASK_ATTACHMENT_MAX_BYTES };
+    if (name.endsWith('taskAttachmentPolicy.mjs')) return policy;
+    if (name.endsWith('TaskLinkAttacher')) return { default: 'TaskLinkAttacher' };
     if (name.endsWith('TaskAttachmentUploader')) return evaluate('TaskAttachmentUploader.tsx');
     if (name.endsWith('ActionFeedbackProvider') || name.endsWith('CameraCaptureButton') || name.endsWith('actionFeedback')) return {};
     throw new Error(name);
@@ -31,23 +33,24 @@ function load(fetch) {
 function nodes(node) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(nodes); return [node, ...nodes(node.props?.children)]; }
 function text(node) { if (node == null) return ''; if (typeof node !== 'object') return String(node); if (Array.isArray(node)) return node.map(text).join(' '); return text(node.props?.children); }
 const button = (ui, label) => nodes(ui).find(n => n.type === 'button' && text(n).includes(label));
-function select(h, files, index = 0) {
+async function select(h, files, index = 0) {
   const input = nodes(h.render()).filter(n => n.type === 'input' && n.props.type === 'file')[index];
   assert.ok(input, 'file picker is present');
   input.props.onChange({ target: { files, value: 'selected' } });
+  await new Promise(resolve => setImmediate(resolve));
 }
 const file = name => new File(['content'], name);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const created = () => Response.json({ tasks: [{ ordinal: 2, id: 'task-two' }, { ordinal: 1, id: 'task-one' }] }, { status: 201 });
 
-test('picker validates types, empty files, size and cumulative count; chips can be removed', () => {
+test('picker validates types, empty files, size and cumulative count; chips can be removed', async () => {
   const h = load();
-  select(h, [file('bad.exe'), new File([], 'empty.pdf'), { name: 'big.pdf', size: TASK_ATTACHMENT_MAX_BYTES + 1 }]);
+  await select(h, [file('bad.exe'), new File([], 'empty.pdf'), { name: 'big.pdf', size: TASK_ATTACHMENT_MAX_BYTES + 1 }]);
   assert.match(text(h.render()), /định dạng|Định dạng/);
   assert.match(text(h.render()), /rỗng/);
   assert.match(text(h.render()), /10 MB/);
-  select(h, ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'xlsx'].map(ext => file(`ok.${ext}`)));
-  select(h, Array.from({ length: 5 }, (_, i) => file(`extra${i}.pdf`)));
+  await select(h, ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'xlsx'].map(ext => file(`ok.${ext}`)));
+  await select(h, Array.from({ length: 5 }, (_, i) => file(`extra${i}.pdf`)));
   assert.match(text(h.render()), /tối đa 10 tệp/i);
   assert.equal(nodes(h.render()).filter(n => n.props?.['aria-label']?.startsWith('Xóa tệp ')).length, 10);
   assert.match(text(h.render()), /KB/);
@@ -64,9 +67,9 @@ test('create precedes sequential uploads, maps ordinals and navigates only after
     if (calls.length === 2) await gate;
     return Response.json({});
   });
-  select(h, [file('first.pdf'), file('second.png')]);
+  await select(h, [file('first.pdf'), file('second.png')]);
   button(h.render(), '+ Thêm việc').props.onClick();
-  select(h, [file('third.xlsx')], 1);
+  await select(h, [file('third.xlsx')], 1);
   const save = button(h.render(), 'Lưu 2 việc');
   save.props.onClick(); save.props.onClick();
   await tick();
@@ -90,7 +93,7 @@ test('partial failure keeps created tasks, continues uploads and waits for ackno
     if (calls.length === 3) throw new Error('network');
     return Response.json({});
   });
-  select(h, [file('denied.pdf'), file('offline.pdf'), file('ok.pdf')]);
+  await select(h, [file('denied.pdf'), file('offline.pdf'), file('ok.pdf')]);
   button(h.render(), 'Lưu 1 việc').props.onClick(); await tick(); await tick();
   assert.equal(calls.length, 4);
   assert.ok(calls.every(([, method]) => method === 'POST'));
@@ -107,7 +110,7 @@ test('partial failure keeps created tasks, continues uploads and waits for ackno
 test('create failure does not upload or navigate and permits another save', async () => {
   const calls = [];
   const h = load(async url => { calls.push(url); return Response.json({ error: { message: 'Không thể lưu' } }, { status: 400 }); });
-  select(h, [file('a.pdf')]);
+  await select(h, [file('a.pdf')]);
   button(h.render(), 'Lưu 1 việc').props.onClick(); await tick();
   assert.deepEqual(calls, ['/api/tasks/quick-report']);
   assert.equal(h.pushes.length, 0);
@@ -117,7 +120,7 @@ test('create failure does not upload or navigate and permits another save', asyn
 test('missing task id after creation reports unuploaded files without creating again', async () => {
   const calls = [];
   const h = load(async url => { calls.push(url); return Response.json({ tasks: [] }, { status: 201 }); });
-  select(h, [file('missing.pdf')]);
+  await select(h, [file('missing.pdf')]);
   button(h.render(), 'Lưu 1 việc').props.onClick(); await tick();
   assert.deepEqual(calls, ['/api/tasks/quick-report']);
   assert.match(text(h.render()), /missing.pdf.*Không tìm thấy/);

@@ -11,3 +11,7 @@ test("approval merge keeps first duplicate", () => { assert.deepEqual(mergeDeskA
 test("notifications exclude deadlines and sort newest", () => { const result = selectDeskNotifications([{ kind: "notice", createdAt: "2026-11-01" }, { kind: "deadline", createdAt: "2026-11-03" }, { kind: "notice", createdAt: "2026-11-02" }]); assert.deepEqual(result.map((item) => item.createdAt), ["2026-11-02", "2026-11-01"]); });
 test("schedule visibility excludes rejected and cancelled", () => { assert.equal(isDeskScheduleVisible({ approval_status: "REJECTED" }), false); assert.equal(isDeskScheduleVisible({ event_status: "CANCELLED" }), false); assert.equal(isDeskScheduleVisible({}), true); });
 test("shortcuts follow navigation order and permissions", () => { const result = pickDeskShortcuts({ primary: [{ id: "database", href: "/database" }, { id: "assign", href: "/tasks/assign" }, { id: "attendance", href: "/attendance" }] }); assert.deepEqual(result.map((item) => item.id), ["assign", "attendance", "database"]); });
+test("task list shortcut is first when tasks navigation is visible and omitted otherwise", () => {
+  assert.deepEqual(pickDeskShortcuts({ primary: [{ id: "tasks", href: "/tasks" }, { id: "attendance", href: "/attendance" }] }).slice(0, 1), [{ id: "tasks", href: "/tasks", label: deskCopy.shortcutTaskList }]);
+  assert.equal(pickDeskShortcuts({ primary: [{ id: "attendance", href: "/attendance" }] }).some((item) => item.id === "tasks"), false);
+});

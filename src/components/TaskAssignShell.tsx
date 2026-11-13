@@ -1,4 +1,5 @@
 "use client";
+import { TASK_ATTACHMENT_ACCEPT, validateTaskAttachment } from "@/lib/taskAttachmentPolicy.mjs";
 import CameraCaptureButton from "@/components/CameraCaptureButton";
 
 
@@ -13,6 +14,7 @@ import { useActionFeedback } from "@/components/ActionFeedbackProvider";
 import { buildJournalismCreatePayload, journalismCreateErrorMessage, serializeVietnamPlannedPublication, validateJournalismCreateFields } from "@/lib/journalismCreateUi.mjs";
 import { journalismLabels } from "@/lib/journalismUi.mjs";
 import { addTaskCard, buildBatchPayload, createTaskCard, MAX_TASK_CARDS, removeTaskCard, validateTaskCards } from "@/lib/taskAssignmentCards.mjs";
+import { uploadBatchTaskLinks, postTaskLink } from "@/lib/taskAssignmentLinks.mjs";
 import { uploadBatchAttachments } from "@/lib/taskAssignmentAttachments.mjs";
 import CanonicalAssignmentForm, { type CanonicalAssignmentSubmit } from "@/components/CanonicalAssignmentForm";
 import ParticipantSelector, { type ParticipantPanel } from "@/components/ParticipantSelector";
@@ -180,6 +182,7 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
     setPendingBatchAttachments([]);
     setBatchTaskResults([]);
     try {
+      for (const card of taskCards) { if (card.attachment) { const validation = await validateTaskAttachment(card.attachment); if (validation) throw new Error(validation); } }
       const response = await fetch("/api/tasks/assign", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -249,11 +252,13 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
       }
       const result = await response.json() as { task?: { id: string }; tasks?: BatchTaskResult[] };
       const attachment = cards[0].attachment;
-      let attachmentWarning = "";
+      const createdLinkTasks = batch ? result.tasks ?? [] : result.task ? [{ ...result.task, ordinal: 1 }] : [];
+      const linksResult = await uploadBatchTaskLinks(createdLinkTasks, cards, postTaskLink);
+      let attachmentWarning = linksResult.failed.map(failure => failure.message).join(" ");
       if (!batch && attachment instanceof File && attachment.size > 0 && result.task?.id) {
         const form = new FormData(); form.set("file", attachment);
         const uploaded = await fetch(`/api/tasks/${result.task.id}/attachments`, { method: "POST", body: form });
-        if (!uploaded.ok) attachmentWarning = await responseErrorMessage(uploaded, "Tệp đính kèm chưa tải lên được.");
+        if (!uploaded.ok) attachmentWarning += " " + await responseErrorMessage(uploaded, "Tệp đính kèm chưa tải lên được.");
       }
       if (batch) {
         const createdTasks = result.tasks ?? [];
@@ -261,7 +266,7 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
         const uploadResult = await uploadBatchAttachments(createdTasks, attachments, uploadTaskAttachment);
         if (uploadResult.failed.length) {
           setBatchTaskResults(createdTasks); setPendingBatchAttachments(attachments.filter((item) => uploadResult.failed.some((failure) => failure.taskIndex === item.taskIndex))); setBatchAttachmentFailures(uploadResult.failed);
-          const text = `Đã tạo ${cards.length} công việc, nhưng một số tệp chưa tải lên được.`; setMessage(text); notify("error", text); return;
+          const text = `Đã tạo ${cards.length} công việc, nhưng một số tệp chưa tải lên được.`; setMessage(text + " " + attachmentWarning); notify("error", text + " " + attachmentWarning); return;
         }
       }
       const recipientName = people.find((person) => person.id === assigneeId)?.fullName ?? "người nhận việc";
@@ -274,6 +279,8 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
   };
 
   const uploadTaskAttachment = async (taskId: string, file: File) => {
+    const validation = await validateTaskAttachment(file);
+    if (validation) return { ok: false, message: validation };
     const upload = new FormData(); upload.set("file", file);
     const response = await fetch(`/api/tasks/${taskId}/attachments`, { method: "POST", body: upload });
     if (!response.ok) return { ok: false, message: await responseErrorMessage(response, "Tệp đính kèm chưa tải lên được.") };
@@ -345,6 +352,8 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
       : parentPayload;
     if (journalismMode && journalismSelfCreate) payload.selfRegister = true;
     try {
+    if (journalismAttachment) { const validation = await validateTaskAttachment(journalismAttachment); if (validation) throw new Error(validation); }
+
       const response = await fetch(journalismMode ? "/api/tasks/journalism/assign" : "/api/tasks/assign", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -425,7 +434,7 @@ export default function TaskAssignShell({ departments: initialDepartments, peopl
           </div> : null}
           {journalismMode ? (journalismSelfCreate ? null : assignmentMode === "individual" ? <Field label="Người phối hợp"><CheckGroup name="collaboratorIds" people={scopedPeople.filter((person) => person.id !== assigneeId)} selected={collaboratorIds} onChange={setCollaboratorIds} empty="Không còn người phù hợp trong phòng." /></Field> : <Field label="Danh sách thành viên đang hoạt động" wide><input type="hidden" name="groupDepartmentId" value={departmentId} />{excludedMemberIds.map((id) => <input key={id} type="hidden" name="excludedMemberIds" value={id} />)}<div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">{scopedPeople.map((person) => { const primary = person.id === assigneeId; const manager = person.id === selectedDepartment?.managerId; const fixed = primary || manager; return <label key={person.id} className="flex items-center gap-2 rounded bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" disabled={fixed} checked={fixed || !excludedMemberIds.includes(person.id)} onChange={(event) => setExcludedMemberIds((current) => event.target.checked ? current.filter((id) => id !== person.id) : [...new Set([...current, person.id])])} /><span>{person.fullName}{primary ? " — Người chịu trách nhiệm chính" : manager ? " — Trưởng phòng, theo dõi tự động" : ""}</span></label>; })}{scopedPeople.length === 0 ? <p className="text-sm text-slate-500">Chưa có thành viên đang hoạt động.</p> : null}</div><span className="font-normal text-slate-500">Bỏ chọn để loại thành viên; server sẽ tải lại membership hiện hành khi lưu. Người chịu trách nhiệm chính và Trưởng phòng không thể bị loại.</span></Field>) : null}
           {journalismMode ? <>{!journalismSelfCreate ? <Field label="Người theo dõi bổ sung"><CheckGroup name="watcherIds" people={people.filter((person) => person.id !== assigneeId && !collaboratorIds.includes(person.id))} selected={watcherIds} onChange={setWatcherIds} empty="Không còn người phù hợp." /><span className="font-normal text-slate-500">Trưởng phòng chính được thêm tự động; lựa chọn trùng sẽ được gộp.</span></Field> : null}</> : null}
-          {journalismMode ? <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" onChange={(event) => setJournalismAttachment(event.target.files?.[0] ?? null)} className={controlClass} /><CameraCaptureButton disabled={busy} onCapture={setJournalismAttachment} />{journalismAttachment ? <span className="break-all text-xs font-normal text-slate-600">{journalismAttachment.name}</span> : null}</Field> : null}
+          {journalismMode ? <Field label="Đính kèm riêng tư"><input name="attachment" type="file" accept={TASK_ATTACHMENT_ACCEPT} onChange={(event) => setJournalismAttachment(event.target.files?.[0] ?? null)} className={controlClass} /><CameraCaptureButton disabled={busy} onCapture={setJournalismAttachment} />{journalismAttachment ? <span className="break-all text-xs font-normal text-slate-600">{journalismAttachment.name}</span> : null}</Field> : null}
           <div className="mobile-form-actions flex items-end"><button disabled={busy || !recipientReady || !departmentId || (!selectedDepartment?.managerId && actorRoleCode !== "tong_bien_tap") || (journalismMode && (!journalismWorkKindsLoaded || journalismWorkKinds.length === 0))} aria-busy={busy} className="w-full rounded-lg bg-orange-700 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Đang tạo…" : journalismMode ? "Tạo công việc nghiệp vụ báo chí" : taskCards.length > 1 ? `Giao ${taskCards.length} việc` : "Giao việc"}</button></div>
           {message ? <p role="alert" className="text-sm text-red-700 lg:col-span-2">{message}</p> : null}
           </fieldset>
@@ -503,7 +512,7 @@ function TaskCardFields({ card, index, selectedAssigneeId, people, collaboratorC
       <Field label="Lặp lại"><div className="grid gap-2"><select value={card.recurrenceFrequency ?? ""} onChange={(event) => onChange({ recurrenceFrequency: (event.target.value || null) as AssignmentCardState["recurrenceFrequency"], recurrenceEndsOn: event.target.value ? card.recurrenceEndsOn : null })} className={controlClass}><option value="">Không lặp</option><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly">Hàng tháng</option></select>{card.recurrenceFrequency ? <input value={card.recurrenceEndsOn ?? ""} onChange={(event) => onChange({ recurrenceEndsOn: event.target.value || null })} type="date" className={controlClass} /> : null}</div></Field>
       <ParticipantSelector disabled={busy} label="Người phối hợp" name={`collaborators-${card.cardId}`} people={collaboratorCandidates.filter((person) => person.id !== selectedAssigneeId)} selected={card.collaboratorIds} onChange={(ids) => onChange({ collaboratorIds: ids })} empty="Không còn người phù hợp trong phòng." panel="collaborator" openPanel={openPanel} setOpenPanel={setOpenPanel} />
       <ParticipantSelector disabled={busy} label="Người theo dõi" name={`watchers-${card.cardId}`} people={people.filter((person) => person.id !== selectedAssigneeId && !card.collaboratorIds.includes(person.id))} selected={card.watcherIds} onChange={(ids) => onChange({ watcherIds: ids })} empty="Không còn người phù hợp." panel="watcher" openPanel={openPanel} setOpenPanel={setOpenPanel} />
-      <Field label="Đính kèm riêng tư"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" disabled={busy} onChange={(event) => onChange({ attachment: event.target.files?.[0] ?? null })} className={controlClass} /><CameraCaptureButton disabled={busy} onCapture={(file) => onChange({ attachment: file })} />{card.attachment ? <span className="break-all text-xs font-normal text-slate-600">{card.attachment.name}</span> : null}<span className="font-normal text-slate-500">Giao nhiều việc sẽ xử lý tệp ở bước đính kèm riêng.</span></Field>
+      <Field label="Đính kèm riêng tư"><input type="file" accept={TASK_ATTACHMENT_ACCEPT} disabled={busy} onChange={(event) => onChange({ attachment: event.target.files?.[0] ?? null })} className={controlClass} /><CameraCaptureButton disabled={busy} onCapture={(file) => onChange({ attachment: file })} />{card.attachment ? <span className="break-all text-xs font-normal text-slate-600">{card.attachment.name}</span> : null}<span className="font-normal text-slate-500">Giao nhiều việc sẽ xử lý tệp ở bước đính kèm riêng.</span></Field>
     </div>
   </article>;
 }
