@@ -822,7 +822,7 @@ export const taskRepository: TaskRepository = {
         .select("id,task_id,employee_id,reviewer_id,rating,effort_weight,total_score,completion,on_time,opinion,checkpoint_date,is_final,created_at")
         .eq("task_id", taskId).order("checkpoint_date", { ascending: false }).order("created_at", { ascending: false }),
       serverSupabase.from("task_progress_reports")
-        .select("id,reported_by,reported_on,report_status,progress_text,blockers,created_at")
+        .select("id,reported_by,reported_on,report_status,progress_text,blockers,created_at,reporter:staff_users!task_progress_reports_reported_by_fkey(full_name)")
         .eq("task_id", taskId).order("reported_on", { ascending: false }).order("created_at", { ascending: false }),
       projectTask ? Promise.resolve({ data: [], error: null }) : serverSupabase.from("task_qualitative_evaluations")
         .select("id,evaluation_text,evaluation_deadline,evaluation_source,created_at,evaluator:staff_users!task_qualitative_evaluations_evaluator_id_fkey(full_name)")

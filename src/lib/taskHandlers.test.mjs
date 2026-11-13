@@ -108,6 +108,7 @@ const makeHarness = ({
     assign: (...args) => { calls.push(["assign", ...args]); return result({ id: "assigned" }); },
     update: (...args) => { calls.push(["update", ...args]); return result({ id: args[1] }); },
     claim: (...args) => { calls.push(["claim", ...args]); return result({}); },
+    submitStructuredProgress: (...args) => { calls.push(["submitStructuredProgress", ...args]); return result({ id: "progress-report" }); },
     report: (...args) => { calls.push(["report", ...args]); return result({}); },
     review: (...args) => { calls.push(["review", ...args]); return result({}); },
     reviewAssignedCompletion: (...args) => { calls.push(["reviewAssignedCompletion", ...args]); return result({}); },
@@ -661,4 +662,15 @@ test("admin may add task links without ordinary attachment permission", async ()
   const h = makeHarness({ mutationActor: makeActor({ role_code: "admin" }), taskAccess: access({ ownerId: "other", assigneeId: "other", participants: [] }) });
   assert.equal((await h.app.addLink(adminRequest({ url: "https://example.org" }), taskId)).status, 201);
   assert.equal(h.calls[0][3].title, "example.org");
+});
+
+
+test("structured progress endpoint permits owners and collaborators after done/review and denies watchers/cancelled", async () => {
+  for (const taskRbacEnabled of [false, true]) for (const projectId of [null, "project"]) for (const status of ["done", "pending_review", "cancelled"]) for (const assignmentRole of ["owner", "assignee", "watcher"]) {
+    const h = makeHarness({ taskRbacEnabled, taskRbacBaseAllowed: async () => true, taskAccess: access({ projectId, status, taskType: "assigned", ownerId: "other", assigneeId: "other", participants: [{ userId: "actor", assignmentRole }] }) });
+    const response = await h.app.submitStructuredProgress(new Request("https://example.test/progress-reports", { method: "POST", body: JSON.stringify({ reportedOn: "2026-11-13", reportStatus: "in_progress", progressText: "Result note", blockers: "" }) }), taskId);
+    const allowed = assignmentRole !== "watcher" && status !== "cancelled";
+    assert.equal(response.status, allowed ? 201 : 403, [taskRbacEnabled, projectId, status, assignmentRole].join("/"));
+    assert.deepEqual(h.calls, allowed ? [["submitStructuredProgress", "actor", taskId, { reportedOn: "2026-11-13", reportStatus: "in_progress", progressText: "Result note", blockers: null }]] : []);
+  }
 });
