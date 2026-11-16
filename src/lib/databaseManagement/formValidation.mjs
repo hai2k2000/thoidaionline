@@ -29,7 +29,7 @@ export function validateRecordForm({ mode, categoryId, categoryCode, languageCod
     const rules = field.validation && typeof field.validation === "object" ? field.validation : {};
     if (typeof value === "string" && typeof rules.maxLength === "number" && value.length > rules.maxLength) errors.push({ field: `metadata.${field.field_key}`, code: "max_length" });
     if (Array.isArray(value) && typeof rules.maxItems === "number" && value.length > rules.maxItems) errors.push({ field: `metadata.${field.field_key}`, code: "max_items" });
-    if (["select", "multi_select"].includes(field.data_type) && Array.isArray(field.options) && field.options.length) {
+    if (["select", "multi_select"].includes(field.data_type) && Array.isArray(field.options) && field.options.length && field.validation?.peopleOptions !== true) {
       const allowed = new Set(field.options.map((option) => typeof option === "string" ? option : option?.value).filter((option) => typeof option === "string"));
       const values = Array.isArray(value) ? value : [value];
       if (values.some((option) => !allowed.has(option))) errors.push({ field: `metadata.${field.field_key}`, code: "invalid_option" });
