@@ -3,7 +3,7 @@ main() {
   set -Eeuo pipefail
   local ROOT=${THOIDAI_BACKUP_ROOT:-/opt/ops/thoidai-work/backups/managed}
   local LOCK=${THOIDAI_BACKUP_LOCK:-/run/lock/thoidai-backup.lock}
-  local MAX_MB=${THOIDAI_BACKUP_MAX_MB:-500}
+  local MAX_MB=${THOIDAI_BACKUP_MAX_MB:-3000}
   local NOW=${THOIDAI_BACKUP_NOW:-}
   local PG_CONTAINER=${THOIDAI_BACKUP_PG_CONTAINER:-supabase_db_thoidai-work}
   local STORAGE=${THOIDAI_BACKUP_STORAGE:-/opt/thoidai-work/storage}
