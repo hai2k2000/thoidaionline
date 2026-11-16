@@ -222,6 +222,7 @@ const migrationReference = [
   "supabase/migrations/20261112140100_legacy_office_metadata_validation.sql",
   "supabase/migrations/20261113100000_progress_report_after_done.sql",
   "supabase/migrations/20261116100000_database_management_v1_hop_dong_phu_trach.sql",
+  "supabase/migrations/20261116140000_database_management_v1_hop_dong_show_nguoi_thuc_hien.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");
 const riskOutput = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", root], {
