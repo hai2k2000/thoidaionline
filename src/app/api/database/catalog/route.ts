@@ -4,6 +4,12 @@ import { serverSupabase } from "@/lib/serverSupabase";
 import { canAccessRecordType } from "@/lib/databaseManagement/policy";
 import { canSeeRestricted } from "@/lib/databaseManagement/policy";
 
+// Named people (no staff account) a form adds to its person picker via validation.extraPeople.
+function extraPeople(validation: unknown) {
+  const names = validation && typeof validation === "object" ? (validation as { extraPeople?: unknown }).extraPeople : null;
+  return Array.isArray(names) ? names.filter((name): name is string => typeof name === "string" && name.trim() !== "").map((name) => ({ value: name, label: name })) : [];
+}
+
 export async function GET() {
   const actor = await getSessionUser();
   if (!actor) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
@@ -41,7 +47,7 @@ export async function GET() {
       ...field,
       help: typeof field.validation?.help === "string" ? field.validation.help : null,
       options: field.data_type === "department" ? (departments ?? []).map((item) => ({ value: item.id, label: item.name }))
-        : field.data_type === "person" || field.field_key === "participants" ? (people ?? []).map((item) => ({ value: item.id, label: item.full_name }))
+        : field.data_type === "person" || field.field_key === "participants" ? [...(people ?? []).map((item) => ({ value: item.id, label: item.full_name })), ...extraPeople(field.validation)]
         : field.data_type === "country" ? countryOptions : field.options,
     })),
   }));
