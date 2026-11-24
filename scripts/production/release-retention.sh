@@ -6,150 +6,148 @@ set -Eeuo pipefail
 : "${THOIDAI_HEALTH_URL:=http://127.0.0.1:3001/login}"
 : "${THOIDAI_SYSTEMCTL_BIN:=systemctl}"
 : "${THOIDAI_CURL_BIN:=curl}"
-: "${THOIDAI_CANONICAL_BASELINE:=e501652e969900b97938acccd8f998df4e5d1873}"
-: "${THOIDAI_RETENTION_GRACE_DAYS:=7}"
-: "${THOIDAI_RETENTION_HISTORICAL_MAX:=2}"
-[[ "$THOIDAI_RETENTION_GRACE_DAYS" =~ ^[0-9]+$ && "$THOIDAI_RETENTION_HISTORICAL_MAX" =~ ^[0-9]+$ ]] || { echo "retention policy values must be non-negative integers" >&2; exit 1; }
+: "${THOIDAI_RETENTION_KEEP_LATEST:=5}"
+: "${THOIDAI_RETENTION_EVIDENCE_ROOT:=/opt/releases/thoidai-work/build-evidence/retention}"
+: "${THOIDAI_RETENTION_REFERENCE_ROOTS:=/opt}"
+: "${THOIDAI_RETENTION_CONFIG_ROOTS:=/etc/systemd/system:/etc/nginx}"
+: "${THOIDAI_RETENTION_PROC_ROOT:=/proc}"
+: "${THOIDAI_RETENTION_REFERENCE_MAXDEPTH:=4}"
 
+[[ "$THOIDAI_RETENTION_KEEP_LATEST" =~ ^[0-9]+$ ]] || exit 2
+[[ "$THOIDAI_RETENTION_REFERENCE_MAXDEPTH" =~ ^[0-9]+$ ]] || exit 2
 mode=dry-run
 case "${1:-}" in
-  ""|--dry-run) ;;
+  ''|--dry-run) ;;
   --apply) mode=apply ;;
   *) echo "usage: $0 [--dry-run|--apply]" >&2; exit 2 ;;
 esac
 
 root=$(realpath -m -- "$THOIDAI_RELEASE_ROOT")
 [[ -d "$root" ]] || { echo "release root missing: $root" >&2; exit 1; }
-health_check() {
-  "$THOIDAI_SYSTEMCTL_BIN" is-active --quiet "$THOIDAI_SERVICE" || return 1
-  "$THOIDAI_CURL_BIN" -fsS --max-time 15 -o /dev/null "$THOIDAI_HEALTH_URL"
-}
-
-meta_value() {
-  local file=$1 key=$2
-  awk -F= -v wanted="$key" '$1 == wanted {sub(/^[^=]*=/, ""); print; exit}' "$file"
-}
-
-reference_state() {
-  local tool=$1
-  shift
-  local status
-  if "$tool" "$@" >/dev/null 2>&1; then status=0; else status=$?; fi
-  case "$status" in
-    0) echo yes ;;
-    1) echo no ;;
-    *) echo unknown ;;
-  esac
-}
-
-config_reference_state() {
-  local target=$1
-  shift
-  local paths=()
-  local configured=${THOIDAI_RETENTION_REFERENCE_ROOTS:-}
-  if [[ -n "$configured" ]]; then
-    IFS=: read -r -a configured_paths <<< "$configured"
-    set -- "${configured_paths[@]}"
+health_check() { "$THOIDAI_SYSTEMCTL_BIN" is-active --quiet "$THOIDAI_SERVICE" && "$THOIDAI_CURL_BIN" -fsS --max-time 15 -o /dev/null "$THOIDAI_HEALTH_URL"; }
+meta_value() { awk -F= -v wanted="$2" '$1 == wanted {sub(/^[^=]*=/, ""); print; exit}' "$1"; }
+release_candidate() {
+  local path=$1 base commit created
+  base=$(basename "$path")
+  if [[ -f "$path/.release-meta" ]]; then
+    commit=$(meta_value "$path/.release-meta" commit)
+    created=$(meta_value "$path/.release-meta" created_at)
+    [[ "$commit" =~ ^[0-9a-f]{40}$ && "$created" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[^[:space:]]+Z$ ]]
+    return
   fi
-  for path in "$@"; do [[ -e "$path" ]] && paths+=("$path"); done
-  (( ${#paths[@]} )) || { echo no; return; }
-  reference_state grep -R -l --fixed-strings "$target" "${paths[@]}"
+  [[ "$base" =~ ^thoidai-standalone-[0-9a-f]{40}(-r[2-9][0-9]*)?$ || "$base" =~ ^[0-9a-f]{40}$ || "$base" =~ ^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{7,40}(-[a-z0-9._-]+)?$ || "$base" =~ ^[a-z0-9._-]+-[0-9a-f]{7,40}$ ]]
 }
-
+release_epoch() {
+  local path=$1 created
+  if [[ -f "$path/.release-meta" ]]; then
+    created=$(meta_value "$path/.release-meta" created_at)
+    date -u -d "$created" +%s 2>/dev/null && return
+  fi
+  stat -c %Y "$path"
+}
 process_reference_state() {
-  local target=$1
-  command -v ps >/dev/null 2>&1 || { echo unknown; return; }
-  if ps -eo pid=,args= 2>/dev/null | awk -v target="$target" -v self="$$" -v parent="${PPID:-0}" \
-    '$1 != self && $1 != parent && index($0,target) && $0 !~ /release-retention\\.sh/ && $0 !~ /awk -v target/ && $0 !~ /ps -eo/ { found=1 } END { exit(found ? 0 : 1) }'; then
-    echo yes
-  else
-    echo no
-  fi
+  local target=$1 link resolved
+  [[ -d "$THOIDAI_RETENTION_PROC_ROOT" ]] || { echo unknown; return; }
+  for link in "$THOIDAI_RETENTION_PROC_ROOT"/[0-9]*/cwd "$THOIDAI_RETENTION_PROC_ROOT"/[0-9]*/fd/*; do
+    [[ -e "$link" || -L "$link" ]] || continue
+    resolved=$(readlink -f -- "$link" 2>/dev/null) || continue
+    [[ "$resolved" == "$target" || "$resolved" == "$target"/* ]] && { echo yes; return; }
+  done
+  echo no
 }
-
-managed_release() {
-  local path=$1 meta="$path/.release-meta"
-  [[ -f "$meta" && -f "$path/.deploy-success" && -f "$path/.next/BUILD_ID" && -f "$path/required-route-manifest.json" ]] || return 1
-  [[ "$(meta_value "$meta" commit)" =~ ^[0-9a-f]{40}$ ]] || return 1
-  [[ "$(meta_value "$meta" created_at)" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[^[:space:]]+Z$ ]] || return 1
-  [[ "$(meta_value "$meta" artifact_type)" == next-standalone ]] || return 1
-  [[ "$(meta_value "$meta" canonical_baseline)" == "$THOIDAI_CANONICAL_BASELINE" ]] || return 1
-  [[ "$(meta_value "$meta" protection)" == managed ]] || return 1
-  [[ "$(meta_value "$meta" rollback_eligible)" == yes ]] || return 1
-  grep -q '^health_status=pass$' "$path/.deploy-success" || return 1
-  grep -q '^deploy_status=success$' "$path/.deploy-success" || return 1
+symlink_reference_state() {
+  local target=$1 path link resolved output
+  local configured=() roots=("$root")
+  IFS=: read -r -a configured <<< "$THOIDAI_RETENTION_REFERENCE_ROOTS"
+  roots+=("${configured[@]}")
+  for path in "${roots[@]}"; do
+    [[ -e "$path" ]] || continue
+    output=$(find "$path" -maxdepth "$THOIDAI_RETENTION_REFERENCE_MAXDEPTH" -type l -print 2>/dev/null) || { echo unknown; return; }
+    while IFS= read -r link; do
+      [[ -n "$link" ]] || continue
+      resolved=$(readlink -f -- "$link" 2>/dev/null) || { echo unknown; return; }
+      [[ "$resolved" == "$target" || "$resolved" == "$target"/* ]] && { echo yes; return; }
+    done <<< "$output"
+  done
+  echo no
 }
-
-active=$("$THOIDAI_SYSTEMCTL_BIN" show -P WorkingDirectory "$THOIDAI_SERVICE" 2>/dev/null || true)
-[[ -n "$active" && -d "$active" ]] || { echo "cannot prove active release; refusing retention" >&2; exit 1; }
-active=$(realpath -m -- "$active")
-[[ "$active" == "$root"/* ]] || { echo "active release is outside release root" >&2; exit 1; }
+config_reference_state() {
+  local target=$1 path status saw_error=0
+  local configured=()
+  IFS=: read -r -a configured <<< "$THOIDAI_RETENTION_CONFIG_ROOTS"
+  for path in "${configured[@]}"; do
+    [[ -e "$path" ]] || continue
+    set +e
+    grep -R -l --fixed-strings "$target" "$path" >/dev/null 2>&1
+    status=$?
+    set -e
+    [[ $status == 0 ]] && { echo yes; return; }
+    [[ $status == 1 ]] || saw_error=1
+  done
+  (( saw_error )) && echo unknown || echo no
+}
+reference_reason() {
+  local target=$1 state
+  state=$(process_reference_state "$target")
+  [[ "$state" == yes ]] && { echo process-reference; return; }
+  [[ "$state" == unknown ]] && { echo reference-scan-failed; return; }
+  state=$(symlink_reference_state "$target")
+  [[ "$state" == yes ]] && { echo symlink-reference; return; }
+  [[ "$state" == unknown ]] && { echo reference-scan-failed; return; }
+  state=$(config_reference_state "$target")
+  [[ "$state" == yes ]] && { echo configuration-reference; return; }
+  [[ "$state" == unknown ]] && { echo reference-scan-failed; return; }
+  echo no-reference
+}
 
 declare -A keep=()
-keep["$active"]="active-systemd"
-links_complete=1
+active=$("$THOIDAI_SYSTEMCTL_BIN" show -P WorkingDirectory "$THOIDAI_SERVICE" 2>/dev/null || true)
+[[ -n "$active" ]] && active=$(realpath -m -- "$active")
+[[ "$active" == "$root"/* ]] && keep["$active"]='active-systemd'
 for name in current previous rollback-1 rollback-2; do
   link="$root/$name"
   if [[ -L "$link" ]]; then
     target=$(realpath -m -- "$link")
     [[ "$target" == "$root"/* && -d "$target" ]] || { echo "invalid lifecycle link: $link" >&2; exit 1; }
-    keep["$target"]="$name"
-  else
-    links_complete=0
+    keep["$target"]=$name
   fi
 done
 
 records=()
-historical=()
-now_epoch=${THOIDAI_RETENTION_NOW_EPOCH:-$(date -u +%s)}
-grace_seconds=$((THOIDAI_RETENTION_GRACE_DAYS * 86400))
+candidates=()
+tab=$'\t'
 while IFS= read -r -d '' path; do
   base=$(basename "$path")
-  case "$base" in current|previous|rollback-1|rollback-2|ops-backups|build-evidence) continue ;; esac
   real=$(realpath -m -- "$path")
-  reason=""
-  if ! managed_release "$path"; then reason=legacy-unmanaged;
-  elif (( ! links_complete )); then reason=managed-unvalidated-lifecycle;
-  elif [[ ${keep[$real]+yes} ]]; then reason=${keep[$real]};
-  elif [[ -e "$path/.keep" ]]; then reason=protected-.keep;
-  elif [[ -e "$path/.deploy-evidence" || -e "$path/.provenance" || -e "$path/provenance.json" ]]; then reason=protected-evidence;
-  elif [[ "$(config_reference_state "$real" /etc/systemd/system /etc/nginx)" == yes ]]; then reason=configuration-reference;
-  elif [[ "$(config_reference_state "$real" /etc/systemd/system /etc/nginx)" == unknown ]]; then reason=reference-scan-failed;
-  elif [[ "${THOIDAI_RETENTION_REFERENCE_CHECK_MODE:-full}" != filesystem && "$(process_reference_state "$real")" == yes ]]; then reason=process-reference;
-  elif [[ "${THOIDAI_RETENTION_REFERENCE_CHECK_MODE:-full}" != filesystem && "$(process_reference_state "$real")" == unknown ]]; then reason=reference-scan-failed;
-  elif [[ "${THOIDAI_RETENTION_REFERENCE_CHECK_MODE:-full}" != filesystem ]] && command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == yes ]]; then reason=open-file-reference;
-  elif [[ "${THOIDAI_RETENTION_REFERENCE_CHECK_MODE:-full}" != filesystem ]] && command -v lsof >/dev/null 2>&1 && [[ "$(reference_state lsof +D "$real")" == unknown ]]; then reason=reference-scan-failed;
-  fi
-  if [[ -n "$reason" ]]; then
-    records+=("KEEP\t$path\t$reason")
-  else
-    created_at=$(meta_value "$path/.release-meta" created_at)
-    created_epoch=$(date -u -d "$created_at" +%s 2>/dev/null || echo 0)
-    if (( created_epoch <= 0 )); then
-      records+=("KEEP\t$path\tunknown-created-at")
-    elif (( now_epoch - created_epoch < grace_seconds )); then
-      records+=("KEEP\t$path\tgrace-period")
-    else
-      historical+=("$created_epoch"$'\t'"$path")
-    fi
-  fi
+  case "$base" in
+    current|previous|rollback-1|rollback-2) records+=("KEEP${tab}${path}${tab}protected-lifecycle-name"); continue ;;
+    build-evidence|ops-backups) records+=("KEEP${tab}${path}${tab}protected-nonrelease"); continue ;;
+  esac
+  if [[ ${keep[$real]+yes} ]]; then records+=("KEEP${tab}${path}${tab}${keep[$real]}"); continue; fi
+  if [[ -e "$path/.keep" ]]; then records+=("KEEP${tab}${path}${tab}protected-.keep"); continue; fi
+  if ! release_candidate "$path"; then records+=("KEEP${tab}${path}${tab}unknown-nonrelease"); continue; fi
+  candidates+=("$(release_epoch "$path")${tab}${path}")
 done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 
-historical_rank=0
-while IFS=$'\t' read -r _ path; do
+rank=0
+while IFS=$'\t' read -r epoch path; do
   [[ -n "$path" ]] || continue
-  if (( historical_rank < THOIDAI_RETENTION_HISTORICAL_MAX )); then
-    records+=("KEEP\t$path\thistorical-reserve")
+  if (( rank < THOIDAI_RETENTION_KEEP_LATEST )); then
+    records+=("KEEP${tab}${path}${tab}latest-reserve")
   else
-    records+=("DELETE\t$path\tsuperseded-managed")
+    reference=$(reference_reason "$(realpath -m -- "$path")")
+    if [[ "$reference" == no-reference ]]; then records+=("DELETE${tab}${path}${tab}superseded-release"); else records+=("KEEP${tab}${path}${tab}${reference}"); fi
   fi
-  historical_rank=$((historical_rank + 1))
-done < <(printf '%s\n' "${historical[@]:-}" | sort -nr)
+  rank=$((rank + 1))
+done < <(printf '%s\n' "${candidates[@]:-}" | sort -nr)
 
-printf '%b\n' "${records[@]}"
+mkdir -p "$THOIDAI_RETENTION_EVIDENCE_ROOT"
+evidence="$THOIDAI_RETENTION_EVIDENCE_ROOT/$(date -u +%Y%m%dT%H%M%SZ)-$mode.tsv"
+printf '%s\n' "${records[@]}" | tee "$evidence"
+echo "EVIDENCE=$evidence"
 if [[ "$mode" == apply ]]; then
-  [[ "${THOIDAI_RETENTION_AFTER_SUCCESS:-0}" == 1 ]] || { echo "retention apply requires successful deployment validation" >&2; exit 1; }
-  health_check || { echo "health validation failed; refusing retention" >&2; exit 1; }
+  [[ "${THOIDAI_RETENTION_APPROVED:-0}" == 1 ]] || { echo 'retention apply requires THOIDAI_RETENTION_APPROVED=1' >&2; exit 1; }
+  health_check || { echo 'health validation failed; refusing retention' >&2; exit 1; }
   for record in "${records[@]}"; do
     IFS=$'\t' read -r action path reason <<< "$record"
     [[ "$action" == DELETE ]] || continue
@@ -157,5 +155,5 @@ if [[ "$mode" == apply ]]; then
     [[ "$real" == "$root"/* && -d "$real" ]] || { echo "unsafe retention target: $path" >&2; exit 1; }
     rm -rf -- "$real"
   done
-  health_check || { echo "health validation failed after retention" >&2; exit 1; }
+  health_check || { echo 'health validation failed after retention' >&2; exit 1; }
 fi
