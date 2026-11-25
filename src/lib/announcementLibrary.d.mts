@@ -6,3 +6,7 @@ export function canViewAnnouncement(access: AnnouncementAccess, row: { departmen
 export function isAnnouncementActive(row: { deleted_at: string | null; expires_at: string | null }, now?: Date): boolean;
 export function sortAnnouncements<T extends { pinned: boolean; created_at: string }>(rows: readonly T[]): T[];
 export function isSafeLibraryUrl(value: unknown): boolean;
+export const ANNOUNCEMENT_IMAGE_LIMIT: 6;
+export const ANNOUNCEMENT_IMAGE_MAX_BYTES: 5242880;
+export function announcementImageType(bytes: Uint8Array): { mimeType: "image/jpeg" | "image/png" | "image/webp"; extension: "jpg" | "png" | "webp" } | null;
+export function orderAnnouncementImages<T extends { position: number; created_at?: string }>(rows: readonly T[]): T[];
