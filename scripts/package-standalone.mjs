@@ -187,6 +187,7 @@ const migrationReference = [
   "supabase/migrations/20261103100000_database_management_v1_p3_tong_hop_subgroups.sql",
   "supabase/migrations/20261103120000_database_management_v1_doan_the_parent.sql",
   "supabase/migrations/20261103140000_database_management_v1_keywords_fix_remaining.sql",
+  "supabase/migrations/20261125090000_announcement_images.sql",
   "supabase/migrations/20261103150000_role_cong_tac_vien.sql",
   "supabase/migrations/20261103160000_projects_v1.sql",
   "supabase/migrations/20261105140000_task_assignment_optional_deadline.sql",
@@ -221,6 +222,8 @@ const migrationReference = [
   "supabase/migrations/20261112140000_allow_legacy_office_uploads.sql",
   "supabase/migrations/20261112140100_legacy_office_metadata_validation.sql",
   "supabase/migrations/20261113100000_progress_report_after_done.sql",
+  "supabase/migrations/20261116100000_database_management_v1_hop_dong_phu_trach.sql",
+  "supabase/migrations/20261116140000_database_management_v1_hop_dong_show_nguoi_thuc_hien.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");
 const riskOutput = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", root], {

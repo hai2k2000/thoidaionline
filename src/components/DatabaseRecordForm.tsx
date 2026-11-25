@@ -8,6 +8,7 @@ import { validateRecordForm } from "@/lib/databaseManagement/formValidation.mjs"
 import { CONTENT_ROOT_CODE, childCategories, filterLanguageRecordTypes, hasSubcategories, LANGUAGE_OPTIONS, selectableCategories } from "@/lib/databaseManagement/languageGroup.mjs";
 import { isDepartmentOnlyRecordType } from "@/lib/databaseManagement/departmentOnlyTypes.mjs";
 import { formatIsoDateVi, formatViDateInput, parseViDate } from "@/lib/databaseManagement/dateVi.mjs";
+import { formatGroupedInput, formatGroupedNumber, parseGroupedNumber, usesGroupedNumber } from "@/lib/databaseManagement/numberVi.mjs";
 
 type FormField = { field_key: string; label: string; data_type: string; required: boolean; hidden?: boolean; help?: string | null; options?: Array<{ value: string; label: string }>; validation?: Record<string, unknown> };
 type Catalog = { categories: Array<{ id: string; parent_id?: string | null; code: string; name: string }>; recordTypes: Array<{ id: string; category_id: string; code?: string; name: string; sort_order?: number | null }>; forms: Array<{ record_type_id: string; db_form_fields?: FormField[] }> };
@@ -35,6 +36,7 @@ export default function DatabaseRecordForm({ mode, catalog, initial }: Props) {
   const [summary, setSummary] = useState(initial?.summary ?? "");
   const [visibility, setVisibility] = useState<"department" | "public">(initial?.visibility === "public" && !isDepartmentOnlyRecordType(catalog.recordTypes.find((type) => type.id === initial?.recordTypeId)?.code) ? "public" : "department");
   const [metadata, setMetadata] = useState<Record<string, unknown>>(initial?.metadata ?? {});
+  const [numberInputs, setNumberInputs] = useState<Record<string, string>>({});
   const [dateInputs, setDateInputs] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(initial?.metadata ?? {}).map(([key, value]) => [key, typeof value === "string" ? formatIsoDateVi(value) : ""])));
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [message, setMessage] = useState("");
@@ -70,8 +72,15 @@ export default function DatabaseRecordForm({ mode, catalog, initial }: Props) {
     const common = { "data-field-key": `metadata.${field.field_key}`, required: field.required, "aria-invalid": invalid, className: `min-h-11 rounded-lg border px-3 font-normal ${invalid ? "border-rose-500" : "border-slate-300"}` };
     if (field.data_type === "long_text") return <textarea {...common} rows={3} value={typeof value === "string" ? value : ""} onChange={(event) => update(field.field_key, event.target.value)} />;
     if (field.data_type === "select" || field.data_type === "country" || field.data_type === "department" || field.data_type === "person") return <select {...common} value={typeof value === "string" ? value : ""} onChange={(event) => update(field.field_key, event.target.value)}><option value="">Chọn...</option>{(field.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>;
+    if (field.data_type === "multi_select" && field.validation?.peopleOptions === true) {
+      const selected = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+      const known = new Set((field.options ?? []).map((option) => option.value));
+      const options = [...(field.options ?? []), ...selected.filter((item) => !known.has(item)).map((item) => ({ value: item, label: item }))];
+      return <div data-field-key={`metadata.${field.field_key}`} tabIndex={-1} role="group" aria-invalid={invalid} className={`grid max-h-64 gap-1 overflow-y-auto rounded-lg border p-2 font-normal sm:grid-cols-2 ${invalid ? "border-rose-500" : "border-slate-300"}`}>{options.map((option) => <label key={option.value} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 hover:bg-orange-50"><input type="checkbox" className="h-4 w-4 accent-orange-600" checked={selected.includes(option.value)} onChange={(event) => update(field.field_key, event.target.checked ? [...selected, option.value] : selected.filter((item) => item !== option.value))} /><span>{option.label}</span></label>)}</div>;
+    }
     if (field.data_type === "multi_select") return <select {...common} multiple className={`${common.className} min-h-24 py-2`} value={Array.isArray(value) ? value as string[] : []} onChange={(event) => update(field.field_key, Array.from(event.target.selectedOptions, (option) => option.value))}>{(field.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>;
     if (field.data_type === "date") return <input {...common} type="text" inputMode="numeric" placeholder="dd/mm/yyyy" maxLength={10} value={dateInputs[field.field_key] ?? (typeof value === "string" ? formatIsoDateVi(value) : "")} onChange={(event) => { const text = formatViDateInput(event.target.value); setDateInputs((current) => ({ ...current, [field.field_key]: text })); const parsed = parseViDate(text); update(field.field_key, parsed ?? text); }} />;
+    if (usesGroupedNumber(field)) return <input {...common} type="text" inputMode="decimal" placeholder="0" value={numberInputs[field.field_key] ?? formatGroupedNumber(value)} onChange={(event) => { const text = formatGroupedInput(event.target.value); if (text === null) return; setNumberInputs((current) => ({ ...current, [field.field_key]: text })); const parsed = parseGroupedNumber(text); update(field.field_key, parsed === null ? "" : parsed); }} />;
     const inputType = field.data_type === "datetime" ? "datetime-local" : field.data_type === "number" ? "number" : field.data_type === "url" ? "url" : "text";
     return <input {...common} type={inputType} value={typeof value === "string" || typeof value === "number" ? value : ""} onChange={(event) => update(field.field_key, field.data_type === "number" ? event.target.value === "" ? "" : Number(event.target.value) : event.target.value)} />;
   };
