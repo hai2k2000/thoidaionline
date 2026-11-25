@@ -121,3 +121,17 @@ Cập nhật lần cuối: 2026-11-02 (sau khi deploy góp ý đợt 1 và giai 
 - **Giai đoạn 3:** đã deploy phần nhóm con Phòng Tổng hợp, Văn thư – Lưu trữ, Tổ chức – Cán bộ (PR #113). Kế toán, Quản trị, Công nghệ, Pháp chế, Đối ngoại: chờ Phòng Tổng hợp gửi danh mục. Owner cần cấp quyền nhóm Tổ chức – Cán bộ cho người phụ trách.
 - **Nguồn:** góp ý của các phòng (file docx của owner). Phần đã thống nhất được tóm tắt trong các đặc tả trên.
 - **Cách làm:** gửi owner bản đặc tả rút gọn, hỏi các điểm còn mở được đánh dấu **[HỎI OWNER]**, rồi mới giao Codex.
+
+## 6. Hồ sơ đào tạo và Hủy duyệt (PR #212, 2026-11-25)
+Trạng thái lúc viết: PR #212 (`feature/csdl-dao-tao-huy-duyet` vào `integration/production`) đang mở. Chưa merge, chưa chạy migration trên production, chưa deploy. Người viết: phiên Claude ở máy nhà.
+
+- **Migration `20261125100000_database_management_v1_dao_tao_type`:** loại `ho_so_dao_tao` "Hồ sơ đào tạo", chỉ cho Tổ Tiếng Việt (`noi_dung_tieng_viet`). Form 14 trường, chỉ bắt buộc `title`. Trường liên kết là `publication_url` (giống các form cùng tổ), không phải `reference_url`. Revert: `scripts/production/database-management-dao-tao-type-revert.sql` (ngừng loại và form, không xóa hồ sơ).
+- **Migration `20261125110000_database_management_v1_unapprove`:** thêm hành động `unapprove` cho hồ sơ đã duyệt. Revert: `scripts/production/database-management-unapprove-revert.sql`.
+  - Chỉ Admin (`record.sensitive.access`); ACL `approve` deny vẫn chặn.
+  - Bắt buộc lý do từ 3 ký tự. Hồ sơ từ `approved` về `draft`, lịch sử ghi `unapprove`; người tạo sửa rồi gửi duyệt lại.
+  - Giao diện: nút "Hủy duyệt" ở trang chi tiết hồ sơ, dùng chung hộp thoại với "Trả lại chỉnh sửa".
+- **Bản gốc khi viết lại RPC:** sau PR #212, định nghĩa mới nhất của `api_transition_database_record` nằm ở `20261125110000`, không còn ở `20261102140000`.
+- **Thứ tự deploy:** chạy hai migration trước hoặc cùng lúc với code (CI không tự chạy). Cần owner duyệt riêng.
+- **Đã kiểm tra:** hai migration áp dụng, chạy lại, revert, áp dụng lại trên PGlite (Postgres 17 trong bộ nhớ); thử hành vi hủy duyệt. 14 migration cũ không chạy được trên cơ sở dữ liệu rỗng này, nên đây không phải bản sao production.
+- **Chưa kiểm tra:** giao diện trên trình duyệt; người tạo không phải Admin gửi lại hồ sơ sau khi bị hủy duyệt. Kiểm tra cả hai sau khi deploy.
+- **Test hỏng sẵn, không do PR này:** `approvalUi.browser` (thiếu playwright), "delete and restore controls" (`window.confirm`), P2 `nosniff`, và `announcement image copy matches original` (đọc file ở đường dẫn Temp của một máy, đến từ PR #211).
