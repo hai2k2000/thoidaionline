@@ -84,6 +84,7 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261103100000_database_management_v1_p3_tong_hop_subgroups.sql",
   "supabase/migrations/20261103120000_database_management_v1_doan_the_parent.sql",
   "supabase/migrations/20261103140000_database_management_v1_keywords_fix_remaining.sql",
+  "supabase/migrations/20261125090000_announcement_images.sql",
   "supabase/migrations/20261103150000_role_cong_tac_vien.sql",
   "supabase/migrations/20261103160000_projects_v1.sql",
   "supabase/migrations/20261105140000_task_assignment_optional_deadline.sql",
@@ -140,6 +141,7 @@ assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261102190000_database_
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261103100000_database_management_v1_p3_tong_hop_subgroups\.sql(?:,|$)/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261103120000_database_management_v1_doan_the_parent\.sql(?:,|$)/m);
 assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261103140000_database_management_v1_keywords_fix_remaining\.sql(?:,|$)/m);
+assert.match(releaseMeta, /(?:^|,)supabase\/migrations\/20261125090000_announcement_images\.sql(?:,|$)/m);
 for (const field of ["build_id=", "commit=", "branch=", "created_at=", "source_worktree=", "local_head=", "remote_head=", "artifact_source_commit=", "metadata_commit=", "current_production_parent=", "integration_branch=", "integration_baseline=", "contract_suite=", "risk_class=", "risk_test_evidence=", "risk_reason="]) assert.match(releaseMeta, new RegExp(`^${field}[^\\n]+`, "m"));
 const routes = JSON.parse(readFileSync(join(root, "required-route-manifest.json"), "utf8"));
 const appPaths = JSON.parse(readFileSync(join(root, ".next/server/app-paths-manifest.json"), "utf8"));
