@@ -36,7 +36,7 @@ export function fileTone(kind: string, name?: string | null, mime?: string | nul
 }
 
 export function FileBadge({ tone }: { tone: Tone }) {
-  return <span aria-hidden="true" className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold tracking-wide ring-1 ${tone.box}`}>{tone.label}</span>;
+  return <span aria-hidden="true" className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold tracking-wide ring-1 ${tone.box}`}>{tone.label}</span>;
 }
 
 const folderPaths: Record<string, ReactNode> = {
@@ -78,7 +78,7 @@ export function LibraryFrame({ fullName, crumb, intro, actions, children }: { fu
 }
 
 export const buttonClass = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:border-orange-300 hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500";
-export const primaryButtonClass = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 px-3 text-sm font-semibold text-white hover:bg-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2";
+export const primaryButtonClass = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-orange-700 px-3 text-sm font-semibold text-white hover:bg-orange-800 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2";
 
 export function EmptyPanel({ title, hint }: { title: string; hint?: string }) {
   return <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center">
