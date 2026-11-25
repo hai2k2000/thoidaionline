@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+const read = (file) => readFileSync(file, "utf8");
+const migration = read("supabase/migrations/20261125110000_database_management_v1_unapprove.sql");
+const revert = read("scripts/production/database-management-unapprove-revert.sql");
+const original = read("supabase/migrations/20261102140000_database_management_v1_p2_restricted_groups.sql");
+const page = read("src/app/database/records/[id]/page.tsx");
+const repository = read("src/lib/databaseManagement/repository.ts");
+const daoTao = read("supabase/migrations/20261125100000_database_management_v1_dao_tao_type.sql");
+const body = (source) => source.match(/CREATE OR REPLACE FUNCTION public\.api_transition_database_record[\s\S]*?\$function\$\s*\n?;/)[0];
+const withoutUnapprove = (source) => body(source).replace(/\n  elsif p_action = 'unapprove' then[\s\S]*?\n  else/, "\n  else");
+test("RPC migration and revert preserve base", () => { assert.equal(withoutUnapprove(migration), body(original)); assert.equal(body(revert), body(original)); assert.match(migration, /p_action = 'unapprove'/); });
+test("page has mode reset and dialog", () => { assert.match(page, /setReturnMode\("return"\)/); assert.match(page, /Hủy duyệt và gửi lại để sửa/); assert.match(page, /returnMode === "unapprove"/); });
+test("ACL filters by actor", () => { assert.match(repository, /hasPermissionScope\(actor, "record\.sensitive\.access"/); assert.match(migration, /a\.principal_id=u\.id/); });
+test("dao tao fields and assertion", () => { for (const field of ["title", "summary", "don_vi_to_chuc", "giang_vien", "nguoi_tham_gia", "hinh_thuc", "ngay_bat_dau", "ngay_ket_thuc", "dia_diem", "ket_qua", "keywords", "responsible_person", "publication_url", "status"]) assert.match(daoTao, new RegExp(field)); assert.match(daoTao, /\$assert\$/); assert.match(daoTao, /validation,false,sort_order/); assert.doesNotMatch(daoTao, /reference_url/); });

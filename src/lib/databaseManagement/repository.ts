@@ -222,6 +222,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   const actorNames = new Map((actors.data ?? []).map((item) => [item.id, item.full_name]));
   const latestApproval = historyRows.find((item) => item.action === "approve");
   const canApprove = record.status === "pending_review" && await canApproveRecord(actor, record, recordId);
+  const canUnapprove = record.status === "approved" && hasPermissionScope(actor, "record.sensitive.access", ["all", "department", "self"]) && !(await (async () => { const context = await actorContext(actor); const rows = await aclForRecord(recordId); return rows.some((row) => row.capability === "approve" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId))); })());
   const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
   const canDelete = record.status !== "deleted" && await canRecord(actor, record, recordId, "delete");
   const canEdit = ["draft", "approved", "archived"].includes(record.status) && await canRecord(actor, record, recordId, "edit");
@@ -231,6 +232,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   return {
     record: metadataAllowed ? record : { ...record, summary: null, metadata: {} },
     canApprove,
+    canUnapprove,
     canSubmit,
     canDelete,
     canEdit,
@@ -244,7 +246,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     externalLinks: metadataAllowed ? links.data ?? [] : [],
     keywords: metadataAllowed ? (keywords.data ?? []).map((row) => row.keyword) : [],
     history: historyRows.map((item) => ({ ...item, old_data: metadataAllowed ? item.old_data : null, new_data: metadataAllowed ? item.new_data : null, actor_name: actorNames.get(item.actor_id) ?? null })),
-    approvedBy: latestApproval ? { name: actorNames.get(latestApproval.actor_id) ?? null, at: latestApproval.created_at } : null,
+    approvedBy: ["approved", "archived"].includes(record.status) && latestApproval ? { name: actorNames.get(latestApproval.actor_id) ?? null, at: latestApproval.created_at } : null,
   };
 }
 
@@ -371,7 +373,7 @@ export async function listVisibleApprovalQueue(actor: DatabaseRecordActor, filte
   return approved.slice(offsetValue, offsetValue + limitValue).map((row) => ({ ...row, total_count: totalCount }));
 }
 
-export type DatabaseRecordWorkflowAction = "submit" | "approve" | "return";
+export type DatabaseRecordWorkflowAction = "submit" | "approve" | "return" | "unapprove";
 
 export async function transitionDatabaseRecord(actor: DatabaseRecordActor, recordId: string, action: DatabaseRecordWorkflowAction, reason?: string) {
   const { data, error } = await serverSupabase.rpc("api_transition_database_record", {
