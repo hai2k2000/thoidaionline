@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/serverSession";
 import { serverSupabase } from "@/lib/serverSupabase";
 import { canAccessRecordType } from "@/lib/databaseManagement/policy";
 import { canSeeRestricted } from "@/lib/databaseManagement/policy";
+import { sortFormFields } from "@/lib/databaseManagement/formFieldOrder.mjs";
 
 // Named people (no staff account) a form adds to its person picker via validation.extraPeople.
 function extraPeople(validation: unknown) {
@@ -48,7 +49,7 @@ export async function GET() {
   const countryOptions = ["Việt Nam", "Lào", "Campuchia", "Trung Quốc", "Nhật Bản", "Hàn Quốc", "Hoa Kỳ", "Pháp", "Đức", "Vương quốc Anh"].map((label) => ({ value: label, label }));
   const formsWithSources = visibleForms.map((form) => ({
     ...form,
-    db_form_fields: (form.db_form_fields ?? []).map((field) => ({
+    db_form_fields: sortFormFields(form.db_form_fields).map((field) => ({
       ...field,
       help: typeof field.validation?.help === "string" ? field.validation.help : null,
       options: field.data_type === "department" ? (departments ?? []).map((item) => ({ value: item.id, label: item.name }))
