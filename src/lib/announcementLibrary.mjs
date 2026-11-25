@@ -13,3 +13,13 @@ export function canViewAnnouncement({ canManage, departmentId, managedDepartment
 export function isAnnouncementActive(row, now = new Date()) { return !row.deleted_at && (!row.expires_at || new Date(row.expires_at).getTime() > now.getTime()); }
 export function sortAnnouncements(rows) { return [...rows].sort((a, b) => Number(b.pinned) - Number(a.pinned) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); }
 export function isSafeLibraryUrl(value) { if (typeof value !== "string" || value.length > 2000) return false; try { const url = new URL(value); return url.protocol === "http:" || url.protocol === "https:"; } catch { return false; } }
+
+export const ANNOUNCEMENT_IMAGE_LIMIT = 6;
+export const ANNOUNCEMENT_IMAGE_MAX_BYTES = 5242880;
+export function announcementImageType(bytes) {
+  if (bytes instanceof Uint8Array && bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { mimeType: "image/jpeg", extension: "jpg" };
+  if (bytes instanceof Uint8Array && bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return { mimeType: "image/png", extension: "png" };
+  if (bytes instanceof Uint8Array && bytes.length >= 12 && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP") return { mimeType: "image/webp", extension: "webp" };
+  return null;
+}
+export function orderAnnouncementImages(rows) { return [...rows].sort((a, b) => a.position - b.position || String(a.created_at ?? "").localeCompare(String(b.created_at ?? ""))); }

@@ -187,6 +187,7 @@ const migrationReference = [
   "supabase/migrations/20261103100000_database_management_v1_p3_tong_hop_subgroups.sql",
   "supabase/migrations/20261103120000_database_management_v1_doan_the_parent.sql",
   "supabase/migrations/20261103140000_database_management_v1_keywords_fix_remaining.sql",
+  "supabase/migrations/20261125090000_announcement_images.sql",
   "supabase/migrations/20261103150000_role_cong_tac_vien.sql",
   "supabase/migrations/20261103160000_projects_v1.sql",
   "supabase/migrations/20261105140000_task_assignment_optional_deadline.sql",
