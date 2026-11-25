@@ -12,7 +12,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (!actor) return json({ error: "unauthenticated" }, 401);
   const body = await request.json().catch(() => null) as { action?: unknown; reason?: unknown } | null;
   const action = body?.action;
-  if (action !== "submit" && action !== "approve" && action !== "return") return json({ error: "invalid_request" }, 400);
+  if (action !== "submit" && action !== "approve" && action !== "return" && action !== "unapprove") return json({ error: "invalid_request" }, 400);
   try {
     const id = (await context.params).id;
     const result = await transitionDatabaseRecord(actor, id, action as DatabaseRecordWorkflowAction, typeof body?.reason === "string" ? body.reason : undefined);
