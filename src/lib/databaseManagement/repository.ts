@@ -102,6 +102,11 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ca
   return canAccessDatabaseRecord(context, rows, capability) || defaultDatabaseRecordAccess(context, capability, record.owner_id, record.department_id);
 }
 
+// Admins may edit submitted and approved records without sending them back to draft.
+function adminKeepsStatus(actor: DatabaseRecordActor) {
+  return actor.role_code === "admin";
+}
+
 function hasPermissionScope(actor: DatabaseRecordActor, permission: string, scopes: readonly string[]) {
   if (!actor.rbacPermissions.includes(permission)) return false;
   const effectiveScopes = actor.rbacPermissionScopes?.[permission];
@@ -225,7 +230,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   const canUnapprove = record.status === "approved" && hasPermissionScope(actor, "record.sensitive.access", ["all", "department", "self"]) && !(await (async () => { const context = await actorContext(actor); const rows = await aclForRecord(recordId); return rows.some((row) => row.capability === "approve" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId))); })());
   const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
   const canDelete = record.status !== "deleted" && await canRecord(actor, record, recordId, "delete");
-  const canEdit = ["draft", "approved", "archived"].includes(record.status) && await canRecord(actor, record, recordId, "edit");
+  const canEdit = (["draft", "approved", "archived"].includes(record.status) || record.status === "pending_review" && adminKeepsStatus(actor)) && await canRecord(actor, record, recordId, "edit");
   const canDownload = metadataAllowed && decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, record);
   const canManageAcl = await canRecord(actor, record, recordId, "acl.manage");
   const blockReason = canManageAcl ? await approvalBlockReason(actor, record, recordId) : null;
@@ -472,7 +477,7 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   const grantContext = await loadCategoryGrantContext(actor, current.category_id);
   if (!(await canRecord(actor, current, recordId, "edit")) || grantContext.restricted && !canContributeRestricted(actor, grantContext.grantLevel)) throw new Error("permission_denied");
-  if (current.status === "pending_review") throw new Error("record_locked");
+  if (current.status === "pending_review" && !adminKeepsStatus(actor)) throw new Error("record_locked");
   if (isDepartmentOnlyRecordType(current.record_type_code) && input.visibility === "public") throw new Error("danh_ba_department_only");
   const [previousKeywords, previousLinks] = await Promise.all([
     serverSupabase.from("db_record_keywords").select("record_id,keyword").eq("record_id", recordId),
@@ -491,7 +496,7 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
     patch.metadata = input.metadata;
   }
   if (input.visibility !== undefined) patch.visibility = input.visibility;
-  const reopened = current.status === "approved" || current.status === "archived";
+  const reopened = !adminKeepsStatus(actor) && (current.status === "approved" || current.status === "archived");
   if (reopened) patch.status = "draft";
   const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).eq("status", current.status).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,visibility,created_at,updated_at").maybeSingle();
   if (!data && !error) throw new Error("record_locked");
@@ -514,7 +519,7 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
       reopenHistoryId = history.id;
     }
     const oldData = { ...current, keywords: oldKeywords.map((row) => row.keyword), externalLinks: oldLinks };
-    const newData = { ...data, keywords: nextKeywords ?? oldKeywords.map((row) => row.keyword), externalLinks: nextLinks ?? oldLinks };
+    const newData = { ...data, keywords: nextKeywords ?? oldKeywords.map((row) => row.keyword), externalLinks: nextLinks ?? oldLinks, ...(adminKeepsStatus(actor) && current.status !== "draft" ? { admin_edit_kept_status: current.status } : {}) };
     const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "update", old_data: oldData, new_data: newData });
     if (historyError) throw historyError;
   } catch (cause) {
@@ -594,14 +599,16 @@ export async function assertCanModifyRecordFiles(actor: DatabaseRecordActor, rec
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
-  if (current.status === "pending_review") throw new Error("record_locked");
+  if (current.status === "pending_review" && !adminKeepsStatus(actor)) throw new Error("record_locked");
   return current;
 }
 
 export async function reopenRecordAfterFileChange(actor: DatabaseRecordActor, recordId: string, expectedStatus: string) {
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
-  if (current.status !== expectedStatus || current.status === "pending_review") throw new Error("record_locked");
+  if (current.status !== expectedStatus) throw new Error("record_locked");
+  if (adminKeepsStatus(actor)) return current;
+  if (current.status === "pending_review") throw new Error("record_locked");
   if (current.status !== "approved" && current.status !== "archived") return current;
   const { data, error } = await serverSupabase.from("db_records").update({ status: "draft" }).eq("id", recordId).eq("status", current.status).select("*").maybeSingle();
   if (error) throw error;
