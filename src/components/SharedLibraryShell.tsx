@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm, usePromptDialog } from "@/components/ConfirmDialog";
 import { EmptyPanel, FileBadge, FolderGlyph, LibraryFrame, buttonClass, fileTone, folderHint, libraryDate, librarySize, primaryButtonClass } from "@/components/SharedLibraryUi";
 import { announcementCopy as copy } from "@/lib/announcementLibraryCopy.mjs";
+import { libraryOfficeKind, libraryPreviewMime } from "@/lib/projectLibraryFile";
 
 type Folder = { id: string; name: string; system_key?: string | null; item_count?: number };
 type Item = { id: string; kind: string; title: string; description?: string | null; url?: string | null; file_name?: string | null; mime_type?: string | null; size_bytes?: number | null; created_at?: string | null; uploaded_by_name?: string | null };
@@ -36,7 +37,7 @@ export default function SharedLibraryShell({ folders, items, folderId, folderNam
       {folderId ? <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{copy.libraryFoldersHeading}</h2> : null}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {showSharedRecords ? <Link href="/library?view=csdl" className={`${tileClass} border-orange-200 bg-gradient-to-br from-orange-50 to-white`}>
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-600 text-white"><FolderGlyph kind="records" /></span>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-700 text-white"><FolderGlyph kind="records" /></span>
           <span className="min-w-0 flex-1">
             <span className="block break-words font-semibold text-slate-900 group-hover:text-orange-700">{copy.sharedRecordsFolder}</span>
             <span className="mt-0.5 block text-sm text-slate-500">{copy.sharedRecordsHint}</span>
@@ -68,7 +69,7 @@ export default function SharedLibraryShell({ folders, items, folderId, folderNam
         </div>
         <div className="flex flex-wrap gap-2 sm:shrink-0">
           {item.kind === "file" ? <>
-            <a className={buttonClass} target="_blank" rel="noopener noreferrer" href={`/api/shared-library/file/${item.id}?disposition=inline`}>{copy.view}</a>
+            {libraryPreviewMime({ mime_type: item.mime_type ?? null, file_name: item.file_name ?? null, title: item.title }) !== null && libraryOfficeKind({ mime_type: item.mime_type ?? null, file_name: item.file_name ?? null, title: item.title }) === null ? <a className={buttonClass} target="_blank" rel="noopener noreferrer" href={`/api/shared-library/file/${item.id}?disposition=inline`}>{copy.view}</a> : null}
             <a className={buttonClass} href={`/api/shared-library/file/${item.id}?disposition=attachment`}>{copy.download}</a>
           </> : <a className={buttonClass} target="_blank" rel="noopener noreferrer" href={item.url ?? "#"}>{copy.open}</a>}
           {canManage ? <button type="button" className={removeClass} onClick={() => void remove(`/api/shared-library/${item.id}`, false)}>{copy.remove}</button> : null}
