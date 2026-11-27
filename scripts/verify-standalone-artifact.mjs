@@ -124,6 +124,9 @@ assert.deepEqual(readFileSync(join(root, "MIGRATION_REFERENCE"), "utf8").trim().
   "supabase/migrations/20261125100000_database_management_v1_dao_tao_type.sql",
   "supabase/migrations/20261125110000_database_management_v1_unapprove.sql",
   "supabase/migrations/20261127100000_database_management_v1_dao_tao_record_code.sql",
+  "supabase/migrations/20261127130000_database_management_v1_media_group.sql",
+  "supabase/migrations/20261127140000_database_management_v1_link_titles.sql",
+  "supabase/migrations/20261127150000_database_management_v1_category_editors.sql",
 ], "artifact migration mismatch");
 const releaseMeta = readFileSync(join(root, ".release-meta"), "utf8");
 assert.match(releaseMeta, /protection=managed/);

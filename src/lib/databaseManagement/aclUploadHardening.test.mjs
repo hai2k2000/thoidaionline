@@ -22,6 +22,7 @@ const record = { id: "r1", category_id: "c1", record_type_id: "t1", owner_id: "o
 function database(options = {}) {
   const tables = { db_records: [{ ...record, ...options.record }], db_categories: [{ id: "c1", restricted: false, ...options.category }], db_record_types: [{ id: "t1", code: "ordinary" }], staff_users: [{ id: "u1", role_id: "role1" }], departments: [{ id: "d1", manager_id: options.manager }], db_record_acl: (options.acl ?? []).map((row) => ({ record_id: "r1", ...row })), db_category_access_grants: options.grant ? [{ user_id: "u1", category_id: "c1", level: options.grant }] : [], db_record_files: [{ id: "f1", record_id: "r1", storage_key: "key", original_name: "a.pdf" }], db_record_history: [] };
   const events = [];
+  tables.db_category_editors = options.editor ? [{ user_id: "u1", category_id: "c1" }] : [];
   let sequence = 0;
   const client = { from(table) {
     let operation = "select", payload, single = false;
@@ -192,14 +193,16 @@ test("approve panel does not offer allow or claim it is required", () => {
 });
 
 async function upload(options = {}) {
-  const db = database({ record: { owner_id: "u1", status: options.status ?? "approved" }, fail: options.fail });
+  const db = database({ record: { owner_id: "u1", status: options.status ?? "approved", ...options.record }, fail: options.fail, acl: options.acl, editor: options.editor });
   db.tables.db_record_files = options.references ?? [];
   let removed = 0;
+  let written = 0;
   const route = load("src/app/api/database/records/[id]/files/route.ts", {
     ...fileTypes, ...db.repository, serverSupabase: db.client,
     NextResponse: { json: (body, init) => Response.json(body, init) },
     getSessionUser: async () => actor, isSameOriginRequest: async () => true,
     writeDatabaseRecordFile: async (_id, input) => {
+      written++;
       if (options.storageError) throw new Error("storage_failed");
       assert.equal(input.mimeType, "application/pdf");
       assert.deepEqual([...input.bytes], [...Buffer.from("%PDF-1.7")]);
@@ -211,7 +214,7 @@ async function upload(options = {}) {
   const form = new FormData();
   form.set("file", new File(["%PDF-1.7"], "report.pdf", { type: "application/octet-stream" }));
   const response = await route.POST(new Request("http://localhost/api/files", { method: "POST", body: form, headers: { "Idempotency-Key": "request123" } }), { params: Promise.resolve({ id: "r1" }) });
-  return { ...db, response, removed };
+  return { ...db, response, removed, written };
 }
 
 for (const status of ["approved", "archived"]) {
@@ -256,11 +259,57 @@ test("cleanup removes only newly created unreferenced storage", async () => {
   }
 });
 
-test("locked records reject upload and delete before any writes", async () => {
-  const result = await upload({ status: "pending_review" });
+test("pending owner may upload and delete while status stays pending", async () => {
+  const result = await upload({ status: "pending_review", owner_id: "u1" });
+  assert.equal(result.response.status, 201);
+  assert.equal(result.tables.db_records[0].status, "pending_review");
+  await result.repository.deleteDatabaseRecordFile(actor, "r1", result.tables.db_record_files[0].id);
+  assert.equal(result.tables.db_record_files.length, 0);
+  assert.equal(result.tables.db_records[0].status, "pending_review");
+});
+
+test("locked pending records reject upload before writes", async () => {
+  const result = await upload({ status: "pending_review", record: { owner_id: "other", created_by: "creator", department_id: "d1", visibility: "public" }, acl: [{ capability: "discover", effect: "allow", principal_type: "user", principal_id: "u1" }, { capability: "edit", effect: "allow", principal_type: "user", principal_id: "u1" }] });
   assert.equal(result.response.status, 409);
-  assert.equal(result.events.some((e) => e.operation !== "select"), false);
+  assert.equal((await result.response.json()).error, "record_locked");
+  assert.equal(result.written, 0);
+  assert.equal(result.removed, 0);
+  assert.equal(result.events.some((event) => event.operation !== "select"), false);
   await assert.rejects(result.repository.deleteDatabaseRecordFile(actor, "r1", "f1"), /record_locked/);
+  assert.equal(result.events.some((event) => event.operation !== "select"), false);
+});
+
+test("category editor downloads another department's draft without widening non-editor access", async () => {
+  const who = { ...actor, rbacPermissions: ["record.discover", "record.download"] };
+  for (const editor of [false, true]) {
+    const db = database({ editor, record: { department_id: "d2", status: "draft", visibility: "department" } });
+    db.tables.db_record_external_links = []; db.tables.db_record_keywords = [];
+    if (editor) {
+      assert.equal((await db.repository.getDatabaseRecordFile(who, "r1", "f1")).id, "f1");
+      assert.equal((await db.repository.getDatabaseRecordFile(who, "r1", "f1", "preview")).id, "f1");
+      assert.equal((await db.repository.getVisibleDatabaseRecord(who, "r1")).canDownload, true);
+    } else {
+      await assert.rejects(db.repository.getDatabaseRecordFile(who, "r1", "f1"), /permission_denied/);
+    }
+  }
+});
+
+test("category editor respects download and metadata denies", async () => {
+  const who = { ...actor, rbacPermissions: ["record.discover", "record.download"] };
+  for (const capability of ["download", "metadata.view"]) {
+    const db = database({ editor: true, record: { department_id: "d2", status: "draft" }, acl: [{ capability, effect: "deny", principal_type: "user", principal_id: "u1" }] });
+    await assert.rejects(db.repository.getDatabaseRecordFile(who, "r1", "f1"), /permission_denied/);
+  }
+});
+
+test("editor upload and delete keep an approved record approved", async () => {
+  const result = await upload({ editor: true, record: { owner_id: "owner", department_id: "d2" } });
+  assert.equal(result.response.status, 201);
+  assert.equal(result.tables.db_records[0].status, "approved");
+  await result.repository.deleteDatabaseRecordFile(actor, "r1", result.tables.db_record_files[0].id);
+  assert.equal(result.tables.db_record_files.length, 0);
+  assert.equal(result.tables.db_records[0].status, "approved");
+  assert.equal(result.tables.db_record_history.some((row) => row.action === "reopen_for_edit"), false);
 });
 
 test("cleanup retains storage when its reference lookup fails", async () => {

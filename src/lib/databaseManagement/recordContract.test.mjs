@@ -7,7 +7,7 @@ import { validateDatabaseAclInput, validateDatabaseMetadata, validateDatabaseRec
 const ids = { categoryId: "11111111-1111-4111-8111-111111111111", recordTypeId: "22222222-2222-4222-8222-222222222222" };
 
 test("record input requires controlled identifiers and metadata object", () => {
-  const result = validateDatabaseRecordInput({ ...ids, recordCode: "VB/01", title: "Văn bản", metadata: { issuedAt: "2026-10-17" }, externalLinks: [{ provider: "google_drive", url: "https://drive.google.com/file/d/abc" }] });
+  const result = validateDatabaseRecordInput({ ...ids, recordCode: "VB/01", title: "Văn bản", metadata: { issuedAt: "2026-10-17" }, externalLinks: [{ provider: "google_drive", url: "https://drive.google.com/file/d/abc", label: "Ảnh" }] });
   assert.equal(result.ok, true);
   assert.equal(result.ok && result.value.recordCode, undefined);
 });

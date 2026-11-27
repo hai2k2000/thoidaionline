@@ -43,6 +43,12 @@ async function aclForRecord(recordId: string) {
   return (data ?? []).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now) as Array<DatabaseAclRow & { record_id: string; expires_at?: string | null }>;
 }
 
+async function isCategoryEditor(actor: DatabaseRecordActor, categoryId: string) {
+  const { data, error } = await serverSupabase.from("db_category_editors").select("category_id").eq("category_id", categoryId).eq("user_id", actor.id).maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
 async function loadCategoryGrantContext(actor: DatabaseRecordActor, categoryId: string) {
   const { data, error } = await serverSupabase.from("db_categories").select("id,parent_id,restricted").eq("id", categoryId).maybeSingle();
   if (error) throw error;
@@ -68,6 +74,7 @@ async function visibilityAllowed(actor: DatabaseRecordActor, record: Pick<Record
   const rows = await aclForRecord(recordId);
   if (rows.some((row) => row.capability === "discover" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return false;
   if (grantContext.restricted) return true;
+  if (await isCategoryEditor(actor, record.category_id)) return true;
   if (rows.some((row) => row.capability === "discover" && row.effect === "allow" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId)))) return true;
   if (record.owner_id && record.owner_id === actor.id) return true;
   if (actor.rbacPermissionScopes?.["record.discover"]?.includes("all")) return true;
@@ -94,6 +101,8 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ca
     || (row.principal_type === "department" && row.principal_id === context.departmentId)
   ));
   if (explicitDeny) return false;
+  if (grantContext.restricted && capability === "edit" && !canContributeRestricted(actor, grantContext.grantLevel)) return false;
+  if (!grantContext.restricted && ["discover", "metadata.view", "preview", "download", "edit"].includes(capability) && await isCategoryEditor(actor, record.category_id)) return true;
   if (capability === "acl.manage") {
     if (record.owner_id === actor.id) return true;
     if (hasPermissionScope(actor, "record.discover", ["all"])) return true;
@@ -105,6 +114,13 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ca
 // Admins may edit submitted and approved records without sending them back to draft.
 function adminKeepsStatus(actor: DatabaseRecordActor) {
   return actor.role_code === "admin";
+}
+
+async function editKeepsStatus(actor: DatabaseRecordActor, record: Pick<RecordRow, "category_id" | "status" | "owner_id" | "created_by">) {
+  if (adminKeepsStatus(actor)) return true;
+  if (record.status === "pending_review" && (record.created_by === actor.id || record.owner_id === actor.id)) return true;
+  const grantContext = await loadCategoryGrantContext(actor, record.category_id);
+  return !grantContext.restricted && await isCategoryEditor(actor, record.category_id);
 }
 
 function hasPermissionScope(actor: DatabaseRecordActor, permission: string, scopes: readonly string[]) {
@@ -213,7 +229,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   const [acl, files, links, keywords, history] = await Promise.all([
     aclForRecord(recordId),
     serverSupabase.from("db_record_files").select("id,storage_backend,original_name,mime_type,size_bytes,sha256,created_by,created_at").eq("record_id", recordId).order("created_at", { ascending: false }),
-    serverSupabase.from("db_record_external_links").select("id,provider,url,external_file_id,media_kind,usage_rights,link_status,last_verified_at,created_at").eq("record_id", recordId).order("created_at", { ascending: false }),
+    serverSupabase.from("db_record_external_links").select("id,provider,url,label,position,external_file_id,media_kind,usage_rights,link_status,last_verified_at,created_at").eq("record_id", recordId).order("position", { ascending: true }).order("created_at", { ascending: true }),
     serverSupabase.from("db_record_keywords").select("keyword").eq("record_id", recordId).order("keyword"),
     serverSupabase.from("db_record_history").select("id,actor_id,action,old_data,new_data,created_at").eq("record_id", recordId).order("created_at", { ascending: false }).limit(100),
   ]);
@@ -230,8 +246,9 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   const canUnapprove = record.status === "approved" && hasPermissionScope(actor, "record.sensitive.access", ["all", "department", "self"]) && !(await (async () => { const context = await actorContext(actor); const rows = await aclForRecord(recordId); return rows.some((row) => row.capability === "approve" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId))); })());
   const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
   const canDelete = record.status !== "deleted" && await canRecord(actor, record, recordId, "delete");
-  const canEdit = (["draft", "approved", "archived"].includes(record.status) || record.status === "pending_review" && adminKeepsStatus(actor)) && await canRecord(actor, record, recordId, "edit");
-  const canDownload = metadataAllowed && decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, record);
+  const canEdit = record.status !== "deleted" && (record.status !== "pending_review" || await editKeepsStatus(actor, record)) && await canRecord(actor, record, recordId, "edit");
+  const categoryEditor = !(await loadCategoryGrantContext(actor, record.category_id)).restricted && await isCategoryEditor(actor, record.category_id);
+  const canDownload = metadataAllowed && record.status !== "deleted" && (decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, record) || categoryEditor && await canRecord(actor, record, recordId, "download"));
   const canManageAcl = await canRecord(actor, record, recordId, "acl.manage");
   const blockReason = canManageAcl ? await approvalBlockReason(actor, record, recordId) : null;
   return {
@@ -241,6 +258,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
     canSubmit,
     canDelete,
     canEdit,
+    editKeepsStatus: await editKeepsStatus(actor, record),
     canDownload,
     canPreview: metadataAllowed && record.status !== "deleted" && (canDownload || await canRecord(actor, record, recordId, "preview")),
     canRestore,
@@ -458,7 +476,7 @@ export async function createDatabaseRecord(actor: DatabaseRecordActor, input: Da
     if (keywordError) { await cleanupNewRecord(data.id); throw keywordError; }
   }
   if (input.externalLinks?.length) {
-    const { error: linkError } = await serverSupabase.from("db_record_external_links").insert(input.externalLinks.map((link) => ({ record_id: data.id, provider: link.provider, url: link.url, media_kind: link.mediaKind ?? null, created_by: actor.id })));
+    const { error: linkError } = await serverSupabase.from("db_record_external_links").insert(input.externalLinks.map((link, position) => ({ record_id: data.id, provider: link.provider, url: link.url, label: link.label.trim(), position, media_kind: link.mediaKind ?? null, created_by: actor.id })));
     if (linkError) { await cleanupNewRecord(data.id); throw linkError; }
   }
   const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: data.id, actor_id: actor.id, action: "create", old_data: null, new_data: data });
@@ -477,7 +495,8 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   const grantContext = await loadCategoryGrantContext(actor, current.category_id);
   if (!(await canRecord(actor, current, recordId, "edit")) || grantContext.restricted && !canContributeRestricted(actor, grantContext.grantLevel)) throw new Error("permission_denied");
-  if (current.status === "pending_review" && !adminKeepsStatus(actor)) throw new Error("record_locked");
+  const keepsStatus = await editKeepsStatus(actor, current);
+  if (current.status === "pending_review" && !keepsStatus) throw new Error("record_locked");
   if (isDepartmentOnlyRecordType(current.record_type_code) && input.visibility === "public") throw new Error("danh_ba_department_only");
   const [previousKeywords, previousLinks] = await Promise.all([
     serverSupabase.from("db_record_keywords").select("record_id,keyword").eq("record_id", recordId),
@@ -496,7 +515,7 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
     patch.metadata = input.metadata;
   }
   if (input.visibility !== undefined) patch.visibility = input.visibility;
-  const reopened = !adminKeepsStatus(actor) && (current.status === "approved" || current.status === "archived");
+  const reopened = !keepsStatus && (current.status === "approved" || current.status === "archived");
   if (reopened) patch.status = "draft";
   const { data, error } = await serverSupabase.from("db_records").update(patch).eq("id", recordId).eq("status", current.status).select("id,category_id,record_type_id,record_code,title,summary,status,department_id,owner_id,created_by,metadata,visibility,created_at,updated_at").maybeSingle();
   if (!data && !error) throw new Error("record_locked");
@@ -511,7 +530,7 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
     }
     if (nextLinks !== undefined) {
       linksChanged = true;
-      await replaceRecordRows("db_record_external_links", recordId, nextLinks.map((link) => ({ record_id: recordId, provider: link.provider, url: link.url, media_kind: link.mediaKind ?? null, created_by: actor.id })));
+      await replaceRecordRows("db_record_external_links", recordId, nextLinks.map((link, position) => ({ record_id: recordId, provider: link.provider, url: link.url, label: link.label.trim(), position, media_kind: link.mediaKind ?? null, created_by: actor.id })));
     }
     if (reopened) {
       const { data: history, error: reopenError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "reopen_for_edit", old_data: current, new_data: { from_status: current.status, to_status: "draft" } }).select("id").single();
@@ -519,7 +538,7 @@ export async function updateDatabaseRecord(actor: DatabaseRecordActor, recordId:
       reopenHistoryId = history.id;
     }
     const oldData = { ...current, keywords: oldKeywords.map((row) => row.keyword), externalLinks: oldLinks };
-    const newData = { ...data, keywords: nextKeywords ?? oldKeywords.map((row) => row.keyword), externalLinks: nextLinks ?? oldLinks, ...(adminKeepsStatus(actor) && current.status !== "draft" ? { admin_edit_kept_status: current.status } : {}) };
+    const newData = { ...data, keywords: nextKeywords ?? oldKeywords.map((row) => row.keyword), externalLinks: nextLinks ?? oldLinks, ...(keepsStatus && current.status !== "draft" ? { admin_edit_kept_status: current.status } : {}) };
     const { error: historyError } = await serverSupabase.from("db_record_history").insert({ record_id: recordId, actor_id: actor.id, action: "update", old_data: oldData, new_data: newData });
     if (historyError) throw historyError;
   } catch (cause) {
@@ -586,7 +605,8 @@ export async function getDatabaseRecordFile(actor: DatabaseRecordActor, recordId
   if (!(await visibilityAllowed(actor, current, recordId))) throw new Error("permission_denied");
   const context = await actorContext(actor);
   const acl = await aclForRecord(recordId);
-  const canDownload = decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, current);
+  const categoryEditor = !(await loadCategoryGrantContext(actor, current.category_id)).restricted && await isCategoryEditor(actor, current.category_id);
+  const canDownload = decideDatabaseRecordDownload({ ...context, permissionScopes: actor.rbacPermissionScopes }, acl, current) || categoryEditor && !databaseRecordMetadataDenied(context, acl) && await canRecord(actor, current, recordId, "download");
   const canPreview = mode === "preview" && !databaseRecordMetadataDenied(context, acl) && await canRecord(actor, current, recordId, "preview");
   if (!canDownload && !canPreview) throw new Error("permission_denied");
   const { data, error } = await serverSupabase.from("db_record_files").select("id,record_id,storage_key,original_name,mime_type,size_bytes,sha256").eq("id", fileId).eq("record_id", recordId).maybeSingle();
@@ -599,7 +619,7 @@ export async function assertCanModifyRecordFiles(actor: DatabaseRecordActor, rec
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
-  if (current.status === "pending_review" && !adminKeepsStatus(actor)) throw new Error("record_locked");
+  if (current.status === "pending_review" && !(await editKeepsStatus(actor, current))) throw new Error("record_locked");
   return current;
 }
 
@@ -607,7 +627,8 @@ export async function reopenRecordAfterFileChange(actor: DatabaseRecordActor, re
   const current = await getRecord(recordId);
   if (!current || current.status === "deleted") throw new Error("record_not_found");
   if (current.status !== expectedStatus) throw new Error("record_locked");
-  if (adminKeepsStatus(actor)) return current;
+  if (!(await canRecord(actor, current, recordId, "edit"))) throw new Error("permission_denied");
+  if (await editKeepsStatus(actor, current)) return current;
   if (current.status === "pending_review") throw new Error("record_locked");
   if (current.status !== "approved" && current.status !== "archived") return current;
   const { data, error } = await serverSupabase.from("db_records").update({ status: "draft" }).eq("id", recordId).eq("status", current.status).select("*").maybeSingle();

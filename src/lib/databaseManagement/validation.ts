@@ -3,11 +3,14 @@ import type { DatabaseRecordAclInput, DatabaseRecordInput, DatabaseRecordUpdateI
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function validExternalLink(link: unknown) {
   if (!link || typeof link !== "object") return false;
-  const value = link as { provider?: unknown; url?: unknown };
-  if (value.provider !== "google_drive" || typeof value.url !== "string") return false;
+  const value = link as { provider?: unknown; url?: unknown; label?: unknown };
+  if (value.provider !== "google_drive" && value.provider !== "web") return false;
+  if (typeof value.url !== "string" || typeof value.label !== "string" || value.label.trim().length < 1 || value.label.trim().length > 200 || value.url.length > 2000) return false;
   try {
     const url = new globalThis.URL(value.url);
-    return url.protocol === "https:" && ["drive.google.com", "docs.google.com"].includes(url.hostname.toLowerCase()) && !url.username && !url.password && (!url.port || url.port === "443");
+    if (url.protocol !== "https:" || url.username || url.password) return false;
+    if (value.provider === "google_drive" && (!["drive.google.com", "docs.google.com"].includes(url.hostname.toLowerCase()) || url.port && url.port !== "443")) return false;
+    return true;
   } catch { return false; }
 }
 
@@ -82,12 +85,12 @@ export function validateDatabaseRecordInput(input: unknown): { ok: true; value: 
   if (value.languageCode !== undefined && value.languageCode !== null && !["vi", "en", "zh", "lo", "km", "ru"].includes(value.languageCode)) errors.push({ field: "languageCode", code: "invalid_option" });
   if (value.visibility !== undefined && value.visibility !== "department" && value.visibility !== "public") errors.push({ field: "visibility", code: "invalid_option" });
   if (value.keywords !== undefined && !validKeywords(value.keywords)) errors.push({ field: "keywords", code: "invalid_keywords" });
-  if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.some((link) => !validExternalLink(link)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
+  if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.length > 30 || value.externalLinks.some((link) => !validExternalLink(link)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: {
     categoryId: value.categoryId!, recordTypeId: value.recordTypeId!, title: value.title!.trim(),
     summary: value.summary ?? null, departmentId: value.departmentId ?? null, ownerId: value.ownerId ?? null,
-    status: value.status ?? "draft", metadata: value.metadata as Record<string, unknown>, languageCode: value.languageCode ?? null, keywords: value.keywords, externalLinks: value.externalLinks ?? [], visibility: value.visibility ?? "department",
+    status: value.status ?? "draft", metadata: value.metadata as Record<string, unknown>, languageCode: value.languageCode ?? null, keywords: value.keywords, externalLinks: (value.externalLinks ?? []).map((link) => ({ ...link, label: link.label.trim() })), visibility: value.visibility ?? "department",
   } };
 }
 
@@ -109,9 +112,9 @@ export function validateDatabaseRecordUpdateInput(input: unknown): { ok: true; v
     else result.visibility = value.visibility;
   }
   if (value.keywords !== undefined && !validKeywords(value.keywords)) errors.push({ field: "keywords", code: "invalid_keywords" });
-  if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.some((link) => !validExternalLink(link)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
+  if (value.externalLinks !== undefined && (!Array.isArray(value.externalLinks) || value.externalLinks.length > 30 || value.externalLinks.some((link) => !validExternalLink(link)))) errors.push({ field: "externalLinks", code: "invalid_external_link" });
   if (value.keywords !== undefined && validKeywords(value.keywords)) result.keywords = value.keywords as string[];
-  if (value.externalLinks !== undefined && Array.isArray(value.externalLinks) && value.externalLinks.every(validExternalLink)) result.externalLinks = value.externalLinks as DatabaseRecordUpdateInput["externalLinks"];
+  if (value.externalLinks !== undefined && Array.isArray(value.externalLinks) && value.externalLinks.every(validExternalLink)) result.externalLinks = (value.externalLinks as NonNullable<DatabaseRecordUpdateInput["externalLinks"]>).map((link) => ({ ...link, label: link.label.trim() }));
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: result };
 }

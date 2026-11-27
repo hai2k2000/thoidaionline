@@ -1,0 +1,10 @@
+begin;
+alter table public.db_record_external_links add column if not exists label text;
+alter table public.db_record_external_links add column if not exists position integer not null default 0;
+alter table public.db_record_external_links drop constraint if exists db_record_external_links_provider_check;
+alter table public.db_record_external_links add constraint db_record_external_links_provider_check check (provider in ('google_drive','web'));
+alter table public.db_record_external_links drop constraint if exists db_record_external_links_label_check;
+alter table public.db_record_external_links add constraint db_record_external_links_label_check check (label is null or length(label) <= 200);
+do $assert$ begin if not exists (select 1 from pg_constraint where conrelid='public.db_record_external_links'::regclass and conname='db_record_external_links_provider_check' and pg_get_constraintdef(oid) like '%web%') then raise exception 'provider constraint missing'; end if; if not exists (select 1 from pg_constraint where conrelid='public.db_record_external_links'::regclass and conname='db_record_external_links_url_check') then raise exception 'HTTPS constraint missing'; end if; if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='db_record_external_links' and column_name='position' and is_nullable='NO' and data_type='integer') then raise exception 'position column missing'; end if; end $assert$;
+notify pgrst, 'reload schema';
+commit;
