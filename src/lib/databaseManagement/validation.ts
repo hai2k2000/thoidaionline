@@ -26,11 +26,14 @@ export type DatabaseFormField = {
   validation?: unknown;
 };
 
+const SYSTEM_METADATA_KEYS = new Set(["record_code", "title", "summary", "status"]);
+
 export function validateDatabaseMetadata(metadata: Record<string, unknown>, fields: readonly DatabaseFormField[]) {
   const errors: RecordValidationError[] = [];
   const knownFields = new Set(fields.map((field) => field.field_key));
   for (const key of Object.keys(metadata)) {
-    if (!knownFields.has(key)) errors.push({ field: `metadata.${key}`, code: "unknown_field" });
+    // System keys are added by the server; a form that lacks one of them must not reject every record.
+    if (!knownFields.has(key) && !SYSTEM_METADATA_KEYS.has(key)) errors.push({ field: `metadata.${key}`, code: "unknown_field" });
   }
   for (const field of fields) {
     const value = metadata[field.field_key];
