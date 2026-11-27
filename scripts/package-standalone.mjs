@@ -226,6 +226,7 @@ const migrationReference = [
   "supabase/migrations/20261116140000_database_management_v1_hop_dong_show_nguoi_thuc_hien.sql",
   "supabase/migrations/20261125100000_database_management_v1_dao_tao_type.sql",
   "supabase/migrations/20261125110000_database_management_v1_unapprove.sql",
+  "supabase/migrations/20261127100000_database_management_v1_dao_tao_record_code.sql",
 ];
 await writeFile(join(output, "MIGRATION_REFERENCE"), migrationReference.join("\n") + "\n");
 const riskOutput = execFileSync(process.execPath, ["scripts/classify-release-risk.mjs", root], {
