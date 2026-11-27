@@ -14,7 +14,7 @@ function load(name, dependencies = {}) {
 }
 const actor = { id: "u1", department_id: "d1", rbacPermissions: ["record.create", "record.discover", "record.edit"], rbacPermissionScopes: {} };
 const input = { categoryId: "11111111-1111-4111-8111-111111111111", recordTypeId: "22222222-2222-4222-8222-222222222222", title: "Record", metadata: {} };
-const link = { provider: "google_drive", url: "https://drive.google.com/file/d/new", mediaKind: "video" };
+const link = { provider: "google_drive", url: "https://drive.google.com/file/d/new", label: "Video", mediaKind: "video" };
 
 for (const [name, validate] of [["create", (patch) => validation.validateDatabaseRecordInput({ ...input, ...patch })], ["update", validation.validateDatabaseRecordUpdateInput]]) {
   test(`${name} accepts editable keywords and links`, () => {
@@ -37,6 +37,7 @@ for (const [name, validate] of [["create", (patch) => validation.validateDatabas
 
 function database(fail = () => false) {
   const tables = {
+    db_category_editors: [],
     db_records: [{ id: "r1", category_id: input.categoryId, record_type_id: input.recordTypeId, title: "Old", summary: null, status: "approved", owner_id: "u1", created_by: "u1", department_id: "d1", metadata: { keywords: ["Old"] }, visibility: "department" }],
     db_categories: [{ id: input.categoryId, code: "ordinary", active: true, restricted: false }],
     db_record_types: [{ id: input.recordTypeId, category_id: input.categoryId, code: "ordinary", active: true }],
