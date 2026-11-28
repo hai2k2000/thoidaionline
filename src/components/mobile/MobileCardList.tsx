@@ -39,9 +39,8 @@ export function MobileCard({
     </div>
     {meta.length ? <dl className="mt-3 grid gap-2">{meta.slice(0, maxMeta).map((item) => <div key={item.label} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3"><dt className="text-xs text-text-muted">{item.label}</dt><dd className="min-w-0 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{item.value}</dd></div>)}</dl> : null}
     {children}
-    {footer && !href ? <footer className="mt-3 flex flex-wrap gap-2">{footer}</footer> : null}
   </>;
-  return <li className="min-w-0 rounded-[var(--radius-card)] border border-border bg-surface text-text shadow-sm"><article>{href ? <Link href={href} className="block min-h-11 rounded-[var(--radius-card)] p-4 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">{content}</Link> : <div className="p-4">{content}</div>}</article></li>;
+  return <li className="min-w-0 rounded-[var(--radius-card)] border border-border bg-surface text-text shadow-sm"><article>{href ? <><Link href={href} className="block min-h-11 rounded-[var(--radius-card)] p-4 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">{content}</Link>{footer ? <footer className="flex flex-wrap gap-2 px-4 pb-4">{footer}</footer> : null}</> : <div className="p-4">{content}{footer ? <footer className="mt-3 flex flex-wrap gap-2">{footer}</footer> : null}</div>}</article></li>;
 }
 
 export function MobileCardList({ children, empty = "Chưa có dữ liệu", ariaLabel = "Danh sách" }: { children?: ReactNode; empty?: ReactNode; ariaLabel?: string }) {
