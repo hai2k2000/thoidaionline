@@ -103,6 +103,7 @@ async function canRecord(actor: DatabaseRecordActor, record: Pick<RecordRow, "ca
   if (explicitDeny) return false;
   if (grantContext.restricted && capability === "edit" && !canContributeRestricted(actor, grantContext.grantLevel)) return false;
   if (!grantContext.restricted && ["discover", "metadata.view", "preview", "download", "edit"].includes(capability) && await isCategoryEditor(actor, record.category_id)) return true;
+  if (adminKeepsStatus(actor) && ["edit", "delete", "restore"].includes(capability)) return true;
   if (capability === "acl.manage") {
     if (record.owner_id === actor.id) return true;
     if (hasPermissionScope(actor, "record.discover", ["all"])) return true;
@@ -127,6 +128,14 @@ function hasPermissionScope(actor: DatabaseRecordActor, permission: string, scop
   if (!actor.rbacPermissions.includes(permission)) return false;
   const effectiveScopes = actor.rbacPermissionScopes?.[permission];
   return Array.isArray(effectiveScopes) && effectiveScopes.some((scope) => scopes.includes(scope));
+}
+
+function canSubmitDraft(actor: DatabaseRecordActor, record: Pick<RecordRow, "owner_id" | "department_id">) {
+  if (!adminKeepsStatus(actor)) return true;
+  const scopes = actor.rbacPermissionScopes?.["record.edit"] ?? [];
+  return scopes.includes("all")
+    || scopes.includes("self") && record.owner_id === actor.id
+    || scopes.includes("department") && Boolean(record.department_id && record.department_id === actor.department_id);
 }
 
 function canApproveRecordWithContext(actor: DatabaseRecordActor, context: DatabaseAclActor, record: Pick<RecordRow, "department_id" | "created_by">, rows: readonly DatabaseAclRow[], managerId?: string | null) {
@@ -244,7 +253,7 @@ export async function getVisibleDatabaseRecord(actor: DatabaseRecordActor, recor
   const latestApproval = historyRows.find((item) => item.action === "approve");
   const canApprove = record.status === "pending_review" && await canApproveRecord(actor, record, recordId);
   const canUnapprove = record.status === "approved" && hasPermissionScope(actor, "record.sensitive.access", ["all", "department", "self"]) && !(await (async () => { const context = await actorContext(actor); const rows = await aclForRecord(recordId); return rows.some((row) => row.capability === "approve" && row.effect === "deny" && ((row.principal_type === "user" && row.principal_id === actor.id) || (row.principal_type === "role" && row.principal_id === context.roleId) || (row.principal_type === "department" && row.principal_id === context.departmentId))); })());
-  const canSubmit = record.status === "draft" && await canRecord(actor, record, recordId, "edit");
+  const canSubmit = record.status === "draft" && canSubmitDraft(actor, record) && await canRecord(actor, record, recordId, "edit");
   const canDelete = record.status !== "deleted" && await canRecord(actor, record, recordId, "delete");
   const canEdit = record.status !== "deleted" && (record.status !== "pending_review" || await editKeepsStatus(actor, record)) && await canRecord(actor, record, recordId, "edit");
   const categoryEditor = !(await loadCategoryGrantContext(actor, record.category_id)).restricted && await isCategoryEditor(actor, record.category_id);
