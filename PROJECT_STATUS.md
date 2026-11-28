@@ -1,3 +1,14 @@
+# CSDL bulk approval completion - 2026-11-28
+
+Current Phase: EDIT-only implementation complete; offline verification recorded.
+Current Task: finish partial quick/bulk approval on feature/csdl-bulk-approve.
+Completed: queue/filter stale-response guards, selection reset, separate mobile footer controls, aligned desktop controls with keyboard guards, single confirmation/single-flight lock, sequential detail freshness checks, failure continuation, summary and list/stats/queue refresh.
+Validation: 13 bulk approval logic/UI tests plus 2 shared mobile-card tests PASS. Requested database/packaging suite: 313/316 PASS; unchanged known failures are approvalUi.browser missing Playwright, delete/restore contract, and P2 nosniff contract. TypeScript reports only the 9 known exceljs/mammoth-related errors outside touched code. UI tests execute transpiled page handlers with injected hooks/fetch and server-render MobileCard; no real-browser smoke performed.
+Constraints: existing edits preserved; no API/server permission/migration changes, network, install, build, deployment, commit or push.
+Follow Up: resolve baseline test/dependency failures separately; real-browser interaction verification remains optional follow-up.
+
+---
+
 # Push notifications v2 - 2026-11-06
 
 Status: IMPLEMENTED in EDIT mode; offline web validation complete; PostgreSQL and Flutter/device execution pending.
